@@ -1,1 +1,7 @@
-# bionocular\n\nA personal AI project focused on binocular vision and biomimetic approaches.\n\n## Getting Started\n\nThis project is currently in early development.
+# bionocular
+
+A personal AI project focused on binocular vision and biomimetic approaches.
+
+## Getting Started
+
+This project is currently in early development.
