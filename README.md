@@ -200,4 +200,9 @@ For questions or support, please open an issue on GitHub.
 ---
 
 **Note**: This project is in early development. The current focus is on establishing a solid foundation with proper tooling and structure.
+
+## 👥 Team Contribution
+
+Initial team member onboarding and contribution setup.
+
 # Test GPG signing
