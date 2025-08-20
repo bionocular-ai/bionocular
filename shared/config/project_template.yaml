@@ -1,0 +1,75 @@
+# Project Template Configuration
+# This file serves as a template for new cancer type projects
+
+project:
+  name: "{{PROJECT_NAME}}"
+  version: "0.1.0"
+  description: "{{PROJECT_DESCRIPTION}} for Bionocular organization"
+  author: "Bionocular Team"
+  email: "team@bionocular.com"
+
+structure:
+  src: "src"                   # Simplified: just src, not src/main/project-name
+  data: "data"
+  scripts: "scripts"
+  resources: "resources"
+  tests: "tests"
+  alembic: "alembic"
+
+dependencies:
+  core:
+    - fastapi
+    - uvicorn
+    - pydantic
+    - sqlalchemy
+    - psycopg2-binary
+    - pypdf2
+    - pdfplumber
+    - python-multipart
+    - python-dotenv
+    - alembic
+  
+  dev:
+    - pytest
+    - pytest-asyncio
+    - pytest-cov
+    - black
+    - ruff
+    - mypy
+
+data_structure:
+  - abstracts
+  - publications
+  - processed
+
+api_endpoints:
+  - ingest
+  - ingest/batch
+  - ingest/local
+  - ingest/local/batch
+  - ingest/directory
+  - health
+  - stats
+  - documents
+  - documents/{id}
+
+clean_architecture:
+  layers:
+    - domain
+    - infrastructure
+    - app
+  
+  domain:
+    - models.py
+    - interfaces.py
+  
+  infrastructure:
+    - database.py
+    - storage.py
+    - repository.py
+    - pdf_processor.py
+  
+  app:
+    - api.py
+    - ingestion_service.py
+    - ingest_cli.py
