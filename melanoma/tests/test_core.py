@@ -1,6 +1,6 @@
 """Tests for the core module."""
 
-from app.core import Application, create_app
+from src.app.core import Application, create_app
 
 
 class TestApplication:

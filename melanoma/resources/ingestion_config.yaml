@@ -1,0 +1,63 @@
+# Ingestion System Configuration
+
+# Storage Configuration
+storage:
+  base_dir: "./storage"
+  input_dirs:
+    abstracts: "./data/abstracts"
+    publications: "./data/publications"
+    processed: "./data/processed"
+  
+  output_dirs:
+    abstracts: "./storage/abstracts"
+    publications: "./storage/publications"
+    metadata: "./storage/metadata"
+
+# Processing Configuration
+processing:
+  max_file_size_mb: 100
+  retry_attempts: 3
+  batch_detection:
+    enabled: true
+    keywords:
+      - "Abstract ID"
+      - "Abstract ID:"
+      - "Abstract:"
+      - "ABSTRACT:"
+      - "Publication ID"
+      - "Publication ID:"
+      - "Title:"
+      - "TITLE:"
+      - "Authors:"
+      - "AUTHORS:"
+      - "Introduction"
+      - "INTRODUCTION"
+      - "Methods"
+      - "METHODS"
+      - "Results"
+      - "RESULTS"
+      - "Conclusion"
+      - "CONCLUSION"
+  
+  content_similarity_threshold: 0.3
+
+# Database Configuration
+database:
+  url: "postgresql://user:password@localhost:5432/bionocular"
+  pool_size: 10
+  max_overflow: 20
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "ingest.log"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  rotation: "1 day"
+  retention: "30 days"
+
+# API Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  workers: 4
+  timeout: 300
