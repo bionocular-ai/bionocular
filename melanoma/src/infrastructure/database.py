@@ -1,6 +1,8 @@
 """Database models and configuration for the ingestion system."""
 
 import os
+from collections.abc import Generator
+from typing import Any
 
 from sqlalchemy import Column, DateTime, Enum, String, create_engine
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -21,7 +23,7 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class for models
-Base = declarative_base()  # type: ignore
+Base = declarative_base()
 
 
 class DocumentModel(Base):
@@ -32,16 +34,16 @@ class DocumentModel(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, index=True)
     original_filename = Column(String(255), nullable=False)
     storage_path = Column(String(500), nullable=False)
-    type = Column(Enum(DocumentType), nullable=False)
-    upload_date = Column(DateTime(timezone=True), server_default=func.now())
-    hash = Column(String(64), unique=True, nullable=False, index=True)
-    status = Column(Enum(DocumentStatus), default=DocumentStatus.INGESTED)
+    doc_type: Any = Column(Enum(DocumentType), nullable=False)
+    upload_date: Any = Column(DateTime(timezone=True), server_default=func.now())
+    hash: Any = Column(String(64), unique=True, nullable=False, index=True)
+    doc_status: Any = Column(Enum(DocumentStatus), default=DocumentStatus.INGESTED)
     metadata = Column(JSONB, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
-def get_db_session() -> None:
+def get_db_session() -> Generator:
     """Get a database session."""
     db = SessionLocal()
     try:

@@ -37,14 +37,14 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
 
         # Convert back to domain model
         return Document(
-            id=db_document.id,
-            original_filename=db_document.original_filename,
-            storage_path=db_document.storage_path,
-            type=db_document.type,
-            upload_date=db_document.upload_date,
-            hash=db_document.hash,
-            status=db_document.status,
-            metadata=db_document.metadata or {},
+            id=db_document.id,  # type: ignore
+            original_filename=db_document.original_filename,  # type: ignore
+            storage_path=db_document.storage_path,  # type: ignore
+            type=db_document.doc_type,  # type: ignore
+            upload_date=db_document.upload_date,  # type: ignore
+            hash=db_document.hash,  # type: ignore
+            status=db_document.doc_status,  # type: ignore
+            metadata=db_document.metadata or {},  # type: ignore
         )
 
     async def find_by_hash(self, content_hash: str) -> Optional[Document]:
@@ -59,14 +59,14 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
             return None
 
         return Document(
-            id=db_document.id,
-            original_filename=db_document.original_filename,
-            storage_path=db_document.storage_path,
-            type=db_document.type,
-            upload_date=db_document.upload_date,
-            hash=db_document.hash,
-            status=db_document.status,
-            metadata=db_document.metadata or {},
+            id=db_document.id,  # type: ignore
+            original_filename=db_document.original_filename,  # type: ignore
+            storage_path=db_document.storage_path,  # type: ignore
+            type=db_document.doc_type,  # type: ignore
+            upload_date=db_document.upload_date,  # type: ignore
+            hash=db_document.hash,  # type: ignore
+            status=db_document.doc_status,  # type: ignore
+            metadata=db_document.metadata or {},  # type: ignore
         )
 
     async def find_by_id(self, document_id: str) -> Optional[Document]:
@@ -84,14 +84,14 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
             return None
 
         return Document(
-            id=db_document.id,
-            original_filename=db_document.original_filename,
-            storage_path=db_document.storage_path,
-            type=db_document.type,
-            upload_date=db_document.upload_date,
-            hash=db_document.hash,
-            status=db_document.status,
-            metadata=db_document.metadata or {},
+            id=db_document.id,  # type: ignore
+            original_filename=db_document.original_filename,  # type: ignore
+            storage_path=db_document.storage_path,  # type: ignore
+            type=db_document.doc_type,  # type: ignore
+            upload_date=db_document.upload_date,  # type: ignore
+            hash=db_document.hash,  # type: ignore
+            status=db_document.doc_status,  # type: ignore
+            metadata=db_document.metadata or {},  # type: ignore
         )
 
     async def update_status(self, document_id: UUID, status: DocumentStatus) -> bool:
@@ -106,7 +106,7 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
             if not db_document:
                 return False
 
-            db_document.status = status
+            db_document.doc_status = status  # type: ignore
             self.db.commit()
             return True
 
@@ -122,14 +122,14 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
 
         return [
             Document(
-                id=doc.id,
-                original_filename=doc.original_filename,
-                storage_path=doc.storage_path,
-                type=doc.type,
-                upload_date=doc.upload_date,
-                hash=doc.hash,
-                status=doc.status,
-                metadata=doc.metadata or {},
+                id=doc.id,  # type: ignore
+                original_filename=doc.original_filename,  # type: ignore
+                storage_path=doc.storage_path,  # type: ignore
+                type=doc.doc_type,  # type: ignore
+                upload_date=doc.upload_date,  # type: ignore
+                hash=doc.hash,  # type: ignore
+                status=doc.doc_status,  # type: ignore
+                metadata=doc.metadata or {},  # type: ignore
             )
             for doc in db_documents
         ]

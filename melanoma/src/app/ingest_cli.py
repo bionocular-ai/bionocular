@@ -112,7 +112,7 @@ async def ingest_batch_file(
         print(f"❌ Error processing batch file {file_path}: {str(e)}")
 
 
-async def main():
+async def main() -> None:
     """Main function for CLI ingestion."""
     parser = argparse.ArgumentParser(
         description="Ingest PDF documents into the Bionocular system"

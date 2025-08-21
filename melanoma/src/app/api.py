@@ -45,7 +45,7 @@ def get_ingestion_service(db: Session = Depends(get_db_session)) -> IngestionSer
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     """Initialize the application on startup."""
     try:
         # Initialize database
@@ -62,7 +62,7 @@ async def startup_event():
 
 
 @app.get("/")
-async def root():
+async def root() -> dict:
     """Root endpoint."""
     return {
         "message": "Bionocular Ingestion API",
@@ -80,7 +80,7 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict:
     """Health check endpoint."""
     return {"status": "healthy"}
 
@@ -91,11 +91,11 @@ async def ingest_document(
     document_type: DocumentType = Form(..., description="Type of document"),
     metadata: str = Form("{}", description="Additional metadata as JSON string"),
     ingestion_service: IngestionService = Depends(get_ingestion_service),
-):
+) -> dict:
     """Ingest a PDF document from file upload."""
     try:
         # Validate file type
-        if not file.filename.lower().endswith(".pdf"):
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
         # Read file content
@@ -112,7 +112,7 @@ async def ingest_document(
 
         # Process document
         response = await ingestion_service.ingest_single_document(
-            file_content, file.filename, request
+            file_content, file.filename or "unknown.pdf", request
         )
 
         logger.info(f"Successfully ingested uploaded document: {file.filename}")
@@ -139,7 +139,7 @@ async def ingest_local_document(
     document_type: DocumentType = Form(..., description="Type of document"),
     metadata: str = Form("{}", description="Additional metadata as JSON string"),
     ingestion_service: IngestionService = Depends(get_ingestion_service),
-):
+) -> dict:
     """Ingest a PDF document from local file path."""
     try:
         # Validate file path
@@ -189,17 +189,17 @@ async def ingest_local_document(
         ) from e
 
 
-@app.post("/ingest/batch", response_model=BatchIngestionResponse)
+@app.post("/ingest/batch", response_model=dict)
 async def ingest_batch_documents(
     file: UploadFile = File(..., description="Batch PDF file to ingest"),
     document_type: DocumentType = Form(..., description="Type of documents"),
     metadata: str = Form("{}", description="Additional metadata as JSON string"),
     ingestion_service: IngestionService = Depends(get_ingestion_service),
-):
+) -> dict:
     """Ingest multiple documents from a batch PDF upload."""
     try:
         # Validate file type
-        if not file.filename.lower().endswith(".pdf"):
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Only PDF files are supported")
 
         # Read file content
@@ -216,7 +216,7 @@ async def ingest_batch_documents(
 
         # Process batch documents
         responses = await ingestion_service.ingest_batch_documents(
-            file_content, file.filename, request
+            file_content, file.filename or "unknown.pdf", request
         )
 
         # Calculate statistics
@@ -235,7 +235,7 @@ async def ingest_batch_documents(
             failed=failed,
             duplicates=duplicates,
             documents=responses,
-        )
+        ).dict()
 
     except HTTPException:
         raise
@@ -248,13 +248,13 @@ async def ingest_batch_documents(
         ) from e
 
 
-@app.post("/ingest/local/batch", response_model=BatchIngestionResponse)
+@app.post("/ingest/local/batch", response_model=dict)
 async def ingest_local_batch_documents(
     file_path: str = Form(..., description="Path to local batch PDF file"),
     document_type: DocumentType = Form(..., description="Type of documents"),
     metadata: str = Form("{}", description="Additional metadata as JSON string"),
     ingestion_service: IngestionService = Depends(get_ingestion_service),
-):
+) -> dict:
     """Ingest multiple documents from a local batch PDF file."""
     try:
         # Validate file path
@@ -303,7 +303,7 @@ async def ingest_local_batch_documents(
             failed=failed,
             duplicates=duplicates,
             documents=responses,
-        )
+        ).dict()
 
     except HTTPException:
         raise
@@ -322,7 +322,7 @@ async def ingest_directory(
     document_type: DocumentType = Form(..., description="Type of documents"),
     recursive: bool = Form(False, description="Process subdirectories recursively"),
     ingestion_service: IngestionService = Depends(get_ingestion_service),
-):
+) -> dict:
     """Ingest all PDF files from a directory."""
     try:
         # Validate directory path
@@ -413,7 +413,7 @@ async def ingest_directory(
 @app.get("/stats")
 async def get_stats(
     ingestion_service: IngestionService = Depends(get_ingestion_service),
-):
+) -> dict:
     """Get ingestion system statistics."""
     try:
         stats = await ingestion_service.get_ingestion_stats()
@@ -428,7 +428,7 @@ async def get_stats(
 @app.get("/documents")
 async def list_documents(
     limit: int = 100, offset: int = 0, db: Session = Depends(get_db_session)
-):
+) -> dict:
     """List ingested documents with pagination."""
     try:
         repository = SQLAlchemyDocumentRepository(db)
@@ -448,7 +448,7 @@ async def list_documents(
 
 
 @app.get("/documents/{document_id}")
-async def get_document(document_id: str, db: Session = Depends(get_db_session)):
+async def get_document(document_id: str, db: Session = Depends(get_db_session)) -> dict:
     """Get a specific document by ID."""
     try:
         repository = SQLAlchemyDocumentRepository(db)
@@ -468,7 +468,7 @@ async def get_document(document_id: str, db: Session = Depends(get_db_session)):
 
 
 @app.get("/filesystem")
-async def get_filesystem_info():
+async def get_filesystem_info() -> dict:
     """Get information about the filesystem structure."""
     try:
         data_dirs = {
