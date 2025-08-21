@@ -128,7 +128,9 @@ async def ingest_document(
         raise
     except Exception as e:
         logger.error(f"Error ingesting uploaded document {file.filename}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @app.post("/ingest/local", response_model=dict)
@@ -182,7 +184,9 @@ async def ingest_local_document(
         raise
     except Exception as e:
         logger.error(f"Error ingesting local document {file_path}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @app.post("/ingest/batch", response_model=BatchIngestionResponse)
@@ -239,7 +243,9 @@ async def ingest_batch_documents(
         logger.error(
             f"Error ingesting uploaded batch documents from {file.filename}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @app.post("/ingest/local/batch", response_model=BatchIngestionResponse)
@@ -305,7 +311,9 @@ async def ingest_local_batch_documents(
         logger.error(
             f"Error ingesting local batch documents from {file_path}: {str(e)}"
         )
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @app.post("/ingest/directory")
@@ -331,7 +339,7 @@ async def ingest_directory(
         # Find all PDF files
         pdf_files = []
         if recursive:
-            for root, dirs, files in os.walk(directory_path):
+            for root, _, files in os.walk(directory_path):
                 for file in files:
                     if file.lower().endswith(".pdf"):
                         pdf_files.append(os.path.join(root, file))
@@ -397,7 +405,9 @@ async def ingest_directory(
         raise
     except Exception as e:
         logger.error(f"Error processing directory {directory_path}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @app.get("/stats")
@@ -410,7 +420,9 @@ async def get_stats(
         return stats
     except Exception as e:
         logger.error(f"Error getting stats: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @app.get("/documents")
@@ -430,7 +442,9 @@ async def list_documents(
         }
     except Exception as e:
         logger.error(f"Error listing documents: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @app.get("/documents/{document_id}")
@@ -448,7 +462,9 @@ async def get_document(document_id: str, db: Session = Depends(get_db_session)):
         raise
     except Exception as e:
         logger.error(f"Error getting document {document_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 @app.get("/filesystem")
@@ -500,7 +516,9 @@ async def get_filesystem_info():
 
     except Exception as e:
         logger.error(f"Error getting filesystem info: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
 
 
 if __name__ == "__main__":

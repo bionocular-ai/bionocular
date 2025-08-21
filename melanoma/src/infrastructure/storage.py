@@ -30,7 +30,6 @@ class LocalFileStorage(StorageInterface):
     ) -> str:
         """Store a document and return the storage path."""
         # Generate unique filename to avoid conflicts
-        file_extension = Path(filename).suffix
         unique_filename = f"{uuid4()}_{filename}"
 
         # Determine storage subdirectory based on document type
@@ -69,7 +68,7 @@ class LocalFileStorage(StorageInterface):
         total_size = 0
         file_count = 0
 
-        for root, dirs, files in os.walk(self.base_storage_dir):
+        for root, _, files in os.walk(self.base_storage_dir):
             for file in files:
                 file_path = Path(root) / file
                 if file_path.is_file():
