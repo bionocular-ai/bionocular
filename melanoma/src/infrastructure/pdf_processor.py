@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class PyPDF2Processor(PDFProcessorInterface):
     """PyPDF2-based PDF processor implementation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the PDF processor."""
         self.batch_indicators = [
             "Abstract ID",
@@ -113,7 +113,7 @@ class PyPDF2Processor(PDFProcessorInterface):
                 return [(file_content, filename)]
 
             documents = []
-            current_doc_pages = []
+            current_doc_pages: list = []
             current_doc_start = 0
 
             for page_num, page in enumerate(reader.pages):
@@ -209,7 +209,7 @@ class PyPDF2Processor(PDFProcessorInterface):
         return output_stream.getvalue()
 
     def _generate_document_filename(
-        self, original_filename: str, start_page: int, end_page: str
+        self, original_filename: str, start_page: int, end_page: int
     ) -> str:
         """Generate a filename for a split document."""
         base_name = original_filename.rsplit(".", 1)[0]

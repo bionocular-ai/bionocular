@@ -183,7 +183,7 @@ class IngestionService(IngestionServiceInterface):
             storage_path=storage_path,
             type=request.type,
             hash=content_hash,
-            metadata=request.metadata,
+            metadata=request.metadata or {},
         )
 
         # Save to database

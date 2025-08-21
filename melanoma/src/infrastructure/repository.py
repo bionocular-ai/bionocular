@@ -44,7 +44,7 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
             upload_date=db_document.upload_date,
             hash=db_document.hash,
             status=db_document.status,
-            metadata=db_document.metadata,
+            metadata=db_document.metadata or {},
         )
 
     async def find_by_hash(self, content_hash: str) -> Optional[Document]:
@@ -66,7 +66,7 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
             upload_date=db_document.upload_date,
             hash=db_document.hash,
             status=db_document.status,
-            metadata=db_document.metadata,
+            metadata=db_document.metadata or {},
         )
 
     async def find_by_id(self, document_id: str) -> Optional[Document]:
@@ -91,7 +91,7 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
             upload_date=db_document.upload_date,
             hash=db_document.hash,
             status=db_document.status,
-            metadata=db_document.metadata,
+            metadata=db_document.metadata or {},
         )
 
     async def update_status(self, document_id: UUID, status: DocumentStatus) -> bool:
@@ -129,7 +129,7 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
                 upload_date=doc.upload_date,
                 hash=doc.hash,
                 status=doc.status,
-                metadata=doc.metadata,
+                metadata=doc.metadata or {},
             )
             for doc in db_documents
         ]

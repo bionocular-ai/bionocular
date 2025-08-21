@@ -26,6 +26,16 @@ class StorageInterface(ABC):
         """Get the storage path of an existing document."""
         pass
 
+    @abstractmethod
+    def compute_hash(self, file_content: bytes) -> str:
+        """Compute hash of file content."""
+        pass
+
+    @abstractmethod
+    def get_storage_info(self) -> dict:
+        """Get information about storage usage."""
+        pass
+
 
 class DocumentRepositoryInterface(ABC):
     """Interface for document data persistence operations."""

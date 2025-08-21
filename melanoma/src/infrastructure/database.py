@@ -21,7 +21,7 @@ engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class for models
-Base = declarative_base()
+Base = declarative_base()  # type: ignore
 
 
 class DocumentModel(Base):
@@ -41,7 +41,7 @@ class DocumentModel(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
-def get_db_session():
+def get_db_session() -> None:
     """Get a database session."""
     db = SessionLocal()
     try:
@@ -50,12 +50,12 @@ def get_db_session():
         db.close()
 
 
-def init_database():
+def init_database() -> None:
     """Initialize the database by creating all tables."""
     Base.metadata.create_all(bind=engine)
 
 
-def create_storage_directories():
+def create_storage_directories() -> None:
     """Create necessary storage directories if they don't exist."""
     os.makedirs(os.path.join(STORAGE_DIR, "originals"), exist_ok=True)
     os.makedirs(os.path.join(STORAGE_DIR, "abstracts"), exist_ok=True)
