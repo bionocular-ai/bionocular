@@ -60,19 +60,8 @@ class PDFProcessorInterface(ABC):
     """Interface for PDF processing operations."""
 
     @abstractmethod
-    async def split_batch_pdf(
-        self, file_content: bytes, filename: str
-    ) -> list[tuple[bytes, str]]:
-        """Split a batch PDF into individual documents.
-
-        Returns:
-            List of tuples containing (document_content, suggested_filename)
-        """
-        pass
-
-    @abstractmethod
     async def is_batch_pdf(self, file_content: bytes) -> bool:
-        """Determine if a PDF contains multiple documents."""
+        """Determine if a PDF contains multiple documents (for information only)."""
         pass
 
     @abstractmethod

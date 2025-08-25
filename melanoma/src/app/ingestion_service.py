@@ -55,18 +55,9 @@ class IngestionService(IngestionServiceInterface):
             if not await self.pdf_processor.validate_pdf(file_content):
                 raise ValueError("Invalid or corrupted PDF file")
 
-            # Check if this is a batch PDF
+            # Check if this is a batch PDF (for information only)
             if await self.pdf_processor.is_batch_pdf(file_content):
-                logger.info(f"Detected batch PDF: {filename}")
-                # Process as batch and return first document for now
-                # In a real implementation, you might want to handle this differently
-                documents = await self.pdf_processor.split_batch_pdf(
-                    file_content, filename
-                )
-                if documents:
-                    return await self._process_document(
-                        documents[0][0], documents[0][1], request
-                    )
+                logger.info(f"Detected batch PDF: {filename} - processing as single document")
 
             # Process as single document
             return await self._process_document(file_content, filename, request)
@@ -98,41 +89,10 @@ class IngestionService(IngestionServiceInterface):
             if not await self.pdf_processor.validate_pdf(file_content):
                 raise ValueError("Invalid or corrupted PDF file")
 
-            # Split the batch PDF
-            documents = await self.pdf_processor.split_batch_pdf(file_content, filename)
-
-            if len(documents) == 1:
-                # Single document, process normally
-                response = await self._process_document(
-                    documents[0][0], documents[0][1], request
-                )
-                return [response]
-
-            # Process each split document
-            responses = []
-            for doc_content, doc_filename in documents:
-                try:
-                    response = await self._process_document(
-                        doc_content, doc_filename, request
-                    )
-                    responses.append(response)
-                except Exception as e:
-                    logger.error(
-                        f"Error processing split document {doc_filename}: {str(e)}"
-                    )
-                    # Create error response for failed document
-                    error_response = IngestionResponse(
-                        document_id=uuid4(),
-                        original_filename=doc_filename,
-                        storage_path="",
-                        type=request.type,
-                        status=DocumentStatus.PROCESSING_FAILED,
-                        message=f"Processing failed: {str(e)}",
-                        is_duplicate=False,
-                    )
-                    responses.append(error_response)
-
-            return responses
+            # Process batch PDF as single document (preserve context)
+            logger.info(f"Processing batch PDF as single document: {filename}")
+            response = await self._process_document(file_content, filename, request)
+            return [response]
 
         except Exception as e:
             logger.error(f"Error ingesting batch documents from {filename}: {str(e)}")
