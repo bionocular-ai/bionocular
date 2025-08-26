@@ -3,7 +3,7 @@
 import io
 import logging
 
-from PyPDF2 import PdfReader, PdfWriter
+from PyPDF2 import PdfReader
 
 from ..domain.interfaces import PDFProcessorInterface
 
@@ -100,6 +100,20 @@ class PyPDF2Processor(PDFProcessorInterface):
             logger.error(f"Error checking if PDF is batch: {str(e)}")
             return False
 
+    def _is_different_content(self, text1: str, text2: str) -> bool:
+        """Check if two text samples are significantly different."""
+        if not text1 or not text2:
+            return True
 
+        # Simple similarity check - can be improved
+        words1 = set(text1.lower().split()[:50])  # First 50 words
+        words2 = set(text2.lower().split()[:50])
 
+        if not words1 or not words2:
+            return True
 
+        intersection = len(words1.intersection(words2))
+        union = len(words1.union(words2))
+
+        similarity = intersection / union if union > 0 else 0
+        return similarity < 0.3  # Less than 30% similarity

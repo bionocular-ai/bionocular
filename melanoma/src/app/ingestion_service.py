@@ -57,7 +57,9 @@ class IngestionService(IngestionServiceInterface):
 
             # Check if this is a batch PDF (for information only)
             if await self.pdf_processor.is_batch_pdf(file_content):
-                logger.info(f"Detected batch PDF: {filename} - processing as single document")
+                logger.info(
+                    f"Detected batch PDF: {filename} - processing as single document"
+                )
 
             # Process as single document
             return await self._process_document(file_content, filename, request)
