@@ -3,7 +3,7 @@
 import io
 import logging
 
-from PyPDF2 import PdfReader, PdfWriter
+from PyPDF2 import PdfReader
 
 from ..domain.interfaces import PDFProcessorInterface
 
@@ -100,124 +100,20 @@ class PyPDF2Processor(PDFProcessorInterface):
             logger.error(f"Error checking if PDF is batch: {str(e)}")
             return False
 
-    async def split_batch_pdf(
-        self, file_content: bytes, filename: str
-    ) -> list[tuple[bytes, str]]:
-        """Split a batch PDF into individual documents."""
-        try:
-            pdf_stream = io.BytesIO(file_content)
-            reader = PdfReader(pdf_stream)
-
-            if len(reader.pages) <= 1:
-                # Single page, return as is
-                return [(file_content, filename)]
-
-            documents = []
-            current_doc_pages: list = []
-            current_doc_start = 0
-
-            for page_num, page in enumerate(reader.pages):
-                page_text = page.extract_text()
-
-                # Check if this page starts a new document
-                if self._is_new_document_start(page_text, page_num):
-                    # Save previous document if we have one
-                    if current_doc_pages:
-                        doc_content = self._create_pdf_from_pages(current_doc_pages)
-                        doc_filename = self._generate_document_filename(
-                            filename, current_doc_start, page_num - 1
-                        )
-                        documents.append((doc_content, doc_filename))
-
-                    # Start new document
-                    current_doc_pages = [page]
-                    current_doc_start = page_num
-                else:
-                    # Add page to current document
-                    current_doc_pages.append(page)
-
-            # Don't forget the last document
-            if current_doc_pages:
-                doc_content = self._create_pdf_from_pages(current_doc_pages)
-                doc_filename = self._generate_document_filename(
-                    filename, current_doc_start, len(reader.pages) - 1
-                )
-                documents.append((doc_content, doc_filename))
-
-            # If no splitting occurred, return original
-            if len(documents) == 0:
-                return [(file_content, filename)]
-
-            logger.info(f"Split PDF into {len(documents)} documents")
-            return documents
-
-        except Exception as e:
-            logger.error(f"Error splitting batch PDF: {str(e)}")
-            # Return original file if splitting fails
-            return [(file_content, filename)]
-
-    def _is_new_document_start(self, page_text: str, page_num: int) -> bool:
-        """Determine if a page starts a new document."""
-        if page_num == 0:
-            return False  # First page is never a new document start
-
-        # Check for batch indicators
-        for indicator in self.batch_indicators:
-            if indicator in page_text:
-                return True
-
-        # Check if page starts with common scientific document patterns
-        lines = page_text.split("\n")
-        if len(lines) > 0:
-            first_line = lines[0].strip()
-            # Check for title-like patterns
-            if (
-                len(first_line) > 20
-                and len(first_line) < 200
-                and first_line.isupper()
-                or first_line[0].isupper()
-            ):
-                return True
-
-        return False
-
     def _is_different_content(self, text1: str, text2: str) -> bool:
-        """Check if two text blocks represent different content."""
-        # Simple heuristic: if less than 30% similarity, likely different documents
-        words1 = set(text1.lower().split())
-        words2 = set(text2.lower().split())
-
-        if len(words1) == 0 or len(words2) == 0:
+        """Check if two text samples are significantly different."""
+        if not text1 or not text2:
             return True
 
-        intersection = words1.intersection(words2)
-        similarity = len(intersection) / max(len(words1), len(words2))
+        # Simple similarity check - can be improved
+        words1 = set(text1.lower().split()[:50])  # First 50 words
+        words2 = set(text2.lower().split()[:50])
 
-        return similarity < 0.3
+        if not words1 or not words2:
+            return True
 
-    def _create_pdf_from_pages(self, pages: list) -> bytes:
-        """Create a new PDF from a list of pages."""
-        writer = PdfWriter()
+        intersection = len(words1.intersection(words2))
+        union = len(words1.union(words2))
 
-        for page in pages:
-            writer.add_page(page)
-
-        output_stream = io.BytesIO()
-        writer.write(output_stream)
-        output_stream.seek(0)
-
-        return output_stream.getvalue()
-
-    def _generate_document_filename(
-        self, original_filename: str, start_page: int, end_page: int
-    ) -> str:
-        """Generate a filename for a split document."""
-        base_name = original_filename.rsplit(".", 1)[0]
-        extension = (
-            original_filename.rsplit(".", 1)[1] if "." in original_filename else "pdf"
-        )
-
-        if start_page == end_page:
-            return f"{base_name}_page_{start_page + 1}.{extension}"
-        else:
-            return f"{base_name}_pages_{start_page + 1}-{end_page + 1}.{extension}"
+        similarity = intersection / union if union > 0 else 0
+        return similarity < 0.3  # Less than 30% similarity
