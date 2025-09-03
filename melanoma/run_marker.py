@@ -5,9 +5,9 @@ Usage:
   poetry run python run_marker.py <input_pdf> <output_dir>
 """
 
-import sys
-import json
 import asyncio
+import json
+import sys
 from pathlib import Path
 
 # Ensure src is on path when running from project root

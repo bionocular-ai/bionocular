@@ -3,8 +3,9 @@
 
 import os
 import sys
-import uvicorn
 from pathlib import Path
+
+import uvicorn
 
 # Add the src directory to Python path
 src_path = Path(__file__).parent / "src"
@@ -13,14 +14,14 @@ sys.path.insert(0, str(src_path))
 def main():
     """Main startup function."""
     print("🚀 Starting Bionocular Ingestion System...")
-    
+
     # Check if we're in the right directory
     if not (Path.cwd() / "src").exists():
         print("❌ Error: Please run this script from the project root directory")
         print("   Current directory:", Path.cwd())
         print("   Expected to find 'src' directory here")
         sys.exit(1)
-    
+
     # Load environment variables
     env_file = Path.cwd() / ".env"
     if env_file.exists():
@@ -29,17 +30,17 @@ def main():
         load_dotenv()
     else:
         print("⚠️  No .env file found, using default configuration")
-    
+
     # Configuration
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", "8000"))
-    
+
     print(f"🌐 Starting server on {host}:{port}")
     print(f"📚 API Documentation: http://{host}:{port}/docs")
     print(f"📊 Health Check: http://{host}:{port}/health")
     print("⏹️  Press Ctrl+C to stop the server")
     print()
-    
+
     try:
         # Start the FastAPI server
         uvicorn.run(
