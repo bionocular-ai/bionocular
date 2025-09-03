@@ -3,7 +3,18 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from .models import Document, DocumentType, IngestionRequest, IngestionResponse
+from .models import (
+    Chunk,
+    ChunkingConfiguration,
+    ConferenceType,
+    Document,
+    DocumentType,
+    IngestionRequest,
+    IngestionResponse,
+    ParsedAbstract,
+    PostprocessingConfiguration,
+    PostprocessingResult,
+)
 
 
 class StorageInterface(ABC):
@@ -85,4 +96,92 @@ class IngestionServiceInterface(ABC):
         self, file_content: bytes, filename: str, request: IngestionRequest
     ) -> list[IngestionResponse]:
         """Ingest multiple documents from a batch PDF."""
+        pass
+
+
+# Chunking Domain Interfaces
+
+
+class ChunkingStrategyInterface(ABC):
+    """Interface for text chunking strategies."""
+
+    @abstractmethod
+    async def chunk_content(
+        self,
+        content: str,
+        configuration: ChunkingConfiguration,
+        document_id: Optional[str] = None,
+        filename: str = "",
+    ) -> list[Chunk]:
+        """Chunk content according to the strategy."""
+        pass
+
+    @abstractmethod
+    def supports_configuration(self, configuration: ChunkingConfiguration) -> bool:
+        """Check if this strategy supports the given configuration."""
+        pass
+
+
+# Postprocessing Interfaces
+
+
+class PostprocessorInterface(ABC):
+    """Interface for conference-specific postprocessors."""
+
+    @abstractmethod
+    def get_conference_type(self) -> ConferenceType:
+        """Get the conference type this processor handles."""
+        pass
+
+    @abstractmethod
+    async def parse_abstract(self, abstract_text: str) -> ParsedAbstract:
+        """Parse a single abstract from raw text."""
+        pass
+
+    @abstractmethod
+    async def format_to_markdown(
+        self, parsed_abstract: ParsedAbstract, config: PostprocessingConfiguration
+    ) -> str:
+        """Format parsed abstract to structured markdown."""
+        pass
+
+    @abstractmethod
+    async def validate_abstract(self, parsed_abstract: ParsedAbstract) -> list[str]:
+        """Validate parsed abstract and return list of issues."""
+        pass
+
+    @abstractmethod
+    def clean_text(self, text: str) -> str:
+        """Clean and normalize text content."""
+        pass
+
+    @abstractmethod
+    def clean_table_content(self, table_text: str) -> str:
+        """Clean and format table content."""
+        pass
+
+
+class PostprocessingServiceInterface(ABC):
+    """Interface for postprocessing orchestration service."""
+
+    @abstractmethod
+    async def process_file(
+        self, input_path: str, output_path: str, config: PostprocessingConfiguration
+    ) -> PostprocessingResult:
+        """Process a single file containing conference abstracts."""
+        pass
+
+    @abstractmethod
+    async def process_batch(
+        self,
+        input_paths: list[str],
+        output_dir: str,
+        config: PostprocessingConfiguration,
+    ) -> list[PostprocessingResult]:
+        """Process multiple files in batch."""
+        pass
+
+    @abstractmethod
+    async def validate_file(self, file_path: str) -> dict[str, any]:
+        """Validate a processed file and return validation summary."""
         pass
