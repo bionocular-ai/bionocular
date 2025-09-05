@@ -13,7 +13,7 @@ from ..infrastructure.database import (
     get_db_session,
     init_database,
 )
-from ..infrastructure.pdf_processor import PyPDF2Processor
+from ..infrastructure.marker_processor import MarkerPDFProcessor
 from ..infrastructure.repository import SQLAlchemyDocumentRepository
 from ..infrastructure.storage import LocalFileStorage
 from .ingestion_service import IngestionService
@@ -39,7 +39,12 @@ def get_ingestion_service(db: Session = Depends(get_db_session)) -> IngestionSer
     """Dependency to get the ingestion service."""
     storage = LocalFileStorage()
     repository = SQLAlchemyDocumentRepository(db)
-    pdf_processor = PyPDF2Processor()
+
+    # Use Marker processor for superior accuracy
+    use_llm = os.getenv("MARKER_USE_LLM", "false").lower() == "true"
+    extract_images = os.getenv("MARKER_EXTRACT_IMAGES", "true").lower() == "true"
+
+    pdf_processor = MarkerPDFProcessor(use_llm=use_llm, extract_images=extract_images)
 
     return IngestionService(storage, repository, pdf_processor)
 
