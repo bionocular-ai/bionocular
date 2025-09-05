@@ -11,21 +11,19 @@ Usage:
 
 import subprocess
 import sys
-import os
 from pathlib import Path
-from typing import List, Optional
 
 
-def run_command(cmd: List[str], check: bool = True) -> subprocess.CompletedProcess:
+def run_command(cmd: list[str], check: bool = True) -> subprocess.CompletedProcess:
     """Run a shell command."""
     print(f"🔄 Running: {' '.join(cmd)}")
     result = subprocess.run(cmd, check=check, capture_output=True, text=True)
-    
+
     if result.stdout:
         print(result.stdout)
     if result.stderr:
         print(result.stderr, file=sys.stderr)
-    
+
     return result
 
 
@@ -99,16 +97,16 @@ def run_type_checking():
 def run_all_quality_checks():
     """Run all quality checks."""
     print("🚀 Running all quality checks...")
-    
+
     checks = [
         ("Code Formatting", format_code),
         ("Linting", run_linting),
         ("Type Checking", run_type_checking),
         ("Tests", run_tests),
     ]
-    
+
     failed_checks = []
-    
+
     for check_name, check_func in checks:
         try:
             print(f"\n--- {check_name} ---")
@@ -118,7 +116,7 @@ def run_all_quality_checks():
         except Exception as e:
             print(f"❌ {check_name} failed with error: {e}")
             failed_checks.append(check_name)
-    
+
     if failed_checks:
         print(f"\n❌ Failed checks: {', '.join(failed_checks)}")
         sys.exit(1)
@@ -162,7 +160,7 @@ def initialize_database():
 def clean_project():
     """Clean build artifacts and cache."""
     print("🧹 Cleaning project...")
-    
+
     # Remove build artifacts
     build_dirs = ["dist/", "build/", "__pycache__/", "*.egg-info/"]
     for pattern in build_dirs:
@@ -174,7 +172,7 @@ def clean_project():
             else:
                 path.unlink()
                 print(f"🗑️ Removed: {path}")
-    
+
     # Remove test artifacts
     test_dirs = ["htmlcov/", ".coverage", ".pytest_cache/"]
     for pattern in test_dirs:
@@ -186,7 +184,7 @@ def clean_project():
             else:
                 path.unlink()
                 print(f"🗑️ Removed: {path}")
-    
+
     print("✅ Project cleaned successfully!")
 
 
