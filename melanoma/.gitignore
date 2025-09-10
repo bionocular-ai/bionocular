@@ -6,6 +6,12 @@ data/processed/*_meta.json
 # Keep the directory structure but ignore the generated content
 !data/processed/.gitkeep
 
+# Postprocessed data directories (generated from processed data)
+data/postprocessed/ASCO_Abstracts/
+data/postprocessed/ESMO_Abstracts/
+data/processed/ASCO_Abstracts/
+data/processed/ESMO_Abstracts/
+
 # Python cache and build files
 __pycache__/
 *.py[cod]

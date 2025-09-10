@@ -1,22 +1,38 @@
 """Implementation of various chunking strategies for oncology abstracts."""
 
 import re
-from typing import Any
+from abc import ABC, abstractmethod
+from typing import Any, Optional
 from uuid import UUID, uuid4
 
-from domain.interfaces import ChunkingStrategyInterface
-from domain.models import Chunk, ChunkingConfiguration, ChunkingStrategy, ChunkType
+from ..domain.interfaces import ChunkingStrategyInterface
+from ..domain.models import Chunk, ChunkingConfiguration, ChunkingStrategy, ChunkType
 
 
-class BaseChunkingStrategy(ChunkingStrategyInterface):
+class BaseChunkingStrategy(ChunkingStrategyInterface, ABC):
     """Base class for chunking strategies."""
 
-    def __init__(self):
-        self.supported_strategies = []
+    def __init__(self, configuration: ChunkingConfiguration):
+        self.supported_strategies: list[str] = []
+        self.configuration = configuration
 
     def supports_configuration(self, configuration: ChunkingConfiguration) -> bool:
         """Check if this strategy supports the given configuration."""
         return configuration.strategy in self.supported_strategies
+
+    @abstractmethod
+    async def chunk_content(
+        self,
+        content: str,
+        configuration: ChunkingConfiguration,
+        document_id: Optional[str] = None,
+        filename: str = "",
+    ) -> list[Chunk]:
+        """Chunk content using this strategy.
+
+        This is an abstract method that must be implemented by concrete strategies.
+        """
+        raise NotImplementedError("Subclasses must implement chunk_content")
 
     def _extract_metadata_from_content(
         self, content: str, filename: str = ""
@@ -199,8 +215,8 @@ class BaseChunkingStrategy(ChunkingStrategyInterface):
 class HeaderBasedChunkingStrategy(BaseChunkingStrategy):
     """Chunking strategy based on markdown headers."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, configuration: ChunkingConfiguration):
+        super().__init__(configuration)
         self.supported_strategies = [ChunkingStrategy.HEADER_BASED]
 
     async def chunk_content(
@@ -282,8 +298,8 @@ class HeaderBasedChunkingStrategy(BaseChunkingStrategy):
 class RecursiveChunkingStrategy(BaseChunkingStrategy):
     """Recursive chunking strategy for large content."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, configuration: ChunkingConfiguration):
+        super().__init__(configuration)
         self.supported_strategies = [ChunkingStrategy.RECURSIVE]
 
     async def chunk_content(
@@ -381,11 +397,11 @@ class RecursiveChunkingStrategy(BaseChunkingStrategy):
 class HybridChunkingStrategy(BaseChunkingStrategy):
     """Hybrid strategy combining header-based and recursive chunking."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, configuration: ChunkingConfiguration):
+        super().__init__(configuration)
         self.supported_strategies = [ChunkingStrategy.HYBRID]
-        self.header_strategy = HeaderBasedChunkingStrategy()
-        self.recursive_strategy = RecursiveChunkingStrategy()
+        self.header_strategy = HeaderBasedChunkingStrategy(configuration)
+        self.recursive_strategy = RecursiveChunkingStrategy(configuration)
 
     async def chunk_content(
         self,
@@ -434,13 +450,13 @@ class ChunkingStrategyFactory:
 
     @classmethod
     def create_strategy(
-        cls, strategy_type: ChunkingStrategy
+        cls, strategy_type: ChunkingStrategy, configuration: ChunkingConfiguration
     ) -> ChunkingStrategyInterface:
         """Create a chunking strategy instance."""
         if strategy_type not in cls._strategies:
             raise ValueError(f"Unsupported chunking strategy: {strategy_type}")
 
-        return cls._strategies[strategy_type]()
+        return cls._strategies[strategy_type](configuration)  # type: ignore[abstract]
 
     @classmethod
     def get_available_strategies(cls) -> list[ChunkingStrategy]:

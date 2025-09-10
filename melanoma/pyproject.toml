@@ -19,6 +19,10 @@ python-multipart = "^0.0.6"
 python-dotenv = "^1.0.0"
 alembic = "^1.12.1"
 marker-pdf = "1.8.2"
+# Embedding and Vector Store Dependencies
+sentence-transformers = "^2.7.0"
+chromadb = "^0.4.0"
+numpy = "^1.24.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

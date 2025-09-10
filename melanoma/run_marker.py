@@ -24,19 +24,24 @@ async def process_pdf(input_pdf: Path, output_dir: Path) -> None:
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    processor = MarkerPDFProcessor(use_llm=False, extract_images=True)
-    file_bytes = input_pdf.read_bytes()
+    # Use context manager for proper resource cleanup
+    with MarkerPDFProcessor(use_llm=False, extract_images=True) as processor:
+        file_bytes = input_pdf.read_bytes()
 
-    # Extract text and metadata
-    text = await processor.extract_text(file_bytes)
-    metadata = await processor.extract_metadata(file_bytes)
+        # Extract text and metadata using enhanced processor
+        text = await processor.extract_text(file_bytes)
+        metadata = await processor.extract_metadata(file_bytes)
 
-    stem = input_pdf.stem
-    (output_dir / f"{stem}.md").write_text(text, encoding="utf-8")
-    (output_dir / f"{stem}.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+        stem = input_pdf.stem
+        (output_dir / f"{stem}.md").write_text(text, encoding="utf-8")
+        (output_dir / f"{stem}.json").write_text(json.dumps(metadata, indent=2, default=str), encoding="utf-8")
 
-    print(f"Saved: {output_dir / f'{stem}.md'}")
-    print(f"Saved: {output_dir / f'{stem}.json'}")
+        print(f"✅ Saved: {output_dir / f'{stem}.md'}")
+        print(f"✅ Saved: {output_dir / f'{stem}.json'}")
+        
+        # Display processing stats
+        stats = processor.get_processing_stats()
+        print(f"📊 Processing time: {stats.get('total_runtime', 0):.2f}s")
 
 
 def main() -> None:

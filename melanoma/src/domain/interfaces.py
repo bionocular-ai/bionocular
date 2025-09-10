@@ -1,19 +1,25 @@
 """Domain interfaces for the ingestion system."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Any, Optional
 
 from .models import (
     Chunk,
     ChunkingConfiguration,
+    ChunkWithEmbedding,
     ConferenceType,
     Document,
     DocumentType,
+    EmbeddingConfiguration,
     IngestionRequest,
     IngestionResponse,
     ParsedAbstract,
     PostprocessingConfiguration,
     PostprocessingResult,
+    RAGQuery,
+    RAGResponse,
+    SearchQuery,
+    SearchResult,
 )
 
 
@@ -78,6 +84,16 @@ class PDFProcessorInterface(ABC):
     @abstractmethod
     async def validate_pdf(self, file_content: bytes) -> bool:
         """Validate that the file is a valid PDF."""
+        pass
+
+    @abstractmethod
+    async def extract_text(self, file_content: bytes) -> str:
+        """Extract text content from PDF."""
+        pass
+
+    @abstractmethod
+    async def extract_metadata(self, file_content: bytes) -> dict[str, Any]:
+        """Extract metadata from PDF."""
         pass
 
 
@@ -184,4 +200,97 @@ class PostprocessingServiceInterface(ABC):
     @abstractmethod
     async def validate_file(self, file_path: str) -> dict[str, any]:
         """Validate a processed file and return validation summary."""
+        pass
+
+
+# =============================================================================
+# EMBEDDING AND VECTOR STORE INTERFACES
+# =============================================================================
+
+
+class EmbeddingServiceInterface(ABC):
+    """Interface for embedding generation services."""
+
+    @abstractmethod
+    async def generate_embedding(
+        self, text: str, config: EmbeddingConfiguration
+    ) -> list[float]:
+        """Generate embedding for a single text."""
+        pass
+
+    @abstractmethod
+    async def generate_embeddings_batch(
+        self, texts: list[str], config: EmbeddingConfiguration
+    ) -> list[list[float]]:
+        """Generate embeddings for multiple texts."""
+        pass
+
+    @abstractmethod
+    async def get_embedding_dimension(self, config: EmbeddingConfiguration) -> int:
+        """Get the dimension of embeddings for the given model."""
+        pass
+
+    @abstractmethod
+    async def validate_model(self, model_name: str) -> bool:
+        """Validate that the model is available and working."""
+        pass
+
+    @abstractmethod
+    async def cleanup_models(self) -> None:
+        """Clean up loaded models to free memory."""
+        pass
+
+
+class VectorStoreInterface(ABC):
+    """Interface for vector storage and retrieval."""
+
+    @abstractmethod
+    async def store_chunks(self, chunks: list[ChunkWithEmbedding]) -> None:
+        """Store chunks with their embeddings."""
+        pass
+
+    @abstractmethod
+    async def search_similar(self, query: SearchQuery) -> list[SearchResult]:
+        """Search for similar chunks."""
+        pass
+
+    @abstractmethod
+    async def get_chunk_by_id(self, chunk_id: str) -> Optional[ChunkWithEmbedding]:
+        """Get a specific chunk by ID."""
+        pass
+
+    @abstractmethod
+    async def delete_chunks(self, chunk_ids: list[str]) -> None:
+        """Delete chunks by their IDs."""
+        pass
+
+    @abstractmethod
+    async def get_store_info(self) -> dict[str, Any]:
+        """Get information about the vector store."""
+        pass
+
+    @abstractmethod
+    async def clear_store(self) -> None:
+        """Clear all data from the vector store."""
+        pass
+
+
+class RAGServiceInterface(ABC):
+    """Interface for RAG (Retrieval-Augmented Generation) operations."""
+
+    @abstractmethod
+    async def process_query(self, query: RAGQuery) -> RAGResponse:
+        """Process a RAG query and return a response."""
+        pass
+
+    @abstractmethod
+    async def generate_context(self, question: str, chunks: list[SearchResult]) -> str:
+        """Generate context from retrieved chunks."""
+        pass
+
+    @abstractmethod
+    async def format_response(
+        self, answer: str, sources: list[SearchResult]
+    ) -> RAGResponse:
+        """Format the final RAG response."""
         pass

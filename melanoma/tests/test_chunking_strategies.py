@@ -9,12 +9,12 @@ import pytest
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from domain.models import (  # noqa: E402
+from src.domain.models import (  # noqa: E402
     ChunkingConfiguration,
     ChunkingStrategy,
     ChunkType,
 )
-from infrastructure.chunking_strategies import (  # noqa: E402
+from src.infrastructure.chunking_strategies import (  # noqa: E402
     ChunkingStrategyFactory,
     HeaderBasedChunkingStrategy,
     HybridChunkingStrategy,
@@ -57,8 +57,8 @@ class TestHeaderBasedChunkingStrategy:
     """Test header-based chunking strategy."""
 
     @pytest.fixture
-    def strategy(self):
-        return HeaderBasedChunkingStrategy()
+    def strategy(self, default_config):
+        return HeaderBasedChunkingStrategy(default_config)
 
     @pytest.mark.asyncio
     async def test_chunk_content(self, strategy, sample_abstract, default_config):
@@ -126,8 +126,8 @@ class TestRecursiveChunkingStrategy:
     """Test recursive chunking strategy."""
 
     @pytest.fixture
-    def strategy(self):
-        return RecursiveChunkingStrategy()
+    def strategy(self, default_config):
+        return RecursiveChunkingStrategy(default_config)
 
     @pytest.mark.asyncio
     async def test_chunk_small_content(self, strategy, default_config):
@@ -174,8 +174,8 @@ class TestHybridChunkingStrategy:
     """Test hybrid chunking strategy."""
 
     @pytest.fixture
-    def strategy(self):
-        return HybridChunkingStrategy()
+    def strategy(self, default_config):
+        return HybridChunkingStrategy(default_config)
 
     @pytest.mark.asyncio
     async def test_hybrid_chunking(self, strategy, sample_abstract, default_config):
@@ -255,27 +255,27 @@ Short conclusions."""
 class TestChunkingStrategyFactory:
     """Test chunking strategy factory."""
 
-    def test_create_header_based_strategy(self):
+    def test_create_header_based_strategy(self, default_config):
         """Test creating header-based strategy."""
         strategy = ChunkingStrategyFactory.create_strategy(
-            ChunkingStrategy.HEADER_BASED
+            ChunkingStrategy.HEADER_BASED, default_config
         )
         assert isinstance(strategy, HeaderBasedChunkingStrategy)
 
-    def test_create_recursive_strategy(self):
+    def test_create_recursive_strategy(self, default_config):
         """Test creating recursive strategy."""
-        strategy = ChunkingStrategyFactory.create_strategy(ChunkingStrategy.RECURSIVE)
+        strategy = ChunkingStrategyFactory.create_strategy(ChunkingStrategy.RECURSIVE, default_config)
         assert isinstance(strategy, RecursiveChunkingStrategy)
 
-    def test_create_hybrid_strategy(self):
+    def test_create_hybrid_strategy(self, default_config):
         """Test creating hybrid strategy."""
-        strategy = ChunkingStrategyFactory.create_strategy(ChunkingStrategy.HYBRID)
+        strategy = ChunkingStrategyFactory.create_strategy(ChunkingStrategy.HYBRID, default_config)
         assert isinstance(strategy, HybridChunkingStrategy)
 
-    def test_unsupported_strategy(self):
+    def test_unsupported_strategy(self, default_config):
         """Test error for unsupported strategy."""
         with pytest.raises(ValueError, match="Unsupported chunking strategy"):
-            ChunkingStrategyFactory.create_strategy("unsupported_strategy")
+            ChunkingStrategyFactory.create_strategy("unsupported_strategy", default_config)
 
     def test_get_available_strategies(self):
         """Test getting available strategies."""
@@ -289,8 +289,8 @@ class TestChunkMetadata:
     """Test chunk metadata extraction and handling."""
 
     @pytest.fixture
-    def strategy(self):
-        return HeaderBasedChunkingStrategy()
+    def strategy(self, default_config):
+        return HeaderBasedChunkingStrategy(default_config)
 
     @pytest.mark.asyncio
     async def test_metadata_with_tables(self, strategy, default_config):
