@@ -157,21 +157,25 @@ class PyPDF2Processor(PDFProcessorInterface):
 
             metadata = {}
             if reader.metadata:
-                metadata.update({
-                    "title": reader.metadata.get("/Title", ""),
-                    "author": reader.metadata.get("/Author", ""),
-                    "subject": reader.metadata.get("/Subject", ""),
-                    "creator": reader.metadata.get("/Creator", ""),
-                    "producer": reader.metadata.get("/Producer", ""),
-                    "creation_date": str(reader.metadata.get("/CreationDate", "")),
-                    "modification_date": str(reader.metadata.get("/ModDate", "")),
-                })
+                metadata.update(
+                    {
+                        "title": reader.metadata.get("/Title", ""),
+                        "author": reader.metadata.get("/Author", ""),
+                        "subject": reader.metadata.get("/Subject", ""),
+                        "creator": reader.metadata.get("/Creator", ""),
+                        "producer": reader.metadata.get("/Producer", ""),
+                        "creation_date": str(reader.metadata.get("/CreationDate", "")),
+                        "modification_date": str(reader.metadata.get("/ModDate", "")),
+                    }
+                )
 
             # Add basic file info
-            metadata.update({
-                "page_count": len(reader.pages),
-                "is_batch": await self.is_batch_pdf(file_content),
-            })
+            metadata.update(
+                {
+                    "page_count": len(reader.pages),
+                    "is_batch": await self.is_batch_pdf(file_content),
+                }
+            )
 
             return metadata
 

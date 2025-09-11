@@ -264,18 +264,24 @@ class TestChunkingStrategyFactory:
 
     def test_create_recursive_strategy(self, default_config):
         """Test creating recursive strategy."""
-        strategy = ChunkingStrategyFactory.create_strategy(ChunkingStrategy.RECURSIVE, default_config)
+        strategy = ChunkingStrategyFactory.create_strategy(
+            ChunkingStrategy.RECURSIVE, default_config
+        )
         assert isinstance(strategy, RecursiveChunkingStrategy)
 
     def test_create_hybrid_strategy(self, default_config):
         """Test creating hybrid strategy."""
-        strategy = ChunkingStrategyFactory.create_strategy(ChunkingStrategy.HYBRID, default_config)
+        strategy = ChunkingStrategyFactory.create_strategy(
+            ChunkingStrategy.HYBRID, default_config
+        )
         assert isinstance(strategy, HybridChunkingStrategy)
 
     def test_unsupported_strategy(self, default_config):
         """Test error for unsupported strategy."""
         with pytest.raises(ValueError, match="Unsupported chunking strategy"):
-            ChunkingStrategyFactory.create_strategy("unsupported_strategy", default_config)
+            ChunkingStrategyFactory.create_strategy(
+                "unsupported_strategy", default_config
+            )
 
     def test_get_available_strategies(self):
         """Test getting available strategies."""

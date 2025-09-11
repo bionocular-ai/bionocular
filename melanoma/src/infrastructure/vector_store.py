@@ -92,16 +92,23 @@ class ChromaVectorStore(VectorStoreInterface):
             from typing import Any, cast
 
             chroma_embeddings = cast(Any, embeddings)
-            chroma_metadatas = cast(Any, [
-                {k: v for k, v in meta.items() if isinstance(v, (str, int, float, bool))}
-                for meta in metadatas
-            ])
+            chroma_metadatas = cast(
+                Any,
+                [
+                    {
+                        k: v
+                        for k, v in meta.items()
+                        if isinstance(v, (str, int, float, bool))
+                    }
+                    for meta in metadatas
+                ],
+            )
 
             self.collection.add(
                 ids=ids,
                 embeddings=chroma_embeddings,
                 documents=documents,
-                metadatas=chroma_metadatas
+                metadatas=chroma_metadatas,
             )
 
             logger.info(
@@ -166,11 +173,14 @@ class ChromaVectorStore(VectorStoreInterface):
                     if similarity_score >= query.similarity_threshold:
                         # Convert ChromaDB metadata to our expected type
                         typed_metadata: dict[str, str | int | float | bool] = {
-                            k: v for k, v in metadata.items()
+                            k: v
+                            for k, v in metadata.items()
                             if isinstance(v, (str, int, float, bool))
                         }
 
-                        chunk = self._reconstruct_chunk(chunk_id, document, typed_metadata)
+                        chunk = self._reconstruct_chunk(
+                            chunk_id, document, typed_metadata
+                        )
                         search_results.append(
                             SearchResult(
                                 chunk=chunk,
@@ -208,7 +218,8 @@ class ChromaVectorStore(VectorStoreInterface):
                 # Convert ChromaDB metadata to our expected type
                 metadata = results["metadatas"][0]
                 typed_metadata: dict[str, str | int | float | bool] = {
-                    k: v for k, v in metadata.items()
+                    k: v
+                    for k, v in metadata.items()
                     if isinstance(v, (str, int, float, bool))
                 }
 

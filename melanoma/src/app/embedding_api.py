@@ -118,7 +118,9 @@ async def generate_embedding(
         raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Embedding generation failed: {e}")
-        raise HTTPException(status_code=500, detail="Embedding generation failed") from e
+        raise HTTPException(
+            status_code=500, detail="Embedding generation failed"
+        ) from e
 
 
 @router.post("/search", response_model=SearchResponse)
@@ -151,6 +153,7 @@ async def search_similar(
         chunk_types = None
         if request.chunk_types:
             from src.domain.models import ChunkType
+
             chunk_types = [ChunkType(ct) for ct in request.chunk_types]
 
         search_query = SearchQuery(

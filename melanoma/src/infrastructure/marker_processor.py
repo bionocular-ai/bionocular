@@ -445,7 +445,9 @@ class MarkerPDFProcessor(PDFProcessorInterface):
                 if total_processed > 0:
                     stats["success_rate"] = successful / total_processed
                     if isinstance(stats["total_runtime"], (int, float)):
-                        stats["avg_time_per_file"] = stats["total_runtime"] / total_processed
+                        stats["avg_time_per_file"] = (
+                            stats["total_runtime"] / total_processed
+                        )
         return stats
 
     def reset_stats(self) -> None:
