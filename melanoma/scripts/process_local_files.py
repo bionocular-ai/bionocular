@@ -25,7 +25,9 @@ from main.binocular.python.infrastructure.pdf_processor import (  # noqa: E402
 from main.binocular.python.infrastructure.storage import LocalFileStorage  # noqa: E402
 
 
-async def process_single_file(file_path: str, document_type: DocumentType, metadata: dict = None):
+async def process_single_file(
+    file_path: str, document_type: DocumentType, metadata: dict = None
+):
     """Process a single PDF file."""
     try:
         # Initialize services
@@ -34,6 +36,7 @@ async def process_single_file(file_path: str, document_type: DocumentType, metad
 
         # For CLI processing, we'll use a mock repository
         from unittest.mock import Mock
+
         mock_repository = Mock()
         mock_repository.find_by_hash.return_value = None
         mock_repository.save_document.return_value = None
@@ -41,20 +44,15 @@ async def process_single_file(file_path: str, document_type: DocumentType, metad
         ingestion_service = IngestionService(storage, mock_repository, pdf_processor)
 
         # Read file content
-        with open(file_path, 'rb') as f:
+        with open(file_path, "rb") as f:
             file_content = f.read()
 
         # Create request
-        request = IngestionRequest(
-            type=document_type,
-            metadata=metadata or {}
-        )
+        request = IngestionRequest(type=document_type, metadata=metadata or {})
 
         # Process document
         response = await ingestion_service.ingest_single_document(
-            file_content,
-            os.path.basename(file_path),
-            request
+            file_content, os.path.basename(file_path), request
         )
 
         print(f"✅ Processed: {file_path}")
@@ -68,7 +66,9 @@ async def process_single_file(file_path: str, document_type: DocumentType, metad
         return None
 
 
-async def process_directory(directory_path: str, document_type: DocumentType, recursive: bool = False):
+async def process_directory(
+    directory_path: str, document_type: DocumentType, recursive: bool = False
+):
     """Process all PDF files in a directory."""
     print(f"📁 Processing directory: {directory_path}")
 
@@ -77,11 +77,11 @@ async def process_directory(directory_path: str, document_type: DocumentType, re
     if recursive:
         for root, _dirs, files in os.walk(directory_path):
             for file in files:
-                if file.lower().endswith('.pdf'):
+                if file.lower().endswith(".pdf"):
                     pdf_files.append(os.path.join(root, file))
     else:
         for file in os.listdir(directory_path):
-            if file.lower().endswith('.pdf'):
+            if file.lower().endswith(".pdf"):
                 pdf_files.append(os.path.join(directory_path, file))
 
     if not pdf_files:
@@ -130,18 +130,17 @@ async def main():
 
     # Check for files in data directories
     print("\n🔍 Checking data directories...")
-    data_dirs = {
-        "Abstracts": "./data/abstracts",
-        "Publications": "./data/publications"
-    }
+    data_dirs = {"Abstracts": "./data/abstracts", "Publications": "./data/publications"}
 
     for name, path in data_dirs.items():
         if os.path.exists(path):
-            pdf_files = [f for f in os.listdir(path) if f.lower().endswith('.pdf')]
+            pdf_files = [f for f in os.listdir(path) if f.lower().endswith(".pdf")]
             print(f"   {name}: {len(pdf_files)} PDF files")
 
             if pdf_files:
-                print(f"      Files: {', '.join(pdf_files[:3])}{'...' if len(pdf_files) > 3 else ''}")
+                print(
+                    f"      Files: {', '.join(pdf_files[:3])}{'...' if len(pdf_files) > 3 else ''}"
+                )
         else:
             print(f"   {name}: Directory not found")
 
@@ -152,7 +151,7 @@ async def main():
     while True:
         user_input = input("\nFile path (or 'q' to quit): ").strip()
 
-        if user_input.lower() == 'q':
+        if user_input.lower() == "q":
             break
 
         if not user_input:
@@ -162,7 +161,7 @@ async def main():
             print(f"❌ File not found: {user_input}")
             continue
 
-        if not user_input.lower().endswith('.pdf'):
+        if not user_input.lower().endswith(".pdf"):
             print("❌ Only PDF files are supported")
             continue
 

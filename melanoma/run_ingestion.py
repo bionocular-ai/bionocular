@@ -11,6 +11,7 @@ import uvicorn
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
 
+
 def main():
     """Main startup function."""
     print("🚀 Starting Bionocular Ingestion System...")
@@ -27,6 +28,7 @@ def main():
     if env_file.exists():
         print("📋 Loading environment from .env file...")
         from dotenv import load_dotenv
+
         load_dotenv()
     else:
         print("⚠️  No .env file found, using default configuration")
@@ -48,13 +50,14 @@ def main():
             host=host,
             port=port,
             reload=True,  # Enable auto-reload for development
-            log_level="info"
+            log_level="info",
         )
     except KeyboardInterrupt:
         print("\n🛑 Server stopped by user")
     except Exception as e:
         print(f"❌ Error starting server: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

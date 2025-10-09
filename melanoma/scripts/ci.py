@@ -31,10 +31,23 @@ def run_ci_tests():
 
     # Run all quality checks
     checks = [
-        ("Code Formatting Check", ["poetry", "run", "black", "--check", "src/", "tests/"]),
+        (
+            "Code Formatting Check",
+            ["poetry", "run", "black", "--check", "src/", "tests/"],
+        ),
         ("Linting", ["poetry", "run", "ruff", "check", "src/", "tests/"]),
         ("Type Checking", ["poetry", "run", "mypy", "src/"]),
-        ("Tests with Coverage", ["poetry", "run", "pytest", "--cov=src", "--cov-report=xml", "--cov-report=term-missing"]),
+        (
+            "Tests with Coverage",
+            [
+                "poetry",
+                "run",
+                "pytest",
+                "--cov=src",
+                "--cov-report=xml",
+                "--cov-report=term-missing",
+            ],
+        ),
     ]
 
     failed_checks = []
@@ -62,7 +75,9 @@ def build_for_ci():
     try:
         # Clean previous builds
         print("🧹 Cleaning previous builds...")
-        run_command(["poetry", "run", "python", "-m", "scripts.dev", "clean"], check=False)
+        run_command(
+            ["poetry", "run", "python", "-m", "scripts.dev", "clean"], check=False
+        )
 
         # Install dependencies
         print("📦 Installing dependencies...")

@@ -21,8 +21,14 @@ alembic = "^1.12.1"
 marker-pdf = "1.8.2"
 # Embedding and Vector Store Dependencies
 sentence-transformers = "^2.7.0"
-chromadb = "^0.4.0"
-numpy = "^1.24.0"
+chromadb = ">=0.5.0"
+numpy = ">=2.1.0"
+langchain = "^0.3.27"
+langchain-community = "^0.3.29"
+langchain-openai = "^0.3.33"
+langchain-huggingface = "^0.3.1"
+tenacity = "^9.1.2"
+langchain-chroma = "^0.2.6"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

@@ -34,11 +34,13 @@ async def process_pdf(input_pdf: Path, output_dir: Path) -> None:
 
         stem = input_pdf.stem
         (output_dir / f"{stem}.md").write_text(text, encoding="utf-8")
-        (output_dir / f"{stem}.json").write_text(json.dumps(metadata, indent=2, default=str), encoding="utf-8")
+        (output_dir / f"{stem}.json").write_text(
+            json.dumps(metadata, indent=2, default=str), encoding="utf-8"
+        )
 
         print(f"✅ Saved: {output_dir / f'{stem}.md'}")
         print(f"✅ Saved: {output_dir / f'{stem}.json'}")
-        
+
         # Display processing stats
         stats = processor.get_processing_stats()
         print(f"📊 Processing time: {stats.get('total_runtime', 0):.2f}s")

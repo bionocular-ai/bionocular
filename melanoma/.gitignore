@@ -100,3 +100,9 @@ faiss_*/
 demo_chunks/
 comparison_chunks/
 comparison_results/
+
+# Database files
+data/doctorci.db
+*.db
+*.sqlite
+*.sqlite3

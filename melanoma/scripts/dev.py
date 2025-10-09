@@ -53,7 +53,16 @@ def run_tests_with_coverage():
     """Run tests with coverage report."""
     print("📊 Running tests with coverage...")
     try:
-        run_command(["poetry", "run", "pytest", "--cov=src", "--cov-report=html", "--cov-report=term-missing"])
+        run_command(
+            [
+                "poetry",
+                "run",
+                "pytest",
+                "--cov=src",
+                "--cov-report=html",
+                "--cov-report=term-missing",
+            ]
+        )
         print("✅ Coverage report generated!")
         print("📁 Open htmlcov/index.html to view detailed coverage")
     except subprocess.CalledProcessError as e:
@@ -167,6 +176,7 @@ def clean_project():
         for path in Path(".").glob(pattern):
             if path.is_dir():
                 import shutil
+
                 shutil.rmtree(path)
                 print(f"🗑️ Removed: {path}")
             else:
@@ -179,6 +189,7 @@ def clean_project():
         for path in Path(".").glob(pattern):
             if path.is_dir():
                 import shutil
+
                 shutil.rmtree(path)
                 print(f"🗑️ Removed: {path}")
             else:

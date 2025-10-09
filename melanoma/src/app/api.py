@@ -16,7 +16,9 @@ from ..infrastructure.database import (
 from ..infrastructure.marker_processor import MarkerPDFProcessor
 from ..infrastructure.repository import SQLAlchemyDocumentRepository
 from ..infrastructure.storage import LocalFileStorage
+from .clinical_api import router as clinical_router
 from .ingestion_service import IngestionService
+from .langchain_api import router as langchain_router
 
 # Configure logging
 logging.basicConfig(
@@ -29,10 +31,14 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(
-    title="Bionocular Ingestion API",
-    description="API for ingesting scientific PDFs about melanoma treatments",
-    version="0.1.0",
+    title="Bionocular Melanoma Research API",
+    description="API for ingesting and querying scientific PDFs about melanoma treatments with RAG capabilities",
+    version="0.2.0",
 )
+
+# Include routers
+app.include_router(langchain_router)
+app.include_router(clinical_router)
 
 
 def get_ingestion_service(db: Session = Depends(get_db_session)) -> IngestionService:
@@ -70,16 +76,39 @@ async def startup_event() -> None:
 async def root() -> dict:
     """Root endpoint."""
     return {
-        "message": "Bionocular Ingestion API",
-        "version": "0.1.0",
+        "message": "Bionocular Melanoma Research API",
+        "version": "0.2.0",
         "status": "running",
+        "capabilities": [
+            "Document Ingestion",
+            "RAG Query Processing",
+            "Clinical Data Extraction",
+            "Semantic Search",
+        ],
         "endpoints": {
-            "upload": "/ingest",
-            "local_file": "/ingest/local",
-            "batch_upload": "/ingest/batch",
-            "local_batch": "/ingest/local/batch",
-            "stats": "/stats",
-            "documents": "/documents",
+            "ingestion": {
+                "upload": "/ingest",
+                "local_file": "/ingest/local",
+                "batch_upload": "/ingest/batch",
+                "local_batch": "/ingest/local/batch",
+                "stats": "/stats",
+                "documents": "/documents",
+            },
+            "rag": {
+                "query": "/langchain/query",
+                "clinical": "/langchain/clinical",
+                "health": "/langchain/health",
+                "info": "/langchain/info",
+            },
+            "clinical_extraction": {
+                "extract": "/clinical/extract",
+                "extract_batch": "/clinical/extract/batch",
+                "validate": "/clinical/validate",
+                "export": "/clinical/export",
+                "process_document": "/clinical/process-document",
+                "statistics": "/clinical/statistics",
+                "health": "/clinical/health",
+            },
         },
     }
 

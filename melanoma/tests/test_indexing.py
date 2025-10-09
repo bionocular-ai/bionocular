@@ -23,7 +23,7 @@ from src.domain.models import (
     EmbeddingModel,
     SearchQuery,
 )
-from src.infrastructure.vector_store import ChromaVectorStore
+from src.infrastructure.langchain import LangChainVectorStore
 
 
 class TestVectorStore:
@@ -35,7 +35,7 @@ class TestVectorStore:
         import tempfile
 
         temp_dir = tempfile.mkdtemp()
-        store = ChromaVectorStore(persist_directory=temp_dir)
+        store = LangChainVectorStore(persist_directory=temp_dir)
         yield store
         # Clean up temp directory
         import shutil
@@ -116,9 +116,9 @@ class TestVectorStore:
     async def test_vector_store_initialization(self, vector_store):
         """Test vector store initializes correctly."""
         assert vector_store is not None
-        assert hasattr(vector_store, "collection")
-        assert hasattr(vector_store, "client")
+        assert hasattr(vector_store, "collection_name")
         assert hasattr(vector_store, "persist_directory")
+        assert hasattr(vector_store, "_vectorstore")
 
     @pytest.mark.asyncio
     async def test_store_chunks(self, vector_store, sample_chunks):
@@ -472,16 +472,28 @@ class TestEmbeddingIndexingIntegration:
     @pytest.fixture
     def embedding_service(self):
         """Create embedding service instance."""
-        from src.infrastructure.embedding_service import BioClinicalEmbeddingService
+        from src.infrastructure.langchain import LangChainEmbeddingService
 
-        return BioClinicalEmbeddingService()
+        return LangChainEmbeddingService()
 
     @pytest.fixture
     def chunking_factory(self):
         """Create chunking strategy factory."""
-        from src.infrastructure.chunking_strategies import ChunkingStrategyFactory
+        from src.app.langchain_factory_service import (
+            LangChainServiceFactory,
+            ServiceConfiguration,
+        )
 
-        return ChunkingStrategyFactory()
+        config = ServiceConfiguration(
+            chunking_strategy="header_based",
+            embedding_model="pritamdeka/S-BioBERT-snli-multinli-stsb",
+            llm_provider="openai",
+            llm_model="gpt-3.5-turbo",
+            temperature=0.1,
+            persist_directory="./test_chroma_db",
+            collection_name="test_chunks",
+        )
+        return LangChainServiceFactory(config)
 
     @pytest.fixture
     def embedding_config(self):
@@ -524,7 +536,7 @@ class TestEmbeddingIndexingIntegration:
         import tempfile
 
         temp_dir = tempfile.mkdtemp()
-        vector_store = ChromaVectorStore(persist_directory=temp_dir)
+        vector_store = LangChainVectorStore(persist_directory=temp_dir)
 
         try:
             # Sample medical text
@@ -545,11 +557,12 @@ class TestEmbeddingIndexingIntegration:
             """
 
             # Step 1: Chunk the text
-            chunking_strategy = chunking_factory.create_strategy(
-                chunking_config.strategy, chunking_config
-            )
+            chunking_strategy = chunking_factory.create_chunking_service()
             chunks = await chunking_strategy.chunk_content(
-                medical_text, chunking_config
+                content=medical_text,
+                configuration=chunking_config,
+                document_id=None,
+                filename="test_abstract.md",
             )
 
             assert len(chunks) > 0
@@ -631,7 +644,7 @@ class TestEmbeddingIndexingIntegration:
         import tempfile
 
         temp_dir = tempfile.mkdtemp()
-        vector_store = ChromaVectorStore(persist_directory=temp_dir)
+        vector_store = LangChainVectorStore(persist_directory=temp_dir)
 
         try:
             # Create test chunks
@@ -708,7 +721,7 @@ class TestEmbeddingIndexingIntegration:
         import tempfile
 
         temp_dir = tempfile.mkdtemp()
-        vector_store = ChromaVectorStore(persist_directory=temp_dir)
+        vector_store = LangChainVectorStore(persist_directory=temp_dir)
 
         try:
             # Create multiple documents
@@ -794,7 +807,7 @@ class TestEmbeddingIndexingIntegration:
         import tempfile
 
         temp_dir = tempfile.mkdtemp()
-        vector_store = ChromaVectorStore(persist_directory=temp_dir)
+        vector_store = LangChainVectorStore(persist_directory=temp_dir)
 
         try:
             # Test with invalid chunk (missing required fields)

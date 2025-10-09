@@ -17,7 +17,7 @@ from src.domain.models import (
     EmbeddingConfiguration,
     EmbeddingModel,
 )
-from src.infrastructure.embedding_service import BioClinicalEmbeddingService
+from src.infrastructure.langchain import LangChainEmbeddingService
 
 
 class TestEmbeddingService:
@@ -26,7 +26,7 @@ class TestEmbeddingService:
     @pytest.fixture
     def embedding_service(self):
         """Create embedding service instance."""
-        return BioClinicalEmbeddingService()
+        return LangChainEmbeddingService()
 
     @pytest.fixture
     def embedding_config(self):
@@ -41,16 +41,17 @@ class TestEmbeddingService:
     async def test_embedding_service_initialization(self, embedding_service):
         """Test embedding service initializes correctly."""
         assert embedding_service is not None
-        assert hasattr(embedding_service, "_models")
-        assert hasattr(embedding_service, "_model_dimensions")
+        assert hasattr(embedding_service, "model_manager")
+        assert embedding_service.model_manager is not None
 
     @pytest.mark.asyncio
-    async def test_model_validation(self, embedding_service):
-        """Test model validation works."""
-        # Test valid model
-        valid_model = "pritamdeka/S-BioBERT-snli-multinli-stsb"
-        is_valid = await embedding_service.validate_model(valid_model)
-        assert is_valid is True
+    async def test_model_loading(self, embedding_service, embedding_config):
+        """Test model loading works."""
+        # Test that we can load a model
+        model = await embedding_service.model_manager.get_model(
+            "pritamdeka/S-BioBERT-snli-multinli-stsb", embedding_config
+        )
+        assert model is not None
 
     @pytest.mark.asyncio
     async def test_embedding_generation_single(
