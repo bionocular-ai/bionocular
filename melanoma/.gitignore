@@ -106,3 +106,7 @@ data/doctorci.db
 *.db
 *.sqlite
 *.sqlite3
+
+# Demo output files
+data/cost_report_*.json
+data/enhanced_extraction_results_*.json

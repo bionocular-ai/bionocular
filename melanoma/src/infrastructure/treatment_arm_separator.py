@@ -113,59 +113,43 @@ class TreatmentArmSeparator:
     def _create_separation_prompt(self) -> str:
         """Create the treatment arm separation prompt."""
         return """
-TASK: Identify and separate treatment arms from this clinical trial abstract.
+TASK: Identify the main treatment arms from this clinical trial abstract.
 
 CRITICAL REQUIREMENTS:
-1. Each unique treatment regimen is a separate arm
-2. Different doses of the same drug are separate arms
-3. Combination therapies are single arms with "+" notation
-4. Extract arm-specific metadata (drug names, doses, patient counts)
-5. Identify line of treatment and arm type
-
-TREATMENT ARM INVARIANTS (STRICT):
-- There is one unique NCT number per clinical trial publication/regimen set.
-- A regimen can be monotherapy or a combination (e.g., "Drug A + Drug B").
-- Within a single publication/trial (same NCT), there may be 1..N treatment arms.
-- All efficacy/safety metrics (e.g., ORR, CR, DCR, Grade 3+ AEs) are UNIQUE per arm.
-- Arms within the same trial share the SAME NCT number but may have DIFFERENT outcomes.
-- If the same regimen appears in different trials (different NCTs), treat them as separate arms with their respective NCT numbers.
+1. Focus on PRIMARY treatment arms only (typically 1-3 arms)
+2. Each arm must have distinct treatment regimens
+3. Different doses of the same drug are separate arms ONLY if explicitly compared
+4. Combination therapies are single arms with "+" notation
+5. Be conservative - avoid over-segmentation
 
 TREATMENT ARM RULES:
 - Single drug: "Drug Name" (e.g., "Nivolumab")
 - Combination: "Drug A + Drug B" (e.g., "Nivolumab + Ipilimumab")
-- Dose variations: "Drug Name Dose" (e.g., "Nivolumab 3mg/kg")
-- Different doses of same drug: Separate arms
-- Placebo/Control: Mark as control arm
+- Placebo/Control: Mark as control arm with generic_name="Placebo"
+- Different doses: Only if explicitly mentioned as separate comparison groups
 
-LINE OF TREATMENT CLASSIFICATION:
-- Neoadjuvant: Before surgery
-- First Line: Initial treatment
-- Second Line: After first-line failure
-- Third Line+: After second-line failure
-
-ARM TYPE CLASSIFICATION:
-- monotherapy: Single drug
-- combination: Multiple drugs
-- dose_variation: Different dose of same drug
-- placebo: Placebo control
-- control: Active control
+CONSERVATIVE APPROACH:
+- Most clinical trials have 2-3 arms maximum
+- If unsure, err on the side of fewer arms
+- Focus on the main treatment comparison
+- Avoid creating arms for adjuvant therapies, supportive care, or exploratory treatments
 
 OUTPUT FORMAT (JSON):
 {
   "treatment_arms": [
     {
       "arm_id": "arm_1",
-      "arm_name": "Nivolumab 3mg/kg",
-      "generic_name": "Nivolumab",
+      "arm_name": "Treatment Name",
+      "generic_name": "Drug Name",
       "brand_name": "",
-      "dose": "3mg/kg",
-      "dosing_schedule": "Q2W",
-      "patient_count": 313,
+      "dose": "Dose if specified",
+      "dosing_schedule": "Schedule if specified",
+      "patient_count": 0,
       "line_of_treatment": "first_line",
       "arm_type": "monotherapy",
       "combination_drugs": [],
       "confidence_score": 0.95,
-      "source_text": "Patients received nivolumab 3mg/kg every 2 weeks",
+      "source_text": "Relevant text from abstract",
       "nct_number": ""
     }
   ]
@@ -175,12 +159,11 @@ ABSTRACT TEXT:
 {abstract_text}
 
 STRICT RESPONSE RULES:
-- Return ONLY valid JSON.
-- Do NOT include any explanation, markdown, or code fences.
-- Do NOT include backticks.
-- The top-level object MUST contain exactly the key "treatment_arms".
- - Each arm object MUST include the field "nct_number" populated with the trial NCT.
-Return only the JSON response:
+- Return ONLY valid JSON
+- Maximum 3 arms (most trials have 1-2)
+- Focus on primary treatment comparisons
+- Do NOT include explanations or markdown
+- Each arm must have distinct treatment regimen
 """
 
     def _format_separation_prompt(self, abstract_text: str) -> str:
@@ -200,13 +183,13 @@ Return only the JSON response:
     async def _call_llm_with_retry(self, prompt: str) -> str:
         """Call LLM with retry logic for handling temporary failures."""
         try:
-            # Use the LangChainLLMService API: get_llm + invoke
-            llm = self.llm_service.get_llm(
-                model_name="gpt-4o-mini",
+            # Use the LLMService interface method
+            return await self.llm_service.generate_response(
+                prompt=prompt,
                 temperature=0.1,
                 max_tokens=2000,
+                model_name="gpt-4o-mini",
             )
-            return self.llm_service.generate_text(llm, prompt)
         except Exception as e:
             error_msg = str(e)
             logger.error(f"LLM call failed: {error_msg}")
@@ -322,11 +305,27 @@ Return only the JSON response:
                     else:
                         normalized_lot = raw_lot
 
+                    # Skip arms with empty generic names (except placebo/control arms)
+                    generic_name = arm_data.get("generic_name", "").strip()
+                    arm_type = arm_data.get("arm_type", "").strip().lower()
+
+                    # Allow placebo and control arms even with empty generic names
+                    if not generic_name and arm_type not in ["placebo", "control"]:
+                        logger.warning(f"Skipping arm {i+1} due to empty generic name")
+                        continue
+
+                    # Set generic name for placebo/control arms if empty
+                    if not generic_name and arm_type in ["placebo", "control"]:
+                        generic_name = "Placebo" if arm_type == "placebo" else "Control"
+                        logger.info(
+                            f"Setting generic name to '{generic_name}' for {arm_type} arm"
+                        )
+
                     # Create treatment arm
                     arm = TreatmentArm(
                         arm_id=arm_data.get("arm_id", f"arm_{i+1}"),
                         arm_name=arm_data.get("arm_name", ""),
-                        generic_name=arm_data.get("generic_name", ""),
+                        generic_name=generic_name,
                         brand_name=arm_data.get("brand_name"),
                         dose=arm_data.get("dose"),
                         dosing_schedule=arm_data.get("dosing_schedule"),
@@ -336,6 +335,11 @@ Return only the JSON response:
                         combination_drugs=arm_data.get("combination_drugs", []),
                         confidence_score=arm_data.get("confidence_score", 0.0),
                         source_text=arm_data.get("source_text"),
+                        arm_metadata={
+                            "nct_number": arm_data.get("nct_number"),
+                            "generic_name": arm_data.get("generic_name", ""),
+                            "raw_arm_data": arm_data,  # Store raw data for debugging
+                        },
                     )
                     treatment_arms.append(arm)
 
@@ -359,18 +363,35 @@ Return only the JSON response:
             validation_result["errors"].append("No treatment arms identified")
             return validation_result
 
+        # CRITICAL: Limit number of arms to prevent over-segmentation
+        max_arms = 3
+        if len(treatment_arms) > max_arms:
+            validation_result["warnings"].append(
+                f"Too many arms identified ({len(treatment_arms)}), limiting to {max_arms} "
+                f"highest confidence arms"
+            )
+            # Sort by confidence score and keep only the top 3
+            treatment_arms.sort(key=lambda x: x.confidence_score, reverse=True)
+            treatment_arms = treatment_arms[:max_arms]
+
         # Calculate confidence based on various factors
         confidence_factors = []
 
-        # Factor 1: Number of arms (expect 1-5 arms typically)
+        # Factor 1: Number of arms (expect 1-3 arms typically, max 3)
         arm_count = len(treatment_arms)
-        if 1 <= arm_count <= 5:
-            confidence_factors.append(0.9)
-        elif arm_count == 0:
+        if arm_count == 0:
             confidence_factors.append(0.0)
+        elif 1 <= arm_count <= 2:
+            confidence_factors.append(0.9)  # Most trials have 1-2 arms
+        elif arm_count == 3:
+            confidence_factors.append(0.8)  # 3 arms is acceptable but less common
         else:
-            confidence_factors.append(0.7)
-            validation_result["warnings"].append(f"Unusual number of arms: {arm_count}")
+            # More than 3 arms - likely over-segmentation
+            confidence_factors.append(0.3)
+            validation_result["warnings"].append(
+                f"Too many arms identified ({arm_count}), likely over-segmentation. "
+                f"Most clinical trials have 1-3 arms maximum."
+            )
 
         # Factor 2: Arm completeness
         complete_arms = 0

@@ -9,7 +9,7 @@ powerful text splitting capabilities.
 import logging
 import re
 from typing import Any, Optional
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 from langchain.text_splitter import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
@@ -343,32 +343,22 @@ class LangChainChunkingService(ChunkingStrategyInterface):
         )
         metadata.update(clinical_metadata)
 
+        # Add abstract_id to metadata if document_id is provided
+        if document_id:
+            metadata["abstract_id"] = document_id
+
         # Determine chunk type
         chunk_type = self.chunk_classifier.classify_chunk_type(
             document.page_content, metadata
         )
 
         # Create domain chunk
-        # Handle document_id conversion safely
-        if document_id:
-            try:
-                if isinstance(document_id, str):
-                    # Try to convert to UUID, if it fails, generate a new one
-                    try:
-                        doc_uuid = UUID(document_id)
-                    except ValueError:
-                        # If document_id is not a valid UUID, generate a new one
-                        doc_uuid = uuid4()
-                else:
-                    doc_uuid = document_id
-            except Exception:
-                doc_uuid = uuid4()
-        else:
-            doc_uuid = uuid4()
+        # Use the original document_id as string, don't convert to UUID
+        chunk_document_id = document_id if document_id else str(uuid4())
 
         return Chunk(
             id=uuid4(),
-            document_id=doc_uuid,
+            document_id=chunk_document_id,
             content=document.page_content,
             chunk_type=chunk_type,
             metadata=metadata,

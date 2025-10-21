@@ -28,6 +28,99 @@ from ...domain.models import (
 logger = logging.getLogger(__name__)
 
 
+class ChromaDBEmbeddingFunction:
+    """ChromaDB-compatible embedding function wrapper.
+
+    This class provides a ChromaDB-compatible embedding function interface
+    using LangChain's HuggingFaceEmbeddings directly.
+    """
+
+    def __init__(self, embedding_service=None):
+        """Initialize the embedding function wrapper.
+
+        Args:
+            embedding_service: Optional embedding service (not used, kept for compatibility)
+        """
+        self._model = None
+        logger.info("ChromaDB embedding function wrapper initialized")
+
+    def _ensure_model_loaded(self):
+        """Ensure the embedding model is loaded."""
+        if self._model is None:
+            try:
+                # Set tokenizer parallelism to avoid warnings
+                import os
+
+                os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+                # Try new package first, fallback to community
+                try:
+                    from langchain_huggingface import HuggingFaceEmbeddings
+                except ImportError:
+                    from langchain_community.embeddings import HuggingFaceEmbeddings
+
+                self._model = HuggingFaceEmbeddings(
+                    model_name="pritamdeka/S-BioBERT-snli-multinli-stsb",
+                    model_kwargs={"device": "cpu"},
+                    encode_kwargs={"normalize_embeddings": True},
+                )
+                logger.info("Embedding model loaded for ChromaDB")
+            except Exception as e:
+                logger.error(f"Failed to load embedding model: {e}")
+                raise
+
+    def __call__(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for a list of texts.
+
+        Args:
+            texts: List of texts to embed
+
+        Returns:
+            List of embedding vectors
+        """
+        self._ensure_model_loaded()
+        try:
+            embeddings = self._model.embed_documents(texts)
+            return embeddings
+        except Exception as e:
+            logger.error(f"Failed to generate embeddings: {e}")
+            raise
+
+    def embed_query(self, text: str) -> list[float]:
+        """Generate embedding for a single query text.
+
+        Args:
+            text: Text to embed
+
+        Returns:
+            Embedding vector
+        """
+        self._ensure_model_loaded()
+        try:
+            embedding = self._model.embed_query(text)
+            return embedding
+        except Exception as e:
+            logger.error(f"Failed to generate query embedding: {e}")
+            raise
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Generate embeddings for multiple documents.
+
+        Args:
+            texts: List of texts to embed
+
+        Returns:
+            List of embedding vectors
+        """
+        self._ensure_model_loaded()
+        try:
+            embeddings = self._model.embed_documents(texts)
+            return embeddings
+        except Exception as e:
+            logger.error(f"Failed to generate document embeddings: {e}")
+            raise
+
+
 class MetadataProcessor:
     """Processes metadata for ChromaDB storage and retrieval.
 
@@ -192,7 +285,7 @@ class DocumentConverter:
 
         return ChunkWithEmbedding(
             id=UUID(chunk_id),
-            document_id=UUID(metadata["document_id"]),
+            document_id=metadata["document_id"],  # Keep as string
             content=document.page_content,
             chunk_type=type(metadata["chunk_type"])(metadata["chunk_type"]),
             metadata=core_metadata,
@@ -232,8 +325,14 @@ class LangChainVectorStore(VectorStoreInterface):
         """
         self.persist_directory = persist_directory
         self.collection_name = collection_name
-        self.embedding_function = embedding_function
         self.embedding_service = embedding_service
+
+        # Create ChromaDB-compatible embedding function
+        if embedding_function is None:
+            self.embedding_function = ChromaDBEmbeddingFunction()
+        else:
+            self.embedding_function = embedding_function
+
         self._vectorstore: Optional[Chroma] = None
 
         # Initialize helper services

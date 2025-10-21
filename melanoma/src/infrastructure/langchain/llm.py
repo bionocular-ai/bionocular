@@ -426,3 +426,52 @@ class LangChainLLMService(LLMService):
             "available_templates": self.list_prompt_templates(),
             "total_templates": len(self.list_prompt_templates()),
         }
+
+    async def extract_structured_data(
+        self, prompt: str, expected_format: str
+    ) -> dict[str, Any]:
+        """Extract structured data using LLM.
+
+        Args:
+            prompt: Input prompt with context
+            expected_format: Expected output format description
+
+        Returns:
+            Structured data dictionary
+        """
+        try:
+            # Get LLM instance
+            llm = self.get_llm()
+
+            # Create structured prompt
+            structured_prompt = f"""
+            {prompt}
+
+            Please respond in the following format: {expected_format}
+            Return only valid JSON.
+            """
+
+            # Generate response
+            response = await llm.ainvoke(structured_prompt)
+
+            # Parse JSON response
+            import json
+
+            try:
+                return json.loads(response.content)
+            except json.JSONDecodeError:
+                # Fallback: try to extract JSON from response
+                import re
+
+                json_match = re.search(r"\{.*\}", response.content, re.DOTALL)
+                if json_match:
+                    return json.loads(json_match.group())
+                else:
+                    logger.error(
+                        f"Could not parse JSON from response: {response.content}"
+                    )
+                    return {}
+
+        except Exception as e:
+            logger.error(f"Failed to extract structured data: {e}")
+            return {}

@@ -124,8 +124,8 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
             for query_text in queries:
                 try:
-                    # Create search query with no restrictive filters to avoid missing chunks
-                    search_filters = {}
+                    # Create search query with abstract_id filter to get chunks only from this abstract
+                    search_filters = {"abstract_id": abstract_id}
 
                     search_query = SearchQuery(
                         text=query_text,
@@ -380,8 +380,11 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
         keywords = attribute_keywords.get(attribute_type, [])
         for result in search_results:
             content = result.chunk.content.lower()
-            keyword_matches = sum(1 for keyword in keywords if keyword in content)
-            attribute_relevance += min(keyword_matches / len(keywords), 1.0)
+            if keywords:  # Avoid division by zero
+                keyword_matches = sum(1 for keyword in keywords if keyword in content)
+                attribute_relevance += min(keyword_matches / len(keywords), 1.0)
+            else:
+                attribute_relevance += 0.0  # No keywords defined for this attribute
 
         attribute_relevance = min(attribute_relevance / len(search_results), 1.0)
         quality_factors.append(attribute_relevance)

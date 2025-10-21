@@ -25,11 +25,6 @@ from ..domain.extraction_interfaces import (
 from ..domain.extraction_models import (
     AttributeType,
     ExtractedAttribute,
-    GenericName,
-    Grade3PlusAE,
-    NCTNumber,
-    ObjectiveResponseRate,
-    PValueOS,
 )
 
 logger = logging.getLogger(__name__)
@@ -65,7 +60,11 @@ class LLMAttributeExtractor(AttributeExtractor):
         logger.info("LLM attribute extractor initialized")
 
     async def extract_attribute(
-        self, attribute_type: AttributeType, context: list[str], document_id: str
+        self,
+        attribute_type: AttributeType,
+        context: list[str],
+        document_id: str,
+        arm_info: Optional[dict] = None,
     ) -> ExtractedAttribute:
         """Extract a specific attribute from context.
 
@@ -73,6 +72,7 @@ class LLMAttributeExtractor(AttributeExtractor):
             attribute_type: Type of attribute to extract
             context: List of context texts
             document_id: Document identifier
+            arm_info: Optional arm information for context
 
         Returns:
             Extracted attribute with confidence score
@@ -82,6 +82,20 @@ class LLMAttributeExtractor(AttributeExtractor):
 
             # Get extraction prompt
             prompt = self.prompt_provider.get_extraction_prompt(attribute_type, context)
+
+            # Add arm-specific context if available
+            if arm_info:
+                arm_context = "\n\nTREATMENT ARM CONTEXT:\n"
+                arm_context += f"Arm ID: {arm_info.get('arm_id', 'Unknown')}\n"
+                arm_context += f"Arm Name: {arm_info.get('arm_name', 'Unknown')}\n"
+                arm_context += (
+                    f"Generic Name: {arm_info.get('generic_name', 'Unknown')}\n"
+                )
+                if arm_info.get("dose"):
+                    arm_context += f"Dose: {arm_info.get('dose')}\n"
+                arm_context += f"\nIMPORTANT: Extract the {attribute_type.value} specifically for this treatment arm. "
+                arm_context += f"Look for data related to {arm_info.get('generic_name', 'this arm')} and ignore data from other treatment arms.\n"
+                prompt = prompt + arm_context
 
             # Add small delay to avoid rate limiting
             await asyncio.sleep(0.5)
@@ -130,13 +144,13 @@ class LLMAttributeExtractor(AttributeExtractor):
             RuntimeError: If all retry attempts fail
         """
         try:
-            # Use LangChainLLMService API
-            llm = self.llm_service.get_llm(
-                model_name="gpt-4o-mini",
+            # Use LLMService interface method
+            return await self.llm_service.generate_response(
+                prompt=prompt,
                 temperature=0.1,
                 max_tokens=500,
+                model_name="gpt-4o-mini",
             )
-            return self.llm_service.generate_text(llm, prompt)
         except Exception as e:
             error_msg = str(e)
             logger.error(f"🔍 DEBUG: LLM call failed with error: {error_msg}")
@@ -190,6 +204,14 @@ class LLMAttributeExtractor(AttributeExtractor):
             elif attribute_type == AttributeType.GRADE_3_PLUS_AE:
                 return self._parse_percentage(response)
             else:
+                # Handle empty or invalid responses
+                if (
+                    not response
+                    or response.strip() == ""
+                    or response.strip() == '""'
+                    or response.strip() == "''"
+                ):
+                    return "Not found"
                 return response
 
         except Exception as e:
@@ -204,8 +226,12 @@ class LLMAttributeExtractor(AttributeExtractor):
             return nct_match.group(0)
 
         # Check for empty string indication
-        if "not found" in response.lower() or "empty" in response.lower():
-            return ""
+        if (
+            "not found" in response.lower()
+            or "empty" in response.lower()
+            or response.strip() == ""
+        ):
+            return "Not found"
 
         return None
 
@@ -215,11 +241,15 @@ class LLMAttributeExtractor(AttributeExtractor):
         response = response.strip()
 
         # Check for empty string indication
-        if "not found" in response.lower() or "empty" in response.lower():
-            return ""
+        if (
+            "not found" in response.lower()
+            or "empty" in response.lower()
+            or response.strip() == ""
+        ):
+            return "Not found"
 
         # Return the response as-is (should be drug name)
-        return response if response else None
+        return response if response else "Not found"
 
     def _parse_p_value(self, response: str) -> Optional[Union[float, str]]:
         """Parse p-value from response."""
@@ -245,8 +275,12 @@ class LLMAttributeExtractor(AttributeExtractor):
             return "Significant"
 
         # Check for empty string indication
-        if "not found" in response_lower or "empty" in response_lower:
-            return ""
+        if (
+            "not found" in response_lower
+            or "empty" in response_lower
+            or response.strip() == ""
+        ):
+            return "Not found"
 
         return None
 
@@ -263,8 +297,12 @@ class LLMAttributeExtractor(AttributeExtractor):
                 pass
 
         # Check for empty string indication
-        if "not found" in response.lower() or "empty" in response.lower():
-            return ""
+        if (
+            "not found" in response.lower()
+            or "empty" in response.lower()
+            or response.strip() == ""
+        ):
+            return "Not found"
 
         return None
 
@@ -382,23 +420,15 @@ class LLMAttributeExtractor(AttributeExtractor):
             "attribute_type": attribute_type,
             "value": value,
             "confidence": confidence,
+            "source": "abstract_extraction",
             "source_chunks": source_chunks,
+            "validation_status": "pending",
+            "validation_errors": [],
             "extracted_at": datetime.now(),
         }
 
-        # Create specific attribute model
-        if attribute_type == AttributeType.NCT_NUMBER:
-            return NCTNumber(**attribute_data)
-        elif attribute_type == AttributeType.GENERIC_NAME:
-            return GenericName(**attribute_data)
-        elif attribute_type == AttributeType.P_VALUE_OS:
-            return PValueOS(**attribute_data)
-        elif attribute_type == AttributeType.OBJECTIVE_RESPONSE_RATE:
-            return ObjectiveResponseRate(**attribute_data)
-        elif attribute_type == AttributeType.GRADE_3_PLUS_AE:
-            return Grade3PlusAE(**attribute_data)
-        else:
-            return ExtractedAttribute(**attribute_data)
+        # Return simple ExtractedAttribute model
+        return ExtractedAttribute(**attribute_data)
 
     def _create_empty_attribute(
         self, attribute_type: AttributeType, context: list[str], document_id: str

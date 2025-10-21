@@ -47,7 +47,11 @@ class AttributeExtractor(ABC):
 
     @abstractmethod
     async def extract_attribute(
-        self, attribute_type: AttributeType, context: list[str], document_id: str
+        self,
+        attribute_type: AttributeType,
+        context: list[str],
+        document_id: str,
+        arm_info: Optional[dict] = None,
     ) -> ExtractedAttribute:
         """Extract a specific attribute from context.
 
@@ -152,18 +156,6 @@ class PromptTemplateProvider(ABC):
 
         Returns:
             Formatted extraction prompt
-        """
-        pass
-
-    @abstractmethod
-    def get_description_prompt(self, attribute_type: AttributeType) -> str:
-        """Get description prompt for an attribute type.
-
-        Args:
-            attribute_type: Type of attribute
-
-        Returns:
-            Description prompt for additional context
         """
         pass
 

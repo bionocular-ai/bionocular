@@ -188,7 +188,7 @@ class Chunk(BaseModel):
     """A chunk of content from a document."""
 
     id: UUID = Field(default_factory=uuid4)
-    document_id: UUID = Field(..., description="ID of the source document")
+    document_id: str = Field(..., description="ID of the source document")
     content: str = Field(..., description="The actual chunk content")
     chunk_type: ChunkType = Field(..., description="Type of content in this chunk")
     metadata: dict[str, Any] = Field(

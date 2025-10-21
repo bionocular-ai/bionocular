@@ -59,6 +59,9 @@ class TreatmentArm(BaseModel):
     source_text: Optional[str] = Field(
         None, description="Source text used for arm identification"
     )
+    arm_metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Additional metadata for the treatment arm"
+    )
     created_at: datetime = Field(default_factory=datetime.now)
 
     @validator("generic_name")
