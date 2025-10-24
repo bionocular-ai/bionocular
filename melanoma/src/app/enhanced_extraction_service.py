@@ -1,7 +1,7 @@
 """Enhanced extraction service with comprehensive attribute support.
 
 This service integrates RAG-enhanced extraction with Clinical Trials API
-data and backbone prompts for comprehensive clinical trial data extraction.
+data for comprehensive clinical trial data extraction.
 """
 
 import logging
@@ -17,7 +17,6 @@ from ..domain.treatment_arm_models import (
     TreatmentArmSeparationResult,
 )
 from ..infrastructure.arm_aware_rag_provider import ArmAwareRAGContextProvider
-from ..infrastructure.backbone_prompt_provider import BackbonePromptProvider
 from ..infrastructure.batch_attribute_extractor import BatchAttributeExtractor
 from ..infrastructure.clinical_trials_api_service import ClinicalTrialsAPIService
 from ..infrastructure.cost_calculator import CostCalculator
@@ -36,9 +35,8 @@ class EnhancedExtractionService:
     1. Treatment arm separation
     2. RAG context retrieval per arm
     3. Clinical Trials API data integration
-    4. Backbone prompt enhancement for complex attributes
-    5. Targeted attribute extraction per arm
-    6. Quality assessment and validation
+    4. Targeted attribute extraction per arm
+    5. Quality assessment and validation
     """
 
     def __init__(
@@ -77,7 +75,6 @@ class EnhancedExtractionService:
 
         # Initialize providers
         self.prompt_provider = ExtractionPromptTemplateProvider()
-        self.backbone_provider = BackbonePromptProvider()
         self.file_path_extractor = FilePathExtractor()
         self.batch_extractor = BatchAttributeExtractor(
             self.llm_service, self.prompt_provider
@@ -87,9 +84,6 @@ class EnhancedExtractionService:
         self.attribute_configs = AttributeConfigurationFactory.get_all_configurations()
         self.api_sourced_attributes = (
             AttributeConfigurationFactory.get_api_sourced_attributes()
-        )
-        self.backbone_prompt_attributes = (
-            AttributeConfigurationFactory.get_backbone_prompt_attributes()
         )
 
         logger.info("Enhanced extraction service initialized")
@@ -393,7 +387,16 @@ class EnhancedExtractionService:
                         ]
 
                 arm_results[arm.arm_id] = arm_result
-                total_attributes_extracted += len(arm_result["attributes"])
+                # Count only non-empty attributes
+                non_empty_attributes = sum(
+                    1
+                    for attr_data in arm_result["attributes"].values()
+                    if hasattr(attr_data, "value")
+                    and attr_data.value
+                    and str(attr_data.value).strip()
+                    not in ["", "Not found", "Not available"]
+                )
+                total_attributes_extracted += non_empty_attributes
 
             # Step 8: Calculate overall confidence and quality
             overall_confidence = self._calculate_overall_confidence(
@@ -743,14 +746,19 @@ class EnhancedExtractionService:
         for arm_result in result.arm_results.values():
             attributes = arm_result.get("attributes", {})
             for attr_data in attributes.values():
-                if isinstance(attr_data, dict):
+                if hasattr(attr_data, "source"):
+                    source = attr_data.source
+                elif isinstance(attr_data, dict):
                     source = attr_data.get("source", "unknown")
-                    if source == "clinical_trials_api":
-                        api_attributes += 1
-                    elif source == "abstract_extraction":
-                        abstract_attributes += 1
-                    elif source == "arm_separation":
-                        arm_separation_attributes += 1
+                else:
+                    source = "unknown"
+
+                if source == "clinical_trials_api":
+                    api_attributes += 1
+                elif source in ["abstract_extraction", "abstract_llm_extraction"]:
+                    abstract_attributes += 1
+                elif source == "arm_separation":
+                    arm_separation_attributes += 1
 
         return {
             "abstract_id": result.abstract_id,

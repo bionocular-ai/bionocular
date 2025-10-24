@@ -136,8 +136,8 @@ async def main():
             logger.error("No abstracts found in file")
             return
 
-        # Process first 5 abstracts
-        abstracts_to_process = abstracts[:5]
+        # Process first 1 abstract for testing
+        abstracts_to_process = abstracts[:1]
         logger.info(
             f"Found {len(abstracts)} total abstracts, processing first {len(abstracts_to_process)}"
         )
@@ -432,13 +432,11 @@ async def main():
         abstract_level = AttributeConfigurationFactory.get_abstract_level_attributes()
         arm_level = AttributeConfigurationFactory.get_arm_level_attributes()
         api_sourced = AttributeConfigurationFactory.get_api_sourced_attributes()
-        backbone_prompt = AttributeConfigurationFactory.get_backbone_prompt_attributes()
 
         logger.info(f"Total attributes configured: {len(configs)}")
         logger.info(f"Abstract-level attributes: {len(abstract_level)}")
         logger.info(f"Arm-level attributes: {len(arm_level)}")
         logger.info(f"API-sourced attributes: {len(api_sourced)}")
-        logger.info(f"Backbone prompt attributes: {len(backbone_prompt)}")
 
         logger.info("\nEnhanced extraction demo completed successfully!")
 

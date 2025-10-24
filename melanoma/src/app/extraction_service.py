@@ -107,11 +107,13 @@ class ExtractionService:
                 )
 
                 # Validate attribute
-                validation_rules = (
-                    await self.extraction_repository.get_validation_rules(
-                        attribute_type
+                validation_rules = []
+                if self.extraction_repository:
+                    validation_rules = (
+                        await self.extraction_repository.get_validation_rules(
+                            attribute_type
+                        )
                     )
-                )
                 validated_attribute = await self.attribute_validator.validate_attribute(
                     attribute=extracted_attribute, validation_rules=validation_rules
                 )

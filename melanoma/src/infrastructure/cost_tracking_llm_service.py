@@ -54,8 +54,8 @@ class CostTrackingLLMService(LLMService):
             )
 
             # Generate text using underlying service
-            response = await self.llm_service.generate_text(
-                prompt, model=model, **kwargs
+            response = await self.llm_service.generate_response(
+                prompt=prompt, model_name=model, **kwargs
             )
 
             # Count completion tokens
@@ -211,10 +211,6 @@ class CostTrackingLLMService(LLMService):
 
             logger.error(f"Failed to extract structured data: {e}")
             raise
-
-    def get_llm(self, model: str = None):
-        """Get LLM instance (delegates to underlying service)."""
-        return self.llm_service.get_llm(model)
 
     def get_cost_summary(self):
         """Get current cost summary."""

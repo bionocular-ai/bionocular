@@ -302,7 +302,7 @@ class LLMAttributeExtractor(AttributeExtractor):
             or "empty" in response.lower()
             or response.strip() == ""
         ):
-            return "Not found"
+            return None
 
         return None
 
@@ -370,7 +370,7 @@ class LLMAttributeExtractor(AttributeExtractor):
 
         try:
             if attribute_type == AttributeType.NCT_NUMBER:
-                return isinstance(value, str) and re.match(r"NCT\d{8}", value)
+                return isinstance(value, str) and bool(re.match(r"NCT\d{8}", value))
             elif attribute_type == AttributeType.GENERIC_NAME:
                 return isinstance(value, str) and len(value.strip()) > 0
             elif attribute_type == AttributeType.P_VALUE_OS:

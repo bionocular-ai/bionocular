@@ -16,7 +16,6 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    Text,
 )
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
@@ -65,15 +64,19 @@ class ExtractedAttributeModel(Base):
         nullable=False,
         index=True,
     )
-    attribute_type = Column(SQLEnum(AttributeType), nullable=False, index=True)
-    value = Column(Text, nullable=True)
+    attribute_type: AttributeType = Column(
+        SQLEnum(AttributeType), nullable=False, index=True
+    )
+    value = Column(String(1000), nullable=True)
     confidence = Column(Float, nullable=False)
     source_chunks = Column(JSON, nullable=False, default=list)
-    validation_status = Column(
+    validation_status: ValidationStatus = Column(
         SQLEnum(ValidationStatus), nullable=False, default=ValidationStatus.PENDING
     )
     validation_errors = Column(JSON, nullable=False, default=list)
-    confidence_level = Column(SQLEnum(ExtractionConfidence), nullable=False)
+    confidence_level: ExtractionConfidence = Column(
+        SQLEnum(ExtractionConfidence), nullable=False
+    )
     extracted_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
@@ -88,7 +91,9 @@ class ValidationRuleModel(Base):
     __tablename__ = "validation_rules"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    attribute_type = Column(SQLEnum(AttributeType), nullable=False, index=True)
+    attribute_type: AttributeType = Column(
+        SQLEnum(AttributeType), nullable=False, index=True
+    )
     required = Column(Boolean, nullable=False, default=False)
     pattern = Column(String(500), nullable=True)
     min_value = Column(Float, nullable=True)
@@ -108,7 +113,9 @@ class ExtractionMetricsModel(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     document_id = Column(String(255), nullable=False, index=True)
-    attribute_type = Column(SQLEnum(AttributeType), nullable=False, index=True)
+    attribute_type: AttributeType = Column(
+        SQLEnum(AttributeType), nullable=False, index=True
+    )
     extraction_count = Column(Integer, nullable=False, default=1)
     success_count = Column(Integer, nullable=False, default=0)
     failure_count = Column(Integer, nullable=False, default=0)

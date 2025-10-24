@@ -33,6 +33,12 @@ class BatchAttributeExtractor:
         """
         self.llm_service = llm_service
         self.prompt_provider = prompt_provider
+
+        # Rate limiting state
+        self.request_count = 0
+        self.last_request_time = 0
+        self.rate_limit_window = 60  # 1 minute window
+        self.max_requests_per_minute = 15  # Conservative limit for GPT-4o
         logger.info("Batch attribute extractor initialized")
 
     async def extract_attributes_for_arms(
@@ -61,9 +67,13 @@ class BatchAttributeExtractor:
 
         # Process ONE attribute at a time for ALL arms
         for attr_idx, attribute in enumerate(attributes):
+            progress = (attr_idx + 1) / len(attributes) * 100
             logger.info(
-                f"Processing attribute {attr_idx + 1}/{len(attributes)}: {attribute.value}"
+                f"Processing attribute {attr_idx + 1}/{len(attributes)} ({progress:.1f}%): {attribute.value}"
             )
+
+            # Smart rate limiting - check if we need to wait
+            await self._handle_rate_limiting()
 
             try:
                 # Extract this single attribute for all arms
@@ -183,7 +193,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
 
         return prompt
 
-    async def _call_llm_with_retry(self, prompt: str, max_retries: int = 3) -> str:
+    async def _call_llm_with_retry(self, prompt: str, max_retries: int = 5) -> str:
         """Call LLM with retry logic.
 
         Args:
@@ -195,19 +205,129 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
         """
         for attempt in range(max_retries):
             try:
-                response = await self.llm_service.generate_response(prompt)
+                # Try GPT-4o first, fallback to GPT-4o-mini on rate limits
+                model_name = "gpt-4o" if attempt < 2 else "gpt-4o-mini"
+                response = await self.llm_service.generate_response(
+                    prompt, model_name=model_name
+                )
                 return response.strip()
             except Exception as e:
+                error_str = str(e)
                 logger.warning(
                     f"LLM call failed (attempt {attempt + 1}/{max_retries}): {e}"
                 )
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(2**attempt)  # Exponential backoff
+
+                # Check if it's a rate limit error
+                if "rate_limit_exceeded" in error_str or "429" in error_str:
+                    # Extract wait time from error message if available
+                    wait_time = self._extract_wait_time_from_error(error_str)
+                    if wait_time and wait_time > 0:
+                        logger.info(f"Rate limit hit, waiting {wait_time} seconds...")
+                        await asyncio.sleep(wait_time)
+                    else:
+                        # Smart backoff: longer delays for rate limits
+                        wait_time = min(
+                            60, (2**attempt) * 5
+                        )  # 5, 10, 20, 40, 60 seconds
+                        logger.info(f"Rate limit hit, waiting {wait_time} seconds...")
+                        await asyncio.sleep(wait_time)
+
+                    # If we've tried GPT-4o multiple times, switch to GPT-4o-mini
+                    if attempt >= 2:
+                        logger.info(
+                            "Switching to GPT-4o-mini due to persistent rate limits"
+                        )
                 else:
+                    # Regular exponential backoff for other errors
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(2**attempt)
+                    else:
+                        raise
+
+                if attempt == max_retries - 1:
                     raise
 
         # This should never be reached, but satisfies type checker
         raise RuntimeError("LLM retry loop completed without returning or raising")
+
+    def _extract_json_from_response(self, response: str) -> str:
+        """Extract JSON from LLM response that might contain extra text.
+
+        Args:
+            response: Raw LLM response
+
+        Returns:
+            Cleaned JSON string
+        """
+        import re
+
+        # Remove leading/trailing whitespace
+        response = response.strip()
+
+        # Try to find JSON object in the response
+        # Look for patterns like { ... } or ```json { ... } ```
+
+        # First, try to find JSON wrapped in code blocks
+        json_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", response, re.DOTALL)
+        if json_match:
+            return json_match.group(1).strip()
+
+        # Try to find JSON object directly
+        json_match = re.search(r"\{.*\}", response, re.DOTALL)
+        if json_match:
+            return json_match.group(0).strip()
+
+        # If no JSON found, return original response
+        return response
+
+    def _extract_wait_time_from_error(self, error_str: str) -> int:
+        """Extract wait time from rate limit error message.
+
+        Args:
+            error_str: Error message string
+
+        Returns:
+            Wait time in seconds, or 0 if not found
+        """
+        import re
+
+        # Look for patterns like "Please try again in 1.39s" or "try again in 668ms"
+        time_match = re.search(r"try again in ([\d.]+)([sm])", error_str)
+        if time_match:
+            value = float(time_match.group(1))
+            unit = time_match.group(2)
+            if unit == "s":
+                return int(value) + 1  # Add 1 second buffer
+            elif unit == "m":
+                return int(value * 60) + 1  # Convert to seconds + buffer
+
+        return 0
+
+    async def _handle_rate_limiting(self):
+        """Handle rate limiting with smart delays and fallback strategies."""
+        import time
+
+        current_time = time.time()
+
+        # Reset counter if we're in a new minute
+        if current_time - self.last_request_time > self.rate_limit_window:
+            self.request_count = 0
+            self.last_request_time = current_time
+
+        # If we're approaching the rate limit, wait
+        if self.request_count >= self.max_requests_per_minute:
+            wait_time = self.rate_limit_window - (current_time - self.last_request_time)
+            if wait_time > 0:
+                logger.info(
+                    f"Rate limit approaching, waiting {wait_time:.1f} seconds..."
+                )
+                await asyncio.sleep(wait_time)
+                # Reset after waiting
+                self.request_count = 0
+                self.last_request_time = time.time()
+
+        # Increment request count
+        self.request_count += 1
 
     def _parse_single_attribute_response(
         self,
@@ -232,8 +352,11 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
         results = {}
 
         try:
+            # Clean response - extract JSON from response if it contains extra text
+            cleaned_response = self._extract_json_from_response(response)
+
             # Parse JSON response
-            response_data = json.loads(response)
+            response_data = json.loads(cleaned_response)
 
             # Extract values for each arm
             for i, arm in enumerate(arms):
@@ -249,7 +372,8 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
 
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON response for {attribute.value}: {e}")
-            logger.debug(f"Response was: {response}")
+            logger.error(f"Cleaned response was: {repr(cleaned_response)}")
+            logger.error(f"Original response was: {repr(response)}")
 
             # Fallback: create "Not found" results for all arms
             for arm in arms:

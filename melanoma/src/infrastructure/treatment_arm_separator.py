@@ -84,13 +84,19 @@ class TreatmentArmSeparator:
             processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
             # Create result
+            confidence = validation_result["confidence"]
+            errors = validation_result["errors"]
+            warnings = validation_result["warnings"]
+
             result = TreatmentArmSeparationResult(
                 abstract_id=abstract_id,
                 treatment_arms=treatment_arms,
-                separation_confidence=validation_result["confidence"],
+                separation_confidence=confidence
+                if isinstance(confidence, float)
+                else 0.0,
                 processing_time_ms=processing_time,
-                errors=validation_result["errors"],
-                warnings=validation_result["warnings"],
+                errors=errors if isinstance(errors, list) else [],
+                warnings=warnings if isinstance(warnings, list) else [],
             )
 
             logger.info(
@@ -188,7 +194,7 @@ STRICT RESPONSE RULES:
                 prompt=prompt,
                 temperature=0.1,
                 max_tokens=2000,
-                model_name="gpt-4o-mini",
+                model_name="gpt-4o",
             )
         except Exception as e:
             error_msg = str(e)
@@ -355,18 +361,32 @@ STRICT RESPONSE RULES:
 
     def _validate_arm_separation(
         self, treatment_arms: list[TreatmentArm]
-    ) -> dict[str, Any]:
+    ) -> dict[str, float | list[str]]:
         """Validate treatment arm separation results."""
-        validation_result = {"confidence": 0.0, "errors": [], "warnings": []}
+        validation_result: dict[str, float | list[str]] = {
+            "confidence": 0.0,
+            "errors": [],
+            "warnings": [],
+        }
+
+        def add_error(msg: str) -> None:
+            errors = validation_result["errors"]
+            if isinstance(errors, list):
+                errors.append(msg)
+
+        def add_warning(msg: str) -> None:
+            warnings = validation_result["warnings"]
+            if isinstance(warnings, list):
+                warnings.append(msg)
 
         if not treatment_arms:
-            validation_result["errors"].append("No treatment arms identified")
+            add_error("No treatment arms identified")
             return validation_result
 
         # CRITICAL: Limit number of arms to prevent over-segmentation
         max_arms = 3
         if len(treatment_arms) > max_arms:
-            validation_result["warnings"].append(
+            add_warning(
                 f"Too many arms identified ({len(treatment_arms)}), limiting to {max_arms} "
                 f"highest confidence arms"
             )
@@ -388,7 +408,7 @@ STRICT RESPONSE RULES:
         else:
             # More than 3 arms - likely over-segmentation
             confidence_factors.append(0.3)
-            validation_result["warnings"].append(
+            add_warning(
                 f"Too many arms identified ({arm_count}), likely over-segmentation. "
                 f"Most clinical trials have 1-3 arms maximum."
             )
@@ -414,7 +434,7 @@ STRICT RESPONSE RULES:
         # Factor 4: Check for duplicate arms
         arm_names = [arm.arm_name for arm in treatment_arms]
         if len(arm_names) != len(set(arm_names)):
-            validation_result["warnings"].append("Duplicate arm names detected")
+            add_warning("Duplicate arm names detected")
             confidence_factors.append(0.5)
         else:
             confidence_factors.append(0.9)
@@ -427,11 +447,9 @@ STRICT RESPONSE RULES:
         # Add specific validation errors
         for arm in treatment_arms:
             if not arm.generic_name:
-                validation_result["errors"].append(
-                    f"Arm {arm.arm_id} missing generic name"
-                )
+                add_error(f"Arm {arm.arm_id} missing generic name")
             if not arm.arm_name:
-                validation_result["errors"].append(f"Arm {arm.arm_id} missing arm name")
+                add_error(f"Arm {arm.arm_id} missing arm name")
 
         return validation_result
 
@@ -446,17 +464,27 @@ STRICT RESPONSE RULES:
         Returns:
             Quality validation results
         """
-        quality_assessment = {
+        quality_assessment: dict[str, Any] = {
             "is_valid": True,
             "quality_score": 0.0,
             "issues": [],
             "recommendations": [],
         }
 
+        def add_issue(msg: str) -> None:
+            issues = quality_assessment["issues"]
+            if isinstance(issues, list):
+                issues.append(msg)
+
+        def add_recommendation(msg: str) -> None:
+            recommendations = quality_assessment["recommendations"]
+            if isinstance(recommendations, list):
+                recommendations.append(msg)
+
         # Check basic validity
         if not separation_result.treatment_arms:
             quality_assessment["is_valid"] = False
-            quality_assessment["issues"].append("No treatment arms identified")
+            add_issue("No treatment arms identified")
             return quality_assessment
 
         # Calculate quality score
@@ -486,21 +514,19 @@ STRICT RESPONSE RULES:
 
         # Add quality issues
         if quality_assessment["quality_score"] < 0.6:
-            quality_assessment["issues"].append("Low quality separation")
+            add_issue("Low quality separation")
 
         if completeness_score < 0.8:
-            quality_assessment["issues"].append("Incomplete arm information")
+            add_issue("Incomplete arm information")
 
         if diversity_score < 0.9:
-            quality_assessment["issues"].append("Potential duplicate arms")
+            add_issue("Potential duplicate arms")
 
         # Add recommendations
         if quality_assessment["quality_score"] < 0.7:
-            quality_assessment["recommendations"].append("Consider manual review")
+            add_recommendation("Consider manual review")
 
         if completeness_score < 0.8:
-            quality_assessment["recommendations"].append(
-                "Improve arm metadata extraction"
-            )
+            add_recommendation("Improve arm metadata extraction")
 
         return quality_assessment

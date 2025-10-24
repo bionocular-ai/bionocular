@@ -45,7 +45,7 @@ class APICall:
     prompt_tokens: int
     completion_tokens: int
     cost: float
-    operation: str  # e.g., "arm_separation", "attribute_extraction", "backbone_prompt"
+    operation: str  # e.g., "arm_separation", "attribute_extraction", "api_lookup"
     attribute_type: Optional[str] = None
     success: bool = True
     error_message: Optional[str] = None
@@ -113,7 +113,7 @@ class CostCalculator:
         """
         self.default_model = default_model
         self.api_calls: list[APICall] = []
-        self.encoders = {}  # Cache for tiktoken encoders
+        self.encoders: dict[str, tiktoken.Encoding] = {}  # Cache for tiktoken encoders
         logger.info(f"Cost calculator initialized with default model: {default_model}")
 
     def get_encoder(self, model: str) -> tiktoken.Encoding:
@@ -253,16 +253,16 @@ class CostCalculator:
         failed_requests = total_requests - successful_requests
 
         # Breakdown by operation
-        calls_by_operation = {}
-        cost_by_operation = {}
+        calls_by_operation: dict[str, int] = {}
+        cost_by_operation: dict[str, float] = {}
         for call in self.api_calls:
             op = call.operation
             calls_by_operation[op] = calls_by_operation.get(op, 0) + 1
             cost_by_operation[op] = cost_by_operation.get(op, 0) + call.cost
 
         # Breakdown by attribute
-        calls_by_attribute = {}
-        cost_by_attribute = {}
+        calls_by_attribute: dict[str, int] = {}
+        cost_by_attribute: dict[str, float] = {}
         for call in self.api_calls:
             if call.attribute_type:
                 attr = call.attribute_type
@@ -270,8 +270,8 @@ class CostCalculator:
                 cost_by_attribute[attr] = cost_by_attribute.get(attr, 0) + call.cost
 
         # Breakdown by model
-        calls_by_model = {}
-        cost_by_model = {}
+        calls_by_model: dict[str, int] = {}
+        cost_by_model: dict[str, float] = {}
         for call in self.api_calls:
             model = call.model
             calls_by_model[model] = calls_by_model.get(model, 0) + 1

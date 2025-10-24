@@ -218,7 +218,6 @@ class AttributeConfiguration(BaseModel):
     special_values: Optional[list[str]] = None
     calculation_formula: Optional[str] = None
     extraction_priority: int = 1
-    needs_backbone_prompt: bool = False
     api_source: bool = False
 
     class Config:
@@ -240,7 +239,6 @@ class AttributeConfigurationFactory:
                 critical=True,
                 validation_pattern=r"NCT\d{8}",
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GENERIC_NAME: AttributeConfiguration(
@@ -249,7 +247,6 @@ class AttributeConfigurationFactory:
                 required=True,
                 critical=True,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.P_VALUE_OS: AttributeConfiguration(
@@ -262,7 +259,6 @@ class AttributeConfigurationFactory:
                     "Highly Significant",
                 ],
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.OBJECTIVE_RESPONSE_RATE: AttributeConfiguration(
@@ -272,7 +268,6 @@ class AttributeConfigurationFactory:
                 validation_range=(0, 100),
                 calculation_formula="(CR + PR) / Total_Patients * 100",
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_3_PLUS_AE: AttributeConfiguration(
@@ -282,7 +277,6 @@ class AttributeConfigurationFactory:
                 validation_range=(0, 100),
                 calculation_formula="Grade3 + Grade4 + Grade5",
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # General Parameters (Abstract-level)
@@ -292,7 +286,6 @@ class AttributeConfigurationFactory:
                 required=True,
                 controlled_vocabulary=["ASCO", "ESMO", "AACR", "SITC"],
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.PUBLISHED_YEAR: AttributeConfiguration(
@@ -301,7 +294,6 @@ class AttributeConfigurationFactory:
                 required=True,
                 validation_range=(1990, 2030),
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.ABSTRACT_NUMBER: AttributeConfiguration(
@@ -309,7 +301,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.COMMENTS: AttributeConfiguration(
@@ -317,7 +308,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=3,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TRIAL_NAME: AttributeConfiguration(
@@ -331,7 +321,6 @@ class AttributeConfigurationFactory:
                     "No Name",
                 ],
                 extraction_priority=1,
-                needs_backbone_prompt=True,
                 api_source=True,
             ),
             AttributeType.CANCER_TYPE: AttributeConfiguration(
@@ -340,7 +329,7 @@ class AttributeConfigurationFactory:
                 required=True,
                 controlled_vocabulary=None,  # No controlled vocabulary - use exact API value
                 extraction_priority=1,
-                needs_backbone_prompt=False,  # Not needed since it's from API
+                # Not needed since it's from API
                 api_source=True,
             ),
             AttributeType.MEDIAN_AGE: AttributeConfiguration(
@@ -349,7 +338,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 120),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.NUMBER_OF_PATIENTS: AttributeConfiguration(
@@ -359,7 +347,6 @@ class AttributeConfigurationFactory:
                 critical=True,
                 validation_range=(1, 10000),
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # Treatment Details (Arm-level)
@@ -368,7 +355,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.SUB_THERAPY: AttributeConfiguration(
@@ -376,7 +362,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.DOSAGE: AttributeConfiguration(
@@ -384,7 +369,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.TYPE_OF_DOSING: AttributeConfiguration(
@@ -392,7 +376,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.MECHANISM_OF_ACTION: AttributeConfiguration(
@@ -400,7 +383,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.TARGET_PROTEIN: AttributeConfiguration(
@@ -408,7 +390,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.TYPE_OF_THERAPY: AttributeConfiguration(
@@ -423,7 +404,6 @@ class AttributeConfigurationFactory:
                     "Chemotherapy",
                 ],
                 extraction_priority=2,
-                needs_backbone_prompt=True,
                 api_source=True,
             ),
             # Efficacy - Response Rates
@@ -433,7 +413,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.PATHOLOGICAL_COMPLETE_RESPONSE: AttributeConfiguration(
@@ -442,7 +421,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.COMPLETE_METABOLIC_RESPONSE: AttributeConfiguration(
@@ -451,7 +429,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.DISEASE_CONTROL_RATE: AttributeConfiguration(
@@ -461,7 +438,6 @@ class AttributeConfigurationFactory:
                 validation_range=(0, 100),
                 calculation_formula="(CR + PR + SD) / Total_Patients * 100",
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.CLINICAL_BENEFIT_RATE: AttributeConfiguration(
@@ -470,7 +446,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.MEDIAN_DOR: AttributeConfiguration(
@@ -479,7 +454,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 special_values=["NR"],
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.DOR_RATE: AttributeConfiguration(
@@ -488,7 +462,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # Efficacy - Survival Metrics
@@ -498,7 +471,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 special_values=["NR"],
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.MEDIAN_FOLLOWUP_PFS: AttributeConfiguration(
@@ -506,7 +478,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.P_VALUE_PFS: AttributeConfiguration(
@@ -519,7 +490,6 @@ class AttributeConfigurationFactory:
                     "Highly Significant",
                 ],
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.HR_PFS: AttributeConfiguration(
@@ -528,7 +498,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 10),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.MEDIAN_OS: AttributeConfiguration(
@@ -537,7 +506,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 special_values=["NR"],
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.MEDIAN_FOLLOWUP_OS: AttributeConfiguration(
@@ -545,7 +513,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.HR_OS: AttributeConfiguration(
@@ -554,7 +521,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 10),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # Safety - Treatment-Emergent Adverse Events (TEAE)
@@ -564,7 +530,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_3_PLUS_TEAE: AttributeConfiguration(
@@ -574,7 +539,6 @@ class AttributeConfigurationFactory:
                 validation_range=(0, 100),
                 calculation_formula="Grade3_TEAE + Grade4_TEAE + Grade5_TEAE",
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_3_TEAE: AttributeConfiguration(
@@ -583,7 +547,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_4_TEAE: AttributeConfiguration(
@@ -592,7 +555,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_5_TEAE: AttributeConfiguration(
@@ -601,7 +563,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TEAE_LEADING_TO_DISCONTINUATION: AttributeConfiguration(
@@ -610,7 +571,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TEAE_LEADING_TO_DEATH: AttributeConfiguration(
@@ -619,7 +579,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.SERIOUS_TEAE: AttributeConfiguration(
@@ -628,7 +587,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TEAE_IMMUNE_RELATED: AttributeConfiguration(
@@ -637,7 +595,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # Safety - Treatment-Related Adverse Events (TRAE)
@@ -647,7 +604,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_3_PLUS_TRAE: AttributeConfiguration(
@@ -657,7 +613,6 @@ class AttributeConfigurationFactory:
                 validation_range=(0, 100),
                 calculation_formula="Grade3_TRAE + Grade4_TRAE + Grade5_TRAE",
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_3_TRAE: AttributeConfiguration(
@@ -666,7 +621,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_4_TRAE: AttributeConfiguration(
@@ -675,7 +629,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.GRADE_5_TRAE: AttributeConfiguration(
@@ -684,7 +637,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TRAE_LEADING_TO_DISCONTINUATION: AttributeConfiguration(
@@ -693,7 +645,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TRAE_LEADING_TO_DEATH: AttributeConfiguration(
@@ -702,7 +653,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.SERIOUS_TRAE: AttributeConfiguration(
@@ -711,7 +661,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TRAE_IMMUNE_RELATED: AttributeConfiguration(
@@ -720,7 +669,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # Safety - Specific Adverse Events
@@ -730,7 +678,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.WBC_DECREASED: AttributeConfiguration(
@@ -739,7 +686,6 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # API-sourced attributes (Phase 1)
@@ -748,7 +694,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.DATE,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.STUDY_COMPLETION_DATE: AttributeConfiguration(
@@ -756,7 +701,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.DATE,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.FIRST_RESULTS: AttributeConfiguration(
@@ -764,7 +708,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.DATE,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.SPONSORS: AttributeConfiguration(
@@ -772,7 +715,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.CLINICAL_TRIAL_PHASE: AttributeConfiguration(
@@ -780,7 +722,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.MINIMUM_AGE: AttributeConfiguration(
@@ -788,7 +729,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.MAXIMUM_AGE: AttributeConfiguration(
@@ -796,7 +736,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.SEX: AttributeConfiguration(
@@ -804,7 +743,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.TRIAL_RUN_IN_EUROPE: AttributeConfiguration(
@@ -812,7 +750,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.TRIAL_RUN_IN_US: AttributeConfiguration(
@@ -820,7 +757,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.TRIAL_RUN_IN_CHINA: AttributeConfiguration(
@@ -828,7 +764,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=1,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.CHEMOTHERAPY_NAIVE: AttributeConfiguration(
@@ -836,7 +771,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.ICI_NAIVE: AttributeConfiguration(
@@ -844,7 +778,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.BRAF_MUTATION: AttributeConfiguration(
@@ -852,7 +785,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.BIOMARKER_INCLUSION: AttributeConfiguration(
@@ -860,7 +792,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             # Additional API-sourced attributes
@@ -869,7 +800,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.ICI_FAILED: AttributeConfiguration(
@@ -877,7 +807,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.IPILIMUMAB_FAILURE: AttributeConfiguration(
@@ -885,7 +814,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.ANTI_PD1_FAILURE: AttributeConfiguration(
@@ -893,7 +821,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.MUTATION_STATUS: AttributeConfiguration(
@@ -901,7 +828,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.TEXT,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.NRAS_MUTATION: AttributeConfiguration(
@@ -909,7 +835,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.BIOSIMILAR: AttributeConfiguration(
@@ -917,7 +842,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.BIOMARKERS_INCLUSION_CRITERIA: AttributeConfiguration(
@@ -925,7 +849,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.TEXT,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             AttributeType.BIOMARKERS_EXCLUSION_CRITERIA: AttributeConfiguration(
@@ -933,7 +856,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.TEXT,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=True,
             ),
             # PFS Rate Attributes
@@ -942,7 +864,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.PFS_RATE_9M: AttributeConfiguration(
@@ -950,7 +871,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.PFS_RATE_12M: AttributeConfiguration(
@@ -958,7 +878,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.PFS_RATE_18M: AttributeConfiguration(
@@ -966,7 +885,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.PFS_RATE_24M: AttributeConfiguration(
@@ -974,7 +892,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.PFS_RATE_36M: AttributeConfiguration(
@@ -982,7 +899,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.PFS_RATE_48M: AttributeConfiguration(
@@ -990,7 +906,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # OS Rate Attributes
@@ -999,7 +914,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.OS_RATE_9M: AttributeConfiguration(
@@ -1007,7 +921,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.OS_RATE_12M: AttributeConfiguration(
@@ -1015,7 +928,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.OS_RATE_18M: AttributeConfiguration(
@@ -1023,7 +935,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.OS_RATE_24M: AttributeConfiguration(
@@ -1031,7 +942,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.OS_RATE_36M: AttributeConfiguration(
@@ -1039,7 +949,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.OS_RATE_48M: AttributeConfiguration(
@@ -1047,7 +956,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.PERCENTAGE,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # EFS Family
@@ -1056,7 +964,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.P_VALUE_EFS: AttributeConfiguration(
@@ -1064,7 +971,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.DECIMAL,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.HR_EFS: AttributeConfiguration(
@@ -1072,7 +978,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.HAZARD_RATIO,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # RFS Family
@@ -1081,7 +986,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.P_VALUE_RFS: AttributeConfiguration(
@@ -1089,7 +993,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.DECIMAL,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.LENGTH_RFS: AttributeConfiguration(
@@ -1097,7 +1000,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.HR_RFS: AttributeConfiguration(
@@ -1105,7 +1007,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.HAZARD_RATIO,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # MFS Family
@@ -1114,7 +1015,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.LENGTH_MFS: AttributeConfiguration(
@@ -1122,7 +1022,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.HR_MFS: AttributeConfiguration(
@@ -1130,7 +1029,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.HAZARD_RATIO,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             # Time-to Metrics
@@ -1139,7 +1037,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TTP: AttributeConfiguration(
@@ -1147,7 +1044,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TTNT: AttributeConfiguration(
@@ -1155,7 +1051,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
             AttributeType.TTF: AttributeConfiguration(
@@ -1163,7 +1058,6 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.MONTHS,
                 required=False,
                 extraction_priority=2,
-                needs_backbone_prompt=False,
                 api_source=False,
             ),
         }
@@ -1201,15 +1095,6 @@ class AttributeConfigurationFactory:
             if config.api_source
         ]
 
-    @staticmethod
-    def get_backbone_prompt_attributes() -> list[AttributeType]:
-        """Get attributes that need backbone prompts for extraction."""
-        return [
-            attr
-            for attr, config in AttributeConfigurationFactory.get_all_configurations().items()
-            if config.needs_backbone_prompt
-        ]
-
 
 class ExtractedAttribute(BaseModel):
     """Core entity representing an extracted attribute."""
@@ -1221,6 +1106,9 @@ class ExtractedAttribute(BaseModel):
     )
     source_chunks: list[str] = Field(
         default_factory=list, description="Chunk IDs that contributed to extraction"
+    )
+    source: str = Field(
+        default="abstract_llm_extraction", description="Source of the extracted data"
     )
     validation_status: ValidationStatus = ValidationStatus.PENDING
     validation_errors: list[str] = Field(default_factory=list)
