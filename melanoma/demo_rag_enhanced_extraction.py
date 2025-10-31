@@ -38,6 +38,7 @@ async def main():
             LangChainServiceFactory,
             ServiceConfiguration,
         )
+        from src.domain.constants import get_ordered_attributes
         from src.app.rag_enhanced_extraction_service import RAGEnhancedExtractionService
         from src.domain.extraction_models import AttributeType
         from src.infrastructure.arm_aware_rag_provider import ArmAwareRAGContextProvider
@@ -304,12 +305,15 @@ NIVO demonstrated sustained RFS benefit vs IPI in resected stage III/IV melanoma
 
         # Add treatment arm details
         for arm_id, arm_result in extraction_result.arm_results.items():
+            # Order attributes according to canonical sequence
+            ordered_attrs = get_ordered_attributes(arm_result.get("attributes", {}))
+
             arm_data = {
                 "arm_id": arm_id,
                 "arm_name": arm_result.get("arm_name", "Unknown"),
                 "context_quality": arm_result.get("context_quality", 0.0),
                 "attributes_extracted": len(arm_result.get("attributes", {})),
-                "attributes": arm_result.get("attributes", {}),
+                "attributes": ordered_attrs,
                 "errors": arm_result.get("errors", []),
                 "warnings": arm_result.get("warnings", []),
             }

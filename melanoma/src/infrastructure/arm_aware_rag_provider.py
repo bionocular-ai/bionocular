@@ -10,8 +10,10 @@ from typing import Any, Optional
 from ..domain.extraction_interfaces import RAGContextProvider
 from ..domain.extraction_models import AttributeType
 from ..domain.models import SearchQuery, SearchResult
+from ..domain.rag_optimization_config import RAGOptimizationConfig
 from ..domain.treatment_arm_models import ArmSpecificContext, TreatmentArm
 from .langchain import LangChainEmbeddingService, LangChainVectorStore
+from .rag_config_loader import RAGConfigLoader
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +39,18 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
         self.vector_store = vector_store
         self.embedding_service = embedding_service
 
-        # Enhanced attribute-specific query templates for arm-aware retrieval
-        self.arm_attribute_queries = {
+        # Load optimized query templates from YAML configuration
+        # This provides better context for LLM extraction across all 114 attributes
+        config_loader = RAGConfigLoader()
+        self.arm_attribute_queries = config_loader.get_all_templates()
+
+        logger.info(
+            "Arm-aware RAG provider initialized with %d attribute query templates",
+            len(self.arm_attribute_queries),
+        )
+
+        # Legacy hardcoded queries (kept for reference, but YAML is used)
+        _legacy_queries = {
             AttributeType.NCT_NUMBER: [
                 "NCT number clinical trial identifier",
                 "ClinicalTrials.gov registration number",
@@ -103,16 +115,25 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
             arm: Treatment arm to get context for
             attribute_type: Type of attribute to extract
             abstract_id: Abstract identifier
-            context_chunks: Number of context chunks to retrieve
+            context_chunks: Number of context chunks to retrieve (will be overridden by optimization)
             similarity_threshold: Minimum similarity threshold
             metadata_filters: Optional metadata filters
 
         Returns:
             Arm-specific context with relevant chunks
+
+        🎯 OPTIMIZATION: Uses dynamic chunk count and smart filtering
         """
         try:
+            # 🎯 OPTIMIZATION 1: Use optimal chunk count based on attribute complexity
+            optimal_chunks = RAGOptimizationConfig.get_optimal_chunk_count(
+                attribute_type
+            )
+            target_chunks = optimal_chunks
+
             logger.info(
-                f"Getting context for arm {arm.arm_id} and attribute {attribute_type}"
+                f"Getting context for arm {arm.arm_id} and attribute {attribute_type} "
+                f"(using {target_chunks} chunks, complexity: {RAGOptimizationConfig.get_complexity_level(attribute_type).value})"
             )
 
             # Create arm-specific queries
@@ -129,7 +150,7 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
                     search_query = SearchQuery(
                         text=query_text,
-                        top_k=context_chunks,
+                        top_k=target_chunks * 2,  # Retrieve more to allow filtering
                         similarity_threshold=similarity_threshold,
                         metadata_filters=search_filters,
                     )
@@ -137,14 +158,22 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
                     # Search vector store
                     search_results = await self.vector_store.search(search_query)
 
-                    # Add unique results
+                    # Add unique results with filtering
                     for result in search_results:
                         if result.chunk.id not in seen_chunk_ids:
-                            all_search_results.append(result)
-                            seen_chunk_ids.add(result.chunk.id)
+                            # 🎯 OPTIMIZATION 2: Filter irrelevant chunks
+                            if RAGOptimizationConfig.should_include_chunk(
+                                result.chunk.content, attribute_type
+                            ):
+                                all_search_results.append(result)
+                                seen_chunk_ids.add(result.chunk.id)
+                            else:
+                                logger.debug(
+                                    f"Filtered out irrelevant chunk for {attribute_type.value}"
+                                )
 
                     # Early exit if we have enough chunks
-                    if len(all_search_results) >= context_chunks:
+                    if len(all_search_results) >= target_chunks:
                         break
 
                 except Exception as e:
@@ -152,12 +181,12 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
                     continue
 
             # If none found, retry without Section filter
-            limited_results = all_search_results[:context_chunks]
+            limited_results = all_search_results[:target_chunks]
             if not limited_results:
                 try:
                     fallback_query = SearchQuery(
                         text=queries[0],
-                        top_k=context_chunks,
+                        top_k=target_chunks,
                         similarity_threshold=similarity_threshold,
                         metadata_filters={"abstract_id": abstract_id},
                     )
@@ -188,7 +217,8 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
             )
 
             logger.info(
-                f"Retrieved {len(limited_results)} context chunks for arm {arm.arm_id}"
+                f"Retrieved {len(limited_results)} optimized chunks for arm {arm.arm_id} "
+                f"(target: {target_chunks}, complexity: {RAGOptimizationConfig.get_complexity_level(attribute_type).value})"
             )
             return context
 
@@ -204,7 +234,7 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
     async def get_context_for_attribute(
         self,
-        document_id: str,
+        document_id: Optional[str],
         attribute_type: AttributeType,
         context_chunks: int = 5,
         similarity_threshold: float = 0.1,
@@ -214,47 +244,87 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
         This method provides backward compatibility with the existing
         RAG context provider interface.
+
+        🎯 OPTIMIZATION: Uses dynamic chunk count and smart filtering
         """
         try:
+            # 🎯 OPTIMIZATION 1: Use optimal chunk count based on attribute complexity
+            optimal_chunks = RAGOptimizationConfig.get_optimal_chunk_count(
+                attribute_type
+            )
+            target_chunks = optimal_chunks
+
+            logger.debug(
+                f"Using {target_chunks} chunks for {attribute_type.value} "
+                f"(complexity: {RAGOptimizationConfig.get_complexity_level(attribute_type).value})"
+            )
+
             # Create search query
             queries = self.arm_attribute_queries.get(
                 attribute_type, [f"{attribute_type.value} data"]
             )
 
             all_search_results = []
-            seen_chunk_ids = set()
+            # Use (document_id, sequence_number) for deduplication since ChromaDB doesn't preserve chunk IDs
+            seen_chunks = set()
 
             for query_text in queries:
                 try:
                     search_filters = (metadata_filters or {}).copy()
-                    search_filters["abstract_id"] = document_id
+
+                    # Only add document_id filter if provided (allows cross-document search)
+                    if document_id:
+                        search_filters[
+                            "document_id"
+                        ] = document_id  # Fixed: use correct key
 
                     search_query = SearchQuery(
                         text=query_text,
-                        top_k=context_chunks,
+                        top_k=target_chunks * 2,  # Retrieve more to allow filtering
                         similarity_threshold=similarity_threshold,
-                        metadata_filters=search_filters,
+                        metadata_filters=search_filters or {},  # Always pass dict
                     )
 
                     search_results = await self.vector_store.search(search_query)
 
                     for result in search_results:
-                        if result.chunk.id not in seen_chunk_ids:
-                            all_search_results.append(result)
-                            seen_chunk_ids.add(result.chunk.id)
+                        # Deduplicate using (document_id, sequence_number) tuple
+                        chunk_key = (
+                            result.chunk.document_id,
+                            result.chunk.sequence_number,
+                        )
+                        if chunk_key not in seen_chunks:
+                            # 🎯 OPTIMIZATION 2: Filter irrelevant chunks
+                            if RAGOptimizationConfig.should_include_chunk(
+                                result.chunk.content, attribute_type
+                            ):
+                                all_search_results.append(result)
+                                seen_chunks.add(chunk_key)
+                            else:
+                                logger.debug(
+                                    f"Filtered out irrelevant chunk for {attribute_type.value}"
+                                )
 
-                    if len(all_search_results) >= context_chunks:
+                    if len(all_search_results) >= target_chunks:
                         break
 
                 except Exception as e:
                     logger.warning(f"Query '{query_text}' failed: {e}")
                     continue
 
+            # Prioritize Results/Conclusions/Table chunks for numeric attributes
+            prioritized_results = self._prioritize_results_sections(
+                all_search_results, attribute_type
+            )
+
             # Convert to string format for legacy interface
             context_strings = []
-            for result in all_search_results[:context_chunks]:
+            for result in prioritized_results[:target_chunks]:
                 context_strings.append(result.chunk.content)
 
+            logger.info(
+                f"Retrieved {len(context_strings)} optimized chunks for {attribute_type.value}"
+            )
             return context_strings
 
         except Exception as e:
@@ -446,3 +516,63 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
             "is_combination": arm.is_combination,
             "is_dose_variation": arm.is_dose_variation,
         }
+
+    def _prioritize_results_sections(
+        self, search_results: list[Any], attribute_type: AttributeType
+    ) -> list[Any]:
+        """Prioritize Results/Conclusions/Table chunks for numeric attributes.
+
+        For numeric attributes, we want to extract from Results, Conclusions, or Tables,
+        NOT from Background (which often references other studies).
+
+        Args:
+            search_results: List of search results with chunks
+            attribute_type: Type of attribute being extracted
+
+        Returns:
+            Reordered list with Results/Conclusions/Tables first
+        """
+        from src.domain.models import ChunkType
+
+        # Non-numeric attributes (can use any section)
+        non_numeric_attributes = {
+            AttributeType.TRIAL_NAME,
+            AttributeType.CANCER_TYPE,
+            AttributeType.NCT_NUMBER,
+            AttributeType.BRAND_NAME,
+            AttributeType.GENERIC_NAME,
+            AttributeType.TYPE_OF_THERAPY,
+            AttributeType.SUB_THERAPY,
+        }
+
+        # If non-numeric, return as-is (no prioritization needed)
+        if attribute_type in non_numeric_attributes:
+            return search_results
+
+        # For numeric attributes, prioritize Results/Conclusions/Tables
+        priority_sections = {
+            ChunkType.RESULTS,
+            ChunkType.CONCLUSIONS,
+            ChunkType.TABLE,
+        }
+
+        # Separate into priority and non-priority chunks
+        priority_chunks = []
+        non_priority_chunks = []
+
+        for result in search_results:
+            chunk_type = result.chunk.chunk_type
+            if chunk_type in priority_sections:
+                priority_chunks.append(result)
+            else:
+                non_priority_chunks.append(result)
+
+        # Log prioritization for debugging
+        if priority_chunks:
+            logger.debug(
+                f"Prioritized {len(priority_chunks)} Results/Conclusions/Table chunks "
+                f"for numeric attribute {attribute_type.value}"
+            )
+
+        # Return priority chunks first, then others
+        return priority_chunks + non_priority_chunks

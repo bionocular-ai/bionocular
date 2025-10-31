@@ -24,22 +24,33 @@ class BatchAttributeExtractor:
         self,
         llm_service: CostTrackingLLMService,
         prompt_provider: ExtractionPromptTemplateProvider,
+        preferred_model: str = "gpt-4o-mini",
     ):
         """Initialize batch attribute extractor.
 
         Args:
             llm_service: LLM service with cost tracking
             prompt_provider: Prompt template provider
+            preferred_model: Preferred LLM model ("gpt-4o" or "gpt-4o-mini")
         """
         self.llm_service = llm_service
         self.prompt_provider = prompt_provider
+        self.preferred_model = preferred_model
 
         # Rate limiting state
         self.request_count = 0
         self.last_request_time = 0
         self.rate_limit_window = 60  # 1 minute window
-        self.max_requests_per_minute = 15  # Conservative limit for GPT-4o
-        logger.info("Batch attribute extractor initialized")
+
+        # Model-specific rate limits (requests per minute)
+        self.rate_limits = {
+            "gpt-4o": 15,  # Conservative for GPT-4o (10-15 RPM)
+            "gpt-4o-mini": 500,  # Much higher for GPT-4o-mini (500+ RPM)
+        }
+        self.current_model = preferred_model  # Track which model we're using
+        logger.info(
+            f"Batch attribute extractor initialized with preferred model: {preferred_model}"
+        )
 
     async def extract_attributes_for_arms(
         self,
@@ -82,8 +93,8 @@ class BatchAttributeExtractor:
                 )
                 results[attribute] = attribute_results
 
-                # Small delay between attributes to avoid rate limiting
-                if attr_idx < len(attributes) - 1:
+                # Small delay between attributes to avoid rate limiting (only for GPT-4o)
+                if attr_idx < len(attributes) - 1 and self.current_model == "gpt-4o":
                     await asyncio.sleep(0.5)
 
             except Exception as e:
@@ -156,31 +167,30 @@ class BatchAttributeExtractor:
 
         arms_text = "\n".join(arms_info)
 
-        # Get the specific prompt for this attribute
+        # Get the specific prompt for this attribute with context included
         attr_name = attribute.value.replace("_", " ").title()
         base_prompt = self.prompt_provider.get_extraction_prompt(attribute, context)
 
-        # Format context
-        context_text = "\n\n".join(
-            [f"Context {i+1}:\n{chunk}" for i, chunk in enumerate(context)]
-        )
-
-        # Create the single attribute prompt
+        # Create the single attribute prompt (note: base_prompt already includes context)
         prompt = f"""TASK: Extract the {attr_name} for ALL treatment arms in this clinical trial.
 
 TREATMENT ARMS:
 {arms_text}
 
 CRITICAL REQUIREMENTS:
-1. Extract {attr_name} for EACH treatment arm separately
-2. If {attr_name} is not found for a specific arm, use "Not found"
-3. Return values in the exact JSON format specified below
-4. Be precise and accurate - this is for clinical data analysis
+1. Extract {attr_name} for EACH treatment arm separately - values MUST be arm-specific
+2. Look for values that explicitly mention the arm name (e.g., "pembrolizumab (N=514)")
+3. DO NOT use the same value for all arms unless explicitly stated as identical
+4. If {attr_name} is not found for a specific arm, use "Not found"
+5. Return values in the exact JSON format specified below
+6. Be precise and accurate - this is for clinical data analysis
+
+⚠️ ARM-SPECIFIC EXTRACTION:
+- Each arm should have its own specific value
+- Look for arm names in the context: {', '.join([arm.arm_name for arm in arms])}
+- Values should differ between arms unless the study reports identical results
 
 {base_prompt}
-
-CONTEXT:
-{context_text}
 
 OUTPUT FORMAT (JSON):
 {{
@@ -205,11 +215,27 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
         """
         for attempt in range(max_retries):
             try:
-                # Try GPT-4o first, fallback to GPT-4o-mini on rate limits
-                model_name = "gpt-4o" if attempt < 2 else "gpt-4o-mini"
+                # Try preferred model first, fallback to alternative on rate limits
+                if attempt < 2:
+                    model_name = self.preferred_model
+                else:
+                    # Fallback to alternative model
+                    model_name = (
+                        "gpt-4o-mini" if self.preferred_model == "gpt-4o" else "gpt-4o"
+                    )
+
                 response = await self.llm_service.generate_response(
                     prompt, model_name=model_name
                 )
+
+                # Track successful model for rate limiting
+                if self.current_model != model_name:
+                    logger.info(f"Switched to {model_name} for subsequent requests")
+                    self.current_model = model_name
+                    # Reset rate limiting when switching models
+                    self.request_count = 0
+                    self.last_request_time = 0
+
                 return response.strip()
             except Exception as e:
                 error_str = str(e)
@@ -304,10 +330,13 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
         return 0
 
     async def _handle_rate_limiting(self):
-        """Handle rate limiting with smart delays and fallback strategies."""
+        """Handle rate limiting with model-specific limits."""
         import time
 
         current_time = time.time()
+
+        # Get model-specific rate limit
+        max_requests = self.rate_limits.get(self.current_model, 15)
 
         # Reset counter if we're in a new minute
         if current_time - self.last_request_time > self.rate_limit_window:
@@ -315,11 +344,11 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
             self.last_request_time = current_time
 
         # If we're approaching the rate limit, wait
-        if self.request_count >= self.max_requests_per_minute:
+        if self.request_count >= max_requests:
             wait_time = self.rate_limit_window - (current_time - self.last_request_time)
             if wait_time > 0:
                 logger.info(
-                    f"Rate limit approaching, waiting {wait_time:.1f} seconds..."
+                    f"Rate limit approaching for {self.current_model} ({max_requests} RPM), waiting {wait_time:.1f} seconds..."
                 )
                 await asyncio.sleep(wait_time)
                 # Reset after waiting

@@ -21,7 +21,7 @@ class RAGContextProvider(ABC):
     @abstractmethod
     async def get_context_for_attribute(
         self,
-        document_id: str,
+        document_id: Optional[str],
         attribute_type: AttributeType,
         context_chunks: int = 5,
         similarity_threshold: float = 0.1,
@@ -30,7 +30,7 @@ class RAGContextProvider(ABC):
         """Get relevant context chunks for attribute extraction.
 
         Args:
-            document_id: Document identifier
+            document_id: Optional document identifier. If None, searches across all documents.
             attribute_type: Type of attribute to extract
             context_chunks: Number of context chunks to retrieve
             similarity_threshold: Minimum similarity threshold

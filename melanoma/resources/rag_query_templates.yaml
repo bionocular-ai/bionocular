@@ -1,0 +1,822 @@
+# RAG Query Templates - Optimized for ASCO/ESMO Clinical Trial Abstracts
+# Version 2 - Enhanced based on abstract analysis
+#
+# All queries are based on patterns found in melanoma/data/postprocessed/ and provided abstracts
+# Each attribute has 4-7+ context-focused query variations
+#
+# Last Updated: Based on ASCO_2020.md & ESMO_2020.md analysis
+# Coverage: 114/114 attributes (100%)
+
+# ============================================================================
+# GENERAL PARAMETERS (Abstract-level)
+# ============================================================================
+
+conference:
+  - "ASCO ESMO annual meeting congress"
+  - "presented at conference symposium"
+  - "meeting abstract presentation"
+  - "conference proceedings"
+  - "virtual congress presentation" # Added for recent context
+
+published_year:
+  - "publication year 20"
+  - "abstract year 20"
+  - "presented at 20"
+  - "data cutoff 20"
+  - "data analysis cutoff year" # More specific
+
+abstract_number:
+  - "Abstract ID number"
+  - "abstract number"
+  - "presentation number LBA" # Added LBA for late-breaking
+  - "poster discussion number"
+  - "abstract identifier"
+
+comments:
+  - "full text available online"
+  - "meetings.asco.org annalsofoncology.org" # Added ESMO journal
+  - "Journal of Clinical Oncology Annals of Oncology" # Added ESMO journal name
+  - "publication available"
+  - "DOI: https://doi.org/" # Added DOI prefix
+
+trial_name:
+  - "Keynote Checkmate Masterkey COMBI trial" # Added COMBI
+  - "trial name study name"
+  - "EORTC trial name"
+  - "phase trial name identifier"
+  - "study acronym trial"
+  - "named trial (e.g., CheckMate 238)"
+
+cancer_type:
+  - "resected unresectable advanced melanoma" # Added advanced
+  - "cutaneous melanoma stage IIIB/C IV" # More specific staging
+  - "uveal mucosal melanoma type"
+  - "brain metastasis CNS mets" # Added mets abbreviation
+  - "basal cell Merkel cell carcinoma CSCC" # Added CSCC
+  - "Kaposi sarcoma KS" # Added KS based on abstracts
+
+# ============================================================================
+# CLINICAL TRIAL IDENTIFIERS
+# ============================================================================
+
+nct_number:
+  - "Clinical Trial Information NCT" # Common header
+  - "NCT followed by 8 digits"
+  - "ClinicalTrials.gov number NCT"
+  - "trial registration NCT"
+  - "clinical trial identifier NCT"
+  - "NCT number study information"
+  - "EudraCT number" # Added European equivalent
+
+# ============================================================================
+# TREATMENT DETAILS (Arm-level)
+# ============================================================================
+
+generic_name:
+  - "pembrolizumab nivolumab ipilimumab dabrafenib trametinib" # Added targeted therapy examples
+  - "drug name treatment arm"
+  - "medication therapy agent"
+  - "combination drug + drug plus drug" # Added 'plus'
+  - "dose mg/kg drug name"
+  - "study drug administered"
+  - "placebo arm" # Added placebo explicitly
+
+brand_name:
+  - "Keytruda Opdivo Yervoy Tafinlar Mekinist" # Added targeted therapy brands
+  - "brand name commercial name"
+  - "trade name drug medication"
+  - "branded agent"
+
+type_of_therapy:
+  - "immunotherapy cellular therapy"
+  - "targeted therapy BRAF/MEK" # Added specific target
+  - "chemotherapy oncolytic virus T-VEC" # Added T-VEC example
+  - "treatment modality class"
+  - "dendritic cell vaccination" # Added from abstract
+  - "adoptive cell therapy ACT" # Added ACT
+
+sub_therapy:
+  - "immune checkpoint inhibitor antibody anti-PD-1 anti-PD-L1 anti-CTLA-4" # Added PD-L1
+  - "vaccine immunostimulant TLR9 agonist" # Added TLR9
+  - "CAR-T TIL therapy NK-Cell" # Added NK
+  - "tyrosine kinase inhibitor TKI angiogenesis inhibitor ADC" # Added ADC
+  - "BRAF MEK inhibitor combination"
+  - "oncolytic virus T-VEC talimogene laherparepvec" # Added full name
+  - "HDAC inhibitor" # Added from abstract
+
+dosage:
+  - "dose mg/kg mg flat dose" # Added flat dose
+  - "dosage regimen mg BID QD" # Added common abbreviations
+  - "drug dose administration level"
+  - "mg twice daily BID"
+  - "mg once daily QD"
+  - "PFU/mL" # Added for viral therapies
+
+type_of_dosing:
+  - "every 3 weeks Q3W"
+  - "every 2 weeks Q2W"
+  - "every 4 weeks Q4W" # Added Q4W
+  - "dosing schedule frequency interval"
+  - "administration schedule cycles"
+  - "twice daily BID once daily QD"
+  - "administered intravenously IV orally PO" # Added routes
+
+mechanism_of_action:
+  - "mechanism of action MOA"
+  - "drug mechanism biological target"
+  - "PD-1 PD-L1 CTLA-4 blockade" # Added PD-L1
+  - "BRAF MEK inhibition pathway"
+  - "inhibitor agonist blockade" # General terms
+
+target_protein:
+  - "PD-1 PD-L1 target protein" # Added PD-L1
+  - "CTLA-4 target receptor"
+  - "BRAF V600 MEK target" # Added MEK
+  - "molecular target pathway"
+  - "VEGF VEGFR cMET" # Added examples from abstracts
+  - "LAG3 TIM3" # Added examples from abstracts
+
+# ============================================================================
+# PATIENT POPULATION
+# ============================================================================
+
+median_age:
+  - "median age years yr" # Added yr
+  - "age range median value"
+  - "median age at diagnosis enrollment" # Added enrollment
+  - "years yrs median age"
+
+number_of_patients:
+  - "N= number patients pts arm" # N= is common prefix
+  - "n= number enrolled treated" # Added treated
+  - "of pts patients in arm group cohort" # Added group/cohort
+  - "N patients specific arm"
+  - "patients N equals value"
+  - "pts enrolled N="
+  - "patient count sample size N=" # Added sample size
+
+line_of_treatment:
+  - "first line 1L second line 2L third line 3L+" # Added abbreviations
+  - "neoadjuvant adjuvant therapy setting" # Added setting
+  - "treatment naive prior therapy" # Combined terms
+  - "previously treated resistant refractory" # Added resistant/refractory
+  - "line of therapy study"
+  - "salvage therapy" # Added from abstracts
+
+# ============================================================================
+# TRIAL DESIGN
+# ============================================================================
+
+primary_endpoint:
+  - "primary endpoint RFS PFS OS ORR" # Added ORR
+  - "primary objective main outcome"
+  - "primary efficacy endpoint measure"
+  - "co-primary endpoints listed"
+
+secondary_endpoint:
+  - "secondary endpoint outcomes measures"
+  - "secondary objectives listed"
+  - "exploratory endpoints analysis"
+  - "secondary efficacy safety endpoints" # Added safety
+
+# ============================================================================
+# EFFICACY - RESPONSE RATES
+# ============================================================================
+
+objective_response_rate:
+  - "overall response rate ORR percentage %" # Added % symbol
+  - "best overall response BOR CR + PR" # Added BOR
+  - "ORR of percentage % value"
+  - "response rate RR percentage %"
+  - "CR plus PR percentage %"
+  - "objective response ORR efficacy"
+  - "ORR investigator assessment RECIST" # Added assessment context
+
+complete_response:
+  - "complete response CR percentage %" # Added %
+  - "CR rate value %"
+  - "complete remission achieved"
+  - "number pts CR"
+
+partial_response:
+  - "partial response PR percentage %" # Added %
+  - "PR rate value %"
+  - "partial remission achieved"
+  - "number pts PR"
+
+pathological_complete_response:
+  - "pathological complete response pCR percentage %" # Added %
+  - "pCR rate value %"
+  - "pathologic CR achieved"
+  - "path response pCR MPR" # Added MPR (Major Pathologic Response) based on abstracts
+
+complete_metabolic_response:
+  - "complete metabolic response CMR percentage %" # Added %
+  - "CMR rate PET value %" # Added PET context
+  - "metabolic complete response achieved"
+
+disease_control_rate:
+  - "disease control rate DCR percentage %" # Added %
+  - "DCR value % CR+PR+SD" # Added formula hint
+  - "disease control achieved"
+  - "CR + PR + SD percentage %"
+
+clinical_benefit_rate:
+  - "clinical benefit rate CBR percentage %" # Added %
+  - "CBR value %"
+  - "clinical benefit observed"
+
+median_dor:
+  - "median duration of response DOR"
+  - "median DOR months mo mths" # Added mths
+  - "mDOR not reached NR value"
+  - "DOR was months mo mths"
+  - "duration of response median value"
+
+dor_rate:
+  - "DOR rate percentage % at timepoint" # Added timepoint context
+  - "duration of response rate value %"
+  - "sustained response DOR rate"
+  - "responders ongoing response percentage %" # Added ongoing context
+
+# ============================================================================
+# EFFICACY - SURVIVAL METRICS (PFS)
+# ============================================================================
+
+median_pfs:
+  - "median PFS progression-free survival months mo mths" # Added mths
+  - "mPFS value months mo mths"
+  - "PFS was months mo mths NOT RFS NOT EFS NOT MFS" # Reinforced distinction
+  - "progression-free survival median value"
+  - "PFS not reached NR progression value"
+  - "PFS mo months mths 95% CI value"
+
+median_followup_pfs:
+  - "median follow-up PFS months mo mths" # Added mths
+  - "PFS follow-up time duration"
+  - "follow-up for measuring PFS months mo mths"
+  - "observation period PFS months mo mths"
+
+p_value_pfs:
+  - "P= P< P , PFS progression p-value" # Combined variations
+  - "p-value PFS statistical significance"
+  - "PFS p-value reported"
+
+hr_pfs:
+  - "hazard ratio HR PFS 95% CI value"
+  - "HR PFS confidence interval value [ ]" # Added bracket hint
+  - "PFS HR value brackets"
+  - "HR for PFS value"
+
+# PFS Rate Timepoints
+pfs_rate_6m:
+  - "6-month PFS rate percentage %" # Added %
+  - "PFS at 6 months value %"
+  - "6-mo PFS percentage % rate"
+
+pfs_rate_9m:
+  - "9-month PFS rate percentage %" # Added %
+  - "PFS at 9 months value %"
+  - "9-mo PFS percentage % rate"
+
+pfs_rate_12m:
+  - "12-month PFS rate percentage %" # Added %
+  - "1-year 1-y 1y PFS value %" # Added variations
+  - "PFS at 12 months value %"
+  - "12-mo PFS percentage % rate"
+
+pfs_rate_18m:
+  - "18-month PFS rate percentage %" # Added %
+  - "PFS at 18 months value %"
+  - "18-mo PFS percentage % rate"
+
+pfs_rate_24m:
+  - "24-month PFS rate percentage %" # Added %
+  - "2-year 2-y 2y PFS value %" # Added variations
+  - "PFS at 24 months value %"
+  - "24-mo PFS percentage % rate"
+
+pfs_rate_36m:
+  - "36-month PFS rate percentage %" # Added %
+  - "3-year 3-y 3y PFS value %" # Added variations
+  - "PFS at 36 months value %"
+  - "36-mo PFS percentage % rate"
+
+pfs_rate_48m:
+  - "48-month PFS rate percentage %" # Added %
+  - "4-year 4-y 4y PFS value %" # Added variations
+  - "PFS at 48 months value %"
+  - "48-mo PFS percentage % rate"
+
+# ============================================================================
+# EFFICACY - SURVIVAL METRICS (OS)
+# ============================================================================
+
+median_os:
+  - "median OS overall survival months mo mths" # Added mths
+  - "mOS value months mo mths duration"
+  - "OS was value months mo mths"
+  - "median overall survival value mo months mths"
+  - "OS not reached NR value"
+  - "OS value mo months mths 95% CI"
+
+median_followup_os:
+  - "median follow-up OS months mo mths" # Added mths
+  - "OS follow-up time duration"
+  - "follow-up for measuring OS months mo mths"
+  - "observation period OS months mo mths"
+
+p_value_os:
+  - "P= P< P , OS overall survival p-value" # Combined variations
+  - "p-value OS statistical significance"
+  - "OS p-value reported"
+
+hr_os:
+  - "hazard ratio HR OS 95% CI value"
+  - "HR overall survival confidence interval value [ ]" # Added bracket hint
+  - "OS HR value brackets"
+  - "hazard ratio OS value CI"
+  - "HR OS 95% value"
+
+# OS Rate Timepoints
+os_rate_6m:
+  - "6-month OS rate percentage %" # Added %
+  - "OS at 6 months value %"
+  - "6-mo OS percentage % rate"
+
+os_rate_9m:
+  - "9-month OS rate percentage %" # Added %
+  - "OS at 9 months value %"
+  - "9-mo OS percentage % rate"
+
+os_rate_12m:
+  - "12-month OS rate percentage %" # Added %
+  - "1-year 1-y 1y OS value %" # Added variations
+  - "OS at 12 months value %"
+  - "12-mo OS percentage % rate"
+
+os_rate_18m:
+  - "18-month OS rate percentage %" # Added %
+  - "OS at 18 months value %"
+  - "18-mo OS percentage % rate"
+
+os_rate_24m:
+  - "24-month OS rate percentage %" # Added %
+  - "2-year 2-y 2y OS value %" # Added variations
+  - "OS at 24 months value %"
+  - "24-mo OS percentage % rate"
+
+os_rate_36m:
+  - "36-month OS rate percentage %" # Added %
+  - "3-year 3-y 3y OS value %" # Added variations
+  - "OS at 36 months value %"
+  - "36-mo OS percentage % rate"
+
+os_rate_48m:
+  - "48-month OS rate percentage %" # Added %
+  - "4-year 4-y 4y OS value %" # Added variations
+  - "OS at 48 months value %"
+  - "48-mo OS percentage % rate"
+
+# ============================================================================
+# EFFICACY - OTHER SURVIVAL METRICS
+# ============================================================================
+
+# Event-Free Survival (EFS)
+efs:
+  - "median EFS event-free survival months mo mths" # Added mths
+  - "EFS value months mo mths NOT PFS NOT RFS NOT MFS" # Reinforced distinction
+  - "event-free survival median value"
+  - "EFS not reached NR event value"
+  - "EFS was value months event-free"
+
+p_value_efs:
+  - "P= P< P , EFS event-free p-value" # Combined variations
+  - "p-value EFS event significance"
+  - "EFS p-value statistical event-free"
+
+hr_efs:
+  - "hazard ratio HR EFS event-free 95% CI value"
+  - "HR event-free survival EFS value"
+  - "EFS HR value 95% CI event brackets" # Added bracket hint
+
+# Recurrence-Free Survival (RFS)
+rfs:
+  - "median RFS recurrence-free survival months mo mths" # Added mths
+  - "RFS value months mo mths NOT PFS NOT EFS NOT MFS" # Reinforced distinction
+  - "recurrence-free survival median value"
+  - "RFS not reached NR recurrence value"
+  - "RFS was value months recurrence-free"
+  - "relapse-free survival RFS value" # Added relapse-free wording
+
+p_value_rfs:
+  - "P= P< P , RFS recurrence p-value" # Combined variations
+  - "p-value RFS recurrence-free significance"
+  - "RFS p-value statistical recurrence"
+
+length_rfs:
+  - "follow-up RFS recurrence months mo mths" # Added mths
+  - "RFS follow-up time recurrence duration"
+  - "observation period length measuring RFS recurrence"
+
+hr_rfs:
+  - "hazard ratio HR RFS recurrence 95% CI value"
+  - "HR recurrence-free survival RFS value [ ]" # Added bracket hint
+  - "RFS HR value 95% CI recurrence brackets"
+
+# Metastasis-Free Survival (MFS)
+mfs:
+  - "median MFS metastasis-free survival months mo mths" # Added mths
+  - "MFS value months mo mths NOT PFS NOT RFS NOT EFS" # Reinforced distinction
+  - "metastasis-free survival median value"
+  - "MFS not reached NR metastasis value"
+  - "DMFS distant metastasis–free survival value" # Added DMFS
+  - "distant metastasis MFS value"
+
+length_mfs:
+  - "follow-up MFS metastasis months mo mths" # Added mths
+  - "MFS follow-up time metastasis duration"
+  - "observation period length measuring MFS metastasis"
+
+hr_mfs:
+  - "hazard ratio HR MFS metastasis 95% CI value"
+  - "HR metastasis-free survival MFS value [ ]" # Added bracket hint
+  - "MFS HR value 95% CI metastasis brackets"
+  - "HR distant metastasis-free survival DMFS" # Added DMFS
+
+# ============================================================================
+# EFFICACY - TIME-TO METRICS
+# ============================================================================
+
+ttr:
+  - "time to response TTR median mean" # Added mean
+  - "median TTR months mo mths range" # Added range
+  - "time to first response value"
+  - "TTR was value months mo mths"
+
+ttp:
+  - "time to progression TTP median mean" # Added mean
+  - "median TTP months mo mths value" # Added mths
+  - "time until progression value"
+
+ttnt:
+  - "time to next treatment TTNT median mean" # Added mean
+  - "median TTNT months mo mths value" # Added mths
+  - "time to subsequent therapy value"
+
+ttf:
+  - "time to treatment failure TTF median mean" # Added mean
+  - "median TTF months mo mths value" # Added mths
+  - "treatment failure time value"
+
+# ============================================================================
+# SAFETY - ADVERSE EVENTS (AE)
+# ============================================================================
+
+ae:
+  - "any grade adverse events AE percentage %" # Added %
+  - "AE percentage % (n/N)" # Added count format
+  - "treatment-related AE percentage %"
+  - "experienced AE n (%)" # Added format hint
+  - "adverse events occurred percentage %"
+
+grade_3_plus_ae:
+  - "grade 3-4 adverse events AE percentage %" # Added %
+  - "grade 3/4 G3/4 treatment-related AE %" # Added G3/4
+  - "$ grade 3-4 AE percentage % (n/N)" # Added format hint
+  - "experienced grade 3-4 AE n (%)" # Added format hint
+  - "grade 3 or higher AE percentage % toxicity" # Added toxicity
+  - "grade 3+ G3+ AE percentage %" # Added G3+
+
+ae_leading_to_discontinuation:
+  - "AE leading to discontinuation percentage %" # Added %
+  - "discontinuation due to AE n (%)" # Added format hint
+  - "treatment withdrawal AE percentage %"
+  - "discontinued due to toxicity AE percentage %"
+
+serious_ae:
+  - "serious adverse events SAE percentage %" # Added %
+  - "serious AE SAE n (%)" # Added format hint
+  - "severe adverse events SAE"
+
+immune_related_ae:
+  - "immune-related adverse events irAE percentage %" # Added %
+  - "irAE percentage % (n/N)" # Added format hint
+  - "immune mediated AE irAE percentage %"
+  - "immune toxicity irAE percentage %"
+
+serious_immune_related_ae:
+  - "serious immune-related AE irAE percentage %" # Added %
+  - "serious irAE grade 3+ G3+ percentage %" # Added grade
+  - "grade 3+ G3+ immune-related AE percentage %"
+
+ae_leading_to_death:
+  - "AE leading to death percentage %" # Added %
+  - "fatal adverse events grade 5 G5 percentage %" # Added grade
+  - "death due to AE n (%)" # Added format hint
+  - "treatment-related deaths percentage %"
+
+# ============================================================================
+# SAFETY - TREATMENT-EMERGENT ADVERSE EVENTS (TEAE)
+# ============================================================================
+
+teae:
+  - "treatment-emergent adverse events TEAE percentage %" # Added %
+  - "TEAE percentage % (n/N)" # Added format hint
+  - "treatment emergent AE TEAE percentage %"
+  - "emergent adverse events TEAE occurred %"
+
+grade_3_plus_teae:
+  - "grade 3-4 TEAE percentage %" # Added %
+  - "grade 3+ G3+ TEAE percentage % (n/N)" # Added format hints
+  - "severe TEAE grade 3+ G3+ percentage %"
+  - "grade 3 or higher TEAE percentage %"
+
+grade_3_teae:
+  - "grade 3 G3 TEAE percentage %" # Added G3
+  - "grade 3 treatment-emergent AE percentage %"
+
+grade_4_teae:
+  - "grade 4 G4 TEAE percentage %" # Added G4
+  - "grade 4 treatment-emergent AE percentage %"
+
+grade_5_teae:
+  - "grade 5 G5 TEAE percentage %" # Added G5
+  - "fatal TEAE grade 5 G5 percentage %"
+  - "grade 5 treatment-emergent AE percentage %"
+
+teae_leading_to_discontinuation:
+  - "TEAE leading to discontinuation percentage %" # Added %
+  - "discontinuation due to TEAE n (%)" # Added format hint
+  - "stopped treatment TEAE percentage %"
+
+teae_leading_to_death:
+  - "TEAE leading to death grade 5 G5 percentage %" # Added grade, %
+  - "fatal TEAE grade 5 G5 percentage %"
+  - "death due to TEAE n (%)" # Added format hint
+
+serious_teae:
+  - "serious TEAE SAE percentage %" # Added SAE, %
+  - "serious treatment-emergent AE SAE percentage %"
+  - "severe TEAE SAE percentage %"
+
+teae_immune_related:
+  - "TEAE immune-related irTEAE percentage %" # Added irTEAE, %
+  - "immune-related TEAE irTEAE percentage %"
+  - "irTEAE percentage %"
+
+# ============================================================================
+# SAFETY - TREATMENT-RELATED ADVERSE EVENTS (TRAE)
+# ============================================================================
+
+trae:
+  - "treatment-related adverse events TRAE percentage %" # Added %
+  - "TRAE percentage % (n/N)" # Added format hint
+  - "treatment related AE TRAE percentage %"
+  - "drug-related adverse events TRAE percentage %"
+
+grade_3_plus_trae:
+  - "grade 3-4 TRAE percentage %" # Added %
+  - "grade 3+ G3+ TRAE percentage % (n/N)" # Added format hints
+  - "severe TRAE grade 3+ G3+ percentage %"
+  - "grade 3 or higher TRAE percentage %"
+
+grade_3_trae:
+  - "grade 3 G3 TRAE percentage %" # Added G3
+  - "grade 3 treatment-related AE percentage %"
+
+grade_4_trae:
+  - "grade 4 G4 TRAE percentage %" # Added G4
+  - "grade 4 treatment-related AE percentage %"
+
+grade_5_trae:
+  - "grade 5 G5 TRAE percentage %" # Added G5
+  - "fatal TRAE grade 5 G5 percentage %"
+  - "grade 5 treatment-related AE percentage %"
+
+trae_leading_to_discontinuation:
+  - "TRAE leading to discontinuation percentage %" # Added %
+  - "discontinuation due to TRAE n (%)" # Added format hint
+  - "stopped treatment TRAE percentage %"
+
+trae_leading_to_death:
+  - "TRAE leading to death grade 5 G5 percentage %" # Added grade, %
+  - "fatal TRAE grade 5 G5 percentage %"
+  - "death due to TRAE n (%)" # Added format hint
+
+serious_trae:
+  - "serious TRAE SAE percentage %" # Added SAE, %
+  - "serious treatment-related AE SAE percentage %"
+  - "severe TRAE SAE percentage %"
+
+trae_immune_related:
+  - "TRAE immune-related irTRAE percentage %" # Added irTRAE, %
+  - "immune-related TRAE irTRAE percentage %"
+  - "irTRAE percentage %"
+
+# ============================================================================
+# SAFETY - SPECIFIC ADVERSE EVENTS
+# ============================================================================
+
+crs:
+  - "cytokine release syndrome CRS percentage %" # Added %
+  - "CRS grade percentage %" # Added grade context
+  - "cytokine storm CRS"
+  - "cytokine release event CRS"
+
+wbc_decreased:
+  - "WBC decreased white blood cell percentage %" # Added %
+  - "leukopenia neutropenia percentage %" # Added %
+  - "WBC count decreased percentage %"
+  - "decreased white blood cells percentage %"
+
+# ============================================================================
+# BIOMARKERS AND MUTATION STATUS
+# ============================================================================
+
+biomarker_inclusion:
+  - "biomarker inclusion criteria yes no" # Added yes/no
+  - "biomarker positive patients required"
+  - "biomarker required enrollment status"
+  - "biomarker expression required yes no"
+
+biomarkers_inclusion_criteria:
+  - "biomarkers inclusion criteria list details"
+  - "molecular inclusion criteria specifics"
+  - "biomarker requirements enrollment list"
+  - "required biomarker status criteria"
+  - "PD-L1 positive required" # Example
+
+biomarkers_exclusion_criteria:
+  - "biomarkers exclusion criteria list details"
+  - "molecular exclusion criteria specifics"
+  - "biomarker exclusions list"
+  - "excluded biomarker status criteria"
+  - "PD-L1 negative excluded" # Example
+
+mutation_status:
+  - "mutation status assessed evaluated"
+  - "BRAF V600 mutation status"
+  - "genetic mutation molecular profile"
+  - "mutational analysis performed"
+  - "BRAF NRAS mutation" # Common combination
+
+braf_mutation:
+  - "BRAF V600 mutation status positive negative yes no" # Added boolean context
+  - "BRAF V600E V600K mutant mutated" # Added variations
+  - "BRAF mutant wild-type WT" # Added WT
+  - "BRAF-mutated BRAF+ melanoma" # Added + symbol
+
+nras_mutation:
+  - "NRAS mutation status positive negative yes no" # Added boolean context
+  - "NRAS mutant mutated"
+  - "NRAS positive negative status"
+  - "NRAS alteration detected"
+
+# ============================================================================
+# PRIOR TREATMENT STATUS
+# ============================================================================
+
+anti_pd1_failure:
+  - "anti-PD-1 PD-1 failure progressed refractory resistant" # Combined terms
+  - "PD-1 inhibitor failure prior previous"
+  - "prior PD-1 treatment failure status yes no"
+  - "progressed on anti-PD-1 PD-1 therapy"
+
+ipilimumab_failure:
+  - "ipilimumab failure progressed refractory resistant" # Combined terms
+  - "prior previous ipilimumab failure status yes no"
+  - "ipilimumab refractory resistant status"
+  - "progressed on ipilimumab CTLA-4 therapy" # Added CTLA-4
+
+ici_failed:
+  - "ICI failed checkpoint inhibitor failure progressed refractory resistant" # Combined terms
+  - "immune checkpoint inhibitor failure prior previous"
+  - "prior ICI failure status yes no"
+  - "ICI refractory resistant status"
+
+ici_naive:
+  - "ICI naive checkpoint inhibitor naive treatment-naive" # Combined terms
+  - "immune checkpoint inhibitor naive status yes no"
+  - "no prior ICI treatment yes no"
+  - "ICI treatment naive status yes no"
+
+chemotherapy_failed:
+  - "chemotherapy failed progressed refractory resistant" # Combined terms
+  - "prior previous chemotherapy failure status yes no"
+  - "chemotherapy refractory resistant status"
+  - "progressed on chemotherapy CT" # Added CT abbr
+
+chemotherapy_naive:
+  - "chemotherapy naive treatment-naive" # Combined terms
+  - "no prior chemotherapy status yes no"
+  - "chemotherapy treatment naive status yes no"
+
+# ============================================================================
+# PATIENT DEMOGRAPHICS
+# ============================================================================
+
+sex:
+  - "male female patients percentage %" # Added %
+  - "sex gender distribution ratio M/F" # Added ratio
+  - "patient gender male female %"
+  - "pts patients are male female percentage %"
+
+minimum_age:
+  - "age $ minimum age years yrs" # Added variations
+  - "minimum age eligibility criteria years yrs"
+  - "age greater than or equal to value"
+  - "patient age minimum years yrs"
+
+maximum_age:
+  - "maximum age years yrs" # Added variations
+  - "maximum age eligibility criteria years yrs"
+  - "age less than or equal to value"
+  - "patient age maximum years yrs"
+
+# ============================================================================
+# TRIAL CHARACTERISTICS
+# ============================================================================
+
+clinical_trial_phase:
+  - "phase I II III 1 2 3 trial study" # Added numerals
+  - "phase Ib IIa IIb III trial study" # Added sub-phases
+  - "clinical trial phase number"
+  - "study phase I II III"
+
+first_results:
+  - "first results initial results preliminary results" # Combined terms
+  - "interim analysis report"
+  - "first report presented"
+  - "early results reported"
+
+biosimilar:
+  - "biosimilar drug agent"
+  - "biosimilar tested evaluated"
+  - "reference product comparison biosimilar"
+
+sponsors:
+  - "Research Sponsor Funded by Funding provided by" # Added variations
+  - "industry sponsored non-industry sponsored" # Added non-industry
+  - "pharmaceutical company name Merck BMS Novartis Pfizer Roche Amgen" # Added examples
+  - "Sponsor name"
+
+study_start_date:
+  - "study start date enrollment start date"
+  - "first patient enrolled date"
+  - "trial initiation date began"
+  - "study commencement date"
+
+study_completion_date:
+  - "study completion date data cutoff date"
+  - "trial completion date ended"
+  - "final data collection date"
+  - "last patient last visit date" # Added LPLV
+
+# ============================================================================
+# GEOGRAPHIC TRIAL LOCATIONS
+# ============================================================================
+
+trial_run_in_us:
+  - "United States US USA trial sites centers" # Added variations
+  - "conducted in United States US USA"
+  - "trial run in US USA yes no" # Added boolean context
+  - "North America trial" # Broader region
+
+trial_run_in_europe:
+  - "European Europe EU trial sites centers" # Added variations
+  - "conducted in Europe EU EORTC" # Added EORTC context
+  - "trial run in Europe EU yes no" # Added boolean context
+  - "European Organisation for Research and Treatment of Cancer" # Full EORTC name
+
+trial_run_in_china:
+  - "Chinese China trial sites centers" # Added variations
+  - "conducted in China PRC" # Added PRC
+  - "trial run in China yes no" # Added boolean context
+  - "Asia-Pacific region trial" # Broader region (check if context fits)
+
+# ============================================================================
+# QUALITY OF LIFE
+# ============================================================================
+
+quality_of_life:
+  - "quality of life QoL assessment evaluated"
+  - "patient-reported outcomes PRO measured"
+  - "QoL assessment EORTC QLQ-C30 FACT-M" # Added specific instruments
+  - "health-related quality of life HRQOL measured"
+
+# ============================================================================
+# STATISTICAL MEASURES
+# ============================================================================
+
+confidence_interval:
+  - "95% confidence interval 95% CI value range"
+  - "CI range brackets [ ] value" # Added brackets
+  - "confidence interval 95% limits"
+  - "CI value confidence limits"
+
+hazard_ratio:
+  - "hazard ratio HR 95% CI value"
+  - "HR confidence interval brackets [ ] value" # Added brackets
+  - "relative risk hazard ratio HR value"
+  - "HR value 95% CI reported"

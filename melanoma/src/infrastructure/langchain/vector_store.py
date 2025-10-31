@@ -670,6 +670,91 @@ class LangChainVectorStore(VectorStoreInterface):
             logger.error(f"Failed to delete chunks: {e}")
             raise RuntimeError(f"Chunk deletion failed: {e}") from e
 
+    async def delete_chunks_by_document_id(self, document_id: str) -> int:
+        """Delete all chunks for a specific document.
+
+        This is useful for re-ingesting documents without creating duplicates.
+
+        Args:
+            document_id: Document ID to delete chunks for
+
+        Returns:
+            Number of chunks deleted
+
+        Raises:
+            RuntimeError: If deletion operation fails
+        """
+        try:
+            await self._ensure_vectorstore_initialized()
+
+            # Get all chunks for this document
+            collection = self._vectorstore._collection
+            existing_data = collection.get(where={"document_id": document_id})
+
+            if not existing_data["ids"]:
+                logger.info(f"No existing chunks found for document {document_id}")
+                return 0
+
+            # Delete them
+            chunk_ids = existing_data["ids"]
+            collection.delete(ids=chunk_ids)
+
+            logger.info(
+                f"Deleted {len(chunk_ids)} existing chunks for document {document_id}"
+            )
+            return len(chunk_ids)
+
+        except Exception as e:
+            logger.error(f"Failed to delete chunks for document {document_id}: {e}")
+            raise RuntimeError(f"Chunk deletion by document_id failed: {e}") from e
+
+    async def upsert_chunks(self, chunks: list[ChunkWithEmbedding]) -> None:
+        """Store chunks with automatic deduplication (upsert).
+
+        This method will:
+        1. Delete all existing chunks for each document_id in the batch
+        2. Store the new chunks
+
+        This prevents duplicate chunks from multiple ingestion runs.
+
+        Args:
+            chunks: List of chunks with embeddings to store
+
+        Raises:
+            ValueError: If chunks list is empty or contains invalid data
+            RuntimeError: If storage operation fails
+        """
+        if not chunks:
+            logger.warning("No chunks provided for upsert")
+            return
+
+        try:
+            # Get unique document IDs
+            document_ids = {chunk.document_id for chunk in chunks}
+
+            logger.info(f"Upserting chunks for {len(document_ids)} document(s)")
+
+            # Delete existing chunks for these documents
+            total_deleted = 0
+            for doc_id in document_ids:
+                deleted_count = await self.delete_chunks_by_document_id(doc_id)
+                total_deleted += deleted_count
+
+            if total_deleted > 0:
+                logger.info(
+                    f"Removed {total_deleted} existing chunks before storing new ones"
+                )
+
+            # Store new chunks
+            await self.store_chunks(chunks)
+            logger.info(
+                f"Upserted {len(chunks)} chunks (deleted {total_deleted}, stored {len(chunks)})"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to upsert chunks: {e}")
+            raise RuntimeError(f"Chunk upsert failed: {e}") from e
+
     async def get_store_info(self) -> dict[str, Any]:
         """Get information about the vector store.
 

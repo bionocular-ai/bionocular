@@ -76,8 +76,14 @@ class EnhancedExtractionService:
         # Initialize providers
         self.prompt_provider = ExtractionPromptTemplateProvider()
         self.file_path_extractor = FilePathExtractor()
+
+        # Get preferred model from environment or use default
+        import os
+
+        preferred_model = os.getenv("EXTRACTION_MODEL", "gpt-4o-mini")
+
         self.batch_extractor = BatchAttributeExtractor(
-            self.llm_service, self.prompt_provider
+            self.llm_service, self.prompt_provider, preferred_model=preferred_model
         )
 
         # Get attribute configurations

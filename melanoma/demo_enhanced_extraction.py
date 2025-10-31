@@ -17,6 +17,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from src.app.enhanced_extraction_service import EnhancedExtractionService
+from src.domain.constants import get_ordered_attributes, get_ordered_attribute_list
 from src.domain.models import (
     ChunkingConfiguration,
     ChunkWithEmbedding,
@@ -63,7 +64,19 @@ async def main():
 
         # LLM service with cost tracking
         base_llm_service = LangChainLLMService()
-        cost_calculator = CostCalculator()
+
+        # Get preferred model for cost tracking
+        import os
+        from src.infrastructure.cost_calculator import ModelType
+
+        preferred_model_str = os.getenv("EXTRACTION_MODEL", "gpt-4o-mini")
+        preferred_model = (
+            ModelType.GPT_4O
+            if preferred_model_str == "gpt-4o"
+            else ModelType.GPT_4O_MINI
+        )
+
+        cost_calculator = CostCalculator(default_model=preferred_model)
         llm_service = CostTrackingLLMService(base_llm_service, cost_calculator)
 
         # Embedding service
@@ -136,8 +149,8 @@ async def main():
             logger.error("No abstracts found in file")
             return
 
-        # Process first 1 abstract for testing
-        abstracts_to_process = abstracts[:1]
+        # Process first 5 abstracts
+        abstracts_to_process = abstracts[:5]
         logger.info(
             f"Found {len(abstracts)} total abstracts, processing first {len(abstracts_to_process)}"
         )
@@ -180,20 +193,23 @@ async def main():
                 )
                 all_chunks_with_embeddings.append(chunk_with_embedding)
 
-        # Store all chunks in vector store
-        await vector_store_service.store_chunks(all_chunks_with_embeddings)
+        # Store all chunks in vector store using upsert (prevents duplicates)
+        await vector_store_service.upsert_chunks(all_chunks_with_embeddings)
         logger.info(
-            f"Loaded {len(all_chunks_with_embeddings)} chunks for {len(abstracts_to_process)} abstracts into vector store"
+            f"Loaded {len(all_chunks_with_embeddings)} chunks for {len(abstracts_to_process)} abstracts into vector store (with deduplication)"
         )
 
         # Use all configured attributes for comprehensive extraction
         from src.domain.extraction_models import AttributeConfigurationFactory
 
         all_configs = AttributeConfigurationFactory.get_all_configurations()
-        attributes_to_extract = list(all_configs.keys())
+        all_attributes = list(all_configs.keys())
+
+        # Order attributes according to canonical business sequence
+        attributes_to_extract = get_ordered_attribute_list(all_attributes)
 
         logger.info(
-            f"Extracting {len(attributes_to_extract)} attributes for {len(abstracts_to_process)} abstracts"
+            f"Extracting {len(attributes_to_extract)} attributes (in canonical order) for {len(abstracts_to_process)} abstracts"
         )
 
         # Process each abstract
@@ -390,6 +406,9 @@ async def main():
                         # Direct value format
                         serializable_attributes[str(attr_type)] = attr_data
 
+                # Apply canonical output ordering to attributes
+                ordered_attributes = get_ordered_attributes(serializable_attributes)
+
                 abstract_data["arm_results"][arm_id] = {
                     "arm_id": arm_result.get("arm_id"),
                     "arm_name": arm_result.get("arm_name"),
@@ -398,7 +417,7 @@ async def main():
                     "abstract_attributes": arm_result.get("abstract_attributes", 0),
                     "errors": arm_result.get("errors", []),
                     "warnings": arm_result.get("warnings", []),
-                    "attributes": serializable_attributes,
+                    "attributes": ordered_attributes,
                 }
 
             json_results["abstracts"].append(abstract_data)

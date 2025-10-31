@@ -12,37 +12,82 @@ from pydantic import BaseModel, Field, validator
 
 
 class AttributeType(str, Enum):
-    """Enumeration of extractable clinical trial attributes."""
+    """Enumeration of extractable clinical trial attributes.
 
-    # Current 5 attributes
-    NCT_NUMBER = "nct_number"
-    GENERIC_NAME = "generic_name"
-    P_VALUE_OS = "p_value_os"
-    OBJECTIVE_RESPONSE_RATE = "objective_response_rate"
-    GRADE_3_PLUS_AE = "grade_3_plus_ae"
+    Order matches the desired output sequence for clinical trial data extraction.
+    """
 
-    # General Parameters (Abstract-level)
-    CONFERENCE = "conference"
-    PUBLISHED_YEAR = "published_year"
+    # General Parameters (Abstract-level) - First Section
     ABSTRACT_NUMBER = "abstract_number"
-    COMMENTS = "comments"
+    NCT_NUMBER = "nct_number"
     TRIAL_NAME = "trial_name"
     CANCER_TYPE = "cancer_type"
-    MEDIAN_AGE = "median_age"
-    NUMBER_OF_PATIENTS = "number_of_patients"
+
+    # Company and Sponsors
+    COMPANY_EU = "company_eu"  # Note: Not yet implemented
+    COMPANY_US = "company_us"  # Note: Not yet implemented
+    COMPANY_CHINA = "company_china"  # Note: Not yet implemented
+    SPONSORS = "sponsors"
+
+    # Trial Characteristics
+    CLINICAL_TRIAL_PHASE = "clinical_trial_phase"
+    CHEMOTHERAPY_NAIVE = "chemotherapy_naive"
+    CHEMOTHERAPY_FAILED = "chemotherapy_failed"
+    ICI_NAIVE = "ici_naive"
+    ICI_FAILED = "ici_failed"
+    IPILIMUMAB_FAILURE = "ipilimumab_failure"
+    ANTI_PD1_FAILURE = "anti_pd1_failure"
+    MUTATION_STATUS = "mutation_status"
+    BRAF_MUTATION = "braf_mutation"
+    NRAS_MUTATION = "nras_mutation"
+    BIOSIMILAR = "biosimilar"
+    LINE_OF_TREATMENT = "line_of_treatment"  # Note: Not yet implemented
+
+    # Endpoints and Biomarkers
     PRIMARY_ENDPOINT = "primary_endpoint"
     SECONDARY_ENDPOINT = "secondary_endpoint"
+    BIOMARKER_INCLUSION = "biomarker_inclusion"
+    BIOMARKERS_INCLUSION_CRITERIA = "biomarkers_inclusion_criteria"
+    BIOMARKERS_EXCLUSION_CRITERIA = "biomarkers_exclusion_criteria"
+
+    # Trial Timeline
+    STUDY_START_DATE = "study_start_date"
+    STUDY_COMPLETION_DATE = "study_completion_date"
+    FIRST_RESULTS = "first_results"
+
+    # Trial Geography
+    TRIAL_RUN_IN_EUROPE = "trial_run_in_europe"
+    TRIAL_RUN_IN_US = "trial_run_in_us"
+    TRIAL_RUN_IN_CHINA = "trial_run_in_china"
 
     # Treatment Details (Arm-level)
+    GENERIC_NAME = "generic_name"
     BRAND_NAME = "brand_name"
-    SUB_THERAPY = "sub_therapy"
     DOSAGE = "dosage"
     TYPE_OF_DOSING = "type_of_dosing"
     MECHANISM_OF_ACTION = "mechanism_of_action"
     TARGET_PROTEIN = "target_protein"
     TYPE_OF_THERAPY = "type_of_therapy"
+    SUB_THERAPY = "sub_therapy"  # Moved after TYPE_OF_THERAPY
+
+    # Patient Demographics
+    MEDIAN_AGE = "median_age"
+    NUMBER_OF_PATIENTS = "number_of_patients"
+
+    # Efficacy - Survival Metrics (PFS)
+    MEDIAN_PFS = "median_pfs"
+    MEDIAN_FOLLOWUP_PFS = "median_followup_pfs"
+    P_VALUE_PFS = "p_value_pfs"
+    HR_PFS = "hr_pfs"
+
+    # Efficacy - Survival Metrics (OS)
+    MEDIAN_OS = "median_os"
+    MEDIAN_FOLLOWUP_OS = "median_followup_os"
+    P_VALUE_OS = "p_value_os"
+    HR_OS = "hr_os"
 
     # Efficacy - Response Rates
+    OBJECTIVE_RESPONSE_RATE = "objective_response_rate"
     COMPLETE_RESPONSE = "complete_response"
     PATHOLOGICAL_COMPLETE_RESPONSE = "pathological_complete_response"
     COMPLETE_METABOLIC_RESPONSE = "complete_metabolic_response"
@@ -51,30 +96,7 @@ class AttributeType(str, Enum):
     MEDIAN_DOR = "median_dor"
     DOR_RATE = "dor_rate"
 
-    # Efficacy - Survival Metrics
-    MEDIAN_PFS = "median_pfs"
-    MEDIAN_FOLLOWUP_PFS = "median_followup_pfs"
-    P_VALUE_PFS = "p_value_pfs"
-    HR_PFS = "hr_pfs"
-    MEDIAN_OS = "median_os"
-    MEDIAN_FOLLOWUP_OS = "median_followup_os"
-    HR_OS = "hr_os"
-    EFS = "efs"
-    P_VALUE_EFS = "p_value_efs"
-    HR_EFS = "hr_efs"
-    RFS = "rfs"
-    P_VALUE_RFS = "p_value_rfs"
-    LENGTH_RFS = "length_rfs"
-    HR_RFS = "hr_rfs"
-    MFS = "mfs"
-    LENGTH_MFS = "length_mfs"
-    HR_MFS = "hr_mfs"
-    TTR = "ttr"
-    TTP = "ttp"
-    TTNT = "ttnt"
-    TTF = "ttf"
-
-    # Efficacy - Survival Rates at Timepoints
+    # Efficacy - PFS Rates at Timepoints
     PFS_RATE_6M = "pfs_rate_6m"
     PFS_RATE_9M = "pfs_rate_9m"
     PFS_RATE_12M = "pfs_rate_12m"
@@ -82,6 +104,8 @@ class AttributeType(str, Enum):
     PFS_RATE_24M = "pfs_rate_24m"
     PFS_RATE_36M = "pfs_rate_36m"
     PFS_RATE_48M = "pfs_rate_48m"
+
+    # Efficacy - OS Rates at Timepoints
     OS_RATE_6M = "os_rate_6m"
     OS_RATE_9M = "os_rate_9m"
     OS_RATE_12M = "os_rate_12m"
@@ -90,8 +114,31 @@ class AttributeType(str, Enum):
     OS_RATE_36M = "os_rate_36m"
     OS_RATE_48M = "os_rate_48m"
 
+    # Efficacy - Other Survival Metrics (EFS)
+    EFS = "efs"
+    P_VALUE_EFS = "p_value_efs"
+    HR_EFS = "hr_efs"
+
+    # Efficacy - Other Survival Metrics (RFS)
+    RFS = "rfs"
+    P_VALUE_RFS = "p_value_rfs"
+    LENGTH_RFS = "length_rfs"
+    HR_RFS = "hr_rfs"
+
+    # Efficacy - Other Survival Metrics (MFS)
+    MFS = "mfs"
+    LENGTH_MFS = "length_mfs"
+    HR_MFS = "hr_mfs"
+
+    # Efficacy - Time-to Metrics
+    TTR = "ttr"
+    TTP = "ttp"
+    TTNT = "ttnt"
+    TTF = "ttf"
+
     # Safety - Adverse Events (AE)
     AE = "ae"
+    GRADE_3_PLUS_AE = "grade_3_plus_ae"
     AE_LEADING_TO_DISCONTINUATION = "ae_leading_to_discontinuation"
     SERIOUS_AE = "serious_ae"
     IMMUNE_RELATED_AE = "immune_related_ae"
@@ -117,38 +164,20 @@ class AttributeType(str, Enum):
     GRADE_5_TRAE = "grade_5_trae"
     TRAE_LEADING_TO_DISCONTINUATION = "trae_leading_to_discontinuation"
     TRAE_LEADING_TO_DEATH = "trae_leading_to_death"
-    SERIOUS_TRAE = "serious_trae"
     TRAE_IMMUNE_RELATED = "trae_immune_related"
+    SERIOUS_TRAE = "serious_trae"
 
     # Safety - Specific Adverse Events
     CRS = "crs"
     WBC_DECREASED = "wbc_decreased"
 
-    # API-sourced attributes (Phase 1)
-    STUDY_START_DATE = "study_start_date"
-    STUDY_COMPLETION_DATE = "study_completion_date"
-    FIRST_RESULTS = "first_results"
-    SPONSORS = "sponsors"
-    CLINICAL_TRIAL_PHASE = "clinical_trial_phase"
+    # Metadata (for internal use)
+    CONFERENCE = "conference"
+    PUBLISHED_YEAR = "published_year"
+    COMMENTS = "comments"
     MINIMUM_AGE = "minimum_age"
     MAXIMUM_AGE = "maximum_age"
     SEX = "sex"
-    TRIAL_RUN_IN_EUROPE = "trial_run_in_europe"
-    TRIAL_RUN_IN_US = "trial_run_in_us"
-    TRIAL_RUN_IN_CHINA = "trial_run_in_china"
-    CHEMOTHERAPY_NAIVE = "chemotherapy_naive"
-    CHEMOTHERAPY_FAILED = "chemotherapy_failed"
-    ICI_NAIVE = "ici_naive"
-    ICI_FAILED = "ici_failed"
-    IPILIMUMAB_FAILURE = "ipilimumab_failure"
-    ANTI_PD1_FAILURE = "anti_pd1_failure"
-    MUTATION_STATUS = "mutation_status"
-    BRAF_MUTATION = "braf_mutation"
-    NRAS_MUTATION = "nras_mutation"
-    BIOSIMILAR = "biosimilar"
-    BIOMARKER_INCLUSION = "biomarker_inclusion"
-    BIOMARKERS_INCLUSION_CRITERIA = "biomarkers_inclusion_criteria"
-    BIOMARKERS_EXCLUSION_CRITERIA = "biomarkers_exclusion_criteria"
 
 
 class ValidationStatus(str, Enum):
