@@ -141,10 +141,22 @@ class ClinicalMetadataExtractor:
         return {}
 
     def _extract_title(self, content: str) -> dict[str, Any]:
-        """Extract title from content."""
-        title_match = re.search(r"\*\*Title:\*\* (.+)", content)
+        """Extract title from content.
+
+        New format: Title is a separate section with '#### Title:' header.
+        """
+        # New format: #### Title:\nTitle text here
+        title_match = re.search(
+            r"#### Title:\s*\n(.+?)(?:\n####|\n\n|$)", content, re.DOTALL
+        )
         if title_match:
             return {"title": title_match.group(1).strip()}
+
+        # Legacy format fallback: **Title:** title text
+        legacy_match = re.search(r"\*\*Title:\*\* (.+)", content)
+        if legacy_match:
+            return {"title": legacy_match.group(1).strip()}
+
         return {}
 
     def _has_table_content(self, content: str) -> bool:
@@ -167,7 +179,13 @@ class ChunkTypeClassifier:
         ChunkType.TRIAL_DESIGN: ["trial design", "#### trial design:"],
         ChunkType.RESULTS: ["result", "#### results:"],
         ChunkType.CONCLUSIONS: ["conclusion", "#### conclusions:"],
-        ChunkType.CLINICAL_TRIAL: ["clinical trial", "#### clinical trial"],
+        ChunkType.TABLE: ["table", "#### table:"],
+        ChunkType.CLINICAL_TRIAL: [
+            "clinical trial",
+            "#### clinical trial",
+            "#### clinical trial information:",
+            "#### clinical trial identification:",
+        ],
         ChunkType.SPONSOR: ["sponsor", "#### research sponsor:"],
         ChunkType.FUNDING: ["funding", "#### funding:"],
         ChunkType.DOI: ["doi", "#### doi:"],
@@ -187,9 +205,13 @@ class ChunkTypeClassifier:
         content_lower = content.lower()
         section = headers.get("Section", "").lower()
 
-        # Abstract header detection
-        if self._is_abstract_header(content_lower):
-            return ChunkType.ABSTRACT_HEADER
+        # Abstract ID detection (separate from title)
+        if self._is_abstract_id(content_lower):
+            return ChunkType.ABSTRACT_ID
+
+        # Title detection (separate from abstract ID)
+        if self._is_title(content_lower):
+            return ChunkType.TITLE
 
         # Section-based detection
         for chunk_type, patterns in self.SECTION_PATTERNS.items():
@@ -203,9 +225,15 @@ class ChunkTypeClassifier:
         # Default to full abstract
         return ChunkType.FULL_ABSTRACT
 
-    def _is_abstract_header(self, content_lower: str) -> bool:
-        """Check if content is an abstract header."""
-        return "abstract id" in content_lower and "**title:**" in content_lower
+    def _is_abstract_id(self, content_lower: str) -> bool:
+        """Check if content is specifically the abstract ID section."""
+        return (
+            "### abstract id:" in content_lower or "abstract id:" in content_lower
+        ) and "title" not in content_lower
+
+    def _is_title(self, content_lower: str) -> bool:
+        """Check if content is specifically the title section."""
+        return "#### title:" in content_lower
 
     def _matches_section_patterns(
         self, section: str, content_lower: str, patterns: list[str]
@@ -228,6 +256,8 @@ class LangChainChunkingService(ChunkingStrategyInterface):
     This service combines LangChain's MarkdownHeaderTextSplitter with custom
     clinical metadata extraction to provide sophisticated chunking capabilities
     for oncology abstracts while maintaining clean architecture principles.
+
+    🎯 TIER 2: Implements hierarchical sub-chunking for large Results sections
     """
 
     def __init__(self, configuration: ChunkingConfiguration):
@@ -251,12 +281,26 @@ class LangChainChunkingService(ChunkingStrategyInterface):
             strip_headers=False,  # Keep headers for context
         )
 
+        # 🎯 TIER 2: Initialize secondary splitter for large Results sections
+        from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+        self.results_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=400,  # ~2-3 paragraphs for better numeric attribute precision
+            chunk_overlap=50,  # Small overlap to maintain context across chunks
+            separators=["\n\n", "\n", ". ", ", ", " "],  # Paragraph > Sentence > Word
+            length_function=len,
+        )
+
+        # Threshold for sub-chunking (character count)
+        self.subchunk_threshold = 600  # Only sub-chunk if section is larger than this
+
         # Initialize helper services
         self.metadata_extractor = ClinicalMetadataExtractor()
         self.chunk_classifier = ChunkTypeClassifier()
 
         logger.info(
-            f"LangChain chunking service initialized with strategy: {configuration.strategy}"
+            f"LangChain chunking service initialized with strategy: {configuration.strategy} "
+            f"and TIER 2 sub-chunking (threshold: {self.subchunk_threshold} chars)"
         )
 
     def supports_configuration(self, configuration: ChunkingConfiguration) -> bool:
@@ -279,6 +323,8 @@ class LangChainChunkingService(ChunkingStrategyInterface):
     ) -> list[Chunk]:
         """Chunk content using LangChain's MarkdownHeaderTextSplitter.
 
+        🎯 TIER 2: Implements hierarchical sub-chunking for large Results/Table sections
+
         Args:
             content: Content to chunk
             configuration: Chunking configuration
@@ -286,7 +332,7 @@ class LangChainChunkingService(ChunkingStrategyInterface):
             filename: Filename for metadata extraction
 
         Returns:
-            List of chunks
+            List of chunks (with Results sections potentially sub-chunked)
 
         Raises:
             ValueError: If content is empty or invalid
@@ -296,20 +342,68 @@ class LangChainChunkingService(ChunkingStrategyInterface):
             raise ValueError("Content cannot be empty")
 
         try:
-            logger.info(f"Starting chunking process for document: {filename}")
+            logger.info(f"Starting TIER 2 chunking process for document: {filename}")
 
-            # Use LangChain's splitter
+            # Step 1: Use LangChain's splitter for section-level chunking
             langchain_documents = self.text_splitter.split_text(content)
 
-            # Convert to domain chunks
-            chunks = []
-            for sequence_number, document in enumerate(langchain_documents):
-                chunk = self._convert_langchain_document_to_chunk(
-                    document, document_id, filename, sequence_number
-                )
-                chunks.append(chunk)
+            # Step 1.5: Post-process to separate Abstract ID and Title
+            # (LangChain combines them since Title is a subsection of Abstract ID)
+            langchain_documents = self._separate_abstract_id_and_title(
+                langchain_documents
+            )
 
-            logger.info(f"Successfully created {len(chunks)} chunks using LangChain")
+            # Step 2: Convert to domain chunks with hierarchical sub-chunking
+            chunks = []
+            sequence_number = 0
+            subchunked_count = 0
+
+            for document in langchain_documents:
+                # Check if this is a Results/Table section that needs sub-chunking
+                section_header = document.metadata.get("Section", "").lower()
+                is_results_section = self._is_results_or_table_section(section_header)
+                content_length = len(document.page_content)
+
+                if is_results_section and content_length > self.subchunk_threshold:
+                    # 🎯 TIER 2: Sub-chunk large Results/Table sections
+                    logger.debug(
+                        f"Sub-chunking large {section_header} section ({content_length} chars)"
+                    )
+
+                    # Split into smaller chunks for better retrieval precision
+                    sub_texts = self.results_splitter.split_text(document.page_content)
+
+                    for sub_index, sub_text in enumerate(sub_texts):
+                        # Create sub-chunk with parent metadata
+                        metadata = document.metadata.copy()
+                        metadata["is_subchunk"] = True
+                        metadata["parent_chunk_size"] = content_length
+                        metadata["subchunk_index"] = sub_index
+                        metadata["total_subchunks"] = len(sub_texts)
+
+                        chunk = self._create_chunk_from_text(
+                            content=sub_text,
+                            metadata=metadata,
+                            document_id=document_id,
+                            filename=filename,
+                            sequence_number=sequence_number,
+                        )
+                        chunks.append(chunk)
+                        sequence_number += 1
+
+                    subchunked_count += 1
+                else:
+                    # Keep as single chunk for non-Results sections or small sections
+                    chunk = self._convert_langchain_document_to_chunk(
+                        document, document_id, filename, sequence_number
+                    )
+                    chunks.append(chunk)
+                    sequence_number += 1
+
+            logger.info(
+                f"Successfully created {len(chunks)} chunks using LangChain "
+                f"(TIER 2: {subchunked_count} Results sections sub-chunked)"
+            )
             return chunks
 
         except Exception as e:
@@ -398,9 +492,135 @@ class LangChainChunkingService(ChunkingStrategyInterface):
             Dictionary containing service statistics
         """
         return {
-            "strategy": self.strategy.value,
-            "chunks_created": self._chunks_created,
-            "documents_processed": self._documents_processed,
+            "strategy": self.configuration.strategy.value,
+            "chunks_created": len(self.metadata_extractor.CLINICAL_TRIAL_PATTERNS),
             "available_strategies": [strategy.value for strategy in ChunkingStrategy],
-            "default_headers": self._default_headers,
+            "subchunk_threshold": self.subchunk_threshold,
+            "tier2_enabled": True,
         }
+
+    def _separate_abstract_id_and_title(
+        self, documents: list[Document]
+    ) -> list[Document]:
+        """Separate Abstract ID and Title if they're combined in one chunk.
+
+        LangChain's MarkdownHeaderTextSplitter treats Title (####) as a subsection
+        of Abstract ID (###), combining them into one document. This method splits
+        them into two separate documents for more precise retrieval.
+
+        Args:
+            documents: List of LangChain Documents
+
+        Returns:
+            List of Documents with Abstract ID and Title separated
+        """
+        separated_docs = []
+
+        for doc in documents:
+            content_lower = doc.page_content.lower()
+
+            # Check if this chunk contains both Abstract ID and Title
+            if "abstract id:" in content_lower and "#### title:" in content_lower:
+                # Split into two documents
+                lines = doc.page_content.split("\n")
+                abstract_id_lines = []
+                title_lines = []
+                in_title_section = False
+
+                for line in lines:
+                    if "#### title:" in line.lower():
+                        in_title_section = True
+
+                    if in_title_section:
+                        title_lines.append(line)
+                    else:
+                        abstract_id_lines.append(line)
+
+                # Create Abstract ID document
+                if abstract_id_lines:
+                    abstract_id_content = "\n".join(abstract_id_lines).strip()
+                    abstract_id_doc = Document(
+                        page_content=abstract_id_content, metadata=doc.metadata.copy()
+                    )
+                    separated_docs.append(abstract_id_doc)
+
+                # Create Title document
+                if title_lines:
+                    title_content = "\n".join(title_lines).strip()
+                    title_doc = Document(
+                        page_content=title_content, metadata=doc.metadata.copy()
+                    )
+                    separated_docs.append(title_doc)
+            else:
+                # No split needed, keep as is
+                separated_docs.append(doc)
+
+        return separated_docs
+
+    def _is_results_or_table_section(self, section_header: str) -> bool:
+        """Check if a section header indicates Results, Table, or related sections.
+
+        🎯 TIER 2: Used to identify sections that should be sub-chunked
+
+        Args:
+            section_header: The section header (lowercase)
+
+        Returns:
+            True if this is a Results/Table/Conclusions section
+        """
+        results_keywords = [
+            "result",
+            "table",
+            "conclusion",
+            "efficacy",
+            "safety",
+            "table",
+        ]
+
+        return any(keyword in section_header for keyword in results_keywords)
+
+    def _create_chunk_from_text(
+        self,
+        content: str,
+        metadata: dict[str, Any],
+        document_id: Optional[str],
+        filename: str,
+        sequence_number: int,
+    ) -> Chunk:
+        """Create a domain Chunk from text and metadata.
+
+        🎯 TIER 2: Used to create sub-chunks with inherited metadata
+
+        Args:
+            content: The chunk content
+            metadata: Metadata dictionary (already includes section info)
+            document_id: Document ID
+            filename: Filename for additional metadata
+            sequence_number: Sequence number
+
+        Returns:
+            Domain Chunk with all metadata
+        """
+        # Add clinical metadata extraction
+        clinical_metadata = self.metadata_extractor.extract_metadata(content, filename)
+        metadata.update(clinical_metadata)
+
+        # Add abstract_id to metadata if document_id is provided
+        if document_id:
+            metadata["abstract_id"] = document_id
+
+        # Determine chunk type
+        chunk_type = self.chunk_classifier.classify_chunk_type(content, metadata)
+
+        # Create domain chunk
+        chunk_document_id = document_id if document_id else str(uuid4())
+
+        return Chunk(
+            id=uuid4(),
+            document_id=chunk_document_id,
+            content=content,
+            chunk_type=chunk_type,
+            metadata=metadata,
+            sequence_number=sequence_number,
+            token_count=len(content.split()),
+        )

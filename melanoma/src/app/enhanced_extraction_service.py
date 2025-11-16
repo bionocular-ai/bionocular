@@ -4,12 +4,18 @@ This service integrates RAG-enhanced extraction with Clinical Trials API
 data for comprehensive clinical trial data extraction.
 """
 
+import asyncio
 import logging
+import re
 from datetime import datetime
 from typing import Any, Optional
 
 from ..domain.extraction_interfaces import AttributeExtractor, LLMService
-from ..domain.extraction_models import AttributeConfigurationFactory, AttributeType
+from ..domain.extraction_models import (
+    AttributeConfigurationFactory,
+    AttributeType,
+    ExtractedAttribute,
+)
 from ..domain.treatment_arm_models import (
     ArmSpecificContext,
     TreatmentArm,
@@ -80,7 +86,7 @@ class EnhancedExtractionService:
         # Get preferred model from environment or use default
         import os
 
-        preferred_model = os.getenv("EXTRACTION_MODEL", "gpt-4o-mini")
+        preferred_model = os.getenv("EXTRACTION_MODEL", "gpt-4o")
 
         self.batch_extractor = BatchAttributeExtractor(
             self.llm_service, self.prompt_provider, preferred_model=preferred_model
@@ -298,19 +304,25 @@ class EnhancedExtractionService:
                 f"Identified {len(separation_result.treatment_arms)} treatment arms"
             )
 
-            # Step 2: Prepare comprehensive context for all arms
-            logger.info("Step 2: Preparing comprehensive context for batch processing")
-            comprehensive_context = await self._prepare_comprehensive_context(
-                separation_result.treatment_arms,
-                abstract_id,
-                context_chunks_per_arm,
-                similarity_threshold,
+            # Step 2: NOTE - Context retrieval is now done PER ATTRIBUTE in Step 5
+            # This enables our 3-tier RAG filtering (metadata, sub-chunking, keywords)
+            logger.info(
+                "Step 2: Deferring context retrieval to per-attribute processing"
             )
 
-            # Step 3: Separate attributes by source
+            # Step 3: Separate attributes by source and level
+            from ..domain.extraction_models import AttributeConfigurationFactory
+
             file_path_attributes = []
-            abstract_attributes = []
+            abstract_level_attributes = (
+                []
+            )  # Same value for all arms (ABSTRACT_NUMBER, NCT_NUMBER, COMMENTS)
+            arm_level_attributes = []  # Different values per arm (most attributes)
             api_attributes = []
+
+            abstract_level_attr_set = set(
+                AttributeConfigurationFactory.get_abstract_level_attributes()
+            )
 
             for attr_type in attributes:
                 if self.file_path_extractor.can_extract_from_path(attr_type):
@@ -319,8 +331,12 @@ class EnhancedExtractionService:
                     config = self.attribute_configs.get(attr_type)
                     if config and config.api_source:
                         api_attributes.append(attr_type)
+                    elif attr_type in abstract_level_attr_set:
+                        # Abstract-level: extract once, share across all arms
+                        abstract_level_attributes.append(attr_type)
                     else:
-                        abstract_attributes.append(attr_type)
+                        # Arm-level: extract per arm
+                        arm_level_attributes.append(attr_type)
 
             # Step 4: Extract file path attributes (once for all arms)
             file_path_results = {}
@@ -332,22 +348,40 @@ class EnhancedExtractionService:
                     file_path_attributes, file_path
                 )
 
-            # Step 5: Extract abstract attributes using batch processing
-            abstract_results = {}
-            if abstract_attributes:
+            # Step 5: Extract abstract-level attributes (once, shared across all arms)
+            abstract_level_results = {}
+            if abstract_level_attributes:
                 logger.info(
-                    f"Extracting abstract attributes in batch: {[attr.value for attr in abstract_attributes]}"
+                    f"Extracting abstract-level attributes (shared across arms): {[attr.value for attr in abstract_level_attributes]}"
                 )
-                abstract_results = (
-                    await self.batch_extractor.extract_attributes_for_arms(
+                abstract_level_results = await self._extract_abstract_level_attributes(
+                    attributes=abstract_level_attributes,
+                    arms=separation_result.treatment_arms,
+                    abstract_id=abstract_id,
+                    similarity_threshold=similarity_threshold,
+                )
+
+            # Step 6: Extract arm-level attributes using PER-ATTRIBUTE retrieval
+            # This enables 3-tier RAG filtering (Tier 1: metadata, Tier 2: sub-chunking, Tier 3: keywords)
+            arm_level_results = {}
+            if arm_level_attributes:
+                logger.info(
+                    f"Extracting arm-level attributes in batch: {[attr.value for attr in arm_level_attributes]}"
+                )
+                arm_level_results = (
+                    await self._extract_attributes_per_attribute_with_rag(
                         arms=separation_result.treatment_arms,
-                        attributes=abstract_attributes,
-                        context=comprehensive_context,
-                        document_id=abstract_id,
+                        attributes=arm_level_attributes,
+                        abstract_id=abstract_id,
+                        context_chunks_per_arm=context_chunks_per_arm,
+                        similarity_threshold=similarity_threshold,
                     )
                 )
 
-            # Step 6: Extract API attributes
+            # Combine abstract-level and arm-level results
+            abstract_results = {**abstract_level_results, **arm_level_results}
+
+            # Step 7: Extract API attributes
             api_results = {}
             if api_attributes and include_api_data:
                 logger.info(
@@ -357,8 +391,74 @@ class EnhancedExtractionService:
                     separation_result.treatment_arms, api_attributes, abstract_id
                 )
 
-            # Step 7: Combine results for each arm
-            logger.info("Step 7: Combining results for each treatment arm")
+            # Step 7b: Extract trial_name from API as fallback (even though it's not API-sourced)
+            # This allows LLM extraction to take precedence, but API can fill in if LLM fails
+            # API result must match 'Keynote-', 'Checkmate-', or 'Masterkey-' patterns
+            if include_api_data and AttributeType.TRIAL_NAME in attributes:
+                trial_name_found = False
+                if AttributeType.TRIAL_NAME in abstract_results:
+                    # Check if any arm has a valid trial name from LLM
+                    for arm_result in abstract_results[
+                        AttributeType.TRIAL_NAME
+                    ].values():
+                        if hasattr(arm_result, "value"):
+                            value = str(arm_result.value).strip()
+                            if value and value not in [
+                                "",
+                                "Not found",
+                                "Not available",
+                                "No Name",
+                            ]:
+                                trial_name_found = True
+                                break
+
+                if not trial_name_found:
+                    # LLM extraction failed or returned empty - try API as fallback
+                    logger.info("Trial name not found via LLM, attempting API fallback")
+                    trial_name_api_results = await self._extract_api_attributes_batch(
+                        separation_result.treatment_arms,
+                        [AttributeType.TRIAL_NAME],
+                        abstract_id,
+                    )
+                    if trial_name_api_results:
+                        # Use API trial name directly (briefTitle from API)
+                        # No pattern validation needed - API provides the official trial title
+                        for arm_id, api_result in trial_name_api_results[
+                            AttributeType.TRIAL_NAME
+                        ].items():
+                            api_value = (
+                                api_result.get("value", "")
+                                if isinstance(api_result, dict)
+                                else str(api_result)
+                            )
+                            api_value_str = str(api_value).strip()
+
+                            # Only use if we have a valid value
+                            if api_value_str and api_value_str not in ["", "Not found", "None"]:
+                                # Update the result with proper confidence for API data
+                                trial_name_api_results[AttributeType.TRIAL_NAME][arm_id] = {
+                                    "value": api_value_str,
+                                    "source": "clinical_trials_api",
+                                    "confidence": 0.9,  # High confidence for API data
+                                }
+                                logger.info(
+                                    f"Using API trial name for arm {arm_id}: {api_value_str}"
+                                )
+                            else:
+                                # If API returned empty/None, set to "No Name"
+                                trial_name_api_results[AttributeType.TRIAL_NAME][arm_id] = {
+                                    "value": "No Name",
+                                    "source": "clinical_trials_api",
+                                    "confidence": 0.0,
+                                }
+                                logger.warning(
+                                    f"API trial name is empty for arm {arm_id}, returning 'No Name'"
+                                )
+
+                            api_results.update(trial_name_api_results)
+
+            # Step 8: Combine results for each arm
+            logger.info("Step 8: Combining results for each treatment arm")
             arm_results = {}
             total_attributes_extracted = 0
 
@@ -384,6 +484,18 @@ class EnhancedExtractionService:
                         arm_result["attributes"][attr_type] = abstract_results[
                             attr_type
                         ][arm.arm_id]
+                    elif attr_type in abstract_results:
+                        # Abstract-level attribute exists but missing for this arm
+                        # This shouldn't happen, but if it does, use the first arm's value
+                        # (abstract-level attributes are the same for all arms)
+                        first_arm_id = list(abstract_results[attr_type].keys())[0]
+                        logger.warning(
+                            f"Abstract-level attribute {attr_type.value} missing for arm {arm.arm_id}, "
+                            f"using value from arm {first_arm_id}"
+                        )
+                        arm_result["attributes"][attr_type] = abstract_results[
+                            attr_type
+                        ][first_arm_id]
                     elif (
                         attr_type in api_results
                         and arm.arm_id in api_results[attr_type]
@@ -393,14 +505,93 @@ class EnhancedExtractionService:
                         ]
 
                 arm_results[arm.arm_id] = arm_result
-                # Count only non-empty attributes
+
+                # Helper function to check if attribute has a valid (non-empty) value
+                def has_valid_value(attr_data):
+                    """Check if attribute data has a valid (non-empty) value."""
+                    if isinstance(attr_data, dict):
+                        value = attr_data.get("value")
+                        if value is None:
+                            return False
+                        value_str = str(value).strip()
+                        return value_str not in [
+                            "",
+                            "Not found",
+                            "Not available",
+                            "No Name",
+                        ]
+                    elif hasattr(attr_data, "value"):
+                        value = attr_data.value
+                        if value is None:
+                            return False
+                        value_str = str(value).strip()
+                        return value_str not in [
+                            "",
+                            "Not found",
+                            "Not available",
+                            "No Name",
+                        ]
+                    return False
+
+                # Calculate per-arm statistics - ONLY count attributes with valid values
+                arm_attributes = arm_result["attributes"]
+
+                # Count only successfully extracted attributes (non-empty values)
+                arm_result["total_attributes"] = sum(
+                    1
+                    for attr_data in arm_attributes.values()
+                    if has_valid_value(attr_data)
+                )
+
+                # Count API attributes with valid values
+                arm_result["api_attributes"] = sum(
+                    1
+                    for attr_data in arm_attributes.values()
+                    if has_valid_value(attr_data)
+                    and (
+                        (
+                            isinstance(attr_data, dict)
+                            and attr_data.get("source") == "clinical_trials_api"
+                        )
+                        or (
+                            hasattr(attr_data, "source")
+                            and attr_data.source == "clinical_trials_api"
+                        )
+                    )
+                )
+
+                # Count abstract attributes with valid values
+                arm_result["abstract_attributes"] = sum(
+                    1
+                    for attr_data in arm_attributes.values()
+                    if has_valid_value(attr_data)
+                    and (
+                        (
+                            isinstance(attr_data, dict)
+                            and attr_data.get("source")
+                            in [
+                                "abstract_extraction",
+                                "abstract_llm_extraction",
+                                "file_path",
+                            ]
+                        )
+                        or (
+                            hasattr(attr_data, "source")
+                            and attr_data.source
+                            in [
+                                "abstract_extraction",
+                                "abstract_llm_extraction",
+                                "file_path",
+                            ]
+                        )
+                    )
+                )
+
+                # Count only non-empty attributes for total_attributes_extracted
                 non_empty_attributes = sum(
                     1
-                    for attr_data in arm_result["attributes"].values()
-                    if hasattr(attr_data, "value")
-                    and attr_data.value
-                    and str(attr_data.value).strip()
-                    not in ["", "Not found", "Not available"]
+                    for attr_data in arm_attributes.values()
+                    if has_valid_value(attr_data)
                 )
                 total_attributes_extracted += non_empty_attributes
 
@@ -422,6 +613,7 @@ class EnhancedExtractionService:
                 arm_results=arm_results,
                 overall_confidence=overall_confidence,
                 processing_time_ms=processing_time,
+                total_attributes_extracted=total_attributes_extracted,
                 errors=[],
                 warnings=[],
             )
@@ -567,6 +759,10 @@ class EnhancedExtractionService:
                         if hasattr(extracted_value, "value")
                         else str(extracted_value)
                     )
+                    
+                    # Post-process cleanup for specific attribute types
+                    clean_value = self._clean_attribute_value(attr_type, clean_value)
+                    
                     extracted_attributes[attr_type] = {
                         "value": clean_value,
                         "source": "abstract_extraction",
@@ -615,8 +811,10 @@ class EnhancedExtractionService:
 
                 for attr_type, value in api_data.items():
                     if value is not None:
+                        # Clean the value before storing
+                        cleaned_value = self._clean_attribute_value(attr_type, value)
                         extracted_attributes[attr_type] = {
-                            "value": value,
+                            "value": cleaned_value,
                             "source": "clinical_trials_api",
                             "confidence": 0.9,  # High confidence for API data
                             "nct_number": nct_number,
@@ -661,6 +859,77 @@ class EnhancedExtractionService:
             ),
         }
 
+    def _clean_attribute_value(
+        self, attribute_type: AttributeType, value: Any
+    ) -> Any:
+        """Clean attribute value based on its type.
+        
+        Args:
+            attribute_type: Type of attribute
+            value: Raw value to clean
+            
+        Returns:
+            Cleaned value
+        """
+        if value is None or value == "Not found" or value == "":
+            return value
+        
+        # Special handling for ABSTRACT_NUMBER - should be string, not float
+        if attribute_type == AttributeType.ABSTRACT_NUMBER:
+            if isinstance(value, (int, float)):
+                return str(int(float(value)))
+            # Extract numeric part from string if present
+            import re
+            numeric_match = re.search(r'\d+', str(value))
+            if numeric_match:
+                return numeric_match.group(0)
+            return str(value).strip()
+        
+        # Special handling for NCT_NUMBER - supports NCT, EudraCT, and other identifiers
+        if attribute_type == AttributeType.NCT_NUMBER:
+            import re
+            value_str = str(value).strip()
+            
+            # Trial identifier patterns (priority order)
+            trial_id_patterns = [
+                (r"NCT\d{8}", "NCT"),  # NCT number (highest priority)
+                (r"EudraCT[:\s]*(\d{4}-\d{6}-\d{2,3})", "EudraCT"),  # EudraCT format
+                (r"EudraCT[:\s]*(\d+)", "EudraCT"),  # EudraCT simple format
+            ]
+            
+            # Try each pattern in priority order
+            for pattern, prefix in trial_id_patterns:
+                match = re.search(pattern, value_str, re.IGNORECASE)
+                if match:
+                    if prefix == "NCT":
+                        return match.group(0)  # Full match for NCT
+                    elif prefix == "EudraCT":
+                        # Format EudraCT properly
+                        eudract_value = match.group(1) if match.lastindex else match.group(0)
+                        # Clean up the value - remove non-digit/non-dash characters
+                        eudract_value = re.sub(r'[^\d-]', '', eudract_value)
+                        return f"EudraCT: {eudract_value}"
+            
+            # Fallback: If it's already in correct format, use it
+            if re.match(r'^NCT\d{8}$', value_str):
+                return value_str
+            # Try to extract NCT number from the value
+            nct_match = re.search(r'NCT\d{8}', value_str)
+            if nct_match:
+                return nct_match.group(0)
+            # If it's just digits (like 3086174.0), convert to NCT format
+            digits_match = re.search(r'\d+', value_str.replace('.', ''))
+            if digits_match:
+                digits = digits_match.group(0)
+                # Pad to 8 digits if needed
+                if len(digits) == 7:
+                    digits = '0' + digits
+                if len(digits) == 8:
+                    return f"NCT{digits}"
+            return value_str
+        
+        return value
+
     def _handle_special_cases(
         self,
         extracted_attributes: dict[AttributeType, Any],
@@ -679,8 +948,10 @@ class EnhancedExtractionService:
         """
         # Direct propagation of NCT number from arm separation
         if nct_number and AttributeType.NCT_NUMBER not in extracted_attributes:
+            # Clean the NCT number value
+            cleaned_nct = self._clean_attribute_value(AttributeType.NCT_NUMBER, nct_number)
             extracted_attributes[AttributeType.NCT_NUMBER] = {
-                "value": nct_number,
+                "value": cleaned_nct,
                 "source": "arm_separation",
                 "confidence": 1.0,
             }
@@ -815,46 +1086,226 @@ class EnhancedExtractionService:
             self.cost_calculator.reset()
             logger.info("Cost tracking reset")
 
-    async def _prepare_comprehensive_context(
+    async def _extract_abstract_level_attributes(
+        self,
+        attributes: list[AttributeType],
+        arms: list[TreatmentArm],
+        abstract_id: str,
+        similarity_threshold: float,
+    ) -> dict[AttributeType, dict[str, ExtractedAttribute]]:
+        """Extract abstract-level attributes (same value for all arms).
+
+        Abstract-level attributes like ABSTRACT_NUMBER, NCT_NUMBER, COMMENTS
+        are the same for all treatment arms in an abstract. This method extracts
+        them once and shares the value across all arms.
+
+        Args:
+            attributes: List of abstract-level attributes to extract
+            arms: List of treatment arms (to distribute results to)
+            abstract_id: Abstract identifier
+            similarity_threshold: Similarity threshold for RAG retrieval
+
+        Returns:
+            Dictionary mapping attribute types to arm results (same value for all arms)
+        """
+        logger.info(
+            f"Extracting {len(attributes)} abstract-level attributes (shared across all arms)"
+        )
+
+        results = {}
+
+        for attribute in attributes:
+            try:
+                # Get attribute-specific context with 3-tier filtering
+                context_texts = (
+                    await self.arm_aware_rag_provider.get_context_for_attribute(
+                        document_id=abstract_id,
+                        attribute_type=attribute,
+                        context_chunks=3,
+                        similarity_threshold=similarity_threshold,
+                    )
+                )
+
+                # Special handling for COMMENTS: if no chunks found, return empty string immediately
+                # (COMMENTS uses fixed section 'full_text_reference' which may not exist)
+                if attribute == AttributeType.COMMENTS and not context_texts:
+                    logger.info(
+                        "No chunks found for COMMENTS (full_text_reference section doesn't exist) - returning empty string"
+                    )
+                    arm_results = {}
+                    for arm in arms:
+                        arm_results[arm.arm_id] = ExtractedAttribute(
+                            attribute_type=attribute,
+                            value="",
+                            confidence=1.0,  # High confidence: we know the section doesn't exist
+                            source="abstract_llm_extraction",
+                        )
+                    results[attribute] = arm_results
+                    continue
+
+                # 💰 COST OPTIMIZATION: Skip LLM call if no chunks retrieved
+                # If 3-tier filtering removed all chunks, return "Not found" immediately
+                if not context_texts:
+                    logger.debug(
+                        f"No chunks retrieved for abstract-level attribute {attribute.value} after 3-tier filtering - skipping LLM call"
+                    )
+                    arm_results = {}
+                    for arm in arms:
+                        arm_results[arm.arm_id] = ExtractedAttribute(
+                            attribute_type=attribute,
+                            value="Not found",
+                            confidence=0.0,
+                            source="abstract_llm_extraction",
+                        )
+                    results[attribute] = arm_results
+                    continue
+
+                # Extract attribute once (no arm-specific extraction needed)
+                extracted_value = await self.attribute_extractor.extract_attribute(
+                    attribute_type=attribute,
+                    context=context_texts,
+                    document_id=abstract_id,
+                    arm_info=None,  # No arm info for abstract-level attributes
+                )
+
+                # Share the same value across all arms
+                arm_results = {}
+                for arm in arms:
+                    arm_results[arm.arm_id] = extracted_value
+
+                results[attribute] = arm_results
+                logger.debug(
+                    f"Extracted {attribute.value} for {len(arms)} arms: {extracted_value.value if hasattr(extracted_value, 'value') else str(extracted_value)}"
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"Failed to extract abstract-level attribute {attribute.value}: {e}",
+                    exc_info=True,
+                )
+                # Create "Not found" results for all arms
+                arm_results = {}
+                for arm in arms:
+                    arm_results[arm.arm_id] = ExtractedAttribute(
+                        attribute_type=attribute,
+                        value="Not found",
+                        confidence=0.0,
+                        source="abstract_llm_extraction",
+                    )
+                results[attribute] = arm_results
+                continue
+
+        return results
+
+    async def _extract_attributes_per_attribute_with_rag(
         self,
         arms: list[TreatmentArm],
+        attributes: list[AttributeType],
         abstract_id: str,
         context_chunks_per_arm: int,
         similarity_threshold: float,
-    ) -> list[str]:
-        """Prepare comprehensive context for all arms.
+    ) -> dict[AttributeType, dict[str, ExtractedAttribute]]:
+        """Extract attributes with per-attribute RAG retrieval (3-tier filtering).
+
+        This method enables our 3-tier RAG optimization:
+        - Tier 1: Metadata filtering (e.g., only 'results' sections for numeric attributes)
+        - Tier 2: Sub-chunking (breaking large sections into semantic units)
+        - Tier 3: Keyword filtering (ensuring relevant terms are present)
+
+        🎯 EFFICIENCY: Uses BatchAttributeExtractor to make 1 LLM call per attribute
+        (not 1 per arm), extracting values for all arms simultaneously.
 
         Args:
             arms: List of treatment arms
+            attributes: List of attributes to extract
             abstract_id: Abstract identifier
             context_chunks_per_arm: Number of context chunks per arm
             similarity_threshold: Similarity threshold for RAG retrieval
 
         Returns:
-            List of context chunks
+            Dictionary mapping attribute types to arm results
         """
-        all_context_chunks = set()
+        logger.info(
+            f"Starting per-attribute extraction with 3-tier RAG for {len(attributes)} attributes across {len(arms)} arms"
+        )
 
-        # Get context for each arm and combine
-        for arm in arms:
+        results = {}
+
+        # Process ONE attribute at a time with its own RAG retrieval
+        for attr_idx, attribute in enumerate(attributes):
+            progress = (attr_idx + 1) / len(attributes) * 100
+            logger.info(
+                f"Processing attribute {attr_idx + 1}/{len(attributes)} ({progress:.1f}%): {attribute.value}"
+            )
+
             try:
-                arm_context = await self.arm_aware_rag_provider.get_context_for_arm_attribute(
-                    arm=arm,
-                    attribute_type=AttributeType.NCT_NUMBER,  # Use a common attribute for context
-                    abstract_id=abstract_id,
-                    context_chunks=context_chunks_per_arm,
-                    similarity_threshold=similarity_threshold,
+                # 🎯 OPTIMIZATION: Retrieve chunks ONCE per attribute, not per arm
+                # Most attributes (e.g., "Pembrolizumab PFS: 12mo vs Placebo: 8mo")
+                # appear in the same chunk, so we share context across arms
+
+                # Get attribute-specific context (shared across arms)
+                # Returns list[str] of chunk contents with 3-tier filtering applied
+                context_texts = (
+                    await self.arm_aware_rag_provider.get_context_for_attribute(
+                        document_id=abstract_id,
+                        attribute_type=attribute,
+                        context_chunks=3,  # Limit to 3 chunks for precision
+                        similarity_threshold=similarity_threshold,
+                    )
                 )
 
-                # Add chunks to the comprehensive context
-                for chunk in arm_context.context_chunks:
-                    all_context_chunks.add(chunk["content"])
+                # 💰 COST OPTIMIZATION: Skip LLM call if no chunks retrieved
+                # If 3-tier filtering removed all chunks, return "Not found" immediately
+                if not context_texts:
+                    logger.debug(
+                        f"No chunks retrieved for {attribute.value} after 3-tier filtering - skipping LLM call"
+                    )
+                    attribute_results = {}
+                    for arm in arms:
+                        attribute_results[arm.arm_id] = ExtractedAttribute(
+                            attribute_type=attribute,
+                            value="Not found",
+                            confidence=0.0,
+                            source="abstract_llm_extraction",
+                        )
+                    results[attribute] = attribute_results
+                    continue
+
+                # 🎯 USE BATCH EXTRACTOR: Extract for all arms in ONE LLM call
+                # This is 2x more efficient than separate calls per arm
+                single_attr_results = (
+                    await self.batch_extractor._extract_single_attribute_for_all_arms(
+                        arms=arms,
+                        attribute=attribute,
+                        context=context_texts,
+                        document_id=abstract_id,
+                    )
+                )
+
+                results[attribute] = single_attr_results
+
+                # Small delay between attributes (rate limiting handled by batch_extractor)
+                if attr_idx < len(attributes) - 1:
+                    await asyncio.sleep(0.1)
 
             except Exception as e:
-                logger.warning(f"Failed to get context for arm {arm.arm_id}: {e}")
+                logger.error(f"Failed to process attribute {attribute.value}: {e}")
+                # Create "Not found" results for all arms for this attribute
+                attribute_results = {}
+                for arm in arms:
+                    attribute_results[arm.arm_id] = ExtractedAttribute(
+                        attribute_type=attribute,
+                        value="Not found",
+                        confidence=0.0,
+                        source="abstract_llm_extraction",
+                    )
+                results[attribute] = attribute_results
                 continue
 
-        return list(all_context_chunks)
+        logger.info(
+            f"Per-attribute extraction completed: {len(results)} attribute types processed"
+        )
+        return results
 
     def _extract_file_path_attributes_batch(
         self,

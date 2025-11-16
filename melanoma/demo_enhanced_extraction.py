@@ -11,6 +11,7 @@ import asyncio
 import json
 import logging
 import os
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -55,6 +56,13 @@ async def main():
     logger.info("Starting Enhanced Extraction Demo")
 
     try:
+        # Clean vector database to avoid conflicts/duplicates
+        chroma_db_path = Path("chroma_db")
+        if chroma_db_path.exists():
+            logger.info(f"🗑️  Cleaning existing vector database: {chroma_db_path}")
+            shutil.rmtree(chroma_db_path)
+            logger.info("✅ Vector database cleaned")
+        
         # Initialize services
         logger.info("Initializing services...")
 
@@ -69,7 +77,7 @@ async def main():
         import os
         from src.infrastructure.cost_calculator import ModelType
 
-        preferred_model_str = os.getenv("EXTRACTION_MODEL", "gpt-4o-mini")
+        preferred_model_str = os.getenv("EXTRACTION_MODEL", "gpt-4o")
         preferred_model = (
             ModelType.GPT_4O
             if preferred_model_str == "gpt-4o"
@@ -134,69 +142,117 @@ async def main():
 
         logger.info("Services initialized successfully")
 
-        # Load sample abstract
-        abstract_file = Path("data/postprocessed/ASCO_Abstracts/ASCO_2020.md")
-        if not abstract_file.exists():
-            logger.error(f"Abstract file not found: {abstract_file}")
+        # Process all ESMO year files sequentially
+        # For testing, limit to first 2 years and first 2 abstracts per year
+        # Remove the limit for full processing
+        TEST_MODE = False  # Set to False for full processing
+        MAX_ABSTRACTS_PER_YEAR = None  # Process all abstracts
+        
+        esmo_years = [2020, 2021, 2022, 2023, 2024]
+        esmo_abstracts_dir = Path("data/postprocessed/ESMO_Abstracts")
+        
+        # Collect all abstracts by year
+        all_abstracts_by_year = {}
+        for year in esmo_years:
+            abstract_file = esmo_abstracts_dir / f"ESMO_{year}.md"
+            if not abstract_file.exists():
+                logger.warning(f"Abstract file not found: {abstract_file}, skipping year {year}")
+                continue
+            
+            logger.info(f"Loading abstracts from {abstract_file.name}...")
+            with open(abstract_file, encoding="utf-8") as f:
+                abstract_content = f.read()
+            
+            # Get all abstracts from this year file
+            abstracts = abstract_content.split("### Abstract ID:")[1:]  # Skip header
+            if not abstracts:
+                logger.warning(f"No abstracts found in {abstract_file.name}")
+                continue
+            
+            # Limit abstracts per year if in test mode
+            abstracts_to_use = abstracts
+            if TEST_MODE and MAX_ABSTRACTS_PER_YEAR and len(abstracts) > MAX_ABSTRACTS_PER_YEAR:
+                abstracts_to_use = abstracts[:MAX_ABSTRACTS_PER_YEAR]
+                logger.info(f"  (TEST MODE: Processing first {MAX_ABSTRACTS_PER_YEAR} of {len(abstracts)} abstracts)")
+            
+            all_abstracts_by_year[year] = {
+                "file": abstract_file,
+                "abstracts": abstracts_to_use
+            }
+            logger.info(f"Found {len(abstracts_to_use)} abstracts in {abstract_file.name} (will process {len(abstracts_to_use)})")
+
+        if not all_abstracts_by_year:
+            logger.error("No abstract files found to process")
             return
 
-        with open(abstract_file, encoding="utf-8") as f:
-            abstract_content = f.read()
-
-        # Get first 5 abstracts
-        abstracts = abstract_content.split("### Abstract ID:")[1:]  # Skip header
-        if not abstracts:
-            logger.error("No abstracts found in file")
-            return
-
-        # Process first 5 abstracts
-        abstracts_to_process = abstracts[:5]
-        logger.info(
-            f"Found {len(abstracts)} total abstracts, processing first {len(abstracts_to_process)}"
-        )
-
-        # Load all abstracts into vector store
-        logger.info("Loading abstract data into vector store...")
+        # Load all abstracts into vector store (by year, sequentially)
+        logger.info("Loading abstract data into vector store (by year, sequentially)...")
 
         all_chunks_with_embeddings = []
         embedding_config = EmbeddingConfiguration()
+        all_abstracts_metadata = []  # Store metadata for processing later
 
-        for i, abstract_text in enumerate(abstracts_to_process):
-            abstract_id = f"ASCO_2020_{i+1:03d}"
-            logger.info(f"Processing abstract {i+1}/5: {abstract_id}")
-            logger.info(f"Abstract length: {len(abstract_text)} characters")
-            logger.info(f"Abstract preview: {abstract_text[:200]}...")
+        # Process each year sequentially
+        for year in sorted(all_abstracts_by_year.keys()):
+            year_data = all_abstracts_by_year[year]
+            abstract_file = year_data["file"]
+            abstracts = year_data["abstracts"]
+            
+            logger.info(f"\n{'='*60}")
+            logger.info(f"Processing year {year}: {len(abstracts)} abstracts")
+            logger.info(f"{'='*60}")
 
-            # Create chunks from the abstract text
-            chunks = await chunking_strategy.chunk_content(
-                content=abstract_text,
-                configuration=chunking_config,
-                document_id=abstract_id,
-                filename=str(abstract_file),
-            )
+            for idx, abstract_text in enumerate(abstracts):
+                # Extract ESMO abstract ID from the text (format: "1076O" or similar)
+                first_line = abstract_text.strip().split('\n')[0].strip()
+                esmo_abstract_id = first_line if first_line else f"{idx+1:03d}"
+                abstract_id = f"ESMO_{year}_{esmo_abstract_id}"
+                
+                logger.info(f"  Loading abstract {idx+1}/{len(abstracts)}: {abstract_id}")
+                
+                # Prepend "### Abstract ID:" back to the abstract text for proper chunking
+                full_abstract_text = "### Abstract ID:" + abstract_text
 
-            # Generate embeddings for chunks
-            for chunk in chunks:
-                embedding = await embedding_service.generate_embedding(
-                    chunk.content, embedding_config
+                # Create chunks from the abstract text
+                chunks = await chunking_strategy.chunk_content(
+                    content=full_abstract_text,
+                    configuration=chunking_config,
+                    document_id=abstract_id,
+                    filename=str(abstract_file),
                 )
-                chunk_with_embedding = ChunkWithEmbedding(
-                    id=chunk.id,
-                    document_id=chunk.document_id,
-                    content=chunk.content,
-                    chunk_type=chunk.chunk_type,
-                    metadata=chunk.metadata,
-                    sequence_number=chunk.sequence_number,
-                    token_count=chunk.token_count,
-                    created_at=chunk.created_at,
-                    embedding=embedding,
-                )
-                all_chunks_with_embeddings.append(chunk_with_embedding)
+
+                # Generate embeddings for chunks
+                for chunk in chunks:
+                    embedding = await embedding_service.generate_embedding(
+                        chunk.content, embedding_config
+                    )
+                    chunk_with_embedding = ChunkWithEmbedding(
+                        id=chunk.id,
+                        document_id=chunk.document_id,
+                        content=chunk.content,
+                        chunk_type=chunk.chunk_type,
+                        metadata=chunk.metadata,
+                        sequence_number=chunk.sequence_number,
+                        token_count=chunk.token_count,
+                        created_at=chunk.created_at,
+                        embedding=embedding,
+                    )
+                    all_chunks_with_embeddings.append(chunk_with_embedding)
+                
+                # Store metadata for processing
+                all_abstracts_metadata.append({
+                    "year": year,
+                    "file": abstract_file,
+                    "abstract_text": abstract_text,
+                    "abstract_id": abstract_id,
+                    "esmo_abstract_id": esmo_abstract_id,
+                    "index": idx,
+                })
 
         # Store all chunks in vector store using upsert (prevents duplicates)
         await vector_store_service.upsert_chunks(all_chunks_with_embeddings)
         logger.info(
-            f"Loaded {len(all_chunks_with_embeddings)} chunks for {len(abstracts_to_process)} abstracts into vector store (with deduplication)"
+            f"\n✅ Loaded {len(all_chunks_with_embeddings)} chunks for {len(all_abstracts_metadata)} abstracts into vector store"
         )
 
         # Use all configured attributes for comprehensive extraction
@@ -209,15 +265,28 @@ async def main():
         attributes_to_extract = get_ordered_attribute_list(all_attributes)
 
         logger.info(
-            f"Extracting {len(attributes_to_extract)} attributes (in canonical order) for {len(abstracts_to_process)} abstracts"
+            f"Extracting {len(attributes_to_extract)} attributes (in canonical order) for {len(all_abstracts_metadata)} abstracts"
         )
 
-        # Process each abstract
+        # Process each abstract sequentially (by year, then by abstract within year)
         all_results = []
-        for i, abstract_text in enumerate(abstracts_to_process):
-            abstract_id = f"ASCO_2020_{i+1:03d}"
+        current_year = None
+        
+        for idx, abstract_meta in enumerate(all_abstracts_metadata):
+            year = abstract_meta["year"]
+            abstract_text = abstract_meta["abstract_text"]
+            abstract_id = abstract_meta["abstract_id"]
+            abstract_file = abstract_meta["file"]
+            
+            # Log year header when year changes
+            if current_year != year:
+                current_year = year
+                logger.info(f"\n{'='*80}")
+                logger.info(f"PROCESSING YEAR {year}")
+                logger.info(f"{'='*80}")
+            
             logger.info(f"\n{'='*60}")
-            logger.info(f"PROCESSING ABSTRACT {i+1}/5: {abstract_id}")
+            logger.info(f"PROCESSING ABSTRACT {idx+1}/{len(all_abstracts_metadata)}: {abstract_id} (Year {year})")
             logger.info(f"{'='*60}")
 
             # Perform extraction using batch method
@@ -228,15 +297,13 @@ async def main():
                 context_chunks_per_arm=10,
                 similarity_threshold=0.1,
                 include_api_data=True,
-                file_path=str(
-                    abstract_file
-                ),  # Pass file path for Conference/Year extraction
+                file_path=str(abstract_file),  # Pass file path for Conference/Year extraction
             )
 
             all_results.append(result)
 
             # Display results for this abstract
-            logger.info(f"Abstract {i+1} completed!")
+            logger.info(f"Abstract {abstract_id} completed!")
             logger.info(f"Total arms: {len(result.arm_results)}")
             logger.info(
                 f"Total attributes extracted: {result.total_attributes_extracted}"
@@ -330,8 +397,14 @@ async def main():
         }
 
         # Convert all results to JSON-serializable format
-        for i, result in enumerate(all_results):
-            abstract_id = f"ASCO_2020_{i+1:03d}"
+        for idx, result in enumerate(all_results):
+            # Get metadata for this abstract
+            abstract_meta = all_abstracts_metadata[idx] if idx < len(all_abstracts_metadata) else None
+            if not abstract_meta:
+                continue
+            
+            abstract_id = abstract_meta["abstract_id"]
+            year = abstract_meta["year"]
             abstract_data = {
                 "abstract_id": abstract_id,
                 "total_arms": len(result.arm_results),

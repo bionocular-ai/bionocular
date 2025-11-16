@@ -22,6 +22,7 @@ class AttributeType(str, Enum):
     NCT_NUMBER = "nct_number"
     TRIAL_NAME = "trial_name"
     CANCER_TYPE = "cancer_type"
+    CANCER_STAGE = "cancer_stage"
 
     # Company and Sponsors
     COMPANY_EU = "company_eu"  # Note: Not yet implemented
@@ -31,6 +32,7 @@ class AttributeType(str, Enum):
 
     # Trial Characteristics
     CLINICAL_TRIAL_PHASE = "clinical_trial_phase"
+    STUDY_TYPE = "study_type"  # e.g., "Interventional", "Observational"
     CHEMOTHERAPY_NAIVE = "chemotherapy_naive"
     CHEMOTHERAPY_FAILED = "chemotherapy_failed"
     ICI_NAIVE = "ici_naive"
@@ -41,7 +43,7 @@ class AttributeType(str, Enum):
     BRAF_MUTATION = "braf_mutation"
     NRAS_MUTATION = "nras_mutation"
     BIOSIMILAR = "biosimilar"
-    LINE_OF_TREATMENT = "line_of_treatment"  # Note: Not yet implemented
+    LINE_OF_TREATMENT = "line_of_treatment"  # e.g., "first-line", "second-line", "previously untreated"
 
     # Endpoints and Biomarkers
     PRIMARY_ENDPOINT = "primary_endpoint"
@@ -52,6 +54,7 @@ class AttributeType(str, Enum):
 
     # Trial Timeline
     STUDY_START_DATE = "study_start_date"
+    PRIMARY_COMPLETION_DATE = "primary_completion_date"  # Primary completion date (estimated or actual)
     STUDY_COMPLETION_DATE = "study_completion_date"
     FIRST_RESULTS = "first_results"
 
@@ -350,16 +353,42 @@ class AttributeConfigurationFactory:
                     "No Name",
                 ],
                 extraction_priority=1,
-                api_source=True,
+                api_source=True,  # Source from Clinical Trials API
             ),
             AttributeType.CANCER_TYPE: AttributeConfiguration(
                 attribute_type=AttributeType.CANCER_TYPE,
                 value_kind=ValueKind.CANCER_TYPE,
                 required=True,
-                controlled_vocabulary=None,  # No controlled vocabulary - use exact API value
+                controlled_vocabulary=[
+                    "Resected Cutaneous Melanoma",
+                    "Unresectable Cutaneous Melanoma",
+                    "Cutaneous melanoma with Brain metastasis",
+                    "Cutaneous Melanoma with CNS metastasis",
+                    "Uveal Melanoma",
+                    "Mucosal Melanoma",
+                    "Acral Melanoma",
+                    "Basal Cell Carcinoma",
+                    "Merkel Cell Carcinoma",
+                    "Cutaneous Squamous Cell Carcinoma",
+                ],
                 extraction_priority=1,
-                # Not needed since it's from API
-                api_source=True,
+                api_source=False,  # Extract from abstract
+            ),
+            AttributeType.CANCER_STAGE: AttributeConfiguration(
+                attribute_type=AttributeType.CANCER_STAGE,
+                value_kind=ValueKind.STRING,
+                required=False,
+                controlled_vocabulary=[
+                    "Stage I",
+                    "Stage I/II",
+                    "Stage II",
+                    "Stage II/III",
+                    "Stage III",
+                    "Stage III/Stage IV",
+                    "Stage IV",
+                ],
+                extraction_priority=1,
+                api_source=False,  # Extract from abstract
             ),
             AttributeType.MEDIAN_AGE: AttributeConfiguration(
                 attribute_type=AttributeType.MEDIAN_AGE,
@@ -376,7 +405,7 @@ class AttributeConfigurationFactory:
                 critical=True,
                 validation_range=(1, 10000),
                 extraction_priority=1,
-                api_source=False,
+                api_source=False,  # Extract from abstract (Methods/Results sections)
             ),
             # Treatment Details (Arm-level)
             AttributeType.BRAND_NAME: AttributeConfiguration(
@@ -412,14 +441,14 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=2,
-                api_source=True,
+                api_source=False,  # Extract from abstract instead of API
             ),
             AttributeType.TARGET_PROTEIN: AttributeConfiguration(
                 attribute_type=AttributeType.TARGET_PROTEIN,
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=2,
-                api_source=True,
+                api_source=False,  # Extract from abstract instead of API
             ),
             AttributeType.TYPE_OF_THERAPY: AttributeConfiguration(
                 attribute_type=AttributeType.TYPE_OF_THERAPY,
@@ -433,7 +462,7 @@ class AttributeConfigurationFactory:
                     "Chemotherapy",
                 ],
                 extraction_priority=2,
-                api_source=True,
+                api_source=False,  # Extract from abstract instead of API
             ),
             # Efficacy - Response Rates
             AttributeType.COMPLETE_RESPONSE: AttributeConfiguration(
@@ -744,14 +773,68 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=1,
-                api_source=True,
+                api_source=False,  # Extract from abstract (Research Sponsor or Funding sections)
             ),
             AttributeType.CLINICAL_TRIAL_PHASE: AttributeConfiguration(
                 attribute_type=AttributeType.CLINICAL_TRIAL_PHASE,
                 value_kind=ValueKind.STRING,
                 required=False,
+                controlled_vocabulary=[
+                    "PHASE1",
+                    "PHASE2",
+                    "PHASE3",
+                    "PHASE4",
+                    "PHASE1_2",
+                    "PHASE2_3",
+                ],
                 extraction_priority=1,
-                api_source=True,
+                api_source=True,  # Source from Clinical Trials API
+            ),
+            AttributeType.STUDY_TYPE: AttributeConfiguration(
+                attribute_type=AttributeType.STUDY_TYPE,
+                value_kind=ValueKind.STRING,
+                required=False,
+                controlled_vocabulary=[
+                    "Interventional",
+                    "Observational",
+                    "Expanded Access",
+                ],
+                extraction_priority=1,
+                api_source=True,  # Source from Clinical Trials API
+            ),
+            AttributeType.PRIMARY_ENDPOINT: AttributeConfiguration(
+                attribute_type=AttributeType.PRIMARY_ENDPOINT,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=1,
+                api_source=True,  # Source from Clinical Trials API
+            ),
+            AttributeType.SECONDARY_ENDPOINT: AttributeConfiguration(
+                attribute_type=AttributeType.SECONDARY_ENDPOINT,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=1,
+                api_source=True,  # Source from Clinical Trials API
+            ),
+            AttributeType.PRIMARY_COMPLETION_DATE: AttributeConfiguration(
+                attribute_type=AttributeType.PRIMARY_COMPLETION_DATE,
+                value_kind=ValueKind.DATE,
+                required=False,
+                extraction_priority=1,
+                api_source=True,  # Source from Clinical Trials API
+            ),
+            AttributeType.LINE_OF_TREATMENT: AttributeConfiguration(
+                attribute_type=AttributeType.LINE_OF_TREATMENT,
+                value_kind=ValueKind.STRING,
+                required=False,
+                controlled_vocabulary=[
+                    "Neoadjuvant",
+                    "First Line",
+                    "2nd Line",
+                    "3rd Line+",
+                ],
+                extraction_priority=2,
+                api_source=True,  # Source from Clinical Trials API (arm-specific)
             ),
             AttributeType.MINIMUM_AGE: AttributeConfiguration(
                 attribute_type=AttributeType.MINIMUM_AGE,
@@ -871,7 +954,7 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.BINARY,
                 required=False,
                 extraction_priority=2,
-                api_source=True,
+                api_source=False,  # Extract from abstract
             ),
             AttributeType.BIOMARKERS_INCLUSION_CRITERIA: AttributeConfiguration(
                 attribute_type=AttributeType.BIOMARKERS_INCLUSION_CRITERIA,

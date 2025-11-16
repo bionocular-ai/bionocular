@@ -24,38 +24,15 @@ class ExtractionPromptTemplateProvider(PromptTemplateProvider):
         """Initialize prompt template provider."""
         self.extraction_prompts = self._initialize_extraction_prompts()
 
-        # Section awareness prefix for numeric attributes
-        self.numeric_section_prefix = """
-⚠️ SECTION AWARENESS:
-- PREFER: Results, Conclusions, Study Results sections, or Tables
-- USE CAREFULLY: Background section (may contain current study data OR citations to other studies)
-- When multiple sections have the value, prefer Results/Conclusions over Background
-- Prioritize table data when available
-
-"""
-
-        # Verification prefix for survival metrics to prevent contamination
-        self.survival_verification_prefix = """
-🔍 CRITICAL VERIFICATION - PREVENT VALUE CONTAMINATION:
-Clinical trials report DIFFERENT survival metrics (PFS, RFS, OS, EFS, MFS).
-Each metric is INDEPENDENT and has its OWN values.
-
-COMMON CONTAMINATION ERROR (DO NOT DO THIS):
-❌ Context mentions "hazard ratio for RFS was 0.56"
-   Asked to extract: HR for PFS
-   WRONG: Extracting "0.56" (this is RFS, not PFS!)
-   CORRECT: Return "Not found" (PFS not mentioned, only RFS)
-
-VERIFICATION REQUIREMENT:
-"""
-
         # Verification prefix for arm-specific values to prevent total/other arm contamination
+        # Note: This is still needed as it's about arm vs study-level, not metric contamination
         self.arm_specific_verification_prefix = """
 ⚠️ ARM-SPECIFIC VERIFICATION:
-✓ Extract ONLY arm-specific value (e.g., "pembrolizumab N=514")
-✗ NOT study totals (e.g., "1019 randomized")
+✓ For multi-arm studies: Extract ONLY arm-specific value (e.g., "pembrolizumab N=514")
+✓ For single-arm studies: Extract the total enrolled and use the same value for all arms
+✓ If you see only one total value (e.g., "n=60", "60 patients") and multiple arms listed, this is likely a single-arm study - use that total for all arms
+✗ NOT study totals in multi-arm studies when arms have separate values (e.g., "1019 randomized" when arms have N=514 and N=505)
 ✗ NOT other arm values
-Pattern: Value MUST be near arm name ("arm_name N=###", "arm: N=###")
 """
         logger.info("Prompt template provider initialized")
 
@@ -90,20 +67,6 @@ Pattern: Value MUST be near arm name ("arm_name N=###", "arm: N=###")
         if self._needs_arm_specific_verification(attribute_type):
             base_prompt = self.arm_specific_verification_prefix + base_prompt
 
-        # Add verification prefix for survival metrics to prevent contamination
-        elif self._needs_survival_verification(attribute_type):
-            verification_rules = self._get_survival_verification_rules(attribute_type)
-            base_prompt = (
-                self.survival_verification_prefix
-                + verification_rules
-                + "\n"
-                + base_prompt
-            )
-
-        # Add section awareness prefix for numeric attributes
-        if self._is_numeric_attribute(attribute_type):
-            base_prompt = self.numeric_section_prefix + base_prompt
-
         # Format context
         context_text = self._format_context(context)
 
@@ -133,92 +96,88 @@ Look for:
 - Numerical values if applicable
 - Context clues that indicate the value
 
-Return only the extracted value, or "Not found" if not available.
+The value should be the extracted value, or "Not found" if not available.
 """
 
     def _initialize_extraction_prompts(self) -> dict[AttributeType, str]:
         """Initialize streamlined extraction prompts.
 
-        IMPORTANT EXTRACTION GUIDELINES:
-        - Numeric attributes: Prefer Results, Conclusions, Study Results sections, or Tables
-        - Background section may contain current study data, but use carefully
-        - Prioritize data from tables when available
-        - Non-numeric attributes: Can be extracted from any section
+        Note: Context is pre-filtered by 3-tier optimization (Tier 1-3),
+        so prompts can focus on extraction logic rather than section awareness.
         """
         return {
             # General Parameters
-            AttributeType.ABSTRACT_NUMBER: "Extract abstract number. Look for '### Abstract ID: [NUMBER]' pattern. Return just the number.",
-            AttributeType.COMMENTS: "Extract full text availability statements. Look for 'meetings.asco.org', 'Journal of Clinical Oncology'. Return complete statement or empty string.",
-            AttributeType.TRIAL_NAME: "Extract trial name. Look for 'Keynote-', 'Checkmate-', 'Masterkey-' patterns. Return full name or 'No Name'.",
-            AttributeType.CANCER_TYPE: "Extract cancer type from controlled vocabulary: Resected Cutaneous Melanoma, Unresectable Cutaneous Melanoma, Cutaneous melanoma with Brain metastasis, Cutaneous Melanoma with CNS metastasis, Uveal Melanoma, Mucosal Melanoma, Acral Melanoma, Basal Cell Carcinoma, Merkel Cell Carcinoma, Cutaneous Squamous Cell Carcinoma.",
-            AttributeType.NCT_NUMBER: "Extract NCT number. Look for 'NCT' followed by 8 digits. Return exactly as found or empty string.",
+            AttributeType.ABSTRACT_NUMBER: "Extract abstract number. Look for '### Abstract ID: [NUMBER]' pattern. The value should be just the number.",
+            AttributeType.COMMENTS: "Extract full text availability statements from the full text reference section. Look for 'meetings.asco.org', 'Journal of Clinical Oncology', or similar publication references. If no full text reference section exists or no relevant statements are found, the value should be an empty string (\"\"). Do not include explanatory text.",
+            # TRIAL_NAME - API-sourced, no prompt needed
+            AttributeType.CANCER_TYPE: "Extract cancer type associated with the treatment. The value should be exactly one of these classes: Resected Cutaneous Melanoma, Unresectable Cutaneous Melanoma, Cutaneous melanoma with Brain metastasis, Cutaneous Melanoma with CNS metastasis, Uveal Melanoma, Mucosal Melanoma, Acral Melanoma, Basal Cell Carcinoma, Merkel Cell Carcinoma, Cutaneous Squamous Cell Carcinoma. Match the most specific applicable type from the abstract.",
+            AttributeType.CANCER_STAGE: "Extract cancer stage. The value should be exactly one of these classes: Stage I, Stage I/II, Stage II, Stage II/III, Stage III, Stage III/Stage IV, Stage IV. Match the most specific applicable stage from the abstract, or empty string if not found.",
+            AttributeType.NCT_NUMBER: "Extract clinical trial identifier from 'Clinical trial identification:' or 'Clinical Trial Information:' section. Priority: NCT number (NCT + 8 digits), then EudraCT, then other identifiers. Return exactly as found or empty string.",
+            AttributeType.SPONSORS: "Extract research sponsor(s) from Research Sponsor or Funding sections. Look for 'Research Sponsor:', 'Lead Sponsor:', 'sponsor', or funding organization names. The value should be the sponsor name(s) or empty string if not found.",
             # Treatment Details
-            AttributeType.BRAND_NAME: "Extract brand names (e.g., Keytruda, Opdivo, Yervoy). Return commercial names or empty string.",
+            AttributeType.BRAND_NAME: "Extract brand names (e.g., Keytruda, Opdivo, Yervoy). The value should be commercial names or empty string.",
             AttributeType.GENERIC_NAME: "Extract generic drug names. For combinations use 'Drug A + Drug B' format. Include dose if specified (e.g., 'Nivolumab 1mg/kg').",
             AttributeType.TYPE_OF_THERAPY: "Extract therapy type: Immunotherapy, Cellular therapy, Targeted Therapy, Oncolytic Virus, Chemotherapy.",
+            AttributeType.MECHANISM_OF_ACTION: "Extract mechanism of action. Look for descriptions of how the drug works, such as 'PD-1 inhibitor', 'CTLA-4 blocker', 'BRAF inhibitor', 'MEK inhibitor', 'anti-angiogenic', 'immune checkpoint blockade', or similar mechanisms. The value should be the mechanism of action described in the abstract.",
+            AttributeType.TARGET_PROTEIN: "Extract target protein. Look for protein targets such as 'PD-1', 'PD-L1', 'CTLA-4', 'BRAF', 'MEK', 'VEGF', 'EGFR', 'HER2', or similar protein targets. The value should be the target protein(s) mentioned in the abstract.",
             AttributeType.SUB_THERAPY: "Extract sub-therapy from controlled vocabulary: Immune Checkpoint Inhibitor/Antibody, Vaccine/Immunostimulant, Bispecific, CAR-T, NK-Cell, Myeloid Cells, TIL Therapy, Antibody, Tyrosine kinase inhibitor, Angiogenesis inhibitor, Antibody-Drug Conjugate, Oncolytic Virus, Chemotherapy.",
-            AttributeType.MEDIAN_AGE: "Extract median age in years. Look for 'median age', 'age range'. Return number only (e.g., '65').",
-            AttributeType.NUMBER_OF_PATIENTS: """Extract the number of patients in this specific treatment arm. Look for 'N=' or 'n=' immediately after the arm name. Return integer only.""",
+            # CLINICAL_TRIAL_PHASE - API-sourced, no prompt needed
+            AttributeType.BIOSIMILAR: "Extract whether the drug is a biosimilar. Look for 'biosimilar', 'biosimilar to', or similar terms. The value should be 'true' if biosimilar is mentioned, 'false' if explicitly stated as not biosimilar, or empty string if not mentioned.",
+            AttributeType.MEDIAN_AGE: "Extract median age in years. Look for 'median age', 'age range'. The value should be a number (e.g., '65').",
+            AttributeType.NUMBER_OF_PATIENTS: "Extract the number of patients for this specific treatment arm. Look for 'N=', 'n=', 'patients', 'pts', 'enrolled', or similar patterns. For multi-arm studies, extract ONLY the value associated with this specific arm name. For single-arm studies, extract the total enrolled. The value should be an integer.",
             # Efficacy - Response Rates
-            AttributeType.OBJECTIVE_RESPONSE_RATE: "Extract ORR percentage. Look for 'Objective response rate', 'ORR'. Return number only (e.g., '25' not '25%'). If not given, calculate: (CR + PR) / Total Patients.",
-            AttributeType.COMPLETE_RESPONSE: "Extract Complete Response percentage. Look for 'Complete Response', 'CR'. Return number only.",
-            AttributeType.PATHOLOGICAL_COMPLETE_RESPONSE: "Extract Pathological Complete Response percentage. Look for 'pCR', 'pathological CR'. Return number only.",
-            AttributeType.COMPLETE_METABOLIC_RESPONSE: "Extract Complete Metabolic Response percentage. Look for 'CMR', 'metabolic response'. Return number only.",
-            AttributeType.DISEASE_CONTROL_RATE: "Extract Disease Control Rate percentage. Look for 'DCR', 'disease control'. Return number only. If not given, calculate: (CR + PR + SD) / Total Patients.",
-            AttributeType.CLINICAL_BENEFIT_RATE: "Extract Clinical Benefit Rate percentage. Look for 'CBR', 'clinical benefit'. Return number only.",
-            AttributeType.MEDIAN_DOR: "Extract median Duration of Response in months. Look for 'DOR', 'duration of response'. Return number or 'NR' if not reached.",
-            AttributeType.DOR_RATE: "Extract DOR rate percentage at specific timepoints. Look for 'DOR rate', 'duration rate'. Return number only.",
+            AttributeType.OBJECTIVE_RESPONSE_RATE: "Extract ORR percentage. Look for 'Objective response rate', 'ORR'. The value should be a number (e.g., '25'). If not given, calculate: (CR + PR) / Total Patients.",
+            AttributeType.COMPLETE_RESPONSE: "Extract Complete Response percentage. Look for 'Complete Response', 'CR'. The value should be a number.",
+            AttributeType.PATHOLOGICAL_COMPLETE_RESPONSE: "Extract Pathological Complete Response percentage. Look for 'pCR', 'pathological CR'. The value should be a number.",
+            AttributeType.COMPLETE_METABOLIC_RESPONSE: "Extract Complete Metabolic Response percentage. Look for 'CMR', 'metabolic response'. The value should be a number.",
+            AttributeType.DISEASE_CONTROL_RATE: "Extract Disease Control Rate percentage. Look for 'DCR', 'disease control'. The value should be a number. If not given, calculate: (CR + PR + SD) / Total Patients.",
+            AttributeType.CLINICAL_BENEFIT_RATE: "Extract Clinical Benefit Rate percentage. Look for 'CBR', 'clinical benefit'. The value should be a number.",
+            AttributeType.MEDIAN_DOR: "Extract median Duration of Response in months. Look for 'DOR', 'duration of response'. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.DOR_RATE: "Extract DOR rate percentage at specific timepoints. Look for 'DOR rate', 'duration rate'. The value should be a number.",
             # Efficacy - Survival Metrics (PFS Family)
-            # NOTE: PFS is PROGRESSION-free survival, used in advanced/metastatic disease
-            # DO NOT confuse with RFS (recurrence-free), EFS (event-free), or MFS (metastasis-free)
-            AttributeType.MEDIAN_PFS: """Extract median progression-free survival (PFS) in months. Return numeric value or 'NR' if not reached. Return empty string if not found.""",
-            AttributeType.MEDIAN_FOLLOWUP_PFS: "Extract median follow-up time for PFS measurement in months. Look for 'follow-up for PFS', 'PFS follow-up'. Verify 'PFS' is mentioned. Return number only or empty string.",
-            AttributeType.P_VALUE_PFS: "Extract p-value for PFS. Look for 'p-value for PFS', 'PFS p-value'. Verify 'PFS' is mentioned. Return decimal value or significance level: Non-Significant (p>0.05), Significant (p≤0.05), Highly Significant (p≤0.001).",
-            AttributeType.HR_PFS: "Extract Hazard Ratio for PFS. Look for 'HR for PFS', 'PFS HR'. Verify 'PFS' is mentioned. Return decimal value (e.g., '0.65') or empty string.",
-            AttributeType.MEDIAN_OS: "Extract median OS in months. Look for 'median OS', 'mOS', 'overall survival'. Return number or 'NR' if not reached.",
-            AttributeType.MEDIAN_FOLLOWUP_OS: "Extract median follow-up time for OS measurement in months. Look for 'follow-up for OS', 'OS follow-up'. Return number only.",
-            AttributeType.P_VALUE_OS: "Extract p-value for OS. Look for 'p-value for OS', 'OS p-value'. Return decimal value or significance level: Non-Significant (p>0.05), Significant (p≤0.05), Highly Significant (p≤0.001).",
-            AttributeType.HR_OS: "Extract Hazard Ratio for OS. Look for 'HR for OS', 'OS HR'. Return decimal value (e.g., '0.65').",
+            AttributeType.MEDIAN_PFS: "Extract median PFS in months. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.MEDIAN_FOLLOWUP_PFS: "Extract median follow-up time for PFS in months. The value should be a number.",
+            AttributeType.P_VALUE_PFS: "Extract p-value for PFS. The value should be a decimal number or significance level: Non-Significant (p>0.05), Significant (p≤0.05), Highly Significant (p≤0.001).",
+            AttributeType.HR_PFS: "Extract Hazard Ratio for PFS. The value should be a decimal number (e.g., '0.65').",
+            # OS Family
+            AttributeType.MEDIAN_OS: "Extract median OS in months. Look for 'median OS', 'mOS', 'overall survival'. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.MEDIAN_FOLLOWUP_OS: "Extract median follow-up time for OS measurement in months. Look for 'follow-up for OS', 'OS follow-up'. The value should be a number.",
+            AttributeType.P_VALUE_OS: "Extract p-value for OS. Look for 'p-value for OS', 'OS p-value'. The value should be a decimal number or significance level: Non-Significant (p>0.05), Significant (p≤0.05), Highly Significant (p≤0.001).",
+            AttributeType.HR_OS: "Extract Hazard Ratio for OS. Look for 'HR for OS', 'OS HR'. The value should be a decimal number (e.g., '0.65').",
             # PFS Rate Timepoints
-            AttributeType.PFS_RATE_6M: "Extract 6-month PFS rate percentage. Look for '6-month PFS', 'PFS at 6 months'. Return number only.",
-            AttributeType.PFS_RATE_9M: "Extract 9-month PFS rate percentage. Look for '9-month PFS', 'PFS at 9 months'. Return number only.",
-            AttributeType.PFS_RATE_12M: "Extract 12-month PFS rate percentage. Look for '12-month PFS', '1-year PFS', 'PFS at 12 months'. Return number only.",
-            AttributeType.PFS_RATE_18M: "Extract 18-month PFS rate percentage. Look for '18-month PFS', 'PFS at 18 months'. Return number only.",
-            AttributeType.PFS_RATE_24M: "Extract 24-month PFS rate percentage. Look for '24-month PFS', '2-year PFS', 'PFS at 24 months'. Return number only.",
-            AttributeType.PFS_RATE_36M: "Extract 36-month PFS rate percentage. Look for '36-month PFS', '3-year PFS', 'PFS at 36 months'. Return number only.",
-            AttributeType.PFS_RATE_48M: "Extract 48-month PFS rate percentage. Look for '48-month PFS', '4-year PFS', 'PFS at 48 months'. Return number only.",
+            AttributeType.PFS_RATE_6M: "Extract 6-month PFS rate percentage. Look for '6-month PFS', 'PFS at 6 months'. The value should be a number.",
+            AttributeType.PFS_RATE_9M: "Extract 9-month PFS rate percentage. Look for '9-month PFS', 'PFS at 9 months'. The value should be a number.",
+            AttributeType.PFS_RATE_12M: "Extract 12-month PFS rate percentage. Look for '12-month PFS', '1-year PFS', 'PFS at 12 months'. The value should be a number.",
+            AttributeType.PFS_RATE_18M: "Extract 18-month PFS rate percentage. Look for '18-month PFS', 'PFS at 18 months'. The value should be a number.",
+            AttributeType.PFS_RATE_24M: "Extract 24-month PFS rate percentage. Look for '24-month PFS', '2-year PFS', 'PFS at 24 months'. The value should be a number.",
+            AttributeType.PFS_RATE_36M: "Extract 36-month PFS rate percentage. Look for '36-month PFS', '3-year PFS', 'PFS at 36 months'. The value should be a number.",
+            AttributeType.PFS_RATE_48M: "Extract 48-month PFS rate percentage. Look for '48-month PFS', '4-year PFS', 'PFS at 48 months'. The value should be a number.",
             # OS Rate Timepoints
-            AttributeType.OS_RATE_6M: "Extract 6-month OS rate percentage. Look for '6-month OS', 'OS at 6 months'. Return number only.",
-            AttributeType.OS_RATE_9M: "Extract 9-month OS rate percentage. Look for '9-month OS', 'OS at 9 months'. Return number only.",
-            AttributeType.OS_RATE_12M: "Extract 12-month OS rate percentage. Look for '12-month OS', '1-year OS', 'OS at 12 months'. Return number only.",
-            AttributeType.OS_RATE_18M: "Extract 18-month OS rate percentage. Look for '18-month OS', 'OS at 18 months'. Return number only.",
-            AttributeType.OS_RATE_24M: "Extract 24-month OS rate percentage. Look for '24-month OS', '2-year OS', 'OS at 24 months'. Return number only.",
-            AttributeType.OS_RATE_36M: "Extract 36-month OS rate percentage. Look for '36-month OS', '3-year OS', 'OS at 36 months'. Return number only.",
-            AttributeType.OS_RATE_48M: "Extract 48-month OS rate percentage. Look for '48-month OS', '4-year OS', 'OS at 48 months'. Return number only.",
+            AttributeType.OS_RATE_6M: "Extract 6-month OS rate percentage. Look for '6-month OS', 'OS at 6 months'. The value should be a number.",
+            AttributeType.OS_RATE_9M: "Extract 9-month OS rate percentage. Look for '9-month OS', 'OS at 9 months'. The value should be a number.",
+            AttributeType.OS_RATE_12M: "Extract 12-month OS rate percentage. Look for '12-month OS', '1-year OS', 'OS at 12 months'. The value should be a number.",
+            AttributeType.OS_RATE_18M: "Extract 18-month OS rate percentage. Look for '18-month OS', 'OS at 18 months'. The value should be a number.",
+            AttributeType.OS_RATE_24M: "Extract 24-month OS rate percentage. Look for '24-month OS', '2-year OS', 'OS at 24 months'. The value should be a number.",
+            AttributeType.OS_RATE_36M: "Extract 36-month OS rate percentage. Look for '36-month OS', '3-year OS', 'OS at 36 months'. The value should be a number.",
+            AttributeType.OS_RATE_48M: "Extract 48-month OS rate percentage. Look for '48-month OS', '4-year OS', 'OS at 48 months'. The value should be a number.",
             # EFS Family
-            # NOTE: EFS is EVENT-free survival (any event: progression, recurrence, death)
-            # Typically used in pediatric oncology and some adjuvant trials
-            AttributeType.EFS: """Extract median event-free survival (EFS) in months. Return numeric value or 'NR' if not reached. Return empty string if not found.""",
-            AttributeType.P_VALUE_EFS: "Extract p-value for EFS. Look for 'p-value for EFS', 'EFS p-value'. Verify 'EFS' is mentioned. Return decimal value or significance level.",
-            AttributeType.HR_EFS: "Extract Hazard Ratio for EFS. Look for 'HR for EFS', 'EFS HR'. Verify 'EFS' is mentioned. Return decimal value (e.g., '0.65') or empty string.",
+            AttributeType.EFS: "Extract median EFS in months. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.P_VALUE_EFS: "Extract p-value for EFS. The value should be a decimal number or significance level.",
+            AttributeType.HR_EFS: "Extract Hazard Ratio for EFS. The value should be a decimal number (e.g., '0.65').",
             # RFS Family
-            # NOTE: RFS is RECURRENCE-free survival (post-surgery recurrence)
-            # Typically used in adjuvant therapy trials after surgical resection
-            AttributeType.RFS: """Extract median recurrence-free survival (RFS) in months. Return numeric value or 'NR' if not reached. Return empty string if not found.""",
-            AttributeType.P_VALUE_RFS: "Extract p-value for RFS. Look for 'p-value for RFS', 'RFS p-value'. Verify 'RFS' is mentioned. Return decimal value or significance level.",
-            AttributeType.LENGTH_RFS: "Extract follow-up duration for RFS measurement in months. Look for 'follow-up for RFS', 'RFS follow-up', 'observation period'. Verify 'RFS' is mentioned. Return number only or empty string.",
-            AttributeType.HR_RFS: "Extract Hazard Ratio for RFS. Look for 'HR for RFS', 'RFS HR'. Verify 'RFS' is mentioned. Return decimal value (e.g., '0.56') or empty string.",
+            AttributeType.RFS: "Extract median RFS in months. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.P_VALUE_RFS: "Extract p-value for RFS. The value should be a decimal number or significance level.",
+            AttributeType.LENGTH_RFS: "Extract follow-up duration for RFS in months. The value should be a number.",
+            AttributeType.HR_RFS: "Extract Hazard Ratio for RFS. The value should be a decimal number (e.g., '0.56').",
             # MFS Family
-            # NOTE: MFS is METASTASIS-free survival (distant metastasis)
-            # Typically used in localized/regional disease trials
-            AttributeType.MFS: """Extract median metastasis-free survival (MFS/DMFS) in months. Return numeric value or 'NR' if not reached. Return empty string if not found.""",
-            AttributeType.LENGTH_MFS: "Extract follow-up duration for MFS measurement in months. Look for 'follow-up for MFS', 'MFS follow-up', 'observation period'. Verify 'MFS' is mentioned. Return number only or empty string.",
-            AttributeType.HR_MFS: "Extract Hazard Ratio for MFS. Look for 'HR for MFS', 'MFS HR'. Verify 'MFS' is mentioned. Return decimal value (e.g., '0.55') or empty string.",
+            AttributeType.MFS: "Extract median MFS in months. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.LENGTH_MFS: "Extract follow-up duration for MFS in months. The value should be a number.",
+            AttributeType.HR_MFS: "Extract Hazard Ratio for MFS. The value should be a decimal number (e.g., '0.55').",
             # Time-to Metrics
-            AttributeType.TTR: "Extract Time to Response in months. Look for 'median TTR', 'time to response'. Return number or 'NR' if not reached.",
-            AttributeType.TTP: "Extract Time to Progression in months. Look for 'median TTP', 'time to progression'. Return number or 'NR' if not reached.",
-            AttributeType.TTNT: "Extract Time to Next Treatment in months. Look for 'median TTNT', 'time to next treatment'. Return number or 'NR' if not reached.",
-            AttributeType.TTF: "Extract Time to Treatment Failure in months. Look for 'median TTF', 'time to treatment failure'. Return number or 'NR' if not reached.",
+            AttributeType.TTR: "Extract Time to Response in months. Look for 'median TTR', 'time to response'. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.TTP: "Extract Time to Progression in months. Look for 'median TTP', 'time to progression'. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.TTNT: "Extract Time to Next Treatment in months. Look for 'median TTNT', 'time to next treatment'. The value should be a number in months, or 'NR' if not reached.",
+            AttributeType.TTF: "Extract Time to Treatment Failure in months. Look for 'median TTF', 'time to treatment failure'. The value should be a number in months, or 'NR' if not reached.",
             # Safety - Adverse Events
             AttributeType.AE: "Extract overall Adverse Events percentage. Look for 'adverse events', 'AEs', 'any grade AE'. Extract from parentheses (e.g., '125 (85%)' → '85').",
             AttributeType.GRADE_3_PLUS_AE: "Extract Grade 3+ AE percentage. Look for 'Grade 3+', 'Grade 3 or higher', 'Grade 3 higher'. Extract from parentheses. If not given, sum Grade 3 + Grade 4 + Grade 5.",
@@ -261,11 +220,11 @@ INSTRUCTIONS:
 1. Read the provided context carefully
 2. Look for information related to the requested attribute
 3. Extract the most relevant and accurate information
-4. If not found, return empty string ""
+4. If not found, the value should be empty string ""
 5. Maintain the original format and precision of the data
 
 OUTPUT FORMAT:
-Return the extracted value as a string or number.
+The value should be the extracted value as a string or number.
 """
 
     def _is_numeric_attribute(self, attribute_type: AttributeType) -> bool:
@@ -278,15 +237,21 @@ Return the extracted value as a string or number.
             True if numeric attribute, False otherwise
         """
         # Non-numeric attributes (can extract from any section)
+        # NOTE: API-sourced attributes (TRIAL_NAME, TYPE_OF_THERAPY, etc.) are not included here
+        # as they won't be extracted from abstracts
         non_numeric_attributes = {
             AttributeType.ABSTRACT_NUMBER,
             AttributeType.COMMENTS,
-            AttributeType.TRIAL_NAME,
+            AttributeType.NCT_NUMBER,  # Kept - used as link/identifier
             AttributeType.CANCER_TYPE,
-            AttributeType.NCT_NUMBER,
+            AttributeType.CANCER_STAGE,
+            AttributeType.SPONSORS,
             AttributeType.BRAND_NAME,
             AttributeType.GENERIC_NAME,
             AttributeType.TYPE_OF_THERAPY,
+            AttributeType.MECHANISM_OF_ACTION,
+            AttributeType.TARGET_PROTEIN,
+            AttributeType.BIOSIMILAR,
             AttributeType.SUB_THERAPY,
         }
 
@@ -314,224 +279,6 @@ Return the extracted value as a string or number.
         }
 
         return attribute_type in arm_specific_attributes
-
-    def _needs_survival_verification(self, attribute_type: AttributeType) -> bool:
-        """Determine if attribute needs survival metric verification to prevent contamination.
-
-        Survival metrics (PFS, OS, RFS, EFS, MFS) are easily confused and values can
-        contaminate each other (e.g., HR_RFS value incorrectly extracted as HR_PFS).
-
-        Args:
-            attribute_type: Type of attribute to check
-
-        Returns:
-            True if attribute needs verification, False otherwise
-        """
-        # Attributes that need verification (survival-related metrics)
-        survival_attributes = {
-            # Hazard Ratios
-            AttributeType.HR_PFS,
-            AttributeType.HR_OS,
-            AttributeType.HR_EFS,
-            AttributeType.HR_RFS,
-            AttributeType.HR_MFS,
-            # P-values
-            AttributeType.P_VALUE_PFS,
-            AttributeType.P_VALUE_OS,
-            AttributeType.P_VALUE_EFS,
-            AttributeType.P_VALUE_RFS,
-            # Median values
-            AttributeType.MEDIAN_PFS,
-            AttributeType.MEDIAN_OS,
-            AttributeType.EFS,
-            AttributeType.RFS,
-            AttributeType.MFS,
-            # Follow-up times
-            AttributeType.MEDIAN_FOLLOWUP_PFS,
-            AttributeType.MEDIAN_FOLLOWUP_OS,
-            AttributeType.LENGTH_RFS,
-            AttributeType.LENGTH_MFS,
-            # Rate timepoints (these are less contamination-prone but included for consistency)
-            AttributeType.PFS_RATE_6M,
-            AttributeType.PFS_RATE_9M,
-            AttributeType.PFS_RATE_12M,
-            AttributeType.PFS_RATE_18M,
-            AttributeType.PFS_RATE_24M,
-            AttributeType.PFS_RATE_36M,
-            AttributeType.PFS_RATE_48M,
-            AttributeType.OS_RATE_6M,
-            AttributeType.OS_RATE_9M,
-            AttributeType.OS_RATE_12M,
-            AttributeType.OS_RATE_18M,
-            AttributeType.OS_RATE_24M,
-            AttributeType.OS_RATE_36M,
-            AttributeType.OS_RATE_48M,
-        }
-
-        return attribute_type in survival_attributes
-
-    def _get_survival_verification_rules(self, attribute_type: AttributeType) -> str:
-        """Get specific verification rules for survival metric attributes.
-
-        Args:
-            attribute_type: Type of attribute
-
-        Returns:
-            Verification rules string
-        """
-        verification_rules = {
-            # Hazard Ratio verification rules
-            AttributeType.HR_PFS: """
-✓ Context MUST explicitly mention "PFS" or "progression-free survival"
-✓ Look for "HR for PFS", "PFS HR", "hazard ratio for progression-free survival"
-✗ DO NOT extract if you only see: RFS, OS, EFS, MFS, or other survival metrics
-✗ If context only has "hazard ratio" without specifying PFS, return "Not found"
-""",
-            AttributeType.HR_OS: """
-✓ Context MUST explicitly mention "OS" or "overall survival"
-✓ Look for "HR for OS", "OS HR", "hazard ratio for overall survival"
-✗ DO NOT extract if you only see: PFS, RFS, EFS, MFS, or other survival metrics
-✗ If context only has "hazard ratio" without specifying OS, return "Not found"
-""",
-            AttributeType.HR_RFS: """
-✓ Context MUST explicitly mention "RFS", "recurrence-free survival", or "relapse-free survival"
-✓ Look for "HR for RFS", "RFS HR", "hazard ratio for recurrence-free survival"
-✗ DO NOT extract if you only see: PFS, OS, EFS, MFS, or other survival metrics
-✗ If context only has "hazard ratio" without specifying RFS, return "Not found"
-""",
-            AttributeType.HR_EFS: """
-✓ Context MUST explicitly mention "EFS" or "event-free survival"
-✓ Look for "HR for EFS", "EFS HR", "hazard ratio for event-free survival"
-✗ DO NOT extract if you only see: PFS, OS, RFS, MFS, or other survival metrics
-✗ If context only has "hazard ratio" without specifying EFS, return "Not found"
-""",
-            AttributeType.HR_MFS: """
-✓ Context MUST explicitly mention "MFS", "DMFS", or "metastasis-free survival"
-✓ Look for "HR for MFS", "MFS HR", "hazard ratio for metastasis-free survival"
-✗ DO NOT extract if you only see: PFS, OS, RFS, EFS, or other survival metrics
-✗ If context only has "hazard ratio" without specifying MFS/DMFS, return "Not found"
-""",
-            # P-value verification rules
-            AttributeType.P_VALUE_PFS: """
-✓ Context MUST explicitly mention "PFS" or "progression-free survival" WITH the p-value
-✓ Look for "p-value for PFS", "PFS p=", "PFS p<", "PFS: p="
-✗ DO NOT extract p-value if it's associated with RFS, OS, EFS, or MFS
-✗ If you see "p<0.001" but it's for RFS (not PFS), return "Not found"
-""",
-            AttributeType.P_VALUE_OS: """
-✓ Context MUST explicitly mention "OS" or "overall survival" WITH the p-value
-✓ Look for "p-value for OS", "OS p=", "OS p<", "OS: p="
-✗ DO NOT extract p-value if it's associated with PFS, RFS, EFS, or MFS
-✗ If you see "p<0.001" but it's for PFS (not OS), return "Not found"
-""",
-            AttributeType.P_VALUE_RFS: """
-✓ Context MUST explicitly mention "RFS" or "recurrence-free survival" WITH the p-value
-✓ Look for "p-value for RFS", "RFS p=", "RFS p<", "RFS: p="
-✗ DO NOT extract p-value if it's associated with PFS, OS, EFS, or MFS
-✗ If you see "p<0.001" but it's for PFS (not RFS), return "Not found"
-""",
-            AttributeType.P_VALUE_EFS: """
-✓ Context MUST explicitly mention "EFS" or "event-free survival" WITH the p-value
-✓ Look for "p-value for EFS", "EFS p=", "EFS p<", "EFS: p="
-✗ DO NOT extract p-value if it's associated with PFS, OS, RFS, or MFS
-✗ If you see "p<0.001" but it's for PFS (not EFS), return "Not found"
-""",
-            # Median survival verification rules
-            AttributeType.MEDIAN_PFS: """
-✓ Context MUST explicitly mention "median PFS" or "mPFS" or "progression-free survival"
-✓ Must be specifically for PFS, not RFS/OS/EFS/MFS
-✗ DO NOT extract median values for other survival metrics (RFS, OS, EFS, MFS)
-✗ If context says "median RFS" (not PFS), return "Not found"
-""",
-            AttributeType.MEDIAN_OS: """
-✓ Context MUST explicitly mention "median OS" or "mOS" or "overall survival"
-✓ Must be specifically for OS, not PFS/RFS/EFS/MFS
-✗ DO NOT extract median values for other survival metrics (PFS, RFS, EFS, MFS)
-✗ If context says "median PFS" (not OS), return "Not found"
-""",
-            AttributeType.RFS: """
-✓ Context MUST explicitly mention "median RFS" or "mRFS" or "recurrence-free survival"
-✓ Must be specifically for RFS, not PFS/OS/EFS/MFS
-✗ DO NOT extract median values for other survival metrics (PFS, OS, EFS, MFS)
-✗ If context says "median PFS" (not RFS), return "Not found"
-""",
-            AttributeType.EFS: """
-✓ Context MUST explicitly mention "median EFS" or "mEFS" or "event-free survival"
-✓ Must be specifically for EFS, not PFS/OS/RFS/MFS
-✗ DO NOT extract median values for other survival metrics (PFS, OS, RFS, MFS)
-✗ If context says "median PFS" (not EFS), return "Not found"
-""",
-            AttributeType.MFS: """
-✓ Context MUST explicitly mention "median MFS/DMFS" or "mMFS" or "metastasis-free survival"
-✓ Must be specifically for MFS/DMFS, not PFS/OS/RFS/EFS
-✗ DO NOT extract median values for other survival metrics (PFS, OS, RFS, EFS)
-✗ If context says "median PFS" (not MFS), return "Not found"
-""",
-            # Follow-up time verification rules
-            AttributeType.MEDIAN_FOLLOWUP_PFS: """
-✓ Context MUST mention "follow-up" specifically in relation to "PFS"
-✓ Look for "follow-up for PFS", "PFS follow-up", "median follow-up for PFS assessment"
-✗ DO NOT extract follow-up times not associated with PFS
-✗ General "median follow-up" without PFS specification → "Not found"
-""",
-            AttributeType.MEDIAN_FOLLOWUP_OS: """
-✓ Context MUST mention "follow-up" specifically in relation to "OS"
-✓ Look for "follow-up for OS", "OS follow-up", "median follow-up for OS assessment"
-✗ DO NOT extract follow-up times not associated with OS
-✗ General "median follow-up" without OS specification → "Not found"
-""",
-            AttributeType.LENGTH_RFS: """
-✓ Context MUST mention "follow-up" or "observation period" in relation to "RFS"
-✓ Look for "RFS follow-up", "follow-up for RFS measurement"
-✗ DO NOT extract follow-up times not associated with RFS
-""",
-            AttributeType.LENGTH_MFS: """
-✓ Context MUST mention "follow-up" or "observation period" in relation to "MFS"
-✓ Look for "MFS follow-up", "follow-up for MFS measurement"
-✗ DO NOT extract follow-up times not associated with MFS
-""",
-        }
-
-        # For rate timepoints, use a generic verification rule
-        if attribute_type in [
-            AttributeType.PFS_RATE_6M,
-            AttributeType.PFS_RATE_9M,
-            AttributeType.PFS_RATE_12M,
-            AttributeType.PFS_RATE_18M,
-            AttributeType.PFS_RATE_24M,
-            AttributeType.PFS_RATE_36M,
-            AttributeType.PFS_RATE_48M,
-        ]:
-            timepoint = attribute_type.value.replace("PFS_RATE_", "").replace(
-                "M", " month"
-            )
-            return f"""
-✓ Context MUST mention "PFS" or "progression-free survival" at the {timepoint} timepoint
-✓ Look for "PFS at {timepoint}", "{timepoint} PFS rate", "PFS rate at {timepoint}"
-✗ DO NOT extract RFS/OS/EFS/MFS rates at this timepoint
-✗ If context only has "{timepoint} RFS" (not PFS), return "Not found"
-"""
-
-        if attribute_type in [
-            AttributeType.OS_RATE_6M,
-            AttributeType.OS_RATE_9M,
-            AttributeType.OS_RATE_12M,
-            AttributeType.OS_RATE_18M,
-            AttributeType.OS_RATE_24M,
-            AttributeType.OS_RATE_36M,
-            AttributeType.OS_RATE_48M,
-        ]:
-            timepoint = attribute_type.value.replace("OS_RATE_", "").replace(
-                "M", " month"
-            )
-            return f"""
-✓ Context MUST mention "OS" or "overall survival" at the {timepoint} timepoint
-✓ Look for "OS at {timepoint}", "{timepoint} OS rate", "OS rate at {timepoint}"
-✗ DO NOT extract PFS/RFS/EFS/MFS rates at this timepoint
-✗ If context only has "{timepoint} PFS" (not OS), return "Not found"
-"""
-
-        return verification_rules.get(attribute_type, "")
 
     def _format_context(self, context: list[Any]) -> str:
         """Format context chunks for inclusion in prompts.

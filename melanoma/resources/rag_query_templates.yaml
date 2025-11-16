@@ -11,56 +11,107 @@
 # GENERAL PARAMETERS (Abstract-level)
 # ============================================================================
 
-conference:
-  - "ASCO ESMO annual meeting congress"
-  - "presented at conference symposium"
-  - "meeting abstract presentation"
-  - "conference proceedings"
-  - "virtual congress presentation" # Added for recent context
-
-published_year:
-  - "publication year 20"
-  - "abstract year 20"
-  - "presented at 20"
-  - "data cutoff 20"
-  - "data analysis cutoff year" # More specific
-
-abstract_number:
-  - "Abstract ID number"
-  - "abstract number"
-  - "presentation number LBA" # Added LBA for late-breaking
-  - "poster discussion number"
-  - "abstract identifier"
-
-comments:
-  - "full text available online"
-  - "meetings.asco.org annalsofoncology.org" # Added ESMO journal
-  - "Journal of Clinical Oncology Annals of Oncology" # Added ESMO journal name
-  - "publication available"
-  - "DOI: https://doi.org/" # Added DOI prefix
+# NOTE: conference and published_year are extracted from file path - no RAG queries needed
+# NOTE: abstract_number uses fixed section: abstract_id - no RAG queries needed
+# NOTE: comments uses fixed section: full_text_reference - no RAG queries needed
 
 trial_name:
-  - "Keynote Checkmate Masterkey COMBI trial" # Added COMBI
-  - "trial name study name"
-  - "EORTC trial name"
-  - "phase trial name identifier"
-  - "study acronym trial"
-  - "named trial (e.g., CheckMate 238)"
+  # Simple pattern matching: Look for Keynote, Checkmate, or Masterkey patterns
+  - "Keynote"
+  - "Checkmate"
+  - "Masterkey"
 
 cancer_type:
-  - "resected unresectable advanced melanoma" # Added advanced
-  - "cutaneous melanoma stage IIIB/C IV" # More specific staging
-  - "uveal mucosal melanoma type"
-  - "brain metastasis CNS mets" # Added mets abbreviation
-  - "basal cell Merkel cell carcinoma CSCC" # Added CSCC
-  - "Kaposi sarcoma KS" # Added KS based on abstracts
+  # Resected Cutaneous Melanoma
+  - "resected stage III melanoma"
+  - "resected high-risk stage III melanoma"
+  - "resected cutaneous melanoma"
+  - "adjuvant therapy resected melanoma"
+  # Unresectable Cutaneous Melanoma
+  - "unresectable stage III/IV melanoma"
+  - "unresectable metastatic melanoma"
+  - "unresectable cutaneous melanoma"
+  - "advanced melanoma unresectable"
+  # Cutaneous melanoma with Brain metastasis
+  - "brain metastasis melanoma"
+  - "melanoma brain metastases"
+  - "brain mets melanoma"
+  - "CNS metastasis brain melanoma"
+  # Cutaneous Melanoma with CNS metastasis
+  - "CNS metastasis melanoma"
+  - "central nervous system metastasis"
+  - "leptomeningeal disease LMD melanoma"
+  # Uveal Melanoma
+  - "uveal melanoma"
+  - "ocular melanoma"
+  # Mucosal Melanoma
+  - "mucosal melanoma"
+  - "metastatic mucosal melanoma"
+  # Acral Melanoma
+  - "acral melanoma"
+  - "acral lentiginous melanoma"
+  # Basal Cell Carcinoma
+  - "basal cell carcinoma"
+  - "BCC"
+  # Merkel Cell Carcinoma
+  - "merkel cell carcinoma"
+  - "MCC"
+  # Cutaneous Squamous Cell Carcinoma
+  - "cutaneous squamous cell carcinoma"
+  - "cSCC"
+  - "squamous cell carcinoma skin"
+
+cancer_stage:
+  # Stage I
+  - "stage I"
+  - "Stage I"
+  - "stage 1"
+  # Stage I/II
+  - "stage I/II"
+  - "Stage I/II"
+  - "stage 1/2"
+  # Stage II
+  - "stage II"
+  - "Stage II"
+  - "stage 2"
+  - "stage IIB"
+  - "stage IIC"
+  # Stage II/III
+  - "stage II/III"
+  - "Stage II/III"
+  - "stage II-III"
+  - "stage 2/3"
+  # Stage III
+  - "stage III"
+  - "Stage III"
+  - "stage 3"
+  - "stage IIIA"
+  - "stage IIIB"
+  - "stage IIIC"
+  - "stage IIIA/IIIB/IIIC"
+  # Stage III/Stage IV
+  - "stage III/IV"
+  - "Stage III/IV"
+  - "stage III/Stage IV"
+  - "stage 3/4"
+  - "stage III-IV"
+  # Stage IV
+  - "stage IV"
+  - "Stage IV"
+  - "stage 4"
+  - "metastatic stage IV"
 
 # ============================================================================
 # CLINICAL TRIAL IDENTIFIERS
 # ============================================================================
 
 nct_number:
-  - "Clinical Trial Information NCT" # Common header
+  - "#### Clinical trial identification:" # ESMO section header (markdown)
+  - "#### Clinical Trial Information:" # ASCO section header (markdown)
+  - "Clinical trial identification:" # ESMO section header (without markdown)
+  - "Clinical Trial Information:" # ASCO section header (without markdown)
+  - "Clinical trial identification NCT" # Section with NCT
+  - "Clinical trial information NCT" # Common header
   - "NCT followed by 8 digits"
   - "ClinicalTrials.gov number NCT"
   - "trial registration NCT"
@@ -88,21 +139,59 @@ brand_name:
   - "branded agent"
 
 type_of_therapy:
-  - "immunotherapy cellular therapy"
-  - "targeted therapy BRAF/MEK" # Added specific target
-  - "chemotherapy oncolytic virus T-VEC" # Added T-VEC example
-  - "treatment modality class"
-  - "dendritic cell vaccination" # Added from abstract
-  - "adoptive cell therapy ACT" # Added ACT
+  # Type 1: Immunotherapy
+  - "immunotherapy immune therapy"
+  # Type 2: Cellular therapy
+  - "cellular therapy cell therapy adoptive cell"
+  # Type 3: Targeted Therapy
+  - "targeted therapy molecularly targeted"
+  # Type 4: Oncolytic Virus
+  - "oncolytic virus oncolytic viral therapy"
+  # Type 5: Chemotherapy
+  - "chemotherapy cytotoxic chemotherapy"
+  # General terms
+  - "treatment modality therapy class therapeutic class"
 
 sub_therapy:
-  - "immune checkpoint inhibitor antibody anti-PD-1 anti-PD-L1 anti-CTLA-4" # Added PD-L1
-  - "vaccine immunostimulant TLR9 agonist" # Added TLR9
-  - "CAR-T TIL therapy NK-Cell" # Added NK
-  - "tyrosine kinase inhibitor TKI angiogenesis inhibitor ADC" # Added ADC
-  - "BRAF MEK inhibitor combination"
-  - "oncolytic virus T-VEC talimogene laherparepvec" # Added full name
-  - "HDAC inhibitor" # Added from abstract
+  # 1.1 Immune Checkpoint Inhibitor/Antibody
+  - "immune checkpoint inhibitor anti-PD-1 anti-PD-L1 anti-CTLA-4 pembrolizumab nivolumab"
+  - "checkpoint inhibitor antibody PD-1 inhibitor PD-L1 inhibitor CTLA-4 inhibitor"
+  # 1.2 Vaccine/Immunostimulant
+  - "vaccine immunostimulant NeoVaxMI mRNA-4157 cancer vaccine"
+  - "therapeutic vaccine immunostimulatory agent"
+  # 1.3 Bispecific
+  - "bispecific antibody bispecific T-cell engager tebentafusp"
+  - "bispecific T-cell redirecting bispecific molecule"
+  # 2.1 CAR-T
+  - "CAR-T chimeric antigen receptor T-cell IL13Ra2 CAR-T"
+  - "CAR T-cell therapy chimeric antigen receptor"
+  # 2.2 NK-Cell
+  - "NK-Cell natural killer cell adoptive NK cell therapy"
+  - "NK cell therapy natural killer cell therapy"
+  # 2.3 Myeloid Cells
+  - "myeloid cell adoptive myeloid cell therapy"
+  - "myeloid-derived cell therapy"
+  # 2.4 TIL Therapy
+  - "TIL therapy tumor-infiltrating lymphocyte lifileucel"
+  - "tumor infiltrating lymphocyte adoptive TIL"
+  # 3.1 Antibody (Targeted)
+  - "monoclonal antibody trastuzumab rituximab therapeutic antibody"
+  - "targeted antibody antibody therapy"
+  # 3.2 Tyrosine kinase inhibitor
+  - "tyrosine kinase inhibitor TKI imatinib erlotinib"
+  - "kinase inhibitor TKI therapy"
+  # 3.3 Angiogenesis inhibitor
+  - "angiogenesis inhibitor bevacizumab anti-angiogenic"
+  - "VEGF inhibitor vascular endothelial growth factor inhibitor"
+  # 3.4 Antibody-Drug Conjugate
+  - "antibody-drug conjugate ADC ozuriftamab vedotin HER3 ADC"
+  - "ADC antibody drug conjugate immunoconjugate"
+  # 4 Oncolytic Virus
+  - "oncolytic virus talimogene laherparepvec Imlygic T-VEC"
+  - "oncolytic viral therapy oncolytic virotherapy"
+  # 5 Chemotherapy
+  - "chemotherapy dacarbazine temozolomide cytotoxic agent"
+  - "chemotherapeutic agent alkylating agent"
 
 dosage:
   - "dose mg/kg mg flat dose" # Added flat dose
@@ -122,19 +211,51 @@ type_of_dosing:
   - "administered intravenously IV orally PO" # Added routes
 
 mechanism_of_action:
-  - "mechanism of action MOA"
-  - "drug mechanism biological target"
-  - "PD-1 PD-L1 CTLA-4 blockade" # Added PD-L1
+  # General mechanism terms
+  - "mechanism of action MOA drug mechanism"
+  - "biological target mechanism how drug works"
+  - "mode of action pharmacological mechanism"
+  # Immune checkpoint mechanisms
+  - "PD-1 PD-L1 CTLA-4 blockade inhibitor"
+  - "programmed death-1 PD-1 inhibitor blocker"
+  - "anti-PD-1 anti-PD-L1 anti-CTLA-4 mechanism"
+  - "checkpoint blockade immune checkpoint inhibition"
+  - "CTLA-4 blocker ipilimumab mechanism"
+  - "PD-1 blockade PD-L1 blockade mechanism"
+  # Targeted therapy mechanisms
   - "BRAF MEK inhibition pathway"
-  - "inhibitor agonist blockade" # General terms
+  - "BRAF inhibitor dabrafenib vemurafenib mechanism"
+  - "MEK inhibitor trametinib cobimetinib mechanism"
+  - "BRAF MEK pathway inhibition"
+  - "tyrosine kinase inhibition TKI mechanism"
+  - "angiogenesis inhibition VEGF blockade"
+  - "VEGF inhibitor anti-angiogenic mechanism"
+  # General action terms
+  - "inhibitor agonist antagonist blockade"
+  - "monoclonal antibody mAb mechanism"
+  - "humanized IgG4 monoclonal antibody"
 
 target_protein:
-  - "PD-1 PD-L1 target protein" # Added PD-L1
-  - "CTLA-4 target receptor"
-  - "BRAF V600 MEK target" # Added MEK
-  - "molecular target pathway"
-  - "VEGF VEGFR cMET" # Added examples from abstracts
-  - "LAG3 TIM3" # Added examples from abstracts
+  # Immune checkpoint targets
+  - "PD-1 PD-L1 target protein programmed death-1"
+  - "CTLA-4 target receptor cytotoxic T-lymphocyte antigen"
+  - "programmed death ligand-1 PD-L1 target"
+  - "anti-PD-1 target anti-PD-L1 target"
+  # Targeted therapy targets
+  - "BRAF V600 MEK target protein"
+  - "BRAF mutation target BRAF V600"
+  - "MEK target mitogen-activated protein kinase"
+  - "BRAF MEK pathway target"
+  # Angiogenesis targets
+  - "VEGF VEGFR target vascular endothelial growth factor"
+  - "VEGF receptor target angiogenesis"
+  # Other targets
+  - "molecular target pathway protein target"
+  - "biological target receptor target"
+  - "cMET MET receptor target"
+  - "LAG3 TIM3 target immune checkpoint"
+  - "EGFR HER2 target receptor"
+  - "target antigen therapeutic target"
 
 # ============================================================================
 # PATIENT POPULATION
@@ -147,13 +268,46 @@ median_age:
   - "years yrs median age"
 
 number_of_patients:
+  # Methods section patterns (HIGHEST PRIORITY - tried first, most common location)
+  - "phase multicenter clinical trial (n=number)" # Methods: phase 2 multicenter (n=60)
+  - "multicenter clinical trial (n=number)" # Methods: multicenter (n=60)
+  - "phase clinical trial (n=number)" # Methods: phase 2 (n=60)
+  - "clinical trial (n=number)" # Methods: clinical trial (n=60)
+  - "study design enrolled patients" # Methods section language
+  - "trial enrolled number patients" # Methods: trial enrolled
+  - "cohort patients study" # Methods: cohort patients
+  - "randomized patients study" # Methods: randomized
+  - "eligible patients enrolled" # Methods: eligible enrolled
+  - "patients enrolled study" # Methods: patients enrolled
+  - "total patients enrolled" # Methods: total enrolled
+  - "Cohort (N = number) patients" # Methods: Cohort 2 (N = 66)
+  - "patients with advanced melanoma" # Methods: 64 patients with...
+  - "tumor biopsies from number patients" # Methods: biopsies from 64 patients
+  - "genomic transcriptomic analyses patients" # Methods: analyses on 64 patients
+  - "comprehensive analyses tumor biopsies patients" # Methods: analyses on biopsies from patients
+  # Direct N= patterns
   - "N= number patients pts arm" # N= is common prefix
-  - "n= number enrolled treated" # Added treated
-  - "of pts patients in arm group cohort" # Added group/cohort
-  - "N patients specific arm"
-  - "patients N equals value"
-  - "pts enrolled N="
-  - "patient count sample size N=" # Added sample size
+  - "n= number enrolled treated" # Lowercase n=
+  - "N = number patients" # With spaces
+  - "n = number patients" # Lowercase with spaces
+  - "(N=###)" # In parentheses
+  - "(n=###)" # Lowercase in parentheses
+  # Arm-specific patterns
+  - "arm name N= number" # arm_name N=###
+  - "treatment arm N= number" # treatment arm N=###
+  - "N patients specific arm" # N patients in specific arm
+  - "patients N equals value" # patients N equals
+  - "pts enrolled N=" # pts enrolled N=
+  # Study-level patterns (for single-arm studies)
+  - "total of number patients enrolled" # total of ### enrolled
+  - "number of number screened eligible enrolled" # ### of ### screened...enrolled
+  - "number patients were enrolled" # ### patients were enrolled
+  - "number pts have been treated" # ### pts have been treated
+  - "Cohort number (N = number)" # Cohort 2 (N = 66)
+  - "phase study (n=number)" # phase 2 study (n=60)
+  - "patient count sample size N=" # sample size N=
+  - "accrued patients evaluable" # accrued patients
+  - "enrolled total number" # enrolled total ###
 
 line_of_treatment:
   - "first line 1L second line 2L third line 3L+" # Added abbreviations
@@ -739,10 +893,43 @@ maximum_age:
 # ============================================================================
 
 clinical_trial_phase:
-  - "phase I II III 1 2 3 trial study" # Added numerals
-  - "phase Ib IIa IIb III trial study" # Added sub-phases
-  - "clinical trial phase number"
-  - "study phase I II III"
+  # Phase I
+  - "phase I"
+  - "Phase I"
+  - "phase 1"
+  - "Phase 1"
+  - "phase Ib"
+  - "phase I/b"
+  # Phase I/II
+  - "phase I/II"
+  - "Phase I/II"
+  - "phase 1/2"
+  # Phase II
+  - "phase II"
+  - "Phase II"
+  - "phase 2"
+  - "Phase 2"
+  - "phase IIa"
+  - "phase IIb"
+  # Phase II/III
+  - "phase II/III"
+  - "Phase II/III"
+  - "phase 2/3"
+  # Phase III
+  - "phase III"
+  - "Phase III"
+  - "phase 3"
+  - "Phase 3"
+  - "double-blind phase III"
+  - "randomized Phase III"
+  # Phase IV
+  - "phase IV"
+  - "Phase IV"
+  - "phase 4"
+  - "Phase 4"
+  # General patterns
+  - "clinical trial phase"
+  - "study phase"
 
 first_results:
   - "first results initial results preliminary results" # Combined terms
@@ -756,10 +943,24 @@ biosimilar:
   - "reference product comparison biosimilar"
 
 sponsors:
-  - "Research Sponsor Funded by Funding provided by" # Added variations
-  - "industry sponsored non-industry sponsored" # Added non-industry
-  - "pharmaceutical company name Merck BMS Novartis Pfizer Roche Amgen" # Added examples
-  - "Sponsor name"
+  - "Funding"
+  - "Funding provided by"
+  - "Funded by"
+  - "Research Sponsor"
+  # Common sponsor patterns
+  - "Merck"
+  - "BMS Bristol Myers-Squibb"
+  - "Novartis Pharmaceuticals"
+  - "Pfizer"
+  - "Roche"
+  - "Amgen"
+  - "Iovance Biotherapeutics"
+  - "Shanghai Junshi Bioscience"
+  # Sponsor variations
+  - "industry sponsored"
+  - "non-industry sponsored"
+  - "Investigator Sponsored Trial"
+  - "None" # No sponsor
 
 study_start_date:
   - "study start date enrollment start date"

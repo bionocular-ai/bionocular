@@ -11,6 +11,7 @@ from typing import Any
 
 from ..domain.extraction_models import AttributeType, ExtractedAttribute
 from ..domain.treatment_arm_models import TreatmentArm
+from .attribute_extractor import clean_numeric_value
 from .cost_tracking_llm_service import CostTrackingLLMService
 from .prompt_templates import ExtractionPromptTemplateProvider
 
@@ -24,7 +25,7 @@ class BatchAttributeExtractor:
         self,
         llm_service: CostTrackingLLMService,
         prompt_provider: ExtractionPromptTemplateProvider,
-        preferred_model: str = "gpt-4o-mini",
+        preferred_model: str = "gpt-4o",
     ):
         """Initialize batch attribute extractor.
 
@@ -167,39 +168,62 @@ class BatchAttributeExtractor:
 
         arms_text = "\n".join(arms_info)
 
-        # Get the specific prompt for this attribute with context included
-        attr_name = attribute.value.replace("_", " ").title()
-        base_prompt = self.prompt_provider.get_extraction_prompt(attribute, context)
+        # Get the base prompt (attribute-specific instruction) without context
+        # We'll add context separately in the wrapper
+        if attribute in self.prompt_provider.extraction_prompts:
+            base_instruction = self.prompt_provider.extraction_prompts[attribute]
+        else:
+            base_instruction = self.prompt_provider._get_dynamic_prompt(attribute)
 
-        # Create the single attribute prompt (note: base_prompt already includes context)
+        # Add arm-specific verification if needed
+        if self.prompt_provider._needs_arm_specific_verification(attribute):
+            base_instruction = (
+                self.prompt_provider.arm_specific_verification_prefix + base_instruction
+            )
+
+        # Format context
+        context_text = self.prompt_provider._format_context(context)
+
+        # Get attribute name for display
+        attr_name = attribute.value.replace("_", " ").upper()
+
+        # Detect if this might be a single-arm study (only one arm or arms have same treatment)
+        is_likely_single_arm = len(arms) == 1 or (
+            len(arms) > 1
+            and all(
+                arm.generic_name == arms[0].generic_name and arm.dose == arms[0].dose
+                for arm in arms
+            )
+        )
+
+        single_arm_note = ""
+        if is_likely_single_arm and attribute == AttributeType.NUMBER_OF_PATIENTS:
+            single_arm_note = "\nNOTE: This appears to be a single-arm study. If you find only one total patient count (e.g., 'n=60', '60 patients'), use that same value for all arms listed above.\n"
+
+        # Create the simplified single attribute prompt
         prompt = f"""TASK: Extract the {attr_name} for ALL treatment arms in this clinical trial.
 
 TREATMENT ARMS:
-{arms_text}
+{arms_text}{single_arm_note}
 
-CRITICAL REQUIREMENTS:
-1. Extract {attr_name} for EACH treatment arm separately - values MUST be arm-specific
-2. Look for values that explicitly mention the arm name (e.g., "pembrolizumab (N=514)")
-3. DO NOT use the same value for all arms unless explicitly stated as identical
-4. If {attr_name} is not found for a specific arm, use "Not found"
-5. Return values in the exact JSON format specified below
-6. Be precise and accurate - this is for clinical data analysis
+INSTRUCTIONS:
+1. For each arm, extract the {attr_name} from the context.
+2. If an arm-specific value is not found, return 'Not found' for that arm.
+3. Use keywords or association with arm names when searching context.
+4. Return results in this JSON format:
 
-⚠️ ARM-SPECIFIC EXTRACTION:
-- Each arm should have its own specific value
-- Look for arm names in the context: {', '.join([arm.arm_name for arm in arms])}
-- Values should differ between arms unless the study reports identical results
-
-{base_prompt}
-
-OUTPUT FORMAT (JSON):
 {{
   "arm_1": "value_for_arm_1",
   "arm_2": "value_for_arm_2",
   "arm_3": "value_for_arm_3"
 }}
 
-IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
+Attribute-Specific Example: {attr_name}
+
+{base_instruction}
+
+CONTEXT:
+{context_text}"""
 
         return prompt
 
@@ -379,6 +403,7 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
             Dictionary mapping arm IDs to extracted attribute results
         """
         results = {}
+        cleaned_response = response  # Initialize for error handling
 
         try:
             # Clean response - extract JSON from response if it contains extra text
@@ -450,8 +475,139 @@ IMPORTANT: Return ONLY the JSON object, no additional text or explanation."""
             clean_value = "Not found"
             confidence = 0.0
         else:
-            clean_value = str(value).strip()
-            confidence = 0.8  # High confidence for batch extraction
+            # Special handling for ABSTRACT_NUMBER - should be string or integer, not float
+            if attribute_type == AttributeType.ABSTRACT_NUMBER:
+                if isinstance(value, (int, float)):
+                    # Convert to int first, then to string to avoid .0
+                    clean_value = str(int(float(value)))
+                else:
+                    # Extract numeric part from string if present
+                    import re
+                    numeric_match = re.search(r'\d+', str(value))
+                    if numeric_match:
+                        clean_value = numeric_match.group(0)
+                    else:
+                        clean_value = str(value).strip()
+                confidence = 0.8
+            # Special handling for NCT_NUMBER - supports NCT, EudraCT, and other identifiers
+            elif attribute_type == AttributeType.NCT_NUMBER:
+                import re
+                value_str = str(value).strip()
+                
+                # Trial identifier patterns (priority order)
+                trial_id_patterns = [
+                    (r"NCT\d{8}", "NCT"),  # NCT number (highest priority)
+                    (r"EudraCT[:\s]*(\d{4}-\d{6}-\d{2,3})", "EudraCT"),  # EudraCT format
+                    (r"EudraCT[:\s]*(\d+)", "EudraCT"),  # EudraCT simple format
+                ]
+                
+                # Try each pattern in priority order
+                found_match = False
+                for pattern, prefix in trial_id_patterns:
+                    match = re.search(pattern, value_str, re.IGNORECASE)
+                    if match:
+                        if prefix == "NCT":
+                            clean_value = match.group(0)  # Full match for NCT
+                            found_match = True
+                            break
+                        elif prefix == "EudraCT":
+                            # Format EudraCT properly
+                            eudract_value = match.group(1) if match.lastindex else match.group(0)
+                            # Clean up the value - remove non-digit/non-dash characters
+                            eudract_value = re.sub(r'[^\d-]', '', eudract_value)
+                            clean_value = f"EudraCT: {eudract_value}"
+                            found_match = True
+                            break
+                
+                if not found_match:
+                    # If it's already in correct format, use it
+                    if re.match(r'^NCT\d{8}$', value_str):
+                        clean_value = value_str
+                    else:
+                        # Try to extract NCT number from the value
+                        nct_match = re.search(r'NCT\d{8}', value_str)
+                        if nct_match:
+                            clean_value = nct_match.group(0)
+                        else:
+                            # If it's just digits (like 3086174.0), convert to NCT format
+                            # Extract just the digits
+                            digits_match = re.search(r'\d+', value_str.replace('.', ''))
+                            if digits_match:
+                                digits = digits_match.group(0)
+                                # Pad to 8 digits if needed
+                                if len(digits) == 7:
+                                    digits = '0' + digits
+                                if len(digits) == 8:
+                                    clean_value = f"NCT{digits}"
+                                else:
+                                    clean_value = value_str
+                            else:
+                                clean_value = value_str
+                confidence = 0.8
+            else:
+                # Check if this is a string-based attribute that should not be cleaned as numeric
+                # These are non-numeric attributes extracted from abstracts
+                from ..domain.extraction_models import AttributeConfigurationFactory
+                config = AttributeConfigurationFactory.get_configuration(attribute_type)
+                string_based_attributes = [
+                    AttributeType.ABSTRACT_NUMBER,
+                    AttributeType.COMMENTS,
+                    AttributeType.NCT_NUMBER,
+                    AttributeType.CANCER_TYPE,
+                    AttributeType.CANCER_STAGE,
+                    AttributeType.SPONSORS,
+                    AttributeType.BRAND_NAME,
+                    AttributeType.GENERIC_NAME,
+                    AttributeType.TYPE_OF_THERAPY,
+                    AttributeType.MECHANISM_OF_ACTION,
+                    AttributeType.TARGET_PROTEIN,
+                    AttributeType.BIOSIMILAR,
+                    AttributeType.SUB_THERAPY,
+                    AttributeType.TRIAL_NAME,
+                    AttributeType.PRIMARY_ENDPOINT,
+                    AttributeType.SECONDARY_ENDPOINT,
+                ]
+                
+                # If it's a string-based attribute, return as-is without numeric cleaning
+                if attribute_type in string_based_attributes or (config and str(config.value_kind) == "STRING"):
+                    clean_value = str(value).strip()
+                    confidence = 0.8
+                else:
+                    # First, try to clean numeric values (removes %, months, years, etc.)
+                    cleaned_numeric = clean_numeric_value(value, attribute_type)
+                    if cleaned_numeric is not None:
+                        # Successfully extracted a numeric value
+                        clean_value = cleaned_numeric
+                        confidence = 0.8  # High confidence for batch extraction
+                    else:
+                        # Not a numeric value, process as string
+                        clean_value = str(value).strip()
+
+                    # Normalize "not reached" variations to "NR" for median survival metrics
+                    # These are valid values that should be extracted, not treated as "Not found"
+                    if attribute_type in [
+                        AttributeType.MEDIAN_PFS,
+                        AttributeType.MEDIAN_OS,
+                        AttributeType.MEDIAN_DOR,
+                        AttributeType.EFS,
+                        AttributeType.RFS,
+                        AttributeType.MFS,
+                        AttributeType.TTR,
+                        AttributeType.TTP,
+                        AttributeType.TTNT,
+                        AttributeType.TTF,
+                    ]:
+                        # Normalize variations of "not reached" to "NR"
+                        clean_value_lower = clean_value.lower()
+                        if clean_value_lower in [
+                            "not reached",
+                            "not-reached",
+                            "not_reached",
+                            "nr",
+                        ]:
+                            clean_value = "NR"
+
+                    confidence = 0.8  # High confidence for batch extraction
 
         # Create source chunk IDs
         source_chunks = [f"chunk_{i}" for i in range(len(context))]

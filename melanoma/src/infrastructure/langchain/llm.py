@@ -59,37 +59,69 @@ class OpenAIProvider(LLMProvider):
     """OpenAI LLM provider implementation.
 
     This class provides OpenAI-specific LLM implementations with
-    proper configuration and error handling.
+    proper configuration and error handling, including automatic rate
+    limiting with exponential backoff for GPT-4 models.
     """
 
     def get_llm(self, model_name: str, **kwargs) -> BaseLLM:
-        """Get an OpenAI LLM instance.
+        """Get an OpenAI LLM instance with rate limiting.
 
         Args:
             model_name: Name of the model
             **kwargs: Additional model parameters
 
         Returns:
-            ChatOpenAI LLM instance
+            ChatOpenAI LLM instance with rate limiting configured
         """
         try:
-            return ChatOpenAI(model_name=model_name, **kwargs)
+            # Apply sensible defaults for rate limiting if not specified
+            # GPT-4o has stricter rate limits, so we use conservative settings
+            default_kwargs = {
+                "max_retries": kwargs.pop("max_retries", 6),  # Retry up to 6 times
+                "request_timeout": kwargs.pop("request_timeout", 120),  # 2 min timeout
+            }
+
+            # Merge with user-provided kwargs
+            final_kwargs = {**default_kwargs, **kwargs}
+
+            logger.info(
+                f"Initializing OpenAI LLM: {model_name} "
+                f"(max_retries={final_kwargs['max_retries']}, "
+                f"timeout={final_kwargs['request_timeout']}s)"
+            )
+
+            return ChatOpenAI(model_name=model_name, **final_kwargs)
         except Exception as e:
             logger.error(f"Failed to create OpenAI LLM: {e}")
             raise RuntimeError(f"OpenAI LLM creation failed: {e}") from e
 
     def get_chat_model(self, model_name: str, **kwargs) -> BaseLLM:
-        """Get an OpenAI chat model instance.
+        """Get an OpenAI chat model instance with rate limiting.
 
         Args:
             model_name: Name of the model
             **kwargs: Additional model parameters
 
         Returns:
-            OpenAI chat model instance
+            OpenAI chat model instance with rate limiting configured
         """
         try:
-            return ChatOpenAI(model_name=model_name, **kwargs)
+            # Apply sensible defaults for rate limiting if not specified
+            default_kwargs = {
+                "max_retries": kwargs.pop("max_retries", 6),  # Retry up to 6 times
+                "request_timeout": kwargs.pop("request_timeout", 120),  # 2 min timeout
+            }
+
+            # Merge with user-provided kwargs
+            final_kwargs = {**default_kwargs, **kwargs}
+
+            logger.info(
+                f"Initializing OpenAI chat model: {model_name} "
+                f"(max_retries={final_kwargs['max_retries']}, "
+                f"timeout={final_kwargs['request_timeout']}s)"
+            )
+
+            return ChatOpenAI(model_name=model_name, **final_kwargs)
         except Exception as e:
             logger.error(f"Failed to create OpenAI chat model: {e}")
             raise RuntimeError(f"OpenAI chat model creation failed: {e}") from e
@@ -329,7 +361,7 @@ class LangChainLLMService(LLMService):
         prompt: str,
         temperature: float = 0.1,
         max_tokens: int = 1000,
-        model_name: str = "gpt-4o-mini",
+        model_name: str = "gpt-4o",
     ) -> str:
         """Generate response using the LLM service.
 

@@ -45,7 +45,8 @@ class AbstractPatterns:
     GENERIC_SPONSOR: Final[str] = r"\*\*Sponsor:\*\* (.+)"
 
     # Title patterns
-    TITLE_PATTERN: Final[str] = r"\*\*Title:\*\* (.+)"
+    # Title pattern - new format has title as separate section
+    TITLE_PATTERN: Final[str] = r"#### Title:\s*\n(.+?)(?:\n####|\n\n|$)"
 
     # Table detection
     TABLE_ROW_SEPARATOR: Final[str] = "|"

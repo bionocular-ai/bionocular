@@ -1,7 +1,15 @@
 """Configuration constants for Clinical Trials API service and related infra."""
 
+from pathlib import Path
+
+# Base data directory
+DATA_DIR = Path("data")
+
 # Database configuration
-DB_PATH = "data/doctorci.db"
+DB_PATH = str(DATA_DIR / "doctorci.db")  # Legacy database for abstracts fallback
+CLINICAL_TRIAL_DB_PATH = str(
+    DATA_DIR / "clinical_trial_api" / "clinical_trial_api.db"
+)  # Cache for API responses
 
 # Country variants for location checking
 COUNTRY_VARIANTS = {

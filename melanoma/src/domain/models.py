@@ -83,7 +83,9 @@ class BatchIngestionResponse(BaseModel):
 class ChunkType(str, Enum):
     """Type of content chunk."""
 
-    ABSTRACT_HEADER = "abstract_header"
+    ABSTRACT_HEADER = "abstract_header"  # Deprecated: Use ABSTRACT_ID + TITLE
+    ABSTRACT_ID = "abstract_id"  # Just the abstract number/ID
+    TITLE = "title"  # Just the title
     BACKGROUND = "background"
     METHODS = "methods"
     RESULTS = "results"
@@ -148,6 +150,9 @@ class ParsedAbstract(BaseModel):
     funding: str = Field(default="", description="Funding information (ESMO)")
     doi: str = Field(default="", description="DOI link (ESMO)")
     full_text_reference: str = Field(default="", description="Full text reference")
+    editorial_acknowledgement: str = Field(
+        default="", description="Editorial acknowledgement (ESMO)"
+    )
     additional_content: str = Field(
         default="", description="Additional content (tables, etc.)"
     )

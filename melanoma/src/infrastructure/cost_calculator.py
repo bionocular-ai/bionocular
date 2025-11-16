@@ -21,8 +21,8 @@ class ModelType(str, Enum):
 
     GPT_4O_MINI = "gpt-4o-mini"
     GPT_4O = "gpt-4o"
-    GPT_4_TURBO = "gpt-4-turbo"
-    GPT_3_5_TURBO = "gpt-3.5-turbo"
+    GPT_5_MINI = "gpt-5-mini"
+    GPT_5 = "gpt-5"
 
 
 @dataclass
@@ -73,13 +73,14 @@ class CostSummary:
 class CostCalculator:
     """Comprehensive cost calculator for LLM API usage."""
 
-    # Model pricing as of 2024 (per 1M tokens)
+    # Model pricing as of November 2024 (per 1M tokens) - Standard tier
+    # Source: https://platform.openai.com/docs/pricing
     MODEL_PRICING = {
         ModelType.GPT_4O_MINI: ModelPricing(
             model=ModelType.GPT_4O_MINI,
             prompt_cost_per_1m=0.15,
             completion_cost_per_1m=0.60,
-            max_tokens=16384,
+            max_tokens=128000,
             description="GPT-4o Mini - Fast and cost-effective",
         ),
         ModelType.GPT_4O: ModelPricing(
@@ -87,25 +88,25 @@ class CostCalculator:
             prompt_cost_per_1m=2.50,
             completion_cost_per_1m=10.00,
             max_tokens=128000,
-            description="GPT-4o - Most capable model",
+            description="GPT-4o - Most capable GPT-4 model",
         ),
-        ModelType.GPT_4_TURBO: ModelPricing(
-            model=ModelType.GPT_4_TURBO,
-            prompt_cost_per_1m=10.00,
-            completion_cost_per_1m=30.00,
+        ModelType.GPT_5_MINI: ModelPricing(
+            model=ModelType.GPT_5_MINI,
+            prompt_cost_per_1m=0.25,
+            completion_cost_per_1m=2.00,
             max_tokens=128000,
-            description="GPT-4 Turbo - High performance",
+            description="GPT-5 Mini - Next-gen fast model",
         ),
-        ModelType.GPT_3_5_TURBO: ModelPricing(
-            model=ModelType.GPT_3_5_TURBO,
-            prompt_cost_per_1m=0.50,
-            completion_cost_per_1m=1.50,
-            max_tokens=16384,
-            description="GPT-3.5 Turbo - Legacy model",
+        ModelType.GPT_5: ModelPricing(
+            model=ModelType.GPT_5,
+            prompt_cost_per_1m=1.25,
+            completion_cost_per_1m=10.00,
+            max_tokens=128000,
+            description="GPT-5 - Next-generation flagship model",
         ),
     }
 
-    def __init__(self, default_model: ModelType = ModelType.GPT_4O_MINI):
+    def __init__(self, default_model: ModelType = ModelType.GPT_4O):
         """Initialize cost calculator.
 
         Args:

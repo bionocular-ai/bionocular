@@ -215,11 +215,14 @@ class MetadataProcessor:
         # Metadata filters
         if query.metadata_filters:
             for key, value in query.metadata_filters.items():
-                # Allow direct operators like $in in value, otherwise wrap in $eq
+                # Allow direct operators like $in in value, otherwise wrap in $eq or $in
                 if isinstance(value, dict) and any(
                     k.startswith("$") for k in value.keys()
                 ):
                     conditions.append({key: value})
+                elif isinstance(value, list):
+                    # 🎯 TIER 1: For lists (like chunk_type filter), use $in operator
+                    conditions.append({key: {"$in": value}})
                 else:
                     conditions.append({key: {"$eq": value}})
 
