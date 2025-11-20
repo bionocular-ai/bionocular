@@ -106,18 +106,30 @@ cancer_stage:
 # ============================================================================
 
 nct_number:
-  - "#### Clinical trial identification:" # ESMO section header (markdown)
-  - "#### Clinical Trial Information:" # ASCO section header (markdown)
+  # Abstract-style queries (ESMO/ASCO)
   - "Clinical trial identification:" # ESMO section header (without markdown)
   - "Clinical Trial Information:" # ASCO section header (without markdown)
   - "Clinical trial identification NCT" # Section with NCT
   - "Clinical trial information NCT" # Common header
+  # Publication-style queries (based on actual publication patterns)
+  - "Clinical trial information:" # Publication format: "Clinical trial information: NCT02267603"
+  - "Clinical trial information NCT" # Direct pattern: "Clinical trial information: NCT02267603"
+  - "Clinical trial registration" # Publication format: "Clinical trial registration NCT02519322"
+  - "Clinicaltrials.gov" # Publication format: "Clinicaltrials.gov, NCT02760498"
+  - "ClinicalTrials.gov identifier" # Publication format: "ClinicalTrials.gov identifier: NCT02267603"
+  - "ClinicalTrials.gov identifier NCT" # Direct pattern: "identifier: NCT02267603"
+  - "ClinicalTrials.gov number" # Publication format: "ClinicalTrials.gov number, NCT00094653"
+  - "ClinicalTrials.gov number NCT" # Publication format with NCT
+  - "trial registration NCT" # Generic registration pattern
+  - "clinical trial identifier NCT" # Generic identifier pattern
+  - "NCT12345678" # Direct NCT pattern (will match any NCT)
+  - "NCT number clinical trial" # Generic pattern
+  # Generic queries (work for both abstracts and publications)
   - "NCT followed by 8 digits"
-  - "ClinicalTrials.gov number NCT"
-  - "trial registration NCT"
-  - "clinical trial identifier NCT"
   - "NCT number study information"
   - "EudraCT number" # Added European equivalent
+  # Direct NCT pattern queries (for embedded NCT numbers in text)
+  - "NCT" # Simple pattern for embedded NCT numbers like "(NCT02383212)"
 
 # ============================================================================
 # TREATMENT DETAILS (Arm-level)
@@ -1021,3 +1033,365 @@ hazard_ratio:
   - "HR confidence interval brackets [ ] value" # Added brackets
   - "relative risk hazard ratio HR value"
   - "HR value 95% CI reported"
+
+# ============================================================================
+# PUBLICATION METADATA (Optimized for Headers/Citations)
+# ============================================================================
+
+publication_name:
+  - "journal name citation header"
+  - "article published in journal"
+  - "cite this article as"
+  - "journal abbreviation volume pages"
+  - "N Engl J Med"
+  - "N Engl J Med year volume pages"
+  - "Lancet Oncol year volume pages"
+  - "Published at jco.org"
+  - "Journal of Clinical Oncology"
+  - "DOI journal citation"
+  - "journal name year semicolon volume colon pages"
+  - "journal citation format year volume pages"
+  - "The Lancet"
+  - "J Clin Oncol"
+  - "European Journal of Cancer"
+
+publication_year:
+  - "copyright year"
+  - "published on date year"
+  - "article accepted year"
+  - "DOI year"
+  - "citation year volume"
+  - "N Engl J Med year"
+  - "Lancet Oncol year"
+  - "Published at jco.org year"
+  - "journal citation year semicolon"
+  - "year semicolon volume colon pages"
+  - "publication year citation format"
+  - "published online year"
+
+# ============================================================================
+# SAFETY TABLE ANCHORS (Context Retrieval Helpers)
+# ============================================================================
+safety_table_anchors:
+  - "Table adverse events safety population"
+  - "Table treatment-related adverse events drug-related"
+  - "Table treatment-emergent adverse events TEAE"
+  - "Table immune-related adverse events irAE"
+
+# ============================================================================
+# GRADE 3+ AE (General / Mixed Context)
+# Optimization: Broadest recall, catches "Any Adverse Event" tables
+# ============================================================================
+
+grade_3_plus_ae_crs:
+  - "cytokine release syndrome CRS grade 3 grade 4 grade 3-4"
+  - "cytokine release syndrome CRS grade 3-5 severe"
+  - "adverse event CRS grade 3+"
+
+grade_3_plus_ae_thrombocytopenia:
+  - "thrombocytopenia platelet count decreased grade 3 grade 4 grade 3-4"
+  - "thrombocytopenia grade 3-5 severe"
+  - "adverse event thrombocytopenia grade 3+"
+
+grade_3_plus_ae_neutropenia:
+  - "neutropenia neutrophil count decreased grade 3 grade 4 grade 3-4"
+  - "neutropenia grade 3-5 severe"
+  - "adverse event neutropenia grade 3+"
+
+grade_3_plus_ae_leukopenia:
+  - "leukopenia white blood cell WBC decreased grade 3 grade 4 grade 3-4"
+  - "leukopenia grade 3-5 severe"
+  - "adverse event leukopenia grade 3+"
+
+grade_3_plus_ae_nausea:
+  - "nausea grade 3 grade 4 grade 3-4"
+  - "nausea grade 3-5 severe"
+  - "adverse event nausea grade 3+"
+
+grade_3_plus_ae_anemia:
+  - "anemia anaemia grade 3 grade 4 grade 3-4"
+  - "anemia grade 3-5 severe"
+  - "adverse event anemia grade 3+"
+
+grade_3_plus_ae_diarrhea:
+  - "diarrhea diarrhoea grade 3 grade 4 grade 3-4"
+  - "diarrhea grade 3-5 severe"
+  - "adverse event diarrhea grade 3+"
+
+grade_3_plus_ae_colitis:
+  - "colitis grade 3 grade 4 grade 3-4"
+  - "colitis grade 3-5 severe"
+  - "adverse event colitis grade 3+"
+
+grade_3_plus_ae_hyperglycemia:
+  - "hyperglycemia glucose increased grade 3 grade 4 grade 3-4"
+  - "hyperglycemia grade 3-5 severe"
+  - "adverse event hyperglycemia grade 3+"
+
+grade_3_plus_ae_neutrophil_count_decreased:
+  - "neutrophil count decreased neutropenia grade 3 grade 4 grade 3-4"
+  - "neutrophil count decreased grade 3-5 severe"
+
+grade_3_plus_ae_dyspnea:
+  - "dyspnea dyspnoea shortness of breath grade 3 grade 4 grade 3-4"
+  - "dyspnea grade 3-5 severe"
+
+grade_3_plus_ae_pyrexia:
+  - "pyrexia fever grade 3 grade 4 grade 3-4"
+  - "pyrexia grade 3-5 severe"
+
+grade_3_plus_ae_bleeding:
+  - "bleeding hemorrhage haemorrhage grade 3 grade 4 grade 3-4"
+  - "bleeding grade 3-5 severe"
+
+grade_3_plus_ae_pruritus:
+  - "pruritus itching grade 3 grade 4 grade 3-4"
+  - "pruritus grade 3-5 severe"
+
+grade_3_plus_ae_rash:
+  - "rash grade 3 grade 4 grade 3-4"
+  - "rash grade 3-5 severe"
+
+grade_3_plus_ae_pneumonia:
+  - "pneumonia grade 3 grade 4 grade 3-4"
+  - "pneumonia grade 3-5 severe"
+
+grade_3_plus_ae_thyroiditis:
+  - "thyroiditis grade 3 grade 4 grade 3-4"
+  - "thyroiditis autoimmune grade 3-5 severe"
+
+grade_3_plus_ae_hypophysitis:
+  - "hypophysitis pituitary inflammation grade 3 grade 4 grade 3-4"
+  - "hypophysitis grade 3-5 severe"
+
+grade_3_plus_ae_hepatitis:
+  - "hepatitis grade 3 grade 4 grade 3-4"
+  - "hepatitis immune-mediated grade 3-5 severe"
+
+grade_3_plus_ae_pneumonitis:
+  - "pneumonitis grade 3 grade 4 grade 3-4"
+  - "pneumonitis immune-mediated grade 3-5 severe"
+
+grade_3_plus_ae_alanine_aminotransferase:
+  - "alanine aminotransferase increased ALT increased grade 3 grade 4 grade 3-4"
+  - "ALT increase grade 3-5 severe"
+
+grade_3_plus_ae_wbc_decreased:
+  - "white blood cell WBC decreased leukopenia grade 3 grade 4 grade 3-4"
+  - "WBC decreased grade 3-5 severe"
+
+# ============================================================================
+# GRADE 3+ TRAE (Treatment-Related)
+# Optimization: Focus on "Drug-related", "Attributed to", "Related" contexts
+# ============================================================================
+
+grade_3_plus_trae_iraes:
+  - "treatment-related immune-related adverse events irAEs grade 3 grade 4"
+  - "drug-related immune-mediated adverse events grade 3-4 grade 3-5"
+  - "immune-related events grade 3+ severe"
+
+grade_3_plus_trae_crs:
+  - "treatment-related cytokine release syndrome CRS grade 3 grade 4"
+  - "drug-related CRS grade 3-4 grade 3-5"
+  - "attributed to study drug CRS severe"
+
+grade_3_plus_trae_thrombocytopenia:
+  - "treatment-related thrombocytopenia grade 3 grade 4"
+  - "drug-related thrombocytopenia grade 3-4 grade 3-5"
+  - "attributed to study drug platelet count decreased severe"
+
+grade_3_plus_trae_neutropenia:
+  - "treatment-related neutropenia grade 3 grade 4"
+  - "drug-related neutropenia grade 3-4 grade 3-5"
+  - "attributed to study drug neutrophil count decreased severe"
+
+grade_3_plus_trae_leukopenia:
+  - "treatment-related leukopenia grade 3 grade 4"
+  - "drug-related leukopenia grade 3-4 grade 3-5"
+  - "attributed to study drug WBC decreased severe"
+
+grade_3_plus_trae_nausea:
+  - "treatment-related nausea grade 3 grade 4"
+  - "drug-related nausea grade 3-4 grade 3-5"
+  - "attributed to study drug nausea severe"
+
+grade_3_plus_trae_anemia:
+  - "treatment-related anemia grade 3 grade 4"
+  - "drug-related anemia grade 3-4 grade 3-5"
+  - "attributed to study drug anemia severe"
+
+grade_3_plus_trae_diarrhea:
+  - "treatment-related diarrhea grade 3 grade 4"
+  - "drug-related diarrhea grade 3-4 grade 3-5"
+  - "attributed to study drug diarrhea severe"
+
+grade_3_plus_trae_colitis:
+  - "treatment-related colitis grade 3 grade 4"
+  - "drug-related colitis grade 3-4 grade 3-5"
+  - "immune-related colitis grade 3 severe"
+
+grade_3_plus_trae_hyperglycemia:
+  - "treatment-related hyperglycemia grade 3 grade 4"
+  - "drug-related glucose increased grade 3-4 grade 3-5"
+
+grade_3_plus_trae_neutrophil_count_decreased:
+  - "treatment-related neutrophil count decreased grade 3 grade 4"
+  - "drug-related neutropenia grade 3-4 grade 3-5"
+
+grade_3_plus_trae_dyspnea:
+  - "treatment-related dyspnea grade 3 grade 4"
+  - "drug-related dyspnea grade 3-4 grade 3-5"
+
+grade_3_plus_trae_pyrexia:
+  - "treatment-related pyrexia fever grade 3 grade 4"
+  - "drug-related pyrexia grade 3-4 grade 3-5"
+
+grade_3_plus_trae_bleeding:
+  - "treatment-related bleeding hemorrhage grade 3 grade 4"
+  - "drug-related bleeding grade 3-4 grade 3-5"
+
+grade_3_plus_trae_pruritus:
+  - "treatment-related pruritus grade 3 grade 4"
+  - "drug-related pruritus grade 3-4 grade 3-5"
+
+grade_3_plus_trae_rash:
+  - "treatment-related rash grade 3 grade 4"
+  - "drug-related rash grade 3-4 grade 3-5"
+
+grade_3_plus_trae_pneumonia:
+  - "treatment-related pneumonia grade 3 grade 4"
+  - "drug-related pneumonia grade 3-4 grade 3-5"
+
+grade_3_plus_trae_thyroiditis:
+  - "treatment-related thyroiditis grade 3 grade 4"
+  - "drug-related thyroiditis grade 3-4 grade 3-5"
+
+grade_3_plus_trae_hypophysitis:
+  - "treatment-related hypophysitis grade 3 grade 4"
+  - "drug-related hypophysitis grade 3-4 grade 3-5"
+
+grade_3_plus_trae_hepatitis:
+  - "treatment-related hepatitis grade 3 grade 4"
+  - "drug-related hepatitis grade 3-4 grade 3-5"
+  - "immune-mediated hepatitis grade 3 severe"
+
+grade_3_plus_trae_pneumonitis:
+  - "treatment-related pneumonitis grade 3 grade 4"
+  - "drug-related pneumonitis grade 3-4 grade 3-5"
+  - "immune-mediated pneumonitis grade 3 severe"
+
+grade_3_plus_trae_alanine_aminotransferase:
+  - "treatment-related alanine aminotransferase ALT increased grade 3 grade 4"
+  - "drug-related ALT increase grade 3-4 grade 3-5"
+  - "attributed to study drug ALT increased severe"
+
+grade_3_plus_trae_wbc_decreased:
+  - "treatment-related white blood cell WBC decreased grade 3 grade 4"
+  - "drug-related leukopenia grade 3-4 grade 3-5"
+
+# ============================================================================
+# GRADE 3+ TEAE (Treatment-Emergent / All Causality)
+# Optimization: Focus on "Regardless of cause", "Any adverse event" contexts
+# ============================================================================
+
+grade_3_plus_teae_iraes:
+  - "treatment-emergent immune-related adverse events irAEs grade 3 grade 4"
+  - "immune-mediated adverse events regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_crs:
+  - "treatment-emergent cytokine release syndrome CRS grade 3 grade 4"
+  - "CRS regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event CRS severe"
+
+grade_3_plus_teae_thrombocytopenia:
+  - "treatment-emergent thrombocytopenia grade 3 grade 4"
+  - "thrombocytopenia regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event platelet count decreased severe"
+
+grade_3_plus_teae_neutropenia:
+  - "treatment-emergent neutropenia grade 3 grade 4"
+  - "neutropenia regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event neutrophil count decreased severe"
+
+grade_3_plus_teae_leukopenia:
+  - "treatment-emergent leukopenia grade 3 grade 4"
+  - "leukopenia regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event WBC decreased severe"
+
+grade_3_plus_teae_nausea:
+  - "treatment-emergent nausea grade 3 grade 4"
+  - "nausea regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event nausea severe"
+
+grade_3_plus_teae_anemia:
+  - "treatment-emergent anemia grade 3 grade 4"
+  - "anemia regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event anemia severe"
+
+grade_3_plus_teae_diarrhea:
+  - "treatment-emergent diarrhea grade 3 grade 4"
+  - "diarrhea regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event diarrhea severe"
+
+grade_3_plus_teae_colitis:
+  - "treatment-emergent colitis grade 3 grade 4"
+  - "colitis regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event colitis severe"
+
+grade_3_plus_teae_hyperglycemia:
+  - "treatment-emergent hyperglycemia grade 3 grade 4"
+  - "hyperglycemia glucose increased regardless of cause grade 3-4"
+
+grade_3_plus_teae_neutrophil_count_decreased:
+  - "treatment-emergent neutrophil count decreased grade 3 grade 4"
+  - "neutrophil count decreased regardless of cause grade 3-4"
+
+grade_3_plus_teae_dyspnea:
+  - "treatment-emergent dyspnea grade 3 grade 4"
+  - "dyspnea regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_pyrexia:
+  - "treatment-emergent pyrexia fever grade 3 grade 4"
+  - "pyrexia regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_bleeding:
+  - "treatment-emergent bleeding hemorrhage grade 3 grade 4"
+  - "bleeding regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_pruritus:
+  - "treatment-emergent pruritus grade 3 grade 4"
+  - "pruritus regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_rash:
+  - "treatment-emergent rash grade 3 grade 4"
+  - "rash regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_pneumonia:
+  - "treatment-emergent pneumonia grade 3 grade 4"
+  - "pneumonia regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_thyroiditis:
+  - "treatment-emergent thyroiditis grade 3 grade 4"
+  - "thyroiditis regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_hypophysitis:
+  - "treatment-emergent hypophysitis grade 3 grade 4"
+  - "hypophysitis regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_hepatitis:
+  - "treatment-emergent hepatitis grade 3 grade 4"
+  - "hepatitis regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_pneumonitis:
+  - "treatment-emergent pneumonitis grade 3 grade 4"
+  - "pneumonitis regardless of cause grade 3-4 grade 3-5"
+
+grade_3_plus_teae_alanine_aminotransferase:
+  - "treatment-emergent alanine aminotransferase ALT increased grade 3 grade 4"
+  - "ALT increased regardless of cause grade 3-4 grade 3-5"
+  - "any adverse event ALT increased severe"
+
+grade_3_plus_teae_wbc_decreased:
+  - "treatment-emergent white blood cell WBC decreased grade 3 grade 4"
+  - "WBC decreased regardless of cause grade 3-4 grade 3-5"
+  

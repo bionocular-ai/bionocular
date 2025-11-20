@@ -185,10 +185,14 @@ class LogMessages:
 # Canonical output order for clinical trial attributes
 # This ensures consistent ordering in exported data and reports
 ATTRIBUTE_OUTPUT_ORDER: Final[tuple[str, ...]] = (
-    # File-level metadata
+    # File-level metadata (Abstracts)
     "conference",
     "published_year",
     "abstract_number",
+    # Publication-level metadata
+    "publication_name",
+    "publication_year",
+    "pdf_number",
     # Trial identification
     "nct_number",
     "trial_name",
@@ -320,6 +324,78 @@ ATTRIBUTE_OUTPUT_ORDER: Final[tuple[str, ...]] = (
     # Specific adverse events
     "crs",
     "wbc_decreased",
+    # Grade 3+ AE Specific Adverse Events
+    "grade_3_plus_ae_crs",
+    "grade_3_plus_ae_thrombocytopenia",
+    "grade_3_plus_ae_neutropenia",
+    "grade_3_plus_ae_leukopenia",
+    "grade_3_plus_ae_nausea",
+    "grade_3_plus_ae_anemia",
+    "grade_3_plus_ae_diarrhea",
+    "grade_3_plus_ae_colitis",
+    "grade_3_plus_ae_hyperglycemia",
+    "grade_3_plus_ae_neutrophil_count_decreased",
+    "grade_3_plus_ae_dyspnea",
+    "grade_3_plus_ae_pyrexia",
+    "grade_3_plus_ae_bleeding",
+    "grade_3_plus_ae_pruritus",
+    "grade_3_plus_ae_rash",
+    "grade_3_plus_ae_pneumonia",
+    "grade_3_plus_ae_thyroiditis",
+    "grade_3_plus_ae_hypophysitis",
+    "grade_3_plus_ae_hepatitis",
+    "grade_3_plus_ae_pneumonitis",
+    "grade_3_plus_ae_alanine_aminotransferase",
+    "grade_3_plus_ae_wbc_decreased",
+    "grade_3_plus_ae_immune_related",
+    # Grade 3+ TRAE Specific Adverse Events
+    "grade_3_plus_trae_immune_related",
+    "grade_3_plus_trae_crs",
+    "grade_3_plus_trae_thrombocytopenia",
+    "grade_3_plus_trae_neutropenia",
+    "grade_3_plus_trae_leukopenia",
+    "grade_3_plus_trae_nausea",
+    "grade_3_plus_trae_anemia",
+    "grade_3_plus_trae_diarrhea",
+    "grade_3_plus_trae_colitis",
+    "grade_3_plus_trae_hyperglycemia",
+    "grade_3_plus_trae_neutrophil_count_decreased",
+    "grade_3_plus_trae_dyspnea",
+    "grade_3_plus_trae_pyrexia",
+    "grade_3_plus_trae_bleeding",
+    "grade_3_plus_trae_pruritus",
+    "grade_3_plus_trae_rash",
+    "grade_3_plus_trae_pneumonia",
+    "grade_3_plus_trae_thyroiditis",
+    "grade_3_plus_trae_hypophysitis",
+    "grade_3_plus_trae_hepatitis",
+    "grade_3_plus_trae_pneumonitis",
+    "grade_3_plus_trae_alanine_aminotransferase",
+    "grade_3_plus_trae_wbc_decreased",
+    # Grade 3+ TEAE Specific Adverse Events
+    "grade_3_plus_teae_immune_related",
+    "grade_3_plus_teae_crs",
+    "grade_3_plus_teae_thrombocytopenia",
+    "grade_3_plus_teae_neutropenia",
+    "grade_3_plus_teae_leukopenia",
+    "grade_3_plus_teae_nausea",
+    "grade_3_plus_teae_anemia",
+    "grade_3_plus_teae_diarrhea",
+    "grade_3_plus_teae_colitis",
+    "grade_3_plus_teae_hyperglycemia",
+    "grade_3_plus_teae_neutrophil_count_decreased",
+    "grade_3_plus_teae_dyspnea",
+    "grade_3_plus_teae_pyrexia",
+    "grade_3_plus_teae_bleeding",
+    "grade_3_plus_teae_pruritus",
+    "grade_3_plus_teae_rash",
+    "grade_3_plus_teae_pneumonia",
+    "grade_3_plus_teae_thyroiditis",
+    "grade_3_plus_teae_hypophysitis",
+    "grade_3_plus_teae_hepatitis",
+    "grade_3_plus_teae_pneumonitis",
+    "grade_3_plus_teae_alanine_aminotransferase",
+    "grade_3_plus_teae_wbc_decreased",
 )
 
 
@@ -387,3 +463,60 @@ def get_ordered_attribute_list(attribute_types: list) -> list:
     ordered.extend(attr_map.values())
 
     return ordered
+
+
+# =============================================================================
+# PUBLICATION POSTPROCESSING PATTERNS
+# =============================================================================
+
+
+class PublicationPostprocessingPatterns:
+    """Regex patterns for publication postprocessing."""
+
+    # Headers and footers to remove
+    DOWNLOADED_FROM: Final[str] = r"^Downloaded from.*"
+    COPYRIGHT: Final[str] = r"^(\*)?Copyright ©.*\*?$"
+    PROTECTED_BY_COPYRIGHT: Final[str] = r"^Protected by copyright.*"
+    TECHNOLOGY_RELATED: Final[str] = r"^Technology related to text and data mining.*"
+    NEJM_HEADER: Final[str] = r"^The NEW ENGLAND JOURNAL of MEDICINE"
+    LANCET_HEADER: Final[str] = r"^www\.thelancet\.com.*"
+    JCO_HEADER: Final[str] = r"^J Clin Oncol \d+.*"
+    JITC_HEADER: Final[str] = r"^J Immunother Cancer: first published as.*"
+
+    # Page numbers (standalone digits)
+    PAGE_NUMBER: Final[str] = r"^\d{3,4}$"
+
+    # Graph artifacts (number sequences)
+    NUMBER_SEQUENCE: Final[str] = r"^\d+(\s+\d+)+$"
+
+    # "No. at Risk" or "Number at risk" tables
+    NUMBER_AT_RISK_START: Final[str] = r"^(No\.|Number)\s+at\s+risk"
+    NUMBER_AT_RISK_LINE: Final[str] = r"^\d+(\s+\d+){2,}$"
+
+    # Table continuation markers
+    TABLE_CONTINUED: Final[str] = r"\(Continued from previous page\)"
+
+    # CSV-dump table detection (quoted strings with commas)
+    CSV_DUMP_PATTERN: Final[str] = r'^"[^"]*"(?:\s*,\s*"[^"]*")+'
+
+    # Citation normalization
+    CITATION_BRACKETS: Final[str] = r"\[(\d+(?:[-,]\d+)*)\]"
+    CITATION_CARET: Final[str] = r"\^(\d+(?:[-,]\d+)*)\^"
+
+    # Document type headers to remove at start
+    ORIGINAL_ARTICLE: Final[str] = r"^#{0,4}\s*\*?\*?original\s+article\*?\*?$"
+    ORIGINAL_REPORT: Final[str] = r"^#{0,4}\s*\*?\*?original\s+report\*?\*?$"
+    ORIGINAL_RESEARCH: Final[str] = r"^#{0,4}\s*\*?\*?original\s+research\*?\*?$"
+    RESEARCH_ARTICLE: Final[str] = r"^#{0,4}\s*\*?\*?research\s+article\*?\*?$"
+    RESEARCH_REPORT: Final[str] = r"^#{0,4}\s*\*?\*?research\s+report\*?\*?$"
+    SHORT_REPORT: Final[str] = r"^#{0,4}\s*\*?\*?short\s+report\*?\*?$"
+    BRIEF_REPORT: Final[str] = r"^#{0,4}\s*\*?\*?brief\s+report\*?\*?$"
+    JOURNAL_CLINICAL_ONCOLOGY: Final[str] = r"^#{0,4}\s*\*?\*?journal\s+of\s+clinical\s+oncology\*?\*?$"
+    SCIENCEDIRECT: Final[str] = r"^#{0,4}\s*\*?\*?sciencedirect\*?\*?$"
+    CROSSMARK: Final[str] = r"^#{0,4}\s*\*?\*?crossmark\*?\*?$"
+    JAMA_ONCOLOGY: Final[str] = r"^#{0,4}\s*\*?\*?jama\s+oncology.*\*?\*?$"
+    AVAILABLE_ONLINE: Final[str] = r"^Available\s+online.*"
+    JOURNAL_HOMEPAGE: Final[str] = r"^journal\s+homepage:.*"
+    OPEN_ACCESS: Final[str] = r"^#{0,4}\s*\*?\*?open\s+access\*?\*?$"
+    ESTABLISHED_IN: Final[str] = r"^established\s+in\s+\d{4}.*"
+    ORIGINAL_ARTICLE_WITH_JOURNAL: Final[str] = r"^#{0,4}\s*\*?\*?original\s+article\s+.*\*?\*?$"

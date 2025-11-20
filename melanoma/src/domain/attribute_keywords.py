@@ -375,17 +375,17 @@ ATTRIBUTE_KEYWORDS: dict[AttributeType, Union[list[str], list[list[str]]]] = {
         ["discontinuation", "discontinue", "discontinued"],
     ],
     AttributeType.SERIOUS_AE: [
-        ["ae", "adverse event", "toxicity", "tox"],
+        ["ae", "adverse event", "toxicity", "tox", "sae"],
         ["serious", "sae"],
     ],
     AttributeType.IMMUNE_RELATED_AE: [
-        ["ae", "adverse event", "toxicity", "tox"],
+        ["ae", "adverse event", "toxicity", "tox", "irae", "iraes"],
         ["immune", "immune-related", "immunotherapy-related", "irae", "iraes"],
     ],
     AttributeType.SERIOUS_IMMUNE_RELATED_AE: [
-        ["ae", "adverse event", "toxicity", "tox"],
+        ["ae", "adverse event", "toxicity", "tox", "irae", "iraes", "sae"],
         ["immune", "immune-related", "immunotherapy-related", "irae", "iraes"],
-        ["serious"],
+        ["serious", "sae"],
     ],
     AttributeType.AE_LEADING_TO_DEATH: [
         ["ae", "adverse event", "toxicity", "tox"],
@@ -477,6 +477,155 @@ ATTRIBUTE_KEYWORDS: dict[AttributeType, Union[list[str], list[list[str]]]] = {
         "leukocyte",
         "decreased",
         "neutropenia",
+    ],
+    # ============================================================================
+    # NEW: Specific Grade 3+ Adverse Events (General / Any Cause)
+    # Logic: [Context: AE] AND [Symptom] AND [Grade: 3+]
+    # ============================================================================
+    AttributeType.GRADE_3_PLUS_AE_ANEMIA: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["anemia", "anaemia", "hemoglobin decreased", "hb decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_AE_THROMBOCYTOPENIA: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["thrombocytopenia", "platelet count decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_AE_NEUTROPENIA: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["neutropenia", "neutrophil count decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_AE_DIARRHEA: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["diarrhea", "diarrhoea"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_AE_COLITIS: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["colitis"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_AE_PNEUMONITIS: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["pneumonitis", "interstitial lung disease", "ild"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["alanine aminotransferase", "alt"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_AE_RASH: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["rash"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_AE_CRS: [
+        ["ae", "adverse event", "toxicity", "safety"],
+        ["crs", "cytokine release syndrome"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    # ============================================================================
+    # NEW: Specific Grade 3+ TRAE (Treatment-Related)
+    # Logic: [Context: Drug Related] AND [Symptom] AND [Grade: 3+]
+    # ============================================================================
+    AttributeType.GRADE_3_PLUS_TRAE_ANEMIA: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["anemia", "anaemia", "hemoglobin decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TRAE_THROMBOCYTOPENIA: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["thrombocytopenia", "platelet count decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TRAE_NEUTROPENIA: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["neutropenia", "neutrophil count decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TRAE_DIARRHEA: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["diarrhea", "diarrhoea"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TRAE_COLITIS: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["colitis"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TRAE_PNEUMONITIS: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["pneumonitis", "interstitial lung disease", "ild"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["alanine aminotransferase", "alt"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TRAE_RASH: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["rash"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    # ============================================================================
+    # NEW: Specific Grade 3+ TEAE (Treatment-Emergent / All Causality)
+    # Logic: [Context: Regardless of cause] AND [Symptom] AND [Grade: 3+]
+    # ============================================================================
+    AttributeType.GRADE_3_PLUS_TEAE_ANEMIA: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["anemia", "anaemia", "hemoglobin decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["thrombocytopenia", "platelet count decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TEAE_NEUTROPENIA: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["neutropenia", "neutrophil count decreased"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TEAE_DIARRHEA: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["diarrhea", "diarrhoea"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TEAE_COLITIS: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["colitis"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TEAE_PNEUMONITIS: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["pneumonitis", "interstitial lung disease", "ild"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["alanine aminotransferase", "alt"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    # Keep existing entries for TEAE_RASH and TEAE_CRS that weren't in the user's request
+    AttributeType.GRADE_3_PLUS_TEAE_RASH: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["rash"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    AttributeType.GRADE_3_PLUS_TEAE_CRS: [
+        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        ["crs", "cytokine release syndrome"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
+    ],
+    # Keep existing entry for TRAE_CRS that wasn't in the user's request
+    AttributeType.GRADE_3_PLUS_TRAE_CRS: [
+        ["trae", "treatment related", "drug-related", "attributed to", "related to"],
+        ["crs", "cytokine release syndrome"],
+        ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
 }
 

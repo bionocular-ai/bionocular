@@ -2,6 +2,8 @@
 data/processed/*.json
 data/processed/*.md
 data/processed/*_meta.json
+data/processed/Publications/
+data/processed/Publications/*
 
 # Keep the directory structure but ignore the generated content
 !data/processed/.gitkeep
@@ -9,8 +11,12 @@ data/processed/*_meta.json
 # Postprocessed data directories (generated from processed data)
 data/postprocessed/ASCO_Abstracts/
 data/postprocessed/ESMO_Abstracts/
+data/postprocessed/Publications/*.md
 data/processed/ASCO_Abstracts/
 data/processed/ESMO_Abstracts/
+
+# Output files directory (all generated output files)
+data/output/
 
 # Python cache and build files
 __pycache__/
@@ -119,6 +125,9 @@ inspect_*.py
 investigate_*.py
 compare_*.py
 generate_*.py
+json_to_csv.py
+publication_json_to_csv.py
+fix_broken_json.py
 
 # Generated output files
 data/enhanced_extraction_results_*.csv

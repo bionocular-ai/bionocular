@@ -65,6 +65,8 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
         AttributeType.TRIAL_NAME,
         AttributeType.PRIMARY_ENDPOINT,
         AttributeType.SECONDARY_ENDPOINT,
+        AttributeType.PUBLICATION_NAME,
+        AttributeType.PUBLICATION_YEAR,
     ]
     if attribute_type in string_attributes:
         return None
@@ -399,6 +401,8 @@ class LLMAttributeExtractor(AttributeExtractor):
                     AttributeType.TRIAL_NAME,
                     AttributeType.PRIMARY_ENDPOINT,
                     AttributeType.SECONDARY_ENDPOINT,
+                    AttributeType.PUBLICATION_NAME,
+                    AttributeType.PUBLICATION_YEAR,
                 ]
                 
                 # If it's a string-based attribute, return as-is without numeric cleaning
@@ -410,7 +414,18 @@ class LLMAttributeExtractor(AttributeExtractor):
                         or response.strip() == '""'
                         or response.strip() == "''"
                     ):
+                        # For PUBLICATION_NAME and PUBLICATION_YEAR, return empty string when not found
+                        if attribute_type in (AttributeType.PUBLICATION_NAME, AttributeType.PUBLICATION_YEAR):
+                            return ""
                         return "Not found"
+                    # For PUBLICATION_NAME and PUBLICATION_YEAR, check if LLM explicitly said not found
+                    response_lower = response.strip().lower()
+                    if attribute_type in (AttributeType.PUBLICATION_NAME, AttributeType.PUBLICATION_YEAR):
+                        if any(phrase in response_lower for phrase in [
+                            "not found", "not available", "not provided", "not in the context",
+                            "does not contain", "cannot find", "unable to find", "no publication"
+                        ]):
+                            return ""
                     return response
                 
                 # For other numeric attributes, try to clean the value
@@ -479,7 +494,14 @@ class LLMAttributeExtractor(AttributeExtractor):
 
         # Check if response is just digits (like "3086174" or "3086174.0")
         # Extract digits and format as NCT number
-        digits_match = re.search(r'\d+', response.replace('.', ''))
+        # Handle decimal numbers by extracting integer part before decimal
+        if '.' in response:
+            # Extract integer part before decimal (e.g., "3086174.0" -> "3086174")
+            integer_part = response.split('.')[0]
+            digits_match = re.search(r'\d+', integer_part)
+        else:
+            digits_match = re.search(r'\d+', response)
+        
         if digits_match:
             digits = digits_match.group(0)
             # Pad to 8 digits if needed (e.g., "3086174" -> "03086174")

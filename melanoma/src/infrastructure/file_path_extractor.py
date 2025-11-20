@@ -83,6 +83,30 @@ class FilePathExtractor:
             logger.error(f"Error extracting year from path {file_path}: {e}")
             return None
 
+    def extract_pdf_number_from_path(self, file_path: str) -> Optional[str]:
+        """Extract PDF number (markdown filename without extension) from file path.
+
+        Args:
+            file_path: Path to the file (e.g., "data/postprocessed/Publications/publication_001.md")
+
+        Returns:
+            PDF number (filename without extension) or None if not found
+        """
+        try:
+            path_obj = Path(file_path)
+            # Get the filename without extension
+            pdf_number = path_obj.stem
+            if pdf_number:
+                logger.debug(
+                    f"Extracted PDF number '{pdf_number}' from path: {file_path}"
+                )
+                return pdf_number
+            logger.debug(f"No PDF number found in path: {file_path}")
+            return None
+        except Exception as e:
+            logger.error(f"Error extracting PDF number from path {file_path}: {e}")
+            return None
+
     def extract_attribute_from_path(
         self, attribute_type: AttributeType, file_path: str
     ) -> Optional[str]:
@@ -99,6 +123,8 @@ class FilePathExtractor:
             return self.extract_conference_from_path(file_path)
         elif attribute_type == AttributeType.PUBLISHED_YEAR:
             return self.extract_year_from_path(file_path)
+        elif attribute_type == AttributeType.PDF_NUMBER:
+            return self.extract_pdf_number_from_path(file_path)
         else:
             logger.debug(
                 f"Attribute {attribute_type} not supported by file path extractor"
@@ -117,4 +143,5 @@ class FilePathExtractor:
         return attribute_type in [
             AttributeType.CONFERENCE,
             AttributeType.PUBLISHED_YEAR,
+            AttributeType.PDF_NUMBER,
         ]

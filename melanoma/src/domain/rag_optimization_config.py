@@ -8,6 +8,7 @@ including:
 """
 
 from enum import Enum
+from typing import Any, Optional
 
 from .extraction_models import AttributeConfigurationFactory, AttributeType
 
@@ -50,7 +51,7 @@ class RAGOptimizationConfig:
         AttributeType.BRAND_NAME,
         AttributeType.CANCER_TYPE,
         AttributeType.CANCER_STAGE,
-        AttributeType.SPONSORS,
+        # AttributeType.SPONSORS,  # API-sourced, removed from LLM extraction
         AttributeType.CLINICAL_TRIAL_PHASE,
         AttributeType.STUDY_START_DATE,
         AttributeType.STUDY_COMPLETION_DATE,
@@ -161,6 +162,78 @@ class RAGOptimizationConfig:
         # Specific AEs - all in Results/Safety
         AttributeType.CRS,
         AttributeType.WBC_DECREASED,
+        # Grade 3+ AE Specific Adverse Events - all in Results/Safety
+        AttributeType.GRADE_3_PLUS_AE_CRS,
+        AttributeType.GRADE_3_PLUS_AE_THROMBOCYTOPENIA,
+        AttributeType.GRADE_3_PLUS_AE_NEUTROPENIA,
+        AttributeType.GRADE_3_PLUS_AE_LEUKOPENIA,
+        AttributeType.GRADE_3_PLUS_AE_NAUSEA,
+        AttributeType.GRADE_3_PLUS_AE_ANEMIA,
+        AttributeType.GRADE_3_PLUS_AE_DIARRHEA,
+        AttributeType.GRADE_3_PLUS_AE_COLITIS,
+        AttributeType.GRADE_3_PLUS_AE_HYPERGLYCEMIA,
+        AttributeType.GRADE_3_PLUS_AE_NEUTROPHIL_COUNT_DECREASED,
+        AttributeType.GRADE_3_PLUS_AE_DYSPNEA,
+        AttributeType.GRADE_3_PLUS_AE_PYREXIA,
+        AttributeType.GRADE_3_PLUS_AE_BLEEDING,
+        AttributeType.GRADE_3_PLUS_AE_PRURITUS,
+        AttributeType.GRADE_3_PLUS_AE_RASH,
+        AttributeType.GRADE_3_PLUS_AE_PNEUMONIA,
+        AttributeType.GRADE_3_PLUS_AE_THYROIDITIS,
+        AttributeType.GRADE_3_PLUS_AE_HYPOPHYSITIS,
+        AttributeType.GRADE_3_PLUS_AE_HEPATITIS,
+        AttributeType.GRADE_3_PLUS_AE_PNEUMONITIS,
+        AttributeType.GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE,
+        AttributeType.GRADE_3_PLUS_AE_WBC_DECREASED,
+        AttributeType.GRADE_3_PLUS_AE_IMMUNE_RELATED,
+        # Grade 3+ TRAE Specific Adverse Events - all in Results/Safety
+        AttributeType.GRADE_3_PLUS_TRAE_IMMUNE_RELATED,
+        AttributeType.GRADE_3_PLUS_TRAE_CRS,
+        AttributeType.GRADE_3_PLUS_TRAE_THROMBOCYTOPENIA,
+        AttributeType.GRADE_3_PLUS_TRAE_NEUTROPENIA,
+        AttributeType.GRADE_3_PLUS_TRAE_LEUKOPENIA,
+        AttributeType.GRADE_3_PLUS_TRAE_NAUSEA,
+        AttributeType.GRADE_3_PLUS_TRAE_ANEMIA,
+        AttributeType.GRADE_3_PLUS_TRAE_DIARRHEA,
+        AttributeType.GRADE_3_PLUS_TRAE_COLITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_HYPERGLYCEMIA,
+        AttributeType.GRADE_3_PLUS_TRAE_NEUTROPHIL_COUNT_DECREASED,
+        AttributeType.GRADE_3_PLUS_TRAE_DYSPNEA,
+        AttributeType.GRADE_3_PLUS_TRAE_PYREXIA,
+        AttributeType.GRADE_3_PLUS_TRAE_BLEEDING,
+        AttributeType.GRADE_3_PLUS_TRAE_PRURITUS,
+        AttributeType.GRADE_3_PLUS_TRAE_RASH,
+        AttributeType.GRADE_3_PLUS_TRAE_PNEUMONIA,
+        AttributeType.GRADE_3_PLUS_TRAE_THYROIDITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_HYPOPHYSITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_HEPATITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_PNEUMONITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE,
+        AttributeType.GRADE_3_PLUS_TRAE_WBC_DECREASED,
+        # Grade 3+ TEAE Specific Adverse Events - all in Results/Safety
+        AttributeType.GRADE_3_PLUS_TEAE_IMMUNE_RELATED,
+        AttributeType.GRADE_3_PLUS_TEAE_CRS,
+        AttributeType.GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA,
+        AttributeType.GRADE_3_PLUS_TEAE_NEUTROPENIA,
+        AttributeType.GRADE_3_PLUS_TEAE_LEUKOPENIA,
+        AttributeType.GRADE_3_PLUS_TEAE_NAUSEA,
+        AttributeType.GRADE_3_PLUS_TEAE_ANEMIA,
+        AttributeType.GRADE_3_PLUS_TEAE_DIARRHEA,
+        AttributeType.GRADE_3_PLUS_TEAE_COLITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_HYPERGLYCEMIA,
+        AttributeType.GRADE_3_PLUS_TEAE_NEUTROPHIL_COUNT_DECREASED,
+        AttributeType.GRADE_3_PLUS_TEAE_DYSPNEA,
+        AttributeType.GRADE_3_PLUS_TEAE_PYREXIA,
+        AttributeType.GRADE_3_PLUS_TEAE_BLEEDING,
+        AttributeType.GRADE_3_PLUS_TEAE_PRURITUS,
+        AttributeType.GRADE_3_PLUS_TEAE_RASH,
+        AttributeType.GRADE_3_PLUS_TEAE_PNEUMONIA,
+        AttributeType.GRADE_3_PLUS_TEAE_THYROIDITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_HYPOPHYSITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_HEPATITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_PNEUMONITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE,
+        AttributeType.GRADE_3_PLUS_TEAE_WBC_DECREASED,
     }
 
     # Attributes that specifically need NCT chunks
@@ -170,8 +243,9 @@ class RAGOptimizationConfig:
     }
 
     # Attributes that specifically need Sponsor chunks
+    # Note: SPONSORS is now API-sourced, so no longer needs sponsor chunks
     SPONSOR_DEPENDENT_ATTRIBUTES: set[AttributeType] = {
-        AttributeType.SPONSORS,
+        # AttributeType.SPONSORS,  # API-sourced, removed from LLM extraction
     }
 
     @staticmethod
@@ -192,21 +266,41 @@ class RAGOptimizationConfig:
             return 5
 
     @staticmethod
-    def should_include_chunk(chunk_content: str, attribute_type: AttributeType) -> bool:
+    def should_include_chunk(
+        chunk_content: str,
+        attribute_type: AttributeType,
+        chunk_metadata: Optional[dict[str, Any]] = None,
+    ) -> bool:
         """Determine if a chunk should be included for an attribute.
 
         Multi-tier filtering to reduce token waste and improve precision:
         - TIER 2: NCT chunks only for NCT-dependent attributes
         - TIER 2: Sponsor chunks only for sponsor attributes
         - TIER 3: Keyword filtering for semantic false positives
+        - Publication-specific: Filter out background chunks for NCT_NUMBER in publications
 
         Args:
             chunk_content: The text content of the chunk
             attribute_type: The attribute being extracted
+            chunk_metadata: Optional chunk metadata (for detecting publication and chunk_type)
 
         Returns:
             True if chunk is relevant, False if it should be filtered out
         """
+        # Publication-specific filtering for NCT_NUMBER: reject background chunks
+        if attribute_type == AttributeType.NCT_NUMBER and chunk_metadata:
+            chunk_type = chunk_metadata.get("chunk_type", "")
+            filename = chunk_metadata.get("filename", "")
+            
+            # Detect if this is from a publication
+            is_publication = (
+                "Publications" in filename or "publication" in filename.lower()
+            ) if filename else False
+            
+            # For publications, reject background chunks (they often reference other studies)
+            if is_publication and chunk_type == "background":
+                return False
+
         # TIER 2: Content-type filtering (NCT/Sponsor)
         chunk_type = RAGOptimizationConfig._classify_chunk(chunk_content)
 
@@ -314,7 +408,9 @@ class RAGOptimizationConfig:
         return attribute_type in RAGOptimizationConfig.NUMERIC_ATTRIBUTES
 
     @staticmethod
-    def get_required_chunk_types(attribute_type: AttributeType) -> list[str] | None:
+    def get_required_chunk_types(
+        attribute_type: AttributeType, is_publication: bool = False
+    ) -> list[str] | None:
         """Get required chunk types for filtering retrieval.
 
         For numeric attributes, this returns chunk type strings that should be
@@ -324,6 +420,7 @@ class RAGOptimizationConfig:
 
         Args:
             attribute_type: The attribute type
+            is_publication: Whether the document is a publication (vs abstract)
 
         Returns:
             List of chunk type strings (lowercase) to filter on, or None for no filtering.
@@ -333,25 +430,66 @@ class RAGOptimizationConfig:
         if attribute_type == AttributeType.ABSTRACT_NUMBER:
             return ["abstract_id"]
 
-        # Special case: NCT number only in clinical trial info section
+        # Special case: NCT number - different logic for abstracts vs publications
         if attribute_type == AttributeType.NCT_NUMBER:
-            return ["clinical_trial"]
+            if is_publication:
+                # Publications: search all sections (no filtering)
+                # Background chunks are already rejected by should_include_chunk() logic
+                # We don't know all section names, so be inclusive
+                return None
+            else:
+                # Abstracts: only in clinical trial info section
+                return ["clinical_trial"]
 
         # Special case: Comments only in full text reference section
         if attribute_type == AttributeType.COMMENTS:
             return ["full_text_reference"]
 
         # Special case: Sponsors only in Research Sponsor or Funding sections
-        if attribute_type == AttributeType.SPONSORS:
-            return ["sponsor", "funding"]
+        # Note: SPONSORS is now API-sourced, so this case is no longer needed
+        # if attribute_type == AttributeType.SPONSORS:
+        #     return ["sponsor", "funding"]
 
         # Special case: Number of patients can be in methods OR results
         if attribute_type == AttributeType.NUMBER_OF_PATIENTS:
             return ["methods", "results", "table", "conclusions"]
 
-        # Numeric attributes: ONLY search Results, Table, and Conclusions chunks
+        # Special case: Publication name and year - primarily in title chunk for publications
+        if attribute_type in (AttributeType.PUBLICATION_NAME, AttributeType.PUBLICATION_YEAR):
+            if is_publication:
+                # For publications, prioritize title chunk where journal name and year appear
+                return ["title", "background", "methods", "results", "conclusions"]
+            else:
+                # For abstracts, search all sections (may appear in various places)
+                return None  # No filtering - search all chunk types
+
+        # Numeric attributes: Extract from Results sections, Findings, Clinical Activity, and Tables only
+        # Note: All of the following are classified as "results" chunk type:
+        #   - Results sections (including Results in Abstract or Summary)
+        #   - Findings sections
+        #   - Clinical Activity sections
+        #   - All subsections within Results (Efficacy, Safety, Demographics, etc.)
+        # For abstracts, also include Conclusions section
         if RAGOptimizationConfig.is_numeric_attribute(attribute_type):
-            return ["results", "table", "conclusions"]
+            if is_publication:
+                # Publications: Results (including Results in Abstract/Summary, Findings, Clinical Activity) and Tables only
+                # This ensures numeric values come from:
+                #   ✓ Results sections (main + all subsections)
+                #   ✓ Results in Abstract or Summary sections
+                #   ✓ Findings sections
+                #   ✓ Clinical Activity sections
+                #   ✓ All tables
+                return ["results", "table"]
+            else:
+                # Abstracts: Results (including Results in Abstract/Summary, Findings, Clinical Activity), Tables, and Conclusions
+                # This ensures numeric values come from:
+                #   ✓ Results sections (main + all subsections)
+                #   ✓ Results in Abstract or Summary sections
+                #   ✓ Findings sections
+                #   ✓ Clinical Activity sections
+                #   ✓ All tables
+                #   ✓ Conclusions section
+                return ["results", "table", "conclusions"]
 
         # All other attributes: search all chunk types EXCEPT abstract_id
         # (abstract_id is just metadata - the ID number itself, not useful for most extraction)

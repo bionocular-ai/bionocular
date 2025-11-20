@@ -530,8 +530,14 @@ CONTEXT:
                             clean_value = nct_match.group(0)
                         else:
                             # If it's just digits (like 3086174.0), convert to NCT format
-                            # Extract just the digits
-                            digits_match = re.search(r'\d+', value_str.replace('.', ''))
+                            # Handle decimal numbers by extracting integer part before decimal
+                            if '.' in value_str:
+                                # Extract integer part before decimal (e.g., "3086174.0" -> "3086174")
+                                integer_part = value_str.split('.')[0]
+                                digits_match = re.search(r'\d+', integer_part)
+                            else:
+                                digits_match = re.search(r'\d+', value_str)
+                            
                             if digits_match:
                                 digits = digits_match.group(0)
                                 # Pad to 8 digits if needed
@@ -566,11 +572,17 @@ CONTEXT:
                     AttributeType.TRIAL_NAME,
                     AttributeType.PRIMARY_ENDPOINT,
                     AttributeType.SECONDARY_ENDPOINT,
+                    AttributeType.PUBLICATION_NAME,
+                    AttributeType.PUBLICATION_YEAR,
                 ]
                 
                 # If it's a string-based attribute, return as-is without numeric cleaning
                 if attribute_type in string_based_attributes or (config and str(config.value_kind) == "STRING"):
-                    clean_value = str(value).strip()
+                    # Convert to string only if not already a string to avoid double conversion
+                    if isinstance(value, str):
+                        clean_value = value.strip()
+                    else:
+                        clean_value = str(value).strip()
                     confidence = 0.8
                 else:
                     # First, try to clean numeric values (removes %, months, years, etc.)

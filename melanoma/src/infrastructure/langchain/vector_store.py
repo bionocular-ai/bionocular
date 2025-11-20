@@ -377,6 +377,10 @@ class LangChainVectorStore(VectorStoreInterface):
             ValueError: If chunks list is empty or contains invalid data
             RuntimeError: If storage operation fails
         """
+        # ChromaDB has a max batch size limit (typically ~5000)
+        # Batch chunks into smaller groups to avoid exceeding the limit
+        MAX_BATCH_SIZE = 5000
+        
         if not chunks:
             logger.warning("No chunks provided for storage")
             return
@@ -475,20 +479,34 @@ class LangChainVectorStore(VectorStoreInterface):
         try:
             await self._ensure_vectorstore_initialized()
 
+            # Batch chunks into smaller groups to avoid ChromaDB batch size limit
+            total_chunks = len(chunks_with_embeddings)
+            total_stored = 0
+            
+            for i in range(0, total_chunks, MAX_BATCH_SIZE):
+                batch = chunks_with_embeddings[i:i + MAX_BATCH_SIZE]
+
             # Convert chunks to LangChain documents
             documents = []
             ids = []
 
-            for chunk in chunks_with_embeddings:
+                for chunk in batch:
                 document = self.document_converter.chunk_to_langchain_document(chunk)
                 documents.append(document)
                 ids.append(str(chunk.id))
 
-            # Store in ChromaDB
+                # Store batch in ChromaDB
             self._vectorstore.add_documents(documents, ids=ids)
+                total_stored += len(batch)
+                
+                logger.debug(
+                    f"Stored batch {i//MAX_BATCH_SIZE + 1}: {len(batch)} chunks "
+                    f"({total_stored}/{total_chunks} total)"
+                )
 
             logger.info(
-                f"Successfully stored {len(chunks_with_embeddings)} chunks using LangChain Chroma"
+                f"Successfully stored {total_stored} chunks using LangChain Chroma "
+                f"(in {(total_chunks + MAX_BATCH_SIZE - 1) // MAX_BATCH_SIZE} batches)"
             )
 
         except Exception as e:

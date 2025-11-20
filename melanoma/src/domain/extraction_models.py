@@ -174,6 +174,81 @@ class AttributeType(str, Enum):
     CRS = "crs"
     WBC_DECREASED = "wbc_decreased"
 
+    # Safety - Grade 3+ AE Specific Adverse Events
+    GRADE_3_PLUS_AE_CRS = "grade_3_plus_ae_crs"
+    GRADE_3_PLUS_AE_THROMBOCYTOPENIA = "grade_3_plus_ae_thrombocytopenia"
+    GRADE_3_PLUS_AE_NEUTROPENIA = "grade_3_plus_ae_neutropenia"
+    GRADE_3_PLUS_AE_LEUKOPENIA = "grade_3_plus_ae_leukopenia"
+    GRADE_3_PLUS_AE_NAUSEA = "grade_3_plus_ae_nausea"
+    GRADE_3_PLUS_AE_ANEMIA = "grade_3_plus_ae_anemia"
+    GRADE_3_PLUS_AE_DIARRHEA = "grade_3_plus_ae_diarrhea"
+    GRADE_3_PLUS_AE_COLITIS = "grade_3_plus_ae_colitis"
+    GRADE_3_PLUS_AE_HYPERGLYCEMIA = "grade_3_plus_ae_hyperglycemia"
+    GRADE_3_PLUS_AE_NEUTROPHIL_COUNT_DECREASED = "grade_3_plus_ae_neutrophil_count_decreased"
+    GRADE_3_PLUS_AE_DYSPNEA = "grade_3_plus_ae_dyspnea"
+    GRADE_3_PLUS_AE_PYREXIA = "grade_3_plus_ae_pyrexia"
+    GRADE_3_PLUS_AE_BLEEDING = "grade_3_plus_ae_bleeding"
+    GRADE_3_PLUS_AE_PRURITUS = "grade_3_plus_ae_pruritus"
+    GRADE_3_PLUS_AE_RASH = "grade_3_plus_ae_rash"
+    GRADE_3_PLUS_AE_PNEUMONIA = "grade_3_plus_ae_pneumonia"
+    GRADE_3_PLUS_AE_THYROIDITIS = "grade_3_plus_ae_thyroiditis"
+    GRADE_3_PLUS_AE_HYPOPHYSITIS = "grade_3_plus_ae_hypophysitis"
+    GRADE_3_PLUS_AE_HEPATITIS = "grade_3_plus_ae_hepatitis"
+    GRADE_3_PLUS_AE_PNEUMONITIS = "grade_3_plus_ae_pneumonitis"
+    GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE = "grade_3_plus_ae_alanine_aminotransferase"
+    GRADE_3_PLUS_AE_WBC_DECREASED = "grade_3_plus_ae_wbc_decreased"
+    GRADE_3_PLUS_AE_IMMUNE_RELATED = "grade_3_plus_ae_immune_related"
+
+    # Safety - Grade 3+ TRAE Specific Adverse Events
+    GRADE_3_PLUS_TRAE_IMMUNE_RELATED = "grade_3_plus_trae_immune_related"
+    GRADE_3_PLUS_TRAE_CRS = "grade_3_plus_trae_crs"
+    GRADE_3_PLUS_TRAE_THROMBOCYTOPENIA = "grade_3_plus_trae_thrombocytopenia"
+    GRADE_3_PLUS_TRAE_NEUTROPENIA = "grade_3_plus_trae_neutropenia"
+    GRADE_3_PLUS_TRAE_LEUKOPENIA = "grade_3_plus_trae_leukopenia"
+    GRADE_3_PLUS_TRAE_NAUSEA = "grade_3_plus_trae_nausea"
+    GRADE_3_PLUS_TRAE_ANEMIA = "grade_3_plus_trae_anemia"
+    GRADE_3_PLUS_TRAE_DIARRHEA = "grade_3_plus_trae_diarrhea"
+    GRADE_3_PLUS_TRAE_COLITIS = "grade_3_plus_trae_colitis"
+    GRADE_3_PLUS_TRAE_HYPERGLYCEMIA = "grade_3_plus_trae_hyperglycemia"
+    GRADE_3_PLUS_TRAE_NEUTROPHIL_COUNT_DECREASED = "grade_3_plus_trae_neutrophil_count_decreased"
+    GRADE_3_PLUS_TRAE_DYSPNEA = "grade_3_plus_trae_dyspnea"
+    GRADE_3_PLUS_TRAE_PYREXIA = "grade_3_plus_trae_pyrexia"
+    GRADE_3_PLUS_TRAE_BLEEDING = "grade_3_plus_trae_bleeding"
+    GRADE_3_PLUS_TRAE_PRURITUS = "grade_3_plus_trae_pruritus"
+    GRADE_3_PLUS_TRAE_RASH = "grade_3_plus_trae_rash"
+    GRADE_3_PLUS_TRAE_PNEUMONIA = "grade_3_plus_trae_pneumonia"
+    GRADE_3_PLUS_TRAE_THYROIDITIS = "grade_3_plus_trae_thyroiditis"
+    GRADE_3_PLUS_TRAE_HYPOPHYSITIS = "grade_3_plus_trae_hypophysitis"
+    GRADE_3_PLUS_TRAE_HEPATITIS = "grade_3_plus_trae_hepatitis"
+    GRADE_3_PLUS_TRAE_PNEUMONITIS = "grade_3_plus_trae_pneumonitis"
+    GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE = "grade_3_plus_trae_alanine_aminotransferase"
+    GRADE_3_PLUS_TRAE_WBC_DECREASED = "grade_3_plus_trae_wbc_decreased"
+
+    # Safety - Grade 3+ TEAE Specific Adverse Events
+    GRADE_3_PLUS_TEAE_IMMUNE_RELATED = "grade_3_plus_teae_immune_related"
+    GRADE_3_PLUS_TEAE_CRS = "grade_3_plus_teae_crs"
+    GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA = "grade_3_plus_teae_thrombocytopenia"
+    GRADE_3_PLUS_TEAE_NEUTROPENIA = "grade_3_plus_teae_neutropenia"
+    GRADE_3_PLUS_TEAE_LEUKOPENIA = "grade_3_plus_teae_leukopenia"
+    GRADE_3_PLUS_TEAE_NAUSEA = "grade_3_plus_teae_nausea"
+    GRADE_3_PLUS_TEAE_ANEMIA = "grade_3_plus_teae_anemia"
+    GRADE_3_PLUS_TEAE_DIARRHEA = "grade_3_plus_teae_diarrhea"
+    GRADE_3_PLUS_TEAE_COLITIS = "grade_3_plus_teae_colitis"
+    GRADE_3_PLUS_TEAE_HYPERGLYCEMIA = "grade_3_plus_teae_hyperglycemia"
+    GRADE_3_PLUS_TEAE_NEUTROPHIL_COUNT_DECREASED = "grade_3_plus_teae_neutrophil_count_decreased"
+    GRADE_3_PLUS_TEAE_DYSPNEA = "grade_3_plus_teae_dyspnea"
+    GRADE_3_PLUS_TEAE_PYREXIA = "grade_3_plus_teae_pyrexia"
+    GRADE_3_PLUS_TEAE_BLEEDING = "grade_3_plus_teae_bleeding"
+    GRADE_3_PLUS_TEAE_PRURITUS = "grade_3_plus_teae_pruritus"
+    GRADE_3_PLUS_TEAE_RASH = "grade_3_plus_teae_rash"
+    GRADE_3_PLUS_TEAE_PNEUMONIA = "grade_3_plus_teae_pneumonia"
+    GRADE_3_PLUS_TEAE_THYROIDITIS = "grade_3_plus_teae_thyroiditis"
+    GRADE_3_PLUS_TEAE_HYPOPHYSITIS = "grade_3_plus_teae_hypophysitis"
+    GRADE_3_PLUS_TEAE_HEPATITIS = "grade_3_plus_teae_hepatitis"
+    GRADE_3_PLUS_TEAE_PNEUMONITIS = "grade_3_plus_teae_pneumonitis"
+    GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE = "grade_3_plus_teae_alanine_aminotransferase"
+    GRADE_3_PLUS_TEAE_WBC_DECREASED = "grade_3_plus_teae_wbc_decreased"
+
     # Metadata (for internal use)
     CONFERENCE = "conference"
     PUBLISHED_YEAR = "published_year"
@@ -181,6 +256,11 @@ class AttributeType(str, Enum):
     MINIMUM_AGE = "minimum_age"
     MAXIMUM_AGE = "maximum_age"
     SEX = "sex"
+
+    # Publication-level metadata
+    PUBLICATION_NAME = "publication_name"
+    PUBLICATION_YEAR = "publication_year"
+    PDF_NUMBER = "pdf_number"
 
 
 class ValidationStatus(str, Enum):
@@ -308,6 +388,55 @@ class AttributeConfigurationFactory:
                 required=False,
                 validation_range=(0, 100),
                 calculation_formula="Grade3 + Grade4 + Grade5",
+                extraction_priority=2,
+                api_source=False,
+            ),
+            # Safety - Adverse Events (AE)
+            AttributeType.AE: AttributeConfiguration(
+                attribute_type=AttributeType.AE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.AE_LEADING_TO_DISCONTINUATION: AttributeConfiguration(
+                attribute_type=AttributeType.AE_LEADING_TO_DISCONTINUATION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.AE_LEADING_TO_DEATH: AttributeConfiguration(
+                attribute_type=AttributeType.AE_LEADING_TO_DEATH,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.SERIOUS_AE: AttributeConfiguration(
+                attribute_type=AttributeType.SERIOUS_AE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.IMMUNE_RELATED_AE: AttributeConfiguration(
+                attribute_type=AttributeType.IMMUNE_RELATED_AE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.SERIOUS_IMMUNE_RELATED_AE: AttributeConfiguration(
+                attribute_type=AttributeType.SERIOUS_IMMUNE_RELATED_AE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
                 extraction_priority=2,
                 api_source=False,
             ),
@@ -746,6 +875,584 @@ class AttributeConfigurationFactory:
                 extraction_priority=2,
                 api_source=False,
             ),
+            # Grade 3+ AE Specific Adverse Events
+            AttributeType.GRADE_3_PLUS_AE_CRS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_CRS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_THROMBOCYTOPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_THROMBOCYTOPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_NEUTROPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_NEUTROPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_LEUKOPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_LEUKOPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_NAUSEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_NAUSEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_ANEMIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_ANEMIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_DIARRHEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_DIARRHEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_COLITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_COLITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_HYPERGLYCEMIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_HYPERGLYCEMIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_NEUTROPHIL_COUNT_DECREASED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_NEUTROPHIL_COUNT_DECREASED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_DYSPNEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_DYSPNEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_PYREXIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_PYREXIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_BLEEDING: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_BLEEDING,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_PRURITUS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_PRURITUS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_RASH: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_RASH,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_PNEUMONIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_PNEUMONIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_THYROIDITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_THYROIDITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_HYPOPHYSITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_HYPOPHYSITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_HEPATITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_HEPATITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_PNEUMONITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_PNEUMONITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_WBC_DECREASED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_WBC_DECREASED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_IMMUNE_RELATED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_IMMUNE_RELATED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            # Grade 3+ TRAE Specific Adverse Events
+            AttributeType.GRADE_3_PLUS_TRAE_IMMUNE_RELATED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_IMMUNE_RELATED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_CRS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_CRS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_THROMBOCYTOPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_THROMBOCYTOPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_NEUTROPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_NEUTROPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_LEUKOPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_LEUKOPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_NAUSEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_NAUSEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_ANEMIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_ANEMIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_DIARRHEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_DIARRHEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_COLITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_COLITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_HYPERGLYCEMIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_HYPERGLYCEMIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_NEUTROPHIL_COUNT_DECREASED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_NEUTROPHIL_COUNT_DECREASED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_DYSPNEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_DYSPNEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_PYREXIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_PYREXIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_BLEEDING: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_BLEEDING,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_PRURITUS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_PRURITUS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_RASH: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_RASH,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_PNEUMONIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_PNEUMONIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_THYROIDITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_THYROIDITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_HYPOPHYSITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_HYPOPHYSITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_HEPATITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_HEPATITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_PNEUMONITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_PNEUMONITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_WBC_DECREASED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_WBC_DECREASED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            # Grade 3+ TEAE Specific Adverse Events
+            AttributeType.GRADE_3_PLUS_TEAE_IMMUNE_RELATED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_IMMUNE_RELATED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_CRS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_CRS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_NEUTROPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_NEUTROPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_LEUKOPENIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_LEUKOPENIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_NAUSEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_NAUSEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_ANEMIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_ANEMIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_DIARRHEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_DIARRHEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_COLITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_COLITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_HYPERGLYCEMIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_HYPERGLYCEMIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_NEUTROPHIL_COUNT_DECREASED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_NEUTROPHIL_COUNT_DECREASED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_DYSPNEA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_DYSPNEA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_PYREXIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_PYREXIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_BLEEDING: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_BLEEDING,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_PRURITUS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_PRURITUS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_RASH: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_RASH,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_PNEUMONIA: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_PNEUMONIA,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_THYROIDITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_THYROIDITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_HYPOPHYSITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_HYPOPHYSITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_HEPATITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_HEPATITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_PNEUMONITIS: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_PNEUMONITIS,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_WBC_DECREASED: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_WBC_DECREASED,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            # Publication-level metadata
+            AttributeType.PUBLICATION_NAME: AttributeConfiguration(
+                attribute_type=AttributeType.PUBLICATION_NAME,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=1,
+                api_source=False,
+            ),
+            AttributeType.PUBLICATION_YEAR: AttributeConfiguration(
+                attribute_type=AttributeType.PUBLICATION_YEAR,
+                value_kind=ValueKind.INTEGER,
+                required=False,
+                validation_range=(1990, 2030),
+                extraction_priority=1,
+                api_source=False,
+            ),
+            AttributeType.PDF_NUMBER: AttributeConfiguration(
+                attribute_type=AttributeType.PDF_NUMBER,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=1,
+                api_source=False,
+            ),
             # API-sourced attributes (Phase 1)
             AttributeType.STUDY_START_DATE: AttributeConfiguration(
                 attribute_type=AttributeType.STUDY_START_DATE,
@@ -773,7 +1480,7 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.STRING,
                 required=False,
                 extraction_priority=1,
-                api_source=False,  # Extract from abstract (Research Sponsor or Funding sections)
+                api_source=True,  # Extract from Clinical Trials API
             ),
             AttributeType.CLINICAL_TRIAL_PHASE: AttributeConfiguration(
                 attribute_type=AttributeType.CLINICAL_TRIAL_PHASE,
@@ -1190,12 +1897,23 @@ class AttributeConfigurationFactory:
         ]
 
     @staticmethod
+    def get_publication_level_attributes() -> list[AttributeType]:
+        """Get attributes that are extracted at the publication level."""
+        return [
+            AttributeType.PUBLICATION_NAME,
+            AttributeType.PUBLICATION_YEAR,
+            AttributeType.PDF_NUMBER,
+        ]
+
+    @staticmethod
     def get_arm_level_attributes() -> list[AttributeType]:
         """Get attributes that are extracted at the treatment arm level."""
+        abstract_level = AttributeConfigurationFactory.get_abstract_level_attributes()
+        publication_level = AttributeConfigurationFactory.get_publication_level_attributes()
         return [
             attr
             for attr in AttributeType
-            if attr not in AttributeConfigurationFactory.get_abstract_level_attributes()
+            if attr not in abstract_level and attr not in publication_level
         ]
 
     @staticmethod

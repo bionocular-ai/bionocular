@@ -5,8 +5,9 @@ combining treatment arm separation with targeted attribute extraction.
 """
 
 import logging
+import re
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 from ..domain.extraction_interfaces import AttributeExtractor, LLMService
 from ..domain.extraction_models import AttributeType
@@ -58,6 +59,100 @@ class RAGEnhancedExtractionService:
 
         logger.info("RAG-enhanced extraction service initialized")
 
+    def _is_publication(self, content: str, file_path: Optional[str] = None) -> bool:
+        """Detect if content is a full publication (not an abstract).
+        
+        Args:
+            content: Document content
+            file_path: Optional file path for pattern matching
+            
+        Returns:
+            True if this appears to be a publication
+        """
+        # Check filename pattern (Publications folder)
+        if file_path and ("Publications" in file_path or "publication" in file_path.lower()):
+            return True
+            
+        # Check for publication structure (main sections with #)
+        has_main_sections = (
+            re.search(r"^#\s+(Introduction|Methods|Results|Discussion|Conclusion)", content, re.MULTILINE | re.IGNORECASE) is not None
+        )
+        
+        # Check for absence of abstract-specific markers
+        has_abstract_id = "### Abstract ID:" in content or "Abstract ID:" in content
+        
+        # Check length (publications are typically much longer)
+        is_long = len(content) > 5000
+        
+        # Publication if it has main sections, no abstract ID, and is long
+        return has_main_sections and not has_abstract_id and is_long
+
+    def _extract_results_section(self, content: str) -> Optional[str]:
+        """Extract the Results section from publication content.
+        
+        For publications, treatment arms are typically described in the Results section,
+        not in Background or Methods. This method extracts only the Results section
+        for arm separation.
+        
+        Args:
+            content: Full publication content
+            
+        Returns:
+            Results section content, or None if not found
+        """
+        lines = content.split("\n")
+        results_start = None
+        results_end = None
+        in_results = False
+        
+        # Keywords that indicate Results section
+        results_keywords = [
+            r"^#+\s*\*?\*?Results\*?\*?",
+            r"^#+\s*\*?\*?Findings\*?\*?",
+        ]
+        
+        # Keywords that indicate end of Results section
+        end_keywords = [
+            r"^#+\s*\*?\*?Discussion\*?\*?",
+            r"^#+\s*\*?\*?Conclusion\*?\*?",
+            r"^#+\s*\*?\*?References\*?\*?",
+            r"^#+\s*\*?\*?Appendix\*?\*?",
+        ]
+        
+        for i, line in enumerate(lines):
+            line_stripped = line.strip()
+            
+            # Check if we're starting Results section
+            if not in_results:
+                for pattern in results_keywords:
+                    if re.match(pattern, line_stripped, re.IGNORECASE):
+                        results_start = i
+                        in_results = True
+                        logger.debug(f"Found Results section start at line {i}: {line_stripped[:50]}")
+                        break
+            else:
+                # Check if we're ending Results section
+                for pattern in end_keywords:
+                    if re.match(pattern, line_stripped, re.IGNORECASE):
+                        results_end = i
+                        logger.debug(f"Found Results section end at line {i}: {line_stripped[:50]}")
+                        break
+                
+                if results_end is not None:
+                    break
+        
+        # If we found start but no end, Results section goes to end of document
+        if results_start is not None and results_end is None:
+            results_end = len(lines)
+        
+        if results_start is not None:
+            results_content = "\n".join(lines[results_start:results_end])
+            logger.info(f"Extracted Results section: {results_end - results_start} lines")
+            return results_content
+        
+        logger.warning("Results section not found in publication content")
+        return None
+
     async def extract_attributes_from_abstract(
         self,
         abstract_text: str,
@@ -65,6 +160,7 @@ class RAGEnhancedExtractionService:
         attributes: list[AttributeType],
         context_chunks_per_arm: int = 5,
         similarity_threshold: float = 0.1,
+        file_path: Optional[str] = None,
     ) -> TreatmentArmExtractionResult:
         """Extract attributes from abstract using RAG-enhanced workflow.
 
@@ -74,6 +170,7 @@ class RAGEnhancedExtractionService:
             attributes: List of attributes to extract
             context_chunks_per_arm: Number of context chunks per arm
             similarity_threshold: Similarity threshold for RAG retrieval
+            file_path: Optional file path for publication detection
 
         Returns:
             Treatment arm extraction result
@@ -84,10 +181,23 @@ class RAGEnhancedExtractionService:
             logger.info(f"Starting RAG-enhanced extraction for abstract {abstract_id}")
 
             # Step 1: Separate treatment arms
+            # For publications, extract Results section first and separate arms from it only
+            is_pub = self._is_publication(abstract_text, file_path)
+            text_for_arm_separation = abstract_text
+            
+            if is_pub:
+                logger.info("Detected publication - extracting Results section for arm separation")
+                results_section = self._extract_results_section(abstract_text)
+                if results_section:
+                    text_for_arm_separation = results_section
+                    logger.info(f"Using Results section for arm separation ({len(results_section)} chars)")
+                else:
+                    logger.warning("Results section not found, using full publication text for arm separation")
+            
             logger.info("Step 1: Separating treatment arms")
             separation_result = (
                 await self.treatment_arm_separator.separate_treatment_arms(
-                    abstract_text, abstract_id
+                    text_for_arm_separation, abstract_id
                 )
             )
 

@@ -103,6 +103,152 @@ class EnhancedExtractionService:
         if self.cost_tracking_enabled:
             logger.info("Cost tracking enabled")
 
+    def _is_publication(self, content: str, file_path: Optional[str] = None) -> bool:
+        """Detect if content is a full publication (not an abstract).
+        
+        Args:
+            content: Document content
+            file_path: Optional file path for pattern matching
+            
+        Returns:
+            True if this appears to be a publication
+        """
+        # Check filename pattern (Publications folder)
+        if file_path and ("Publications" in file_path or "publication" in file_path.lower()):
+            return True
+            
+        # Check for publication structure (main sections with #)
+        has_main_sections = (
+            re.search(r"^#\s+(Introduction|Methods|Results|Discussion|Conclusion)", content, re.MULTILINE | re.IGNORECASE) is not None
+        )
+        
+        # Check for absence of abstract-specific markers
+        has_abstract_id = "### Abstract ID:" in content or "Abstract ID:" in content
+        
+        # Check length (publications are typically much longer)
+        is_long = len(content) > 5000
+        
+        # Publication if it has main sections, no abstract ID, and is long
+        return has_main_sections and not has_abstract_id and is_long
+
+    def _extract_results_section(self, content: str) -> Optional[str]:
+        """Extract the Results section from publication content.
+        
+        For publications, treatment arms are typically described in the Results section,
+        not in Background or Methods. This method extracts only the Results section
+        for arm separation.
+        
+        Args:
+            content: Full publication content
+            
+        Returns:
+            Results section content, or None if not found
+        """
+        lines = content.split("\n")
+        results_start = None
+        results_end = None
+        in_results = False
+        
+        # Keywords that indicate Results section (prioritize more specific patterns first)
+        # Order matters: more specific patterns should come first
+        results_keywords = [
+            r"^#+\s*\*?\*?Results\*?\*?\s+",  # "## Results Patients" or "# Results Patients" (Results followed by text) - most specific
+            r"^#+\s*\*?\*?Results\*?\*?\s*$",  # "## Results" or "# Results" (exact match)
+            r"^#+\s*\*?\*?Findings\*?\*?",
+            r"^#+\s*\*?\*?Clinical\s+activity\*?\*?",  # Some publications use "Clinical activity" as Results
+        ]
+        
+        # Keywords that indicate end of Results section
+        end_keywords = [
+            r"^#+\s*\*?\*?Discussion\*?\*?",
+            r"^#+\s*\*?\*?Conclusion\*?\*?",
+            r"^#+\s*\*?\*?References\*?\*?",
+            r"^#+\s*\*?\*?Appendix\*?\*?",
+        ]
+        
+        # First pass: find all potential Results section starts
+        potential_starts = []
+        for i, line in enumerate(lines):
+            line_stripped = line.strip()
+            for pattern_idx, pattern in enumerate(results_keywords):
+                if re.match(pattern, line_stripped, re.IGNORECASE):
+                    potential_starts.append((i, pattern_idx, line_stripped))
+                    break
+        
+        # If we found multiple Results sections, prefer the one that comes after Methods
+        # or the one with more specific pattern (lower pattern_idx = more specific)
+        if potential_starts:
+            # Check if any come after a Methods section (prefer main Methods, not abstract Methods)
+            methods_found = False
+            methods_line = None
+            # Look for Methods sections - prefer top-level (# Methods) over subsection (## Methods)
+            for i, line in enumerate(lines):
+                line_stripped = line.strip()
+                # Match top-level Methods section (single #)
+                if re.match(r"^#\s+\*?\*?Methods\*?\*?", line_stripped, re.IGNORECASE):
+                    methods_found = True
+                    methods_line = i
+                    break
+            # If no top-level Methods found, look for any Methods section header
+            if not methods_found:
+                for i, line in enumerate(lines):
+                    if re.match(r"^#+\s*\*?\*?Methods\*?\*?", line.strip(), re.IGNORECASE):
+                        methods_found = True
+                        methods_line = i
+                        break
+            # If still no Methods header found, look for bold text "**Methods**" or "**Methods ..."
+            if not methods_found:
+                for i, line in enumerate(lines):
+                    if re.search(r"\*\*Methods", line, re.IGNORECASE):
+                        methods_found = True
+                        methods_line = i
+                        break
+            
+            # Prefer Results section that comes after Methods, or the most specific one
+            if methods_found:
+                # Find the first Results section after Methods
+                for start_line, pattern_idx, line_text in potential_starts:
+                    if start_line > methods_line:
+                        results_start = start_line
+                        logger.debug(f"Found Results section start at line {start_line} (after Methods): {line_text[:50]}")
+                        break
+                # If none found after Methods, use the most specific one
+                if results_start is None:
+                    potential_starts.sort(key=lambda x: (x[0], x[1]))  # Sort by line number, then pattern specificity
+                    results_start = potential_starts[0][0]
+                    logger.debug(f"Found Results section start at line {results_start}: {potential_starts[0][2][:50]}")
+            else:
+                # No Methods section found, use the most specific pattern
+                potential_starts.sort(key=lambda x: (x[1], x[0]))  # Sort by pattern specificity, then line number
+                results_start = potential_starts[0][0]
+                logger.debug(f"Found Results section start at line {results_start}: {potential_starts[0][2][:50]}")
+        
+        # Second pass: find the end of the Results section
+        if results_start is not None:
+            in_results = True
+            for i in range(results_start + 1, len(lines)):
+                line_stripped = lines[i].strip()
+                for pattern in end_keywords:
+                    if re.match(pattern, line_stripped, re.IGNORECASE):
+                        results_end = i
+                        logger.debug(f"Found Results section end at line {i}: {line_stripped[:50]}")
+                        break
+                
+                if results_end is not None:
+                    break
+        
+        # If we found start but no end, Results section goes to end of document
+        if results_start is not None and results_end is None:
+            results_end = len(lines)
+        
+        if results_start is not None:
+            results_content = "\n".join(lines[results_start:results_end])
+            logger.info(f"Extracted Results section: {results_end - results_start} lines")
+            return results_content
+        
+        logger.warning("Results section not found in publication content")
+        return None
+
     async def extract_attributes_from_abstract(
         self,
         abstract_text: str,
@@ -136,10 +282,23 @@ class EnhancedExtractionService:
             self._current_file_path = file_path
 
             # Step 1: Separate treatment arms
+            # For publications, extract Results section first and separate arms from it only
+            is_pub = self._is_publication(abstract_text, file_path)
+            text_for_arm_separation = abstract_text
+            
+            if is_pub:
+                logger.info("Detected publication - extracting Results section for arm separation")
+                results_section = self._extract_results_section(abstract_text)
+                if results_section:
+                    text_for_arm_separation = results_section
+                    logger.info(f"Using Results section for arm separation ({len(results_section)} chars)")
+                else:
+                    logger.warning("Results section not found, using full publication text for arm separation")
+            
             logger.info("Step 1: Separating treatment arms")
             separation_result = (
                 await self.treatment_arm_separator.separate_treatment_arms(
-                    abstract_text, abstract_id
+                    text_for_arm_separation, abstract_id
                 )
             )
 
@@ -279,10 +438,23 @@ class EnhancedExtractionService:
             self._current_file_path = file_path
 
             # Step 1: Separate treatment arms
+            # For publications, extract Results section first and separate arms from it only
+            is_pub = self._is_publication(abstract_text, file_path)
+            text_for_arm_separation = abstract_text
+            
+            if is_pub:
+                logger.info("Detected publication - extracting Results section for arm separation")
+                results_section = self._extract_results_section(abstract_text)
+                if results_section:
+                    text_for_arm_separation = results_section
+                    logger.info(f"Using Results section for arm separation ({len(results_section)} chars)")
+                else:
+                    logger.warning("Results section not found, using full publication text for arm separation")
+            
             logger.info("Step 1: Separating treatment arms")
             separation_result = (
                 await self.treatment_arm_separator.separate_treatment_arms(
-                    abstract_text, abstract_id
+                    text_for_arm_separation, abstract_id
                 )
             )
 
@@ -359,6 +531,7 @@ class EnhancedExtractionService:
                     arms=separation_result.treatment_arms,
                     abstract_id=abstract_id,
                     similarity_threshold=similarity_threshold,
+                    file_path=file_path,
                 )
 
             # Step 6: Extract arm-level attributes using PER-ATTRIBUTE retrieval
@@ -375,6 +548,7 @@ class EnhancedExtractionService:
                         abstract_id=abstract_id,
                         context_chunks_per_arm=context_chunks_per_arm,
                         similarity_threshold=similarity_threshold,
+                        file_path=file_path,
                     )
                 )
 
@@ -387,8 +561,59 @@ class EnhancedExtractionService:
                 logger.info(
                     f"Extracting API attributes: {[attr.value for attr in api_attributes]}"
                 )
+                # Get NCT number from abstract-level results if available (for publications, 
+                # NCT number is extracted from full text, not just Results section)
+                nct_number_from_results = None
+                if AttributeType.NCT_NUMBER in abstract_level_results:
+                    # Get NCT number from any arm (they all have the same value for abstract-level attributes)
+                    if separation_result.treatment_arms:
+                        first_arm_id = separation_result.treatment_arms[0].arm_id
+                        if first_arm_id in abstract_level_results[AttributeType.NCT_NUMBER]:
+                            nct_attr = abstract_level_results[AttributeType.NCT_NUMBER][first_arm_id]
+                            if hasattr(nct_attr, "value") and nct_attr.value:
+                                nct_number_from_results = str(nct_attr.value).strip()
+                                # Clean the NCT number
+                                nct_number_from_results = self._clean_attribute_value(
+                                    AttributeType.NCT_NUMBER, nct_number_from_results
+                                )
+                                logger.info(f"Found NCT number from abstract-level extraction: {nct_number_from_results}")
+                
+                # Fallback: If NCT number not in abstract-level results, try to extract it from full text
+                # This is needed for publications where NCT might not be in the attributes list
+                if not nct_number_from_results:
+                    logger.debug("NCT number not found in abstract-level results, attempting direct extraction from full text")
+                    try:
+                        # Extract NCT number directly from full publication text
+                        nct_context = await self.arm_aware_rag_provider.get_context_for_attribute(
+                            document_id=abstract_id,
+                            attribute_type=AttributeType.NCT_NUMBER,
+                            context_chunks=3,
+                            similarity_threshold=similarity_threshold,
+                            metadata_filters={"filename": file_path} if file_path else None,
+                        )
+                        if nct_context:
+                            nct_attr = await self.attribute_extractor.extract_attribute(
+                                attribute_type=AttributeType.NCT_NUMBER,
+                                context=nct_context,
+                                document_id=abstract_id,
+                            )
+                            if hasattr(nct_attr, "value") and nct_attr.value:
+                                nct_number_from_results = str(nct_attr.value).strip()
+                                nct_number_from_results = self._clean_attribute_value(
+                                    AttributeType.NCT_NUMBER, nct_number_from_results
+                                )
+                                logger.info(f"Found NCT number from direct extraction: {nct_number_from_results}")
+                    except Exception as e:
+                        logger.debug(f"Failed to extract NCT number directly: {e}")
+                
+                # Log the NCT number being passed to API extraction
+                if nct_number_from_results:
+                    logger.info(f"Passing NCT number to API extraction: {nct_number_from_results}")
+                else:
+                    logger.warning(f"NCT number is None/empty when calling API extraction")
+                
                 api_results = await self._extract_api_attributes_batch(
-                    separation_result.treatment_arms, api_attributes, abstract_id
+                    separation_result.treatment_arms, api_attributes, abstract_id, nct_number_from_results
                 )
 
             # Step 7b: Extract trial_name from API as fallback (even though it's not API-sourced)
@@ -718,6 +943,11 @@ class EnhancedExtractionService:
                 logger.debug(f"attr_type: {attr_type} (type: {type(attr_type)})")
 
                 # Get context for this specific attribute
+                # Pass file_path as metadata_filters for publication detection (needed for proper chunk type filtering)
+                metadata_filters = None
+                if hasattr(self, "_current_file_path") and self._current_file_path:
+                    metadata_filters = {"filename": self._current_file_path}
+                
                 attr_context = (
                     await self.arm_aware_rag_provider.get_context_for_arm_attribute(
                         arm=arm,
@@ -725,6 +955,7 @@ class EnhancedExtractionService:
                         abstract_id=abstract_id,
                         context_chunks=5,
                         similarity_threshold=0.1,
+                        metadata_filters=metadata_filters,
                     )
                 )
 
@@ -918,7 +1149,14 @@ class EnhancedExtractionService:
             if nct_match:
                 return nct_match.group(0)
             # If it's just digits (like 3086174.0), convert to NCT format
-            digits_match = re.search(r'\d+', value_str.replace('.', ''))
+            # Handle decimal numbers by extracting integer part before decimal
+            if '.' in value_str:
+                # Extract integer part before decimal (e.g., "3086174.0" -> "3086174")
+                integer_part = value_str.split('.')[0]
+                digits_match = re.search(r'\d+', integer_part)
+            else:
+                digits_match = re.search(r'\d+', value_str)
+            
             if digits_match:
                 digits = digits_match.group(0)
                 # Pad to 8 digits if needed
@@ -1092,6 +1330,7 @@ class EnhancedExtractionService:
         arms: list[TreatmentArm],
         abstract_id: str,
         similarity_threshold: float,
+        file_path: Optional[str] = None,
     ) -> dict[AttributeType, dict[str, ExtractedAttribute]]:
         """Extract abstract-level attributes (same value for all arms).
 
@@ -1117,12 +1356,18 @@ class EnhancedExtractionService:
         for attribute in attributes:
             try:
                 # Get attribute-specific context with 3-tier filtering
+                # Pass file_path as metadata_filters for publication detection (needed for NCT_NUMBER)
+                metadata_filters = None
+                if file_path:
+                    metadata_filters = {"filename": file_path}
+                
                 context_texts = (
                     await self.arm_aware_rag_provider.get_context_for_attribute(
                         document_id=abstract_id,
                         attribute_type=attribute,
                         context_chunks=3,
                         similarity_threshold=similarity_threshold,
+                        metadata_filters=metadata_filters,
                     )
                 )
 
@@ -1204,6 +1449,7 @@ class EnhancedExtractionService:
         abstract_id: str,
         context_chunks_per_arm: int,
         similarity_threshold: float,
+        file_path: Optional[str] = None,
     ) -> dict[AttributeType, dict[str, ExtractedAttribute]]:
         """Extract attributes with per-attribute RAG retrieval (3-tier filtering).
 
@@ -1245,12 +1491,18 @@ class EnhancedExtractionService:
 
                 # Get attribute-specific context (shared across arms)
                 # Returns list[str] of chunk contents with 3-tier filtering applied
+                # Pass file_path as metadata_filters for publication detection (needed for NCT_NUMBER)
+                metadata_filters = None
+                if file_path:
+                    metadata_filters = {"filename": file_path}
+                
                 context_texts = (
                     await self.arm_aware_rag_provider.get_context_for_attribute(
                         document_id=abstract_id,
                         attribute_type=attribute,
                         context_chunks=3,  # Limit to 3 chunks for precision
                         similarity_threshold=similarity_threshold,
+                        metadata_filters=metadata_filters,
                     )
                 )
 
@@ -1358,6 +1610,7 @@ class EnhancedExtractionService:
         arms: list[TreatmentArm],
         attributes: list[AttributeType],
         abstract_id: str,
+        nct_number_override: Optional[str] = None,
     ) -> dict[AttributeType, dict[str, Any]]:
         """Extract API attributes in batch.
 
@@ -1365,6 +1618,8 @@ class EnhancedExtractionService:
             arms: List of treatment arms
             attributes: List of API attributes
             abstract_id: Abstract identifier
+            nct_number_override: Optional NCT number from abstract-level extraction
+                               (used for publications where NCT is not in Results section)
 
         Returns:
             Dictionary mapping attribute types to arm results
@@ -1383,13 +1638,18 @@ class EnhancedExtractionService:
                     }
             return results
 
-        # Get NCT number from first arm (they should all be the same)
-        nct_number = None
-        if arms and arms[0].arm_metadata and "nct_number" in arms[0].arm_metadata:
+        # Get NCT number - prioritize override (from abstract-level extraction) over arm metadata
+        # For publications, NCT number is extracted from full text, not just Results section
+        nct_number = nct_number_override
+        if nct_number:
+            logger.info(f"Using NCT number from override (abstract-level/direct extraction): {nct_number}")
+        elif arms and arms[0].arm_metadata and "nct_number" in arms[0].arm_metadata:
             nct_number = arms[0].arm_metadata["nct_number"]
+            if nct_number:
+                logger.debug(f"Using NCT number from arm metadata: {nct_number}")
 
         if not nct_number:
-            logger.warning("No NCT number found for API attribute extraction")
+            logger.warning(f"No NCT number found for API attribute extraction (override={nct_number_override}, checked both abstract-level results and arm metadata)")
             for attr_type in attributes:
                 results[attr_type] = {}
                 for arm in arms:
