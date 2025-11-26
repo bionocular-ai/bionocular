@@ -486,17 +486,17 @@ class LangChainVectorStore(VectorStoreInterface):
             for i in range(0, total_chunks, MAX_BATCH_SIZE):
                 batch = chunks_with_embeddings[i:i + MAX_BATCH_SIZE]
 
-            # Convert chunks to LangChain documents
-            documents = []
-            ids = []
+                # Convert chunks to LangChain documents
+                documents = []
+                ids = []
 
                 for chunk in batch:
-                document = self.document_converter.chunk_to_langchain_document(chunk)
-                documents.append(document)
-                ids.append(str(chunk.id))
+                    document = self.document_converter.chunk_to_langchain_document(chunk)
+                    documents.append(document)
+                    ids.append(str(chunk.id))
 
                 # Store batch in ChromaDB
-            self._vectorstore.add_documents(documents, ids=ids)
+                self._vectorstore.add_documents(documents, ids=ids)
                 total_stored += len(batch)
                 
                 logger.debug(

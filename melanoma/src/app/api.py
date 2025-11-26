@@ -5,6 +5,8 @@ import logging
 import os
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..domain.models import BatchIngestionResponse, DocumentType, IngestionRequest
@@ -19,6 +21,9 @@ from ..infrastructure.storage import LocalFileStorage
 from .clinical_api import router as clinical_router
 from .ingestion_service import IngestionService
 from .langchain_api import router as langchain_router
+from .trials_api import TrialResponse, TrialsListResponse, extract_trial_data, get_trials_data_source
+from .json_trials_service import JSONTrialsService
+from ..infrastructure.database import DocumentModel
 
 # Configure logging
 logging.basicConfig(
@@ -34,6 +39,20 @@ app = FastAPI(
     title="Bionocular Melanoma Research API",
     description="API for ingesting and querying scientific PDFs about melanoma treatments with RAG capabilities",
     version="0.2.0",
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+    ],  # Frontend URLs
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Include routers
@@ -59,9 +78,14 @@ def get_ingestion_service(db: Session = Depends(get_db_session)) -> IngestionSer
 async def startup_event() -> None:
     """Initialize the application on startup."""
     try:
-        # Initialize database
-        init_database()
-        logger.info("Database initialized successfully")
+        # Only initialize database if we're using it
+        data_source = get_trials_data_source()
+        if data_source == "database":
+            # Initialize database
+            init_database()
+            logger.info("Database initialized successfully")
+        else:
+            logger.info("Using JSON file data source - skipping database initialization")
 
         # Create storage directories
         create_storage_directories()
@@ -69,7 +93,11 @@ async def startup_event() -> None:
 
     except Exception as e:
         logger.error(f"Failed to initialize application: {str(e)}")
-        raise
+        # Don't raise if we're using JSON files - database errors are not critical
+        if get_trials_data_source() == "database":
+            raise
+        else:
+            logger.warning(f"Non-critical error during startup (using JSON files): {str(e)}")
 
 
 @app.get("/")
@@ -496,6 +524,243 @@ async def get_document(document_id: str, db: Session = Depends(get_db_session)) 
         raise
     except Exception as e:
         logger.error(f"Error getting document {document_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/trials", response_model=TrialsListResponse)
+@app.get("/trials", response_model=TrialsListResponse)  # Keep both for backward compatibility
+async def get_trials(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session),
+) -> TrialsListResponse:
+    """Get all abstract documents (trials) with pagination.
+    
+    Returns a clean JSON list of trial objects suitable for frontend consumption.
+    Each trial object includes id, nct_id, title, phase, sponsor, and status from metadata.
+    
+    Supports both JSON file and database sources. Use TRIALS_DATA_SOURCE environment
+    variable to switch between "json" (default) and "database".
+    
+    Args:
+        skip: Number of records to skip (for pagination)
+        limit: Maximum number of records to return
+        db: Database session (used only if data source is "database")
+        
+    Returns:
+        TrialsListResponse with paginated trial data
+        
+    Raises:
+        HTTPException: If data source query fails
+    """
+    try:
+        data_source = get_trials_data_source()
+        
+        if data_source == "json":
+            # Use JSON file as data source
+            json_service = JSONTrialsService()
+            trials_list, total = json_service.get_all_trials(skip=skip, limit=limit)
+            
+            return TrialsListResponse(
+                trials=[TrialResponse(**trial) for trial in trials_list],
+                total=total,
+                skip=skip,
+                limit=limit,
+            )
+        else:
+            # Use database as data source (original implementation)
+            # Query for abstract documents only
+            query = (
+                db.query(DocumentModel)
+                .filter(DocumentModel.doc_type == DocumentType.ABSTRACT)
+                .order_by(DocumentModel.created_at.desc())
+            )
+
+            # Get total count before pagination
+            total = query.count()
+
+            # Apply pagination
+            documents = query.offset(skip).limit(limit).all()
+
+            # Format the output using utility function
+            trials = [
+                extract_trial_data(doc, doc.doc_metadata or {}) for doc in documents
+            ]
+
+            return TrialsListResponse(
+                trials=[TrialResponse(**trial) for trial in trials],
+                total=total,
+                skip=skip,
+                limit=limit,
+            )
+    except Exception as e:
+        logger.error(f"Error fetching trials: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/trials/{trial_id}")
+@app.get("/trials/{trial_id}")  # Keep both for backward compatibility
+async def get_trial(trial_id: str, db: Session = Depends(get_db_session)) -> dict:
+    """Get a specific trial by ID with full details."""
+    try:
+        repository = SQLAlchemyDocumentRepository(db)
+        document = await repository.find_by_id(trial_id)
+
+        if not document:
+            raise HTTPException(status_code=404, detail="Trial not found")
+
+        if document.type != DocumentType.ABSTRACT:
+            raise HTTPException(status_code=404, detail="Document is not an abstract")
+
+        # Return full document with metadata
+        return document.dict()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting trial {trial_id}: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/trials/nct/{nct_id}", response_model=TrialsListResponse)
+@app.get("/trials/nct/{nct_id}", response_model=TrialsListResponse)  # Keep both for backward compatibility
+async def get_trials_by_nct(
+    nct_id: str,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db_session),
+) -> TrialsListResponse:
+    """Get all abstracts/publications associated with an NCT number.
+    
+    Args:
+        nct_id: NCT number (e.g., "NCT02388906")
+        skip: Number of records to skip (for pagination)
+        limit: Maximum number of records to return
+        db: Database session (used only if data source is "database")
+        
+    Returns:
+        TrialsListResponse with paginated trial data
+        
+    Raises:
+        HTTPException: If data source query fails
+    """
+    try:
+        data_source = get_trials_data_source()
+        
+        if data_source == "json":
+            # Use JSON file as data source
+            json_service = JSONTrialsService()
+            trials_list, total = json_service.get_trials_by_nct_id(nct_id, skip=skip, limit=limit)
+            
+            return TrialsListResponse(
+                trials=[TrialResponse(**trial) for trial in trials_list],
+                total=total,
+                skip=skip,
+                limit=limit,
+            )
+        else:
+            # Use database as data source
+            # Query for abstract documents with matching NCT number in metadata
+            # JSONB queries: check multiple possible keys in metadata
+            query = (
+                db.query(DocumentModel)
+                .filter(DocumentModel.doc_type == DocumentType.ABSTRACT)
+                .filter(
+                    or_(
+                        DocumentModel.doc_metadata.contains({"nct_number": nct_id}),
+                        DocumentModel.doc_metadata.contains({"nct_id": nct_id}),
+                        DocumentModel.doc_metadata.contains({"trial_id": nct_id})
+                    )
+                )
+                .order_by(DocumentModel.created_at.desc())
+            )
+
+            # Get total count before pagination
+            total = query.count()
+
+            # Apply pagination
+            documents = query.offset(skip).limit(limit).all()
+
+            # Format the output using utility function
+            trials = [
+                extract_trial_data(doc, doc.doc_metadata or {}) for doc in documents
+            ]
+
+            return TrialsListResponse(
+                trials=[TrialResponse(**trial) for trial in trials],
+                total=total,
+                skip=skip,
+                limit=limit,
+            )
+    except Exception as e:
+        logger.error(f"Error fetching trials by NCT ID {nct_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/trials/abstract/{abstract_id}")
+@app.get("/trials/abstract/{abstract_id}")  # Keep both for backward compatibility
+async def get_trial_by_abstract_id(
+    abstract_id: str,
+    db: Session = Depends(get_db_session),
+) -> dict:
+    """Get full abstract/publication data by abstract ID.
+    
+    Args:
+        abstract_id: Abstract ID (e.g., "ESMO_2020_1076O", "ASCO_2020_001", or "Batch-III_11")
+        db: Database session (used only if data source is "database")
+        
+    Returns:
+        Full abstract dictionary with all attributes and arm_results
+        
+    Raises:
+        HTTPException: If abstract not found or data source query fails
+    """
+    try:
+        data_source = get_trials_data_source()
+        
+        if data_source == "json":
+            # Use JSON file as data source
+            json_service = JSONTrialsService()
+            full_abstract = json_service.get_full_abstract_by_id(abstract_id)
+            
+            if not full_abstract:
+                raise HTTPException(status_code=404, detail=f"Abstract with ID '{abstract_id}' not found")
+            
+            return full_abstract
+        else:
+            # Use database as data source
+            # Query for abstract documents with matching abstract_id in metadata
+            query = (
+                db.query(DocumentModel)
+                .filter(
+                    or_(
+                        DocumentModel.doc_metadata.contains({"abstract_id": abstract_id}),
+                        DocumentModel.doc_metadata.contains({"abstract_number": abstract_id}),
+                        DocumentModel.doc_metadata.contains({"publication_id": abstract_id})
+                    )
+                )
+                .order_by(DocumentModel.created_at.desc())
+            )
+            
+            document = query.first()
+            
+            if not document:
+                raise HTTPException(status_code=404, detail=f"Abstract with ID '{abstract_id}' not found")
+            
+            # Return full document with metadata
+            return document.dict()
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching abstract by ID {abstract_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
         ) from e

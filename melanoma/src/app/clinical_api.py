@@ -10,7 +10,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ..domain.models import ClinicalTrialData
+from ..domain.clinical_trial_models import ClinicalTrialData
 from .clinical_extraction_service import ClinicalExtractionService
 from .langchain_factory_service import LangChainServiceFactory, ServiceConfiguration
 from .pipeline_service import EndToEndPipelineService

@@ -4,6 +4,7 @@ import logging
 import re
 from typing import Optional
 
+from ...domain.cancer_type_normalizer import get_primary_cancer_type
 from ...domain.clinical_trial_interfaces import ClinicalTrialParser
 from ...domain.clinical_trial_models import ClinicalTrialData, TreatmentArm
 from ..config import COUNTRY_VARIANTS
@@ -254,55 +255,35 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         if not conditions_list:
             return None, None
 
-        cancer_type = None
-        biomarker_inclusion = None
+        # Combine all conditions into a single string for normalization
+        # This handles cases where multiple conditions are listed
+        combined_conditions = ", ".join(
+            [c for c in conditions_list if isinstance(c, str)]
+        )
+        
+        # Use the centralized normalization utility
+        normalized_cancer_type = get_primary_cancer_type(combined_conditions)
+        
+        # If normalization returned "Review Required", try to extract from individual conditions
+        if normalized_cancer_type == "Review Required":
+            # Try normalizing each condition individually
+            for condition in conditions_list:
+                if isinstance(condition, str):
+                    normalized = get_primary_cancer_type(condition)
+                    if normalized != "Review Required":
+                        normalized_cancer_type = normalized
+                        break
+        
+        # Set to None if still "Review Required" (so it's not stored as a value)
+        if normalized_cancer_type == "Review Required":
+            normalized_cancer_type = None
 
+        # Extract biomarker inclusion information
+        biomarker_inclusion = None
         for condition in conditions_list:
             if isinstance(condition, str):
                 condition_lower = condition.lower()
-
-                # Normalize melanoma and skin cancer types
-                if "melanoma" in condition_lower:
-                    if "uveal" in condition_lower:
-                        cancer_type = "Uveal Melanoma"
-                    elif "mucosal" in condition_lower:
-                        cancer_type = "Mucosal Melanoma"
-                    elif "cutaneous" in condition_lower:
-                        cancer_type = "Cutaneous Melanoma"
-                    elif "metastatic" in condition_lower:
-                        cancer_type = "Metastatic Melanoma"
-                    elif "advanced" in condition_lower:
-                        cancer_type = "Advanced Melanoma"
-                    elif "malignant" in condition_lower:
-                        cancer_type = "Malignant Melanoma"
-                    elif "stage" in condition_lower:
-                        if "stage iii" in condition_lower:
-                            cancer_type = "Melanoma Stage III"
-                        elif "stage iv" in condition_lower:
-                            cancer_type = "Melanoma Stage IV"
-                        else:
-                            cancer_type = "Melanoma"
-                    else:
-                        cancer_type = "Melanoma"
-                elif (
-                    "squamous cell carcinoma" in condition_lower
-                    or "cutaneous squamous" in condition_lower
-                ):
-                    cancer_type = "Cutaneous Squamous Cell Carcinoma"
-                elif (
-                    "basal cell carcinoma" in condition_lower
-                    or "carcinoma, basal cell" in condition_lower
-                ):
-                    cancer_type = "Basal Cell Carcinoma"
-                elif "merkel cell carcinoma" in condition_lower:
-                    cancer_type = "Merkel Cell Carcinoma"
-                elif "kaposi sarcoma" in condition_lower:
-                    cancer_type = "Kaposi Sarcoma"
-                elif "squamous cell carcinoma" in condition_lower:
-                    cancer_type = "Squamous Cell Carcinoma"
-                elif "cancer" in condition_lower and not cancer_type:
-                    cancer_type = condition
-
+                
                 # Check for biomarker inclusion keywords
                 if biomarker_inclusion is None:
                     biomarker_keywords = [
@@ -331,7 +312,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         if biomarker_inclusion is None:
             biomarker_inclusion = False
 
-        return cancer_type, biomarker_inclusion
+        return normalized_cancer_type, biomarker_inclusion
 
     def _parse_arms_and_interventions(
         self, interventions_module: dict, eligibility_criteria: str = ""
