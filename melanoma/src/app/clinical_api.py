@@ -270,7 +270,9 @@ async def extract_clinical_data_batch(
             if result.get("success") and "trial_data" in result:
                 trial_data = result["trial_data"]
                 if isinstance(trial_data, dict):
-                    trial_data_list.append(ClinicalTrialData.model_construct(**trial_data))
+                    trial_data_list.append(
+                        ClinicalTrialData.model_construct(**trial_data)
+                    )
                 elif isinstance(trial_data, ClinicalTrialData):
                     trial_data_list.append(trial_data)
         statistics = clinical_service.get_extraction_statistics(trial_data_list)
@@ -367,7 +369,9 @@ async def export_clinical_data(
     try:
         # Convert dicts to langchain ClinicalTrialData objects
         trial_data_list = [
-            ClinicalTrialData.model_construct(**data) if isinstance(data, dict) else data
+            ClinicalTrialData.model_construct(**data)
+            if isinstance(data, dict)
+            else data
             for data in request.trial_data_list
         ]
 

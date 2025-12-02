@@ -244,7 +244,10 @@ class RAGContextProviderImpl(RAGContextProvider):
             if self.enable_caching:
                 # Handle None document_id for cache key generation
                 cache_key = self._generate_cache_key(
-                    document_id or "", attribute_type, context_chunks, similarity_threshold
+                    document_id or "",
+                    attribute_type,
+                    context_chunks,
+                    similarity_threshold,
                 )
                 if cache_key in self._context_cache:
                     logger.debug("Cache hit for %s", cache_key)

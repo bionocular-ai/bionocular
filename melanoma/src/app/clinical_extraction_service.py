@@ -127,9 +127,13 @@ class ClinicalDataProcessor:
         # Note: ClinicalTrialData doesn't have extraction_metadata attribute
         # Store validation info in extraction_notes instead
         if trial_data.extraction_notes:
-            trial_data.extraction_notes += f" | Validation: {validation_results['quality_level']}"
+            trial_data.extraction_notes += (
+                f" | Validation: {validation_results['quality_level']}"
+            )
         else:
-            trial_data.extraction_notes = f"Validation: {validation_results['quality_level']}"
+            trial_data.extraction_notes = (
+                f"Validation: {validation_results['quality_level']}"
+            )
 
         return trial_data
 

@@ -289,6 +289,7 @@ Answer:
             # If not initialized, we'll initialize it lazily on first use
             # For now, we'll create a wrapper that initializes on access
             import asyncio
+
             try:
                 # Try to get existing event loop
                 loop = asyncio.get_event_loop()
@@ -306,7 +307,9 @@ Answer:
                 )
 
         if vectorstore is None:
-            raise RuntimeError("Vectorstore not initialized and cannot be initialized synchronously")
+            raise RuntimeError(
+                "Vectorstore not initialized and cannot be initialized synchronously"
+            )
         return RetrievalQA.from_chain_type(
             llm=self.llm,
             chain_type="stuff",
