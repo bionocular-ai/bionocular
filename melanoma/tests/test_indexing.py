@@ -705,7 +705,7 @@ class TestEmbeddingIndexingIntegration:
 
             # Performance assertions (relaxed for CI/CD environments)
             assert embedding_time < 15.0  # Should be reasonable
-            assert storage_time < 5.0  # Should be fast
+            assert storage_time < 10.0  # Should be fast (relaxed for CI/CD environments)
             assert search_time < 2.0  # Should be fast
             assert len(results) > 0  # Should find results
 

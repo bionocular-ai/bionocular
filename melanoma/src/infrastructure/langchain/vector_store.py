@@ -551,46 +551,9 @@ class LangChainVectorStore(VectorStoreInterface):
         try:
             await self._ensure_vectorstore_initialized()
 
-            # Generate embedding for the query text
-            from ...domain.constants import EmbeddingModel
-            from ...domain.models import EmbeddingConfiguration
-
-            embedding_config = EmbeddingConfiguration(
-                model_name=EmbeddingModel.BIO_BERT_SNLI
-            )
-
-            # Generate embedding synchronously using threading to avoid event loop conflicts
-            import asyncio
-            import threading
-
-            def run_async_embedding():
-                new_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(new_loop)
-                try:
-                    return new_loop.run_until_complete(
-                        self.embedding_service.generate_embedding(
-                            text=query.text, config=embedding_config
-                        )
-                    )
-                finally:
-                    new_loop.close()
-
-            # Run embedding generation in a separate thread and get the result
-            result_container = [None]
-            exception_container = [None]
-
-            def thread_target():
-                try:
-                    result_container[0] = run_async_embedding()
-                except Exception as e:
-                    exception_container[0] = e
-
-            embedding_thread = threading.Thread(target=thread_target)
-            embedding_thread.start()
-            embedding_thread.join()
-
-            if exception_container[0]:
-                raise exception_container[0]
+            # Note: ChromaDB's similarity_search_with_score will automatically generate
+            # embeddings using the embedding_function, so we don't need to generate them manually.
+            # The embedding_service is only used if we need embeddings for other purposes.
 
             # Build filter conditions
             filter_conditions = self.metadata_processor.build_filter_conditions(query)
