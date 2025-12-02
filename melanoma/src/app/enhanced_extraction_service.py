@@ -262,7 +262,7 @@ class EnhancedExtractionService:
 
         if results_start is not None:
             if results_start is not None and results_end is not None:
-            results_content = "\n".join(lines[results_start:results_end])
+                results_content = "\n".join(lines[results_start:results_end])
                 logger.info(
                     f"Extracted Results section: {results_end - results_start} lines"
                 )
@@ -632,10 +632,10 @@ class EnhancedExtractionService:
                         # Extract NCT number directly from full publication text
                         nct_context = (
                             await self.arm_aware_rag_provider.get_context_for_attribute(
-                            document_id=abstract_id,
-                            attribute_type=AttributeType.NCT_NUMBER,
-                            context_chunks=3,
-                            similarity_threshold=similarity_threshold,
+                                document_id=abstract_id,
+                                attribute_type=AttributeType.NCT_NUMBER,
+                                context_chunks=3,
+                                similarity_threshold=similarity_threshold,
                                 metadata_filters={"filename": file_path}
                                 if file_path
                                 else None,

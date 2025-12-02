@@ -168,7 +168,10 @@ https://doi.org/10.1016/j.annonc.2020.08.1200"""
         assert "#### Conclusions:" in result
         # Clinical Trial Identification may be formatted differently or may not be present
         # depending on the abstract content and postprocessing implementation
-        assert "#### Legal Entity Responsible for Study:" in result or "#### Legal entity responsible for the study:" in result
+        assert (
+            "#### Legal Entity Responsible for Study:" in result
+            or "#### Legal entity responsible for the study:" in result
+        )
         assert "#### Funding:" in result
         assert "#### DOI:" in result
 

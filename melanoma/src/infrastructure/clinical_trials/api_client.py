@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 from ...domain.clinical_trial_interfaces import ClinicalTrialsAPIClient
 

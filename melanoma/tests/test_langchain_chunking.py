@@ -87,14 +87,6 @@ class TestLangChainChunkingService:
         chunk_types = {chunk.chunk_type for chunk in chunks}
         assert len(chunk_types) > 1
 
-        # Check that we have header chunks (may not always be present depending on content)
-        header_chunks = [
-            chunk for chunk in chunks if chunk.chunk_type == ChunkType.ABSTRACT_HEADER
-        ]
-        # Header chunks may or may not be present depending on chunking strategy
-        # Just verify we have chunks with different types
-        assert len(chunk_types) > 1
-
         # Check that we have content chunks
         content_chunks = [
             chunk
