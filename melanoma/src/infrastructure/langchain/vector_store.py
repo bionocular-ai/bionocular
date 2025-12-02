@@ -372,7 +372,7 @@ class LangChainVectorStore(VectorStoreInterface):
             except Exception as e:
                 logger.error(f"Failed to initialize LangChain vector store: {e}")
                 raise RuntimeError(f"Vector store initialization failed: {e}") from e
-        
+
         # Type assertion: after initialization, _vectorstore is guaranteed to be non-None
         assert self._vectorstore is not None, "Vectorstore should be initialized"
         return self._vectorstore
@@ -406,7 +406,7 @@ class LangChainVectorStore(VectorStoreInterface):
                 try:
                     # Generate embedding for the chunk
                     from ...domain.constants import EmbeddingModel
-                    
+
                     embedding_config = EmbeddingConfiguration(
                         model_name=EmbeddingModel.BIO_BERT_SNLI,
                         batch_size=32,
@@ -466,7 +466,7 @@ class LangChainVectorStore(VectorStoreInterface):
                     # Ensure embedding is not None before using len()
                     if embedding is None:
                         raise ValueError("Failed to generate embedding for chunk")
-                    
+
                     chunk_with_embedding = ChunkWithEmbedding(
                         id=chunk.id,
                         document_id=chunk.document_id,
@@ -552,10 +552,9 @@ class LangChainVectorStore(VectorStoreInterface):
             await self._ensure_vectorstore_initialized()
 
             # Generate embedding for the query text
+            from ...domain.constants import EmbeddingModel
             from ...domain.models import EmbeddingConfiguration
 
-            from ...domain.constants import EmbeddingModel
-            
             embedding_config = EmbeddingConfiguration(
                 model_name=EmbeddingModel.BIO_BERT_SNLI
             )

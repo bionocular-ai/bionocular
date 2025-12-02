@@ -304,7 +304,7 @@ Answer:
                 vectorstore = asyncio.run(
                     self.pipeline_orchestrator.vector_store._ensure_vectorstore_initialized()
                 )
-        
+
         if vectorstore is None:
             raise RuntimeError("Vectorstore not initialized and cannot be initialized synchronously")
         return RetrievalQA.from_chain_type(

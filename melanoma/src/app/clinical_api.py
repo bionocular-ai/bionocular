@@ -10,7 +10,6 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ..domain.clinical_trial_models import ClinicalTrialData as DomainClinicalTrialData
 from ..infrastructure.langchain import ClinicalTrialData
 from .clinical_extraction_service import ClinicalExtractionService
 from .langchain_factory_service import LangChainServiceFactory, ServiceConfiguration
@@ -320,7 +319,6 @@ async def validate_clinical_data(
         # Validate data
         # Convert domain ClinicalTrialData to langchain ClinicalTrialData if needed
         from .clinical_extraction_service import ClinicalDataProcessor
-        from ..infrastructure.langchain import ClinicalTrialData as LangChainClinicalTrialData
 
         processor = ClinicalDataProcessor()
         # trial_data is already langchain ClinicalTrialData from extract_trial_data_from_text
