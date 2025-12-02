@@ -282,10 +282,35 @@ Answer:
         )
 
         # Create RetrievalQA chain
+        # Initialize vectorstore synchronously (lazy initialization will happen on first use)
+        # The vectorstore will be initialized when first accessed
+        vectorstore = self.pipeline_orchestrator.vector_store._vectorstore
+        if vectorstore is None:
+            # If not initialized, we'll initialize it lazily on first use
+            # For now, we'll create a wrapper that initializes on access
+            import asyncio
+            try:
+                # Try to get existing event loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Can't use await in sync context, will initialize lazily
+                    vectorstore = None
+                else:
+                    vectorstore = loop.run_until_complete(
+                        self.pipeline_orchestrator.vector_store._ensure_vectorstore_initialized()
+                    )
+            except RuntimeError:
+                # No event loop, create one
+                vectorstore = asyncio.run(
+                    self.pipeline_orchestrator.vector_store._ensure_vectorstore_initialized()
+                )
+        
+        if vectorstore is None:
+            raise RuntimeError("Vectorstore not initialized and cannot be initialized synchronously")
         return RetrievalQA.from_chain_type(
             llm=self.llm,
             chain_type="stuff",
-            retriever=self.pipeline_orchestrator.vector_store._vectorstore.as_retriever(
+            retriever=vectorstore.as_retriever(
                 search_kwargs={"k": 5}  # Retrieve top 5 most relevant chunks
             ),
             chain_type_kwargs={"prompt": prompt},
@@ -389,7 +414,7 @@ Answer:
 
         return ChunkWithEmbedding(
             id=UUID(metadata.get("id", str(uuid4()))),
-            document_id=UUID(metadata["document_id"]),
+            document_id=str(UUID(metadata["document_id"])),
             content=doc.page_content,
             chunk_type=type(metadata["chunk_type"])(metadata["chunk_type"]),
             metadata=core_metadata,

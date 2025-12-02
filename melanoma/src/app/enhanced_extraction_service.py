@@ -216,7 +216,7 @@ class EnhancedExtractionService:
             if methods_found:
                 # Find the first Results section after Methods
                 for start_line, _pattern_idx, line_text in potential_starts:
-                    if start_line > methods_line:
+                    if methods_line is not None and start_line > methods_line:
                         results_start = start_line
                         logger.debug(
                             f"Found Results section start at line {start_line} (after Methods): {line_text[:50]}"
@@ -261,10 +261,14 @@ class EnhancedExtractionService:
             results_end = len(lines)
 
         if results_start is not None:
-            results_content = "\n".join(lines[results_start:results_end])
-            logger.info(
-                f"Extracted Results section: {results_end - results_start} lines"
-            )
+            if results_start is not None and results_end is not None:
+                results_content = "\n".join(lines[results_start:results_end])
+                logger.info(
+                    f"Extracted Results section: {results_end - results_start} lines"
+                )
+            else:
+                results_content = ""
+                logger.warning("Results section boundaries not found")
             return results_content
 
         logger.warning("Results section not found in publication content")
@@ -678,11 +682,11 @@ class EnhancedExtractionService:
                 trial_name_found = False
                 if AttributeType.TRIAL_NAME in abstract_results:
                     # Check if any arm has a valid trial name from LLM
-                    for arm_result in abstract_results[
+                    for arm_attr_result in abstract_results[
                         AttributeType.TRIAL_NAME
                     ].values():
-                        if hasattr(arm_result, "value"):
-                            value = str(arm_result.value).strip()
+                        if hasattr(arm_attr_result, "value"):
+                            value = str(arm_attr_result.value).strip()
                             if value and value not in [
                                 "",
                                 "Not found",
@@ -759,19 +763,47 @@ class EnhancedExtractionService:
                     "warnings": [],
                 }
 
+                # Helper function to convert ExtractedAttribute to dict
+                def attr_to_dict(attr: Any) -> dict[str, Any]:
+                    """Convert ExtractedAttribute object to dictionary."""
+                    if isinstance(attr, dict):
+                        return attr
+                    elif hasattr(attr, "value") and hasattr(attr, "confidence"):
+                        # It's an ExtractedAttribute object
+                        return {
+                            "value": attr.value,
+                            "confidence": attr.confidence,
+                            "validation_status": (
+                                attr.validation_status.value
+                                if hasattr(attr.validation_status, "value")
+                                else str(attr.validation_status)
+                            ),
+                            "source_chunks": (
+                                attr.source_chunks
+                                if hasattr(attr, "source_chunks")
+                                else []
+                            ),
+                            "source": (
+                                attr.source if hasattr(attr, "source") else "unknown"
+                            ),
+                        }
+                    else:
+                        # Fallback: try to convert to dict
+                        return {"value": str(attr), "confidence": 0.0}
+
                 # Combine all attribute sources for this arm
                 for attr_type in attributes:
                     if attr_type in file_path_results:
-                        arm_result["attributes"][attr_type] = file_path_results[
-                            attr_type
-                        ]
+                        arm_result["attributes"][attr_type.value] = attr_to_dict(
+                            file_path_results[attr_type]
+                        )
                     elif (
                         attr_type in abstract_results
                         and arm.arm_id in abstract_results[attr_type]
                     ):
-                        arm_result["attributes"][attr_type] = abstract_results[
-                            attr_type
-                        ][arm.arm_id]
+                        arm_result["attributes"][attr_type.value] = attr_to_dict(
+                            abstract_results[attr_type][arm.arm_id]
+                        )
                     elif attr_type in abstract_results:
                         # Abstract-level attribute exists but missing for this arm
                         # This shouldn't happen, but if it does, use the first arm's value
@@ -781,16 +813,16 @@ class EnhancedExtractionService:
                             f"Abstract-level attribute {attr_type.value} missing for arm {arm.arm_id}, "
                             f"using value from arm {first_arm_id}"
                         )
-                        arm_result["attributes"][attr_type] = abstract_results[
-                            attr_type
-                        ][first_arm_id]
+                        arm_result["attributes"][attr_type.value] = attr_to_dict(
+                            abstract_results[attr_type][first_arm_id]
+                        )
                     elif (
                         attr_type in api_results
                         and arm.arm_id in api_results[attr_type]
                     ):
-                        arm_result["attributes"][attr_type] = api_results[attr_type][
-                            arm.arm_id
-                        ]
+                        arm_result["attributes"][attr_type.value] = attr_to_dict(
+                            api_results[attr_type][arm.arm_id]
+                        )
 
                 arm_results[arm.arm_id] = arm_result
 
@@ -1418,7 +1450,7 @@ class EnhancedExtractionService:
             f"Extracting {len(attributes)} abstract-level attributes (shared across all arms)"
         )
 
-        results = {}
+        results: dict[AttributeType, dict[str, ExtractedAttribute]] = {}
 
         for attribute in attributes:
             try:
@@ -1444,7 +1476,7 @@ class EnhancedExtractionService:
                     logger.info(
                         "No chunks found for COMMENTS (full_text_reference section doesn't exist) - returning empty string"
                     )
-                    arm_results = {}
+                    arm_results: dict[str, ExtractedAttribute] = {}
                     for arm in arms:
                         arm_results[arm.arm_id] = ExtractedAttribute(
                             attribute_type=attribute,
@@ -1461,15 +1493,15 @@ class EnhancedExtractionService:
                     logger.debug(
                         f"No chunks retrieved for abstract-level attribute {attribute.value} after 3-tier filtering - skipping LLM call"
                     )
-                    arm_results = {}
+                    arm_results_not_found: dict[str, ExtractedAttribute] = {}
                     for arm in arms:
-                        arm_results[arm.arm_id] = ExtractedAttribute(
+                        arm_results_not_found[arm.arm_id] = ExtractedAttribute(
                             attribute_type=attribute,
                             value="Not found",
                             confidence=0.0,
                             source="abstract_llm_extraction",
                         )
-                    results[attribute] = arm_results
+                    results[attribute] = arm_results_not_found
                     continue
 
                 # Extract attribute once (no arm-specific extraction needed)

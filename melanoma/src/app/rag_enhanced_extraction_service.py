@@ -156,7 +156,7 @@ class RAGEnhancedExtractionService:
         if results_start is not None and results_end is None:
             results_end = len(lines)
 
-        if results_start is not None:
+        if results_start is not None and results_end is not None:
             results_content = "\n".join(lines[results_start:results_end])
             logger.info(
                 f"Extracted Results section: {results_end - results_start} lines"
@@ -338,7 +338,7 @@ class RAGEnhancedExtractionService:
             Arm extraction result
         """
         try:
-            arm_result = {
+            arm_result: dict[str, Any] = {
                 "arm_id": arm.arm_id,
                 "arm_name": arm.arm_name,
                 "attributes": {},
@@ -519,7 +519,7 @@ class RAGEnhancedExtractionService:
         Returns:
             Quality validation results
         """
-        quality_assessment = {
+        quality_assessment: dict[str, Any] = {
             "is_valid": True,
             "quality_score": 0.0,
             "issues": [],
@@ -575,7 +575,8 @@ class RAGEnhancedExtractionService:
         )
 
         # Add quality issues
-        if quality_assessment["quality_score"] < 0.6:
+        quality_score: float = quality_assessment["quality_score"]
+        if quality_score < 0.6:
             quality_assessment["issues"].append("Low quality extraction")
 
         if completeness_score < 0.8:
@@ -585,7 +586,7 @@ class RAGEnhancedExtractionService:
             quality_assessment["issues"].append("Low success rate")
 
         # Add recommendations
-        if quality_assessment["quality_score"] < 0.7:
+        if quality_score < 0.7:
             quality_assessment["recommendations"].append("Consider manual review")
 
         if completeness_score < 0.8:

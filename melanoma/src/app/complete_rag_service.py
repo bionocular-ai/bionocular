@@ -118,13 +118,10 @@ class CompleteRAGService:
             processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
 
             response = RAGResponse(
-                question=query.question,
                 answer=answer,
                 confidence_score=confidence_score,
                 context_chunks=search_results,
                 sources=self._extract_sources(search_results),
-                processing_time_ms=processing_time,
-                created_at=datetime.now(),
             )
 
             logger.info(f"RAG query processed successfully in {processing_time:.2f}ms")

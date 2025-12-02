@@ -216,7 +216,7 @@ class RAGContextProviderImpl(RAGContextProvider):
         context_chunks: int = 5,
         similarity_threshold: float = 0.1,
         metadata_filters: Optional[dict[str, Any]] = None,
-    ) -> list[SearchResult]:
+    ) -> list[str]:
         """Get relevant context chunks for attribute extraction.
 
         This method uses parallel query processing and quality scoring
@@ -242,12 +242,20 @@ class RAGContextProviderImpl(RAGContextProvider):
 
             # Check cache first
             if self.enable_caching:
+                # Handle None document_id for cache key generation
                 cache_key = self._generate_cache_key(
-                    document_id, attribute_type, context_chunks, similarity_threshold
+                    document_id or "", attribute_type, context_chunks, similarity_threshold
                 )
                 if cache_key in self._context_cache:
                     logger.debug("Cache hit for %s", cache_key)
-                    return self._context_cache[cache_key]
+                    cached_results = self._context_cache[cache_key]
+                    # Convert SearchResult to list[str] if needed
+                    if cached_results and len(cached_results) > 0:
+                        if isinstance(cached_results[0], SearchResult):
+                            return [result.chunk.content for result in cached_results]
+                        # Already list[str]
+                        return cached_results
+                    return []
 
             # Get attribute-specific queries
             queries = self.attribute_queries.get(
@@ -256,9 +264,10 @@ class RAGContextProviderImpl(RAGContextProvider):
             logger.debug("Using %d queries for %s", len(queries), attribute_type.value)
 
             # Process queries in parallel for better performance
+            # Handle None document_id
             search_results = await self._parallel_query_processing(
                 queries=queries,
-                document_id=document_id,
+                document_id=document_id or "",
                 context_chunks=context_chunks,
                 similarity_threshold=similarity_threshold,
                 metadata_filters=metadata_filters,
@@ -273,8 +282,9 @@ class RAGContextProviderImpl(RAGContextProvider):
             # Limit to requested number of chunks
             limited_results = ranked_results[:context_chunks]
 
-            # Cache results
+            # Cache results (store as SearchResult list, convert to strings on retrieval)
             if self.enable_caching:
+                # Store SearchResult objects in cache
                 self._context_cache[cache_key] = limited_results
 
             logger.info(
@@ -282,7 +292,8 @@ class RAGContextProviderImpl(RAGContextProvider):
                 len(limited_results),
                 attribute_type.value,
             )
-            return limited_results
+            # Extract content strings from SearchResult objects to match interface
+            return [result.chunk.content for result in limited_results]
 
         except Exception as e:
             logger.error(

@@ -44,7 +44,7 @@ class ClinicalDataProcessor:
         Returns:
             Validation results dictionary
         """
-        validation_results = {
+        validation_results: dict[str, Any] = {
             "is_valid": True,
             "quality_score": 0.0,
             "missing_fields": [],
@@ -124,16 +124,12 @@ class ClinicalDataProcessor:
         validation_results = self.validate_trial_data(trial_data)
         trial_data.extraction_notes = f"Quality: {validation_results['quality_level']}, Score: {validation_results['quality_score']:.2f}"
 
-        # Add extraction metadata
-        if not hasattr(trial_data, "extraction_metadata"):
-            trial_data.extraction_metadata = {}
-
-        trial_data.extraction_metadata.update(
-            {
-                "validation_results": validation_results,
-                "extraction_timestamp": trial_data.extraction_notes,
-            }
-        )
+        # Note: ClinicalTrialData doesn't have extraction_metadata attribute
+        # Store validation info in extraction_notes instead
+        if trial_data.extraction_notes:
+            trial_data.extraction_notes += f" | Validation: {validation_results['quality_level']}"
+        else:
+            trial_data.extraction_notes = f"Validation: {validation_results['quality_level']}"
 
         return trial_data
 
@@ -280,7 +276,7 @@ class ClinicalExtractionService:
 
             mock_chunk = ChunkWithEmbedding(
                 id=uuid4(),
-                document_id=uuid4(),
+                document_id=str(uuid4()),
                 content=text,
                 chunk_type=ChunkType.FULL_ABSTRACT,
                 metadata={},
@@ -293,7 +289,10 @@ class ClinicalExtractionService:
                 [mock_chunk], enrich_data, validate_data
             )
 
-            return trial_data_list[0] if trial_data_list else ClinicalTrialData()
+            if trial_data_list:
+                return trial_data_list[0]
+            # Return empty ClinicalTrialData with all Optional fields as None
+            return ClinicalTrialData.model_construct()
 
         except Exception as e:
             logger.error(f"Trial data extraction from text failed: {e}")

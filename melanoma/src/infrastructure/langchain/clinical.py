@@ -333,17 +333,19 @@ class ClinicalDataExtractor:
             # Try to parse as JSON
             if response.strip().startswith("{"):
                 data = json.loads(response)
+                # Ensure all fields are present (Pydantic will handle Optional)
                 return ClinicalTrialData(**data)
             else:
-                # Fallback: create basic data structure
-                return ClinicalTrialData(
+                # Fallback: create basic data structure with minimal required fields
+                return ClinicalTrialData.model_construct(
                     extraction_notes=f"Raw response: {response[:200]}...",
                     confidence_score=0.3,
                 )
         except Exception as e:
             logger.warning(f"Failed to parse trial data: {e}")
-            return ClinicalTrialData(
-                extraction_notes=f"Parse error: {str(e)}", confidence_score=0.1
+            return ClinicalTrialData.model_construct(
+                extraction_notes=f"Parse error: {str(e)}",
+                confidence_score=0.1,
             )
 
     def _calculate_confidence_score(self, trial_data: ClinicalTrialData) -> float:

@@ -15,6 +15,7 @@ try:
 except ImportError:
     from langchain_community.vectorstores import Chroma
 from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
 
 from ...domain.constants import VectorStoreDefaults
 from ...domain.interfaces import VectorStoreInterface
@@ -28,11 +29,12 @@ from ...domain.models import (
 logger = logging.getLogger(__name__)
 
 
-class ChromaDBEmbeddingFunction:
+class ChromaDBEmbeddingFunction(Embeddings):
     """ChromaDB-compatible embedding function wrapper.
 
     This class provides a ChromaDB-compatible embedding function interface
     using LangChain's HuggingFaceEmbeddings directly.
+    Implements the Embeddings interface for type compatibility.
     """
 
     def __init__(self, embedding_service=None):
@@ -41,6 +43,7 @@ class ChromaDBEmbeddingFunction:
         Args:
             embedding_service: Optional embedding service (not used, kept for compatibility)
         """
+        super().__init__()
         self._model = None
         logger.info("ChromaDB embedding function wrapper initialized")
 
@@ -346,8 +349,11 @@ class LangChainVectorStore(VectorStoreInterface):
             f"LangChain vector store initialized for collection: {collection_name}"
         )
 
-    async def _ensure_vectorstore_initialized(self) -> None:
+    async def _ensure_vectorstore_initialized(self) -> Chroma:
         """Ensure the vector store is initialized.
+
+        Returns:
+            Initialized Chroma vectorstore instance
 
         Raises:
             RuntimeError: If vector store initialization fails
@@ -366,6 +372,10 @@ class LangChainVectorStore(VectorStoreInterface):
             except Exception as e:
                 logger.error(f"Failed to initialize LangChain vector store: {e}")
                 raise RuntimeError(f"Vector store initialization failed: {e}") from e
+        
+        # Type assertion: after initialization, _vectorstore is guaranteed to be non-None
+        assert self._vectorstore is not None, "Vectorstore should be initialized"
+        return self._vectorstore
 
     async def store_chunks(self, chunks: list[ChunkWithEmbedding]) -> None:
         """Store chunks with their embeddings.
@@ -395,8 +405,10 @@ class LangChainVectorStore(VectorStoreInterface):
                 # Need to generate embedding
                 try:
                     # Generate embedding for the chunk
+                    from ...domain.constants import EmbeddingModel
+                    
                     embedding_config = EmbeddingConfiguration(
-                        model_name="pritamdeka/S-BioBERT-snli-multinli-stsb",
+                        model_name=EmbeddingModel.BIO_BERT_SNLI,
                         batch_size=32,
                         normalize_embeddings=True,
                     )
@@ -451,6 +463,10 @@ class LangChainVectorStore(VectorStoreInterface):
                     # Create ChunkWithEmbedding
                     from ...domain.models import ChunkWithEmbedding
 
+                    # Ensure embedding is not None before using len()
+                    if embedding is None:
+                        raise ValueError("Failed to generate embedding for chunk")
+                    
                     chunk_with_embedding = ChunkWithEmbedding(
                         id=chunk.id,
                         document_id=chunk.document_id,
@@ -498,7 +514,8 @@ class LangChainVectorStore(VectorStoreInterface):
                     ids.append(str(chunk.id))
 
                 # Store batch in ChromaDB
-                self._vectorstore.add_documents(documents, ids=ids)
+                vectorstore = await self._ensure_vectorstore_initialized()
+                vectorstore.add_documents(documents, ids=ids)
                 total_stored += len(batch)
 
                 logger.debug(
@@ -537,8 +554,10 @@ class LangChainVectorStore(VectorStoreInterface):
             # Generate embedding for the query text
             from ...domain.models import EmbeddingConfiguration
 
+            from ...domain.constants import EmbeddingModel
+            
             embedding_config = EmbeddingConfiguration(
-                model_name="pritamdeka/S-BioBERT-snli-multinli-stsb"
+                model_name=EmbeddingModel.BIO_BERT_SNLI
             )
 
             # Generate embedding synchronously using threading to avoid event loop conflicts
@@ -583,7 +602,8 @@ class LangChainVectorStore(VectorStoreInterface):
             )
             logger.info(f"Filter conditions: {filter_conditions}")
 
-            docs_with_scores = self._vectorstore.similarity_search_with_score(
+            vectorstore = await self._ensure_vectorstore_initialized()
+            docs_with_scores = vectorstore.similarity_search_with_score(
                 query.text,
                 k=query.top_k,
                 filter=filter_conditions,
@@ -652,7 +672,8 @@ class LangChainVectorStore(VectorStoreInterface):
             await self._ensure_vectorstore_initialized()
 
             # Get document by ID
-            docs = self._vectorstore.get(ids=[chunk_id])
+            vectorstore = await self._ensure_vectorstore_initialized()
+            docs = vectorstore.get(ids=[chunk_id])
 
             if not docs["ids"]:
                 return None
@@ -686,7 +707,8 @@ class LangChainVectorStore(VectorStoreInterface):
         try:
             await self._ensure_vectorstore_initialized()
 
-            self._vectorstore.delete(ids=chunk_ids)
+            vectorstore = await self._ensure_vectorstore_initialized()
+            vectorstore.delete(ids=chunk_ids)
             logger.info(f"Successfully deleted {len(chunk_ids)} chunks using LangChain")
 
         except Exception as e:
@@ -708,10 +730,10 @@ class LangChainVectorStore(VectorStoreInterface):
             RuntimeError: If deletion operation fails
         """
         try:
-            await self._ensure_vectorstore_initialized()
+            vectorstore = await self._ensure_vectorstore_initialized()
 
             # Get all chunks for this document
-            collection = self._vectorstore._collection
+            collection = vectorstore._collection
             existing_data = collection.get(where={"document_id": document_id})
 
             if not existing_data["ids"]:
@@ -791,7 +813,8 @@ class LangChainVectorStore(VectorStoreInterface):
             await self._ensure_vectorstore_initialized()
 
             # Get collection info
-            collection = self._vectorstore._collection
+            vectorstore = await self._ensure_vectorstore_initialized()
+            collection = vectorstore._collection
             count = collection.count()
 
             return {
@@ -815,8 +838,9 @@ class LangChainVectorStore(VectorStoreInterface):
             await self._ensure_vectorstore_initialized()
 
             # Delete and recreate collection
-            collection_name = self._vectorstore._collection.name
-            self._vectorstore.delete_collection()
+            vectorstore = await self._ensure_vectorstore_initialized()
+            collection_name = vectorstore._collection.name
+            vectorstore.delete_collection()
             self._vectorstore = Chroma(
                 persist_directory=self.persist_directory,
                 collection_name=collection_name,

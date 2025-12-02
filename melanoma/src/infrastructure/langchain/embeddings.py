@@ -383,6 +383,9 @@ class LangChainEmbeddingService(EmbeddingServiceInterface):
         if exception:
             raise exception
 
+        if result is None:
+            raise RuntimeError("Failed to get embedding model")
+        
         return result
 
     def get_service_statistics(self) -> dict[str, any]:

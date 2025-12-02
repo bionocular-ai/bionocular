@@ -7,7 +7,7 @@ performance optimizations for clinical text generation.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 try:
     from langchain_openai import ChatOpenAI
@@ -90,7 +90,7 @@ class OpenAIProvider(LLMProvider):
                 f"timeout={final_kwargs['request_timeout']}s)"
             )
 
-            return ChatOpenAI(model_name=model_name, **final_kwargs)
+            return cast(BaseLLM, ChatOpenAI(model=model_name, **final_kwargs))
         except Exception as e:
             logger.error(f"Failed to create OpenAI LLM: {e}")
             raise RuntimeError(f"OpenAI LLM creation failed: {e}") from e
@@ -121,7 +121,7 @@ class OpenAIProvider(LLMProvider):
                 f"timeout={final_kwargs['request_timeout']}s)"
             )
 
-            return ChatOpenAI(model_name=model_name, **final_kwargs)
+            return cast(BaseLLM, ChatOpenAI(model=model_name, **final_kwargs))
         except Exception as e:
             logger.error(f"Failed to create OpenAI chat model: {e}")
             raise RuntimeError(f"OpenAI chat model creation failed: {e}") from e
@@ -472,8 +472,8 @@ class LangChainLLMService(LLMService):
             Structured data dictionary
         """
         try:
-            # Get LLM instance
-            llm = self.get_llm()
+            # Get LLM instance (use default model)
+            llm = self.get_llm(model_name="gpt-4o")
 
             # Create structured prompt
             structured_prompt = f"""
@@ -489,19 +489,26 @@ class LangChainLLMService(LLMService):
             # Parse JSON response
             import json
 
+            # Handle both string and AIMessage responses
+            response_text: str
+            if isinstance(response, str):
+                response_text = response
+            elif hasattr(response, "content"):
+                response_text = str(response.content)
+            else:
+                response_text = str(response)
+
             try:
-                return json.loads(response.content)
+                return json.loads(response_text)
             except json.JSONDecodeError:
                 # Fallback: try to extract JSON from response
                 import re
 
-                json_match = re.search(r"\{.*\}", response.content, re.DOTALL)
+                json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
                 if json_match:
                     return json.loads(json_match.group())
                 else:
-                    logger.error(
-                        f"Could not parse JSON from response: {response.content}"
-                    )
+                    logger.error(f"Could not parse JSON from response: {response_text}")
                     return {}
 
         except Exception as e:

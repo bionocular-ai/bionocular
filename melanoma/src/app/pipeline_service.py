@@ -413,7 +413,7 @@ class EndToEndPipelineService:
             "configuration": self.configuration.to_dict(),
             "metrics": self.metrics.get_summary(),
             "services": {
-                "chunking": self.chunking_service.get_chunking_statistics({}),
+                "chunking": self.chunking_service.get_chunking_statistics([]),
                 "embedding": self.embedding_service.get_service_statistics(),
                 "vector_store": self.vector_store.get_vectorstore_statistics(),
                 "llm": self.llm_service.get_service_statistics(),

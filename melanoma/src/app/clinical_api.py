@@ -10,7 +10,8 @@ from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ..domain.clinical_trial_models import ClinicalTrialData
+from ..domain.clinical_trial_models import ClinicalTrialData as DomainClinicalTrialData
+from ..infrastructure.langchain import ClinicalTrialData
 from .clinical_extraction_service import ClinicalExtractionService
 from .langchain_factory_service import LangChainServiceFactory, ServiceConfiguration
 from .pipeline_service import EndToEndPipelineService
@@ -157,19 +158,17 @@ async def extract_clinical_data(
         logger.info("Starting clinical data extraction")
 
         # Extract clinical data
-        trial_data_list = await clinical_service.extract_trial_data_from_text(
+        trial_data = await clinical_service.extract_trial_data_from_text(
             text=request.text,
             enrich_data=request.enrich_data,
             validate_data=request.validate_data,
         )
 
-        if not trial_data_list:
+        if not trial_data:
             raise HTTPException(
                 status_code=400,
                 detail="No clinical data could be extracted from the provided text",
             )
-
-        trial_data = trial_data_list[0]
 
         # Get validation results if validation was performed
         validation_results = None
@@ -230,19 +229,19 @@ async def extract_clinical_data_batch(
 
         for i, text in enumerate(request.texts):
             try:
-                trial_data_list = await clinical_service.extract_trial_data_from_text(
+                trial_data = await clinical_service.extract_trial_data_from_text(
                     text=text,
                     enrich_data=request.enrich_data,
                     validate_data=request.validate_data,
                 )
 
-                if trial_data_list:
+                if trial_data:
                     results.append(
                         {
                             "index": i,
                             "success": True,
-                            "trial_data": trial_data_list[0].model_dump(),
-                            "quality_score": trial_data_list[0].confidence_score,
+                            "trial_data": trial_data.model_dump(),
+                            "quality_score": trial_data.confidence_score,
                         }
                     )
                     successful_extractions += 1
@@ -267,13 +266,15 @@ async def extract_clinical_data_batch(
                 failed_extractions += 1
 
         # Calculate statistics
-        statistics = clinical_service.get_extraction_statistics(
-            [
-                ClinicalTrialData(**result["trial_data"])
-                for result in results
-                if result["success"]
-            ]
-        )
+        trial_data_list: list[ClinicalTrialData] = []
+        for result in results:
+            if result.get("success") and "trial_data" in result:
+                trial_data = result["trial_data"]
+                if isinstance(trial_data, dict):
+                    trial_data_list.append(ClinicalTrialData.model_construct(**trial_data))
+                elif isinstance(trial_data, ClinicalTrialData):
+                    trial_data_list.append(trial_data)
+        statistics = clinical_service.get_extraction_statistics(trial_data_list)
 
         response = BatchClinicalExtractionResponse(
             results=results,
@@ -317,9 +318,12 @@ async def validate_clinical_data(
         trial_data = ClinicalTrialData(**request.trial_data)
 
         # Validate data
+        # Convert domain ClinicalTrialData to langchain ClinicalTrialData if needed
         from .clinical_extraction_service import ClinicalDataProcessor
+        from ..infrastructure.langchain import ClinicalTrialData as LangChainClinicalTrialData
 
         processor = ClinicalDataProcessor()
+        # trial_data is already langchain ClinicalTrialData from extract_trial_data_from_text
         validation_results = processor.validate_trial_data(trial_data)
 
         response = ClinicalValidationResponse(
@@ -363,9 +367,10 @@ async def export_clinical_data(
         HTTPException: If export fails
     """
     try:
-        # Convert dicts to ClinicalTrialData objects
+        # Convert dicts to langchain ClinicalTrialData objects
         trial_data_list = [
-            ClinicalTrialData(**data) for data in request.trial_data_list
+            ClinicalTrialData.model_construct(**data) if isinstance(data, dict) else data
+            for data in request.trial_data_list
         ]
 
         # Format data

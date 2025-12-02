@@ -55,11 +55,12 @@ allowed_origins = [
     "http://127.0.0.1:3001",
 ]
 # Add production origins from environment variable
-if os.getenv("ALLOWED_ORIGINS"):
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
+if allowed_origins_env:
     allowed_origins.extend(
         [
             origin.strip()
-            for origin in os.getenv("ALLOWED_ORIGINS").split(",")
+            for origin in allowed_origins_env.split(",")
             if origin.strip()
         ]
     )
@@ -633,7 +634,11 @@ async def get_trials(
 
             # Format the output using utility function
             trials = [
-                extract_trial_data(doc, doc.doc_metadata or {}) for doc in documents
+                extract_trial_data(
+                    doc,
+                    doc.doc_metadata if isinstance(doc.doc_metadata, dict) else {},
+                )
+                for doc in documents
             ]
 
             return TrialsListResponse(
@@ -739,7 +744,11 @@ async def get_trials_by_nct(
 
             # Format the output using utility function
             trials = [
-                extract_trial_data(doc, doc.doc_metadata or {}) for doc in documents
+                extract_trial_data(
+                    doc,
+                    doc.doc_metadata if isinstance(doc.doc_metadata, dict) else {},
+                )
+                for doc in documents
             ]
 
             return TrialsListResponse(
