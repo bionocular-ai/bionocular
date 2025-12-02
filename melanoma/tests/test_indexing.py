@@ -49,7 +49,7 @@ class TestVectorStore:
         return [
             ChunkWithEmbedding(
                 id=uuid4(),
-                document_id=doc_id,
+                document_id=str(doc_id),
                 content="Pembrolizumab shows efficacy in melanoma treatment with improved survival outcomes.",
                 chunk_type=ChunkType.RESULTS,
                 metadata={
@@ -68,7 +68,7 @@ class TestVectorStore:
             ),
             ChunkWithEmbedding(
                 id=uuid4(),
-                document_id=doc_id,
+                document_id=str(doc_id),
                 content="BRAF V600E mutation targeted therapy with dabrafenib and trametinib combination.",
                 chunk_type=ChunkType.BACKGROUND,
                 metadata={
@@ -87,7 +87,7 @@ class TestVectorStore:
             ),
             ChunkWithEmbedding(
                 id=uuid4(),
-                document_id=uuid4(),
+                document_id=str(uuid4()),
                 content="Immunotherapy resistance mechanisms in advanced melanoma patients.",
                 chunk_type=ChunkType.CONCLUSIONS,
                 metadata={
@@ -573,7 +573,7 @@ class TestEmbeddingIndexingIntegration:
             for i, chunk in enumerate(chunks):
                 chunk_with_embedding = ChunkWithEmbedding(
                     id=chunk.id,
-                    document_id=doc_id,
+                    document_id=str(doc_id),
                     content=chunk.content,
                     chunk_type=chunk.chunk_type,
                     metadata={
@@ -652,7 +652,7 @@ class TestEmbeddingIndexingIntegration:
             for i in range(10):
                 chunk = ChunkWithEmbedding(
                     id=uuid4(),
-                    document_id=uuid4(),
+                    document_id=str(uuid4()),
                     content=f"Test chunk {i} about melanoma treatment and immunotherapy research.",
                     chunk_type=ChunkType.BACKGROUND,
                     metadata={"test_chunk": True, "index": i},
@@ -743,7 +743,7 @@ class TestEmbeddingIndexingIntegration:
                 # Create chunk
                 chunk = ChunkWithEmbedding(
                     id=uuid4(),
-                    document_id=doc_id,
+                    document_id=str(doc_id),
                     content=doc_text,
                     chunk_type=ChunkType.BACKGROUND,
                     metadata={"doc_id": str(doc_id), "processed_concurrently": True},
@@ -813,7 +813,7 @@ class TestEmbeddingIndexingIntegration:
             # Test with invalid chunk (missing required fields)
             invalid_chunk = ChunkWithEmbedding(
                 id=uuid4(),
-                document_id=uuid4(),
+                document_id=str(uuid4()),
                 content="Test content",
                 chunk_type=ChunkType.BACKGROUND,
                 metadata={},
