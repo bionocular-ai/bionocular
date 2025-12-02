@@ -511,7 +511,9 @@ class PublicationPostprocessingPatterns:
     RESEARCH_REPORT: Final[str] = r"^#{0,4}\s*\*?\*?research\s+report\*?\*?$"
     SHORT_REPORT: Final[str] = r"^#{0,4}\s*\*?\*?short\s+report\*?\*?$"
     BRIEF_REPORT: Final[str] = r"^#{0,4}\s*\*?\*?brief\s+report\*?\*?$"
-    JOURNAL_CLINICAL_ONCOLOGY: Final[str] = r"^#{0,4}\s*\*?\*?journal\s+of\s+clinical\s+oncology\*?\*?$"
+    JOURNAL_CLINICAL_ONCOLOGY: Final[
+        str
+    ] = r"^#{0,4}\s*\*?\*?journal\s+of\s+clinical\s+oncology\*?\*?$"
     SCIENCEDIRECT: Final[str] = r"^#{0,4}\s*\*?\*?sciencedirect\*?\*?$"
     CROSSMARK: Final[str] = r"^#{0,4}\s*\*?\*?crossmark\*?\*?$"
     JAMA_ONCOLOGY: Final[str] = r"^#{0,4}\s*\*?\*?jama\s+oncology.*\*?\*?$"
@@ -519,4 +521,6 @@ class PublicationPostprocessingPatterns:
     JOURNAL_HOMEPAGE: Final[str] = r"^journal\s+homepage:.*"
     OPEN_ACCESS: Final[str] = r"^#{0,4}\s*\*?\*?open\s+access\*?\*?$"
     ESTABLISHED_IN: Final[str] = r"^established\s+in\s+\d{4}.*"
-    ORIGINAL_ARTICLE_WITH_JOURNAL: Final[str] = r"^#{0,4}\s*\*?\*?original\s+article\s+.*\*?\*?$"
+    ORIGINAL_ARTICLE_WITH_JOURNAL: Final[
+        str
+    ] = r"^#{0,4}\s*\*?\*?original\s+article\s+.*\*?\*?$"

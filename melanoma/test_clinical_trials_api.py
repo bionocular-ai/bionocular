@@ -1,10 +1,7 @@
 """Test script for Clinical Trials API v2 with arm-wise data."""
 
-import asyncio
 import logging
-from pathlib import Path
 
-from src.app.clinical_trials_service import ClinicalTrialsService
 from src.domain.extraction_models import AttributeType
 from src.infrastructure.clinical_trials.factory import create_clinical_trials_service
 
@@ -34,7 +31,7 @@ def test_basic_fetch():
         logger.error("Failed to fetch trial data")
         return False
 
-    logger.info(f"✅ Successfully fetched trial data")
+    logger.info("✅ Successfully fetched trial data")
     logger.info(f"  NCT Number: {trial_data.nct_number}")
     logger.info(f"  Trial Name: {trial_data.trial_name}")
     logger.info(f"  Phase: {trial_data.clinical_trial_phase}")
@@ -67,7 +64,9 @@ def test_arm_parsing():
         logger.info(f"\n  Arm {i + 1}:")
         logger.info(f"    Label: {arm.arm_label}")
         logger.info(f"    Type: {arm.arm_type}")
-        logger.info(f"    Description: {arm.arm_description[:100] if arm.arm_description else 'N/A'}...")
+        logger.info(
+            f"    Description: {arm.arm_description[:100] if arm.arm_description else 'N/A'}..."
+        )
         logger.info(f"    Generic Name: {arm.generic_name}")
         logger.info(f"    Brand Name: {arm.brand_name}")
         logger.info(f"    Dosage: {arm.dosage}")
@@ -143,7 +142,7 @@ def test_study_wide_attributes():
     logger.info("✅ Study-wide attributes (API-sourced):")
     for attr_type, value in attributes.items():
         logger.info(f"  {attr_type.value}: {value}")
-    
+
     # Also check the raw trial data (these are parsed but may not be in api_sourced list)
     trial_data = service.get_trial_data(nct_number)
     if trial_data:
@@ -266,4 +265,3 @@ def main():
 if __name__ == "__main__":
     success = main()
     exit(0 if success else 1)
-

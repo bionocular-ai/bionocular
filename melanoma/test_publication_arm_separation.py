@@ -17,7 +17,6 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-from src.app.enhanced_extraction_service import EnhancedExtractionService
 from src.infrastructure.cost_calculator import CostCalculator
 from src.infrastructure.cost_tracking_llm_service import CostTrackingLLMService
 from src.infrastructure.langchain.llm import LangChainLLMService
@@ -35,44 +34,51 @@ async def test_actual_publication(publication_file: str):
     logger.info("=" * 80)
     logger.info(f"Testing Publication: {publication_file}")
     logger.info("=" * 80)
-    
+
     # Initialize services
     logger.info("Initializing services...")
     llm_service = LangChainLLMService()
     cost_calculator = CostCalculator()
     cost_tracking_llm = CostTrackingLLMService(llm_service, cost_calculator)
     treatment_arm_separator = TreatmentArmSeparator(cost_tracking_llm)
-    
+
     # Import helper functions directly from the service module
     import re
     from typing import Optional
-    
+
     def is_publication(content: str, file_path: Optional[str] = None) -> bool:
         """Detect if content is a full publication (not an abstract)."""
         # Check filename pattern (Publications folder)
-        if file_path and ("Publications" in file_path or "publication" in file_path.lower()):
+        if file_path and (
+            "Publications" in file_path or "publication" in file_path.lower()
+        ):
             return True
-        
+
         # Check for publication structure (main sections with #)
         has_main_sections = (
-            re.search(r"^#\s+(Introduction|Methods|Results|Discussion|Conclusion)", content, re.MULTILINE | re.IGNORECASE) is not None
+            re.search(
+                r"^#\s+(Introduction|Methods|Results|Discussion|Conclusion)",
+                content,
+                re.MULTILINE | re.IGNORECASE,
+            )
+            is not None
         )
-        
+
         # Check for absence of abstract-specific markers
         has_abstract_id = "### Abstract ID:" in content or "Abstract ID:" in content
-        
+
         # Check length (publications are typically much longer)
         is_long = len(content) > 5000
-        
+
         # Publication if it has main sections, no abstract ID, and is long
         return has_main_sections and not has_abstract_id and is_long
-    
+
     def extract_results_section(content: str) -> Optional[str]:
         """Extract the Results section from publication content."""
         lines = content.split("\n")
         results_start = None
         results_end = None
-        
+
         # Keywords that indicate Results section (prioritize more specific patterns first)
         results_keywords = [
             r"^#+\s*\*?\*?Results\*?\*?\s+",  # "## Results Patients" or "# Results Patients" (Results followed by text) - most specific
@@ -80,7 +86,7 @@ async def test_actual_publication(publication_file: str):
             r"^#+\s*\*?\*?Findings\*?\*?",
             r"^#+\s*\*?\*?Clinical\s+activity\*?\*?",  # Some publications use "Clinical activity" as Results
         ]
-        
+
         # Keywords that indicate end of Results section
         end_keywords = [
             r"^#+\s*\*?\*?Discussion\*?\*?",
@@ -88,7 +94,7 @@ async def test_actual_publication(publication_file: str):
             r"^#+\s*\*?\*?References\*?\*?",
             r"^#+\s*\*?\*?Appendix\*?\*?",
         ]
-        
+
         # First pass: find all potential Results section starts
         potential_starts = []
         for i, line in enumerate(lines):
@@ -97,7 +103,7 @@ async def test_actual_publication(publication_file: str):
                 if re.match(pattern, line_stripped, re.IGNORECASE):
                     potential_starts.append((i, pattern_idx, line_stripped))
                     break
-        
+
         # If we found multiple Results sections, prefer the one that comes after Methods
         if potential_starts:
             # Check if any come after a Methods section (prefer main Methods, not abstract Methods)
@@ -114,7 +120,9 @@ async def test_actual_publication(publication_file: str):
             # If no top-level Methods found, look for any Methods section header
             if not methods_found:
                 for i, line in enumerate(lines):
-                    if re.match(r"^#+\s*\*?\*?Methods\*?\*?", line.strip(), re.IGNORECASE):
+                    if re.match(
+                        r"^#+\s*\*?\*?Methods\*?\*?", line.strip(), re.IGNORECASE
+                    ):
                         methods_found = True
                         methods_line = i
                         break
@@ -125,7 +133,7 @@ async def test_actual_publication(publication_file: str):
                         methods_found = True
                         methods_line = i
                         break
-            
+
             # Prefer Results section that comes after Methods, or the most specific one
             if methods_found:
                 # Find the first Results section after Methods
@@ -141,7 +149,7 @@ async def test_actual_publication(publication_file: str):
                 # No Methods section found, use the most specific pattern
                 potential_starts.sort(key=lambda x: (x[1], x[0]))
                 results_start = potential_starts[0][0]
-        
+
         # Second pass: find the end of the Results section
         if results_start is not None:
             for i in range(results_start + 1, len(lines)):
@@ -150,85 +158,89 @@ async def test_actual_publication(publication_file: str):
                     if re.match(pattern, line_stripped, re.IGNORECASE):
                         results_end = i
                         break
-                
+
                 if results_end is not None:
                     break
-        
+
         # If we found start but no end, Results section goes to end of document
         if results_start is not None and results_end is None:
             results_end = len(lines)
-        
+
         if results_start is not None:
             results_content = "\n".join(lines[results_start:results_end])
             return results_content
-        
+
         return None
-    
+
     # Load publication
     pub_path = Path(publication_file)
     if not pub_path.exists():
         logger.error(f"❌ Publication file not found: {publication_file}")
         return False
-    
+
     logger.info(f"Loading publication from: {pub_path}")
     pub_content = pub_path.read_text(encoding="utf-8")
     logger.info(f"Publication length: {len(pub_content)} characters")
-    
+
     # Step 1: Detect if it's a publication
     logger.info("\n" + "-" * 80)
     logger.info("STEP 1: Publication Detection")
     logger.info("-" * 80)
     is_pub = is_publication(pub_content, str(pub_path))
     logger.info(f"✅ Detected as publication: {is_pub}")
-    
+
     if not is_pub:
-        logger.warning("⚠️  File was not detected as publication, but continuing anyway...")
-    
+        logger.warning(
+            "⚠️  File was not detected as publication, but continuing anyway..."
+        )
+
     # Step 2: Extract Results section
     logger.info("\n" + "-" * 80)
     logger.info("STEP 2: Results Section Extraction")
     logger.info("-" * 80)
     results_section = extract_results_section(pub_content)
-    
+
     if results_section:
         logger.info(f"✅ Results section extracted: {len(results_section)} characters")
-        logger.info(f"   Results section is {len(results_section)/len(pub_content)*100:.1f}% of full publication")
-        
+        logger.info(
+            f"   Results section is {len(results_section)/len(pub_content)*100:.1f}% of full publication"
+        )
+
         # Show preview of Results section
         preview = results_section[:500].replace("\n", " ")
         logger.info(f"   Preview: {preview}...")
     else:
         logger.warning("⚠️  Results section not found, will use full publication text")
         results_section = pub_content
-    
+
     # Step 3: Separate treatment arms from Results section
     logger.info("\n" + "-" * 80)
     logger.info("STEP 3: Treatment Arm Separation")
     logger.info("-" * 80)
     logger.info("Separating treatment arms from Results section...")
-    
+
     abstract_id = pub_path.stem
     separation_result = await treatment_arm_separator.separate_treatment_arms(
         results_section, abstract_id
     )
-    
+
     # Display results
-    logger.info(f"\n✅ Arm separation completed!")
+    logger.info("\n✅ Arm separation completed!")
     logger.info(f"   Processing time: {separation_result.processing_time_ms}ms")
     logger.info(f"   Confidence: {separation_result.separation_confidence:.2f}")
     logger.info(f"   Arms identified: {len(separation_result.treatment_arms)}")
-    
+
     if separation_result.errors:
         logger.warning(f"   Errors: {separation_result.errors}")
-    
+
     if separation_result.warnings:
         logger.warning(f"   Warnings: {separation_result.warnings}")
-    
+
     # Display each arm
     logger.info("\n" + "-" * 80)
     logger.info("TREATMENT ARMS IDENTIFIED:")
     logger.info("-" * 80)
-    
+
     for i, arm in enumerate(separation_result.treatment_arms, 1):
         logger.info(f"\nArm {i}:")
         logger.info(f"  ID: {arm.arm_id}")
@@ -250,11 +262,11 @@ async def test_actual_publication(publication_file: str):
         if arm.source_text:
             source_preview = arm.source_text[:200].replace("\n", " ")
             logger.info(f"  Source Text: {source_preview}...")
-    
+
     logger.info("\n" + "=" * 80)
     logger.info("TEST COMPLETED")
     logger.info("=" * 80)
-    
+
     return len(separation_result.treatment_arms) > 0
 
 
@@ -262,33 +274,37 @@ async def main():
     """Run test with actual publication."""
     logger.info("Starting Publication Arm Separation Test")
     logger.info("=" * 80)
-    
+
     # Check for API key
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         logger.warning("⚠️  OPENAI_API_KEY not found in environment variables")
-        logger.info("   Please set it in .env file or export OPENAI_API_KEY environment variable")
+        logger.info(
+            "   Please set it in .env file or export OPENAI_API_KEY environment variable"
+        )
         logger.info("   The test will still run but LLM calls will fail")
     else:
         logger.info("✅ OPENAI_API_KEY found")
-    
+
     # Default publication file
     default_pub = "data/postprocessed/Publications/Batch-III_32.md"
-    
+
     # Allow command line argument for different publication
     if len(sys.argv) > 1:
         publication_file = sys.argv[1]
     else:
         publication_file = default_pub
-    
+
     try:
         success = await test_actual_publication(publication_file)
-        
+
         if success:
-            logger.info("\n✅ Test passed! Arms were successfully separated from Results section.")
+            logger.info(
+                "\n✅ Test passed! Arms were successfully separated from Results section."
+            )
         else:
             logger.warning("\n⚠️  Test completed but no arms were identified.")
-        
+
     except Exception as e:
         logger.error(f"\n❌ Test failed: {e}", exc_info=True)
         raise

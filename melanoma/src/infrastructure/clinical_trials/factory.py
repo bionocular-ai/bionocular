@@ -40,4 +40,3 @@ def create_clinical_trials_service(
     return ClinicalTrialsService(
         api_client=api_client, repository=repository, parser=parser
     )
-

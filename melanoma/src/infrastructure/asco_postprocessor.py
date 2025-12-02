@@ -363,7 +363,7 @@ class ASCOPostprocessor(PostprocessorInterface):
                     if re.match(pattern1, lower_line):
                         marker_positions.append(0)
                         continue
-                    
+
                     # Pattern 2: Marker in bold format anywhere in line
                     # Example: "Some text **Results:** more text"
                     pattern2 = r"\*\*" + re.escape(marker) + r"\*\*"
@@ -371,16 +371,19 @@ class ASCOPostprocessor(PostprocessorInterface):
                     if match2:
                         marker_positions.append(match2.start())
                         continue
-                    
+
                     # Pattern 3: Marker at start of line after whitespace (but not in middle of sentence)
                     # Only match if line starts with the marker (after trimming)
                     # This handles cases where there might be leading spaces
                     if lower_line.strip().startswith(marker):
                         # Make sure it's not part of a longer word
                         stripped = lower_line.strip()
-                        if len(stripped) == len(marker) or not stripped[len(marker):len(marker)+1].isalnum():
+                        if (
+                            len(stripped) == len(marker)
+                            or not stripped[len(marker) : len(marker) + 1].isalnum()
+                        ):
                             marker_positions.append(lower_line.find(marker.strip()))
-                
+
                 if marker_positions:
                     header_ended = True
                     start_idx = min(pos for pos in marker_positions if pos != -1)
@@ -476,7 +479,7 @@ class ASCOPostprocessor(PostprocessorInterface):
             # - Not author lines (contain semicolons separating authors, institutional names)
             # - Long enough to be a title (at least 30 chars)
             # - Appear early in the header (first few non-session lines)
-            
+
             def looks_like_author_line(line: str) -> bool:
                 """Check if a line looks like an author/affiliation line."""
                 line_lower = line.lower()
@@ -488,15 +491,24 @@ class ASCOPostprocessor(PostprocessorInterface):
                     # Semicolon is a strong indicator of author/affiliation line
                     return True
                 # Check for multiple institutional keywords (more likely author line)
-                institutional_keywords = ["university", "hospital", "center", "centre", "institute", "department"]
-                keyword_count = sum(1 for kw in institutional_keywords if kw in line_lower)
+                institutional_keywords = [
+                    "university",
+                    "hospital",
+                    "center",
+                    "centre",
+                    "institute",
+                    "department",
+                ]
+                keyword_count = sum(
+                    1 for kw in institutional_keywords if kw in line_lower
+                )
                 if keyword_count >= 2:
                     return True
                 # Check for patterns like "Name, Name; Institution" (author list)
                 if re.search(r"[A-Z][a-z]+\s+[A-Z][a-z]+.*;", line):
                     return True
                 return False
-            
+
             for hdr_line in header_lines_filtered[:10]:  # Check first 10 lines
                 line_stripped = hdr_line.strip()
                 # Skip if it's a markdown header (already checked)
@@ -512,7 +524,9 @@ class ASCOPostprocessor(PostprocessorInterface):
                 if looks_like_author_line(line_stripped):
                     continue
                 # Skip if it's just an abstract ID
-                if re.match(r"^(?:(?:TPS|LBA)\s*)?(?:100\d{2}|9[56]\d{2})$", line_stripped):
+                if re.match(
+                    r"^(?:(?:TPS|LBA)\s*)?(?:100\d{2}|9[56]\d{2})$", line_stripped
+                ):
                     continue
                 # This looks like a title
                 title = line_stripped
@@ -594,7 +608,7 @@ class ASCOPostprocessor(PostprocessorInterface):
         for i in range(1, len(parts), 2):
             key = parts[i].lower()
             content = parts[i + 1].strip()
-            
+
             # Normalize "re-sults:" to "results:" for consistency
             if key == "re-sults:":
                 key = "results:"

@@ -1,6 +1,6 @@
 """Domain models for the ingestion system."""
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 from uuid import UUID, uuid4
@@ -35,7 +35,7 @@ class Document(BaseModel):
     type: DocumentType = Field(
         ..., description="Type of document (abstract or publication)"
     )
-    upload_date: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    upload_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     hash: str = Field(
         ..., description="SHA-256 hash of the PDF content for duplicate detection"
     )
@@ -205,7 +205,7 @@ class Chunk(BaseModel):
     token_count: Optional[int] = Field(
         None, description="Number of tokens in this chunk"
     )
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ChunkingConfiguration(BaseModel):

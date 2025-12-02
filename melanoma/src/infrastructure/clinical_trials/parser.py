@@ -73,9 +73,13 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         study_start_date = start_date_struct.get("date") if start_date_struct else None
 
         # Primary completion date
-        primary_completion_date_struct = status_module.get("primaryCompletionDateStruct", {})
+        primary_completion_date_struct = status_module.get(
+            "primaryCompletionDateStruct", {}
+        )
         primary_completion_date = (
-            primary_completion_date_struct.get("date") if primary_completion_date_struct else None
+            primary_completion_date_struct.get("date")
+            if primary_completion_date_struct
+            else None
         )
 
         completion_date_struct = status_module.get("completionDateStruct", {})
@@ -111,9 +115,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
 
         # Locations - parse from locations list
         locations_list = locations_module.get("locations", [])
-        countries = {
-            loc.get("country") for loc in locations_list if loc.get("country")
-        }
+        countries = {loc.get("country") for loc in locations_list if loc.get("country")}
         trial_locations = ", ".join(sorted(countries)) if countries else None
 
         # Determine trial location flags
@@ -141,7 +143,9 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         all_intervention_names = []
         for arm in treatment_arms:
             all_intervention_names.extend(arm.intervention_names)
-        drug_info = ", ".join(set(all_intervention_names)) if all_intervention_names else None
+        drug_info = (
+            ", ".join(set(all_intervention_names)) if all_intervention_names else None
+        )
 
         # Extract legacy fields from first arm for backward compatibility
         first_arm = treatment_arms[0] if treatment_arms else None
@@ -157,7 +161,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         eligibility_data = self._parse_eligibility_criteria_comprehensive(
             eligibility_criteria
         )
-        
+
         # Extract biomarker criteria text
         biomarkers_inclusion_criteria = self._extract_biomarker_inclusion_criteria(
             eligibility_criteria
@@ -206,7 +210,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             anti_pd1_failure=eligibility_data.get("anti_pd1_failure"),
             braf_mutation=eligibility_data.get("braf_mutation"),
             nras_mutation=eligibility_data.get("nras_mutation"),
-            mutation_status=eligibility_data.get("mutation_status"),
+            mutation_status=eligibility_data.get("mutation_status"),  # type: ignore[arg-type]
             biomarker_inclusion=biomarker_inclusion,
             biomarkers_inclusion_criteria=biomarkers_inclusion_criteria,
             biomarkers_exclusion_criteria=biomarkers_exclusion_criteria,
@@ -260,10 +264,10 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         combined_conditions = ", ".join(
             [c for c in conditions_list if isinstance(c, str)]
         )
-        
+
         # Use the centralized normalization utility
         normalized_cancer_type = get_primary_cancer_type(combined_conditions)
-        
+
         # If normalization returned "Review Required", try to extract from individual conditions
         if normalized_cancer_type == "Review Required":
             # Try normalizing each condition individually
@@ -273,7 +277,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
                     if normalized != "Review Required":
                         normalized_cancer_type = normalized
                         break
-        
+
         # Set to None if still "Review Required" (so it's not stored as a value)
         if normalized_cancer_type == "Review Required":
             normalized_cancer_type = None
@@ -283,7 +287,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         for condition in conditions_list:
             if isinstance(condition, str):
                 condition_lower = condition.lower()
-                
+
                 # Check for biomarker inclusion keywords
                 if biomarker_inclusion is None:
                     biomarker_keywords = [
@@ -354,7 +358,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             # Combine all intervention descriptions for this arm
             # Also include arm description as it often contains dosage info
             intervention_text_list = [arm_description] if arm_description else []
-            
+
             for name in arm_intervention_names:
                 # Try exact match first
                 intervention_obj = intervention_map.get(name)
@@ -362,16 +366,20 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
                     # Try without prefix
                     base_name = name.split(": ", 1)[1]
                     intervention_obj = intervention_map.get(base_name)
-                
+
                 if intervention_obj:
                     # Add both name and description for parsing
                     intervention_text_list.append(intervention_obj.get("name", ""))
-                    intervention_text_list.append(intervention_obj.get("description", ""))
+                    intervention_text_list.append(
+                        intervention_obj.get("description", "")
+                    )
 
             full_intervention_text = " ".join(intervention_text_list)
 
             # Parse intervention details for this arm
-            intervention_details = self._parse_intervention_details(full_intervention_text)
+            intervention_details = self._parse_intervention_details(
+                full_intervention_text
+            )
 
             # Determine line of treatment for this arm
             # Combine eligibility criteria and arm description for context
@@ -508,7 +516,10 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         # Brand name extraction
         brand_name = None
         brand_patterns = [
-            re.compile(r"\b(Keytruda|Pembrolizumab|Opdivo|Nivolumab|Yervoy|Ipilimumab)\b", re.IGNORECASE),
+            re.compile(
+                r"\b(Keytruda|Pembrolizumab|Opdivo|Nivolumab|Yervoy|Ipilimumab)\b",
+                re.IGNORECASE,
+            ),
             re.compile(r"\b(Tafinlar|Dabrafenib|Mekinist|Trametinib)\b", re.IGNORECASE),
             re.compile(r"\b(Zelboraf|Vemurafenib)\b", re.IGNORECASE),
         ]
@@ -596,13 +607,26 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             "her2": "HER2",
         }
         # Check for drug-specific targets
-        if "pembrolizumab" in text_lower or "nivolumab" in text_lower or "keytruda" in text_lower or "opdivo" in text_lower:
+        if (
+            "pembrolizumab" in text_lower
+            or "nivolumab" in text_lower
+            or "keytruda" in text_lower
+            or "opdivo" in text_lower
+        ):
             target_protein = "PD-1"
         elif "ipilimumab" in text_lower or "yervoy" in text_lower:
             target_protein = "CTLA-4"
-        elif "dabrafenib" in text_lower or "vemurafenib" in text_lower or "encorafenib" in text_lower:
+        elif (
+            "dabrafenib" in text_lower
+            or "vemurafenib" in text_lower
+            or "encorafenib" in text_lower
+        ):
             target_protein = "BRAF"
-        elif "trametinib" in text_lower or "cobimetinib" in text_lower or "binimetinib" in text_lower:
+        elif (
+            "trametinib" in text_lower
+            or "cobimetinib" in text_lower
+            or "binimetinib" in text_lower
+        ):
             target_protein = "MEK"
         else:
             # Fallback to keyword matching
@@ -615,13 +639,21 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         type_of_therapy = None
         # Determine from mechanism of action if available
         if mechanism_of_action:
-            if "checkpoint" in mechanism_of_action.lower() or "pd-1" in mechanism_of_action.lower() or "ctla-4" in mechanism_of_action.lower():
+            if (
+                "checkpoint" in mechanism_of_action.lower()
+                or "pd-1" in mechanism_of_action.lower()
+                or "ctla-4" in mechanism_of_action.lower()
+            ):
                 type_of_therapy = "Immunotherapy"
-            elif "braf" in mechanism_of_action.lower() or "mek" in mechanism_of_action.lower() or "targeted" in mechanism_of_action.lower():
+            elif (
+                "braf" in mechanism_of_action.lower()
+                or "mek" in mechanism_of_action.lower()
+                or "targeted" in mechanism_of_action.lower()
+            ):
                 type_of_therapy = "Targeted therapy"
             elif "immunotherapy" in mechanism_of_action.lower():
                 type_of_therapy = "Immunotherapy"
-        
+
         # Fallback to keyword matching
         if not type_of_therapy:
             therapy_keywords = {
@@ -680,7 +712,11 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             chemo_naive = True
         elif any(
             phrase in eligibility_lower
-            for phrase in ["prior chemotherapy", "chemotherapy experienced", "previously treated"]
+            for phrase in [
+                "prior chemotherapy",
+                "chemotherapy experienced",
+                "previously treated",
+            ]
         ):
             chemo_naive = False
 
@@ -787,7 +823,12 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             "braf v600e",
             "braf v600k",
         ]
-        braf_negative = ["braf wild-type", "braf negative", "no braf mutation", "braf wt"]
+        braf_negative = [
+            "braf wild-type",
+            "braf negative",
+            "no braf mutation",
+            "braf wt",
+        ]
         if any(phrase in eligibility_lower for phrase in braf_positive):
             braf_mutation = True
         elif any(phrase in eligibility_lower for phrase in braf_negative):
@@ -802,14 +843,19 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             "nras-mutant",
             "nras mutant",
         ]
-        nras_negative = ["nras wild-type", "nras negative", "no nras mutation", "nras wt"]
+        nras_negative = [
+            "nras wild-type",
+            "nras negative",
+            "no nras mutation",
+            "nras wt",
+        ]
         if any(phrase in eligibility_lower for phrase in nras_positive):
             nras_mutation = True
         elif any(phrase in eligibility_lower for phrase in nras_negative):
             nras_mutation = False
 
         # Mutation status (combined)
-        mutation_status = None
+        mutation_status: Optional[str] = None
         if braf_mutation is True:
             mutation_status = "BRAF-mutant"
         elif nras_mutation is True:
@@ -826,36 +872,36 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             "anti_pd1_failure": anti_pd1_failure,
             "braf_mutation": braf_mutation,
             "nras_mutation": nras_mutation,
-            "mutation_status": mutation_status,
+            "mutation_status": mutation_status,  # type: ignore[dict-item]
         }
 
     def _determine_line_of_treatment(
         self, eligibility_text: str, arm_description: Optional[str] = None
     ) -> Optional[str]:
         """Determine line of treatment for a specific arm.
-        
+
         Returns one of: "Neoadjuvant", "First Line", "2nd Line", "3rd Line+"
-        
+
         Logic:
         - Neoadjuvant: treatment before surgery
         - First Line: previously untreated, treatment naive
         - 2nd Line: first treatment failed (progressed on, refractory to first treatment)
         - 3rd Line+: second treatment failed (progressed on, refractory to second treatment)
-        
+
         Args:
             eligibility_text: Full eligibility criteria text
             arm_description: Optional arm description for additional context
-            
+
         Returns:
             Line of treatment classification or None
         """
         if not eligibility_text:
             return None
-        
+
         text_to_analyze = eligibility_text.lower()
         if arm_description:
             text_to_analyze += " " + arm_description.lower()
-        
+
         # Check for Neoadjuvant (treatment before surgery)
         neoadjuvant_keywords = [
             "neoadjuvant",
@@ -865,15 +911,19 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             "prior to surgery",
         ]
         # Check if it mentions surgery before treatment (neoadjuvant context)
-        if "adjuvant" not in text_to_analyze and "before" in text_to_analyze and "surgery" in text_to_analyze:
+        if (
+            "adjuvant" not in text_to_analyze
+            and "before" in text_to_analyze
+            and "surgery" in text_to_analyze
+        ):
             # Additional context check for neoadjuvant
             if "treatment" in text_to_analyze or "therapy" in text_to_analyze:
                 return "Neoadjuvant"
-        
+
         # Direct neoadjuvant keywords
         if any(keyword in text_to_analyze for keyword in neoadjuvant_keywords):
             return "Neoadjuvant"
-        
+
         # Check for 3rd Line+ (second treatment failed)
         # Keywords indicating failure of second-line treatment
         third_line_plus_keywords = [
@@ -892,7 +942,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         ]
         if any(keyword in text_to_analyze for keyword in third_line_plus_keywords):
             return "3rd Line+"
-        
+
         # Check for First Line FIRST (previously untreated, treatment naive)
         # This must be checked before 2nd line to avoid false positives
         first_line_keywords = [
@@ -912,7 +962,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         ]
         if any(keyword in text_to_analyze for keyword in first_line_keywords):
             return "First Line"
-        
+
         # Check for 2nd Line (first treatment failed)
         # Keywords indicating failure of first-line treatment
         second_line_keywords = [
@@ -930,12 +980,14 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             "anti-pd1 failure",
             "ipilimumab failure",
         ]
-        
-        has_second_line_indicator = any(keyword in text_to_analyze for keyword in second_line_keywords)
-        
+
+        has_second_line_indicator = any(
+            keyword in text_to_analyze for keyword in second_line_keywords
+        )
+
         if has_second_line_indicator:
             return "2nd Line"
-        
+
         return None
 
     def _extract_biomarker_inclusion_criteria(
@@ -1017,7 +1069,15 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
                 # Check if it mentions biomarkers
                 if any(
                     word in sentence_lower
-                    for word in ["biomarker", "pd-l1", "pdl1", "pd1", "braf", "nras", "mutation"]
+                    for word in [
+                        "biomarker",
+                        "pd-l1",
+                        "pdl1",
+                        "pd1",
+                        "braf",
+                        "nras",
+                        "mutation",
+                    ]
                 ):
                     exclusion_sentences.append(sentence.strip())
 
@@ -1025,4 +1085,3 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             return " ".join(exclusion_sentences[:3])  # Limit to first 3 sentences
 
         return None
-

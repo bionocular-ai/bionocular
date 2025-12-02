@@ -255,11 +255,11 @@ class PublicationPostprocessor:
             Content with CSV-dump tables converted to Markdown
         """
         lines = content.split("\n")
-        repaired_lines = []
-        csv_block = []
+        repaired_lines: list[str] = []
+        csv_block: list[str] = []
         in_csv_block = False
 
-        for i, line in enumerate(lines):
+        for _i, line in enumerate(lines):
             line_stripped = line.strip()
 
             # Detect CSV-dump pattern: lines starting with quoted strings and commas
@@ -375,8 +375,12 @@ class PublicationPostprocessor:
                     next_line = lines[i + 1].strip()
                     if "|" in next_line:
                         # Check if first row has empty cells except first column
-                        cells = [cell.strip() for cell in line_stripped.split("|")[1:-1]]
-                        next_cells = [cell.strip() for cell in next_line.split("|")[1:-1]]
+                        cells = [
+                            cell.strip() for cell in line_stripped.split("|")[1:-1]
+                        ]
+                        next_cells = [
+                            cell.strip() for cell in next_line.split("|")[1:-1]
+                        ]
 
                         # If first row is mostly empty except first cell, merge with next
                         if (
@@ -387,9 +391,9 @@ class PublicationPostprocessor:
                             and next_cells[0]  # Next row has content
                         ):
                             # Merge: combine first cell from row 1 with rest from row 2
-                            merged_cells = [cells[0] + " " + next_cells[0]] + next_cells[
-                                1:
-                            ]
+                            merged_cells = [
+                                cells[0] + " " + next_cells[0]
+                            ] + next_cells[1:]
                             merged_row = "| " + " | ".join(merged_cells) + " |"
                             repaired_lines.append(merged_row)
                             i += 2  # Skip both original rows
@@ -410,9 +414,9 @@ class PublicationPostprocessor:
             Content with multi-page tables merged
         """
         lines = content.split("\n")
-        merged_lines = []
+        merged_lines: list[str] = []
         i = 0
-        current_table = []
+        current_table: list[str] = []
         in_table = False
 
         while i < len(lines):
@@ -586,4 +590,3 @@ class PublicationPostprocessor:
         content = content.strip()
 
         return content
-

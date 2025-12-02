@@ -68,7 +68,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 # Create index on updated_at for efficient expiration checks
                 cursor.execute(
                     """
-                    CREATE INDEX IF NOT EXISTS idx_updated_at 
+                    CREATE INDEX IF NOT EXISTS idx_updated_at
                     ON clinical_trials_cache(updated_at)
                     """
                 )
@@ -239,4 +239,3 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         except sqlite3.Error as e:
             logger.error(f"Error getting cache stats: {e}")
             return {"total": 0, "expired": 0, "valid": 0}
-

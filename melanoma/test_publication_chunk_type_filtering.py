@@ -34,10 +34,20 @@ def test_chunk_type_classification():
         ("clinical activity", "", "RESULTS", "Main Clinical Activity section"),
         ("results", "efficacy", "RESULTS", "Results > Efficacy subsection"),
         ("results", "safety", "RESULTS", "Results > Safety subsection"),
-        ("results", "clinical activity", "RESULTS", "Results > Clinical Activity subsection"),
+        (
+            "results",
+            "clinical activity",
+            "RESULTS",
+            "Results > Clinical Activity subsection",
+        ),
         ("background", "", "BACKGROUND", "Background section (should NOT be Results)"),
         ("methods", "", "METHODS", "Methods section (should NOT be Results)"),
-        ("conclusions", "", "CONCLUSIONS", "Conclusions section (should NOT be Results)"),
+        (
+            "conclusions",
+            "",
+            "CONCLUSIONS",
+            "Conclusions section (should NOT be Results)",
+        ),
     ]
 
     all_passed = True
@@ -47,13 +57,17 @@ def test_chunk_type_classification():
             "Subsection": subsection,
         }
         result = classifier.classify_chunk_type("", headers)
-        result_type = result.value.upper() if hasattr(result, "value") else str(result).upper()
+        result_type = (
+            result.value.upper() if hasattr(result, "value") else str(result).upper()
+        )
         expected_upper = expected_type.upper()
 
         if result_type == expected_upper:
             logger.info(f"✅ {description}: {result_type}")
         else:
-            logger.error(f"❌ {description}: Expected {expected_upper}, got {result_type}")
+            logger.error(
+                f"❌ {description}: Expected {expected_upper}, got {result_type}"
+            )
             all_passed = False
 
     return all_passed
@@ -65,8 +79,8 @@ def test_results_section_detection():
     logger.info("TEST 2: Results Section Detection")
     logger.info("=" * 80)
 
-    from src.infrastructure.langchain.chunking import LangChainChunkingService
     from src.domain.models import ChunkingConfiguration
+    from src.infrastructure.langchain.chunking import LangChainChunkingService
 
     config = ChunkingConfiguration(
         chunk_size=800,
@@ -213,8 +227,8 @@ async def test_actual_publication_chunking():
     logger.info("TEST 5: Actual Publication Chunking")
     logger.info("=" * 80)
 
-    from src.infrastructure.langchain.chunking import LangChainChunkingService
     from src.domain.models import ChunkingConfiguration
+    from src.infrastructure.langchain.chunking import LangChainChunkingService
 
     publication_file = Path("data/postprocessed/Publications/Batch-II_11.md")
     if not publication_file.exists():
@@ -280,7 +294,7 @@ async def test_actual_publication_chunking():
     if chunk_type_counts.get("table", 0) > 0:
         logger.info(f"✅ Found {chunk_type_counts.get('table', 0)} Table chunks")
     else:
-        logger.warning(f"⚠️  No Table chunks found")
+        logger.warning("⚠️  No Table chunks found")
 
     return True
 
@@ -342,4 +356,3 @@ async def main():
 if __name__ == "__main__":
     success = asyncio.run(main())
     sys.exit(0 if success else 1)
-

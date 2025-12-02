@@ -43,7 +43,9 @@ class AttributeType(str, Enum):
     BRAF_MUTATION = "braf_mutation"
     NRAS_MUTATION = "nras_mutation"
     BIOSIMILAR = "biosimilar"
-    LINE_OF_TREATMENT = "line_of_treatment"  # e.g., "first-line", "second-line", "previously untreated"
+    LINE_OF_TREATMENT = (
+        "line_of_treatment"  # e.g., "first-line", "second-line", "previously untreated"
+    )
 
     # Endpoints and Biomarkers
     PRIMARY_ENDPOINT = "primary_endpoint"
@@ -54,7 +56,9 @@ class AttributeType(str, Enum):
 
     # Trial Timeline
     STUDY_START_DATE = "study_start_date"
-    PRIMARY_COMPLETION_DATE = "primary_completion_date"  # Primary completion date (estimated or actual)
+    PRIMARY_COMPLETION_DATE = (
+        "primary_completion_date"  # Primary completion date (estimated or actual)
+    )
     STUDY_COMPLETION_DATE = "study_completion_date"
     FIRST_RESULTS = "first_results"
 
@@ -184,7 +188,9 @@ class AttributeType(str, Enum):
     GRADE_3_PLUS_AE_DIARRHEA = "grade_3_plus_ae_diarrhea"
     GRADE_3_PLUS_AE_COLITIS = "grade_3_plus_ae_colitis"
     GRADE_3_PLUS_AE_HYPERGLYCEMIA = "grade_3_plus_ae_hyperglycemia"
-    GRADE_3_PLUS_AE_NEUTROPHIL_COUNT_DECREASED = "grade_3_plus_ae_neutrophil_count_decreased"
+    GRADE_3_PLUS_AE_NEUTROPHIL_COUNT_DECREASED = (
+        "grade_3_plus_ae_neutrophil_count_decreased"
+    )
     GRADE_3_PLUS_AE_DYSPNEA = "grade_3_plus_ae_dyspnea"
     GRADE_3_PLUS_AE_PYREXIA = "grade_3_plus_ae_pyrexia"
     GRADE_3_PLUS_AE_BLEEDING = "grade_3_plus_ae_bleeding"
@@ -195,7 +201,9 @@ class AttributeType(str, Enum):
     GRADE_3_PLUS_AE_HYPOPHYSITIS = "grade_3_plus_ae_hypophysitis"
     GRADE_3_PLUS_AE_HEPATITIS = "grade_3_plus_ae_hepatitis"
     GRADE_3_PLUS_AE_PNEUMONITIS = "grade_3_plus_ae_pneumonitis"
-    GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE = "grade_3_plus_ae_alanine_aminotransferase"
+    GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE = (
+        "grade_3_plus_ae_alanine_aminotransferase"
+    )
     GRADE_3_PLUS_AE_WBC_DECREASED = "grade_3_plus_ae_wbc_decreased"
     GRADE_3_PLUS_AE_IMMUNE_RELATED = "grade_3_plus_ae_immune_related"
 
@@ -210,7 +218,9 @@ class AttributeType(str, Enum):
     GRADE_3_PLUS_TRAE_DIARRHEA = "grade_3_plus_trae_diarrhea"
     GRADE_3_PLUS_TRAE_COLITIS = "grade_3_plus_trae_colitis"
     GRADE_3_PLUS_TRAE_HYPERGLYCEMIA = "grade_3_plus_trae_hyperglycemia"
-    GRADE_3_PLUS_TRAE_NEUTROPHIL_COUNT_DECREASED = "grade_3_plus_trae_neutrophil_count_decreased"
+    GRADE_3_PLUS_TRAE_NEUTROPHIL_COUNT_DECREASED = (
+        "grade_3_plus_trae_neutrophil_count_decreased"
+    )
     GRADE_3_PLUS_TRAE_DYSPNEA = "grade_3_plus_trae_dyspnea"
     GRADE_3_PLUS_TRAE_PYREXIA = "grade_3_plus_trae_pyrexia"
     GRADE_3_PLUS_TRAE_BLEEDING = "grade_3_plus_trae_bleeding"
@@ -221,7 +231,9 @@ class AttributeType(str, Enum):
     GRADE_3_PLUS_TRAE_HYPOPHYSITIS = "grade_3_plus_trae_hypophysitis"
     GRADE_3_PLUS_TRAE_HEPATITIS = "grade_3_plus_trae_hepatitis"
     GRADE_3_PLUS_TRAE_PNEUMONITIS = "grade_3_plus_trae_pneumonitis"
-    GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE = "grade_3_plus_trae_alanine_aminotransferase"
+    GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE = (
+        "grade_3_plus_trae_alanine_aminotransferase"
+    )
     GRADE_3_PLUS_TRAE_WBC_DECREASED = "grade_3_plus_trae_wbc_decreased"
 
     # Safety - Grade 3+ TEAE Specific Adverse Events
@@ -235,7 +247,9 @@ class AttributeType(str, Enum):
     GRADE_3_PLUS_TEAE_DIARRHEA = "grade_3_plus_teae_diarrhea"
     GRADE_3_PLUS_TEAE_COLITIS = "grade_3_plus_teae_colitis"
     GRADE_3_PLUS_TEAE_HYPERGLYCEMIA = "grade_3_plus_teae_hyperglycemia"
-    GRADE_3_PLUS_TEAE_NEUTROPHIL_COUNT_DECREASED = "grade_3_plus_teae_neutrophil_count_decreased"
+    GRADE_3_PLUS_TEAE_NEUTROPHIL_COUNT_DECREASED = (
+        "grade_3_plus_teae_neutrophil_count_decreased"
+    )
     GRADE_3_PLUS_TEAE_DYSPNEA = "grade_3_plus_teae_dyspnea"
     GRADE_3_PLUS_TEAE_PYREXIA = "grade_3_plus_teae_pyrexia"
     GRADE_3_PLUS_TEAE_BLEEDING = "grade_3_plus_teae_bleeding"
@@ -246,7 +260,9 @@ class AttributeType(str, Enum):
     GRADE_3_PLUS_TEAE_HYPOPHYSITIS = "grade_3_plus_teae_hypophysitis"
     GRADE_3_PLUS_TEAE_HEPATITIS = "grade_3_plus_teae_hepatitis"
     GRADE_3_PLUS_TEAE_PNEUMONITIS = "grade_3_plus_teae_pneumonitis"
-    GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE = "grade_3_plus_teae_alanine_aminotransferase"
+    GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE = (
+        "grade_3_plus_teae_alanine_aminotransferase"
+    )
     GRADE_3_PLUS_TEAE_WBC_DECREASED = "grade_3_plus_teae_wbc_decreased"
 
     # Metadata (for internal use)
@@ -1909,7 +1925,9 @@ class AttributeConfigurationFactory:
     def get_arm_level_attributes() -> list[AttributeType]:
         """Get attributes that are extracted at the treatment arm level."""
         abstract_level = AttributeConfigurationFactory.get_abstract_level_attributes()
-        publication_level = AttributeConfigurationFactory.get_publication_level_attributes()
+        publication_level = (
+            AttributeConfigurationFactory.get_publication_level_attributes()
+        )
         return [
             attr
             for attr in AttributeType

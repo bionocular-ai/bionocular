@@ -45,33 +45,31 @@ logger = logging.getLogger(__name__)
 
 async def test_abstract_attributes():
     """Test extraction of abstract-level attributes."""
-    
+
     logger.info("Initializing services...")
-    
+
     # Database setup
     db_setup = DatabaseSetup()
     db_setup.setup_database()
-    
+
     # LLM service with cost tracking
     base_llm_service = LangChainLLMService()
     preferred_model_str = os.getenv("EXTRACTION_MODEL", "gpt-4o")
     preferred_model = (
-        ModelType.GPT_4O
-        if preferred_model_str == "gpt-4o"
-        else ModelType.GPT_4O_MINI
+        ModelType.GPT_4O if preferred_model_str == "gpt-4o" else ModelType.GPT_4O_MINI
     )
     cost_calculator = CostCalculator(default_model=preferred_model)
     llm_service = CostTrackingLLMService(base_llm_service, cost_calculator)
-    
+
     # Embedding service
     embedding_service = LangChainEmbeddingService()
-    
+
     # Vector store service
     vector_store_service = LangChainVectorStore(
         embedding_service=embedding_service,
         collection_name="test_abstract_attributes",
     )
-    
+
     # Chunking strategy
     chunking_config = ChunkingConfiguration(
         max_chunk_size=1000,
@@ -80,28 +78,28 @@ async def test_abstract_attributes():
         include_headers=True,
     )
     chunking_service = LangChainChunkingService(chunking_config)
-    
+
     # Embedding configuration
     embedding_config = EmbeddingConfiguration()
-    
+
     # Treatment arm separator
     treatment_arm_separator = TreatmentArmSeparator(llm_service)
-    
+
     # Prompt template provider
     prompt_template_provider = ExtractionPromptTemplateProvider()
-    
+
     # Attribute extractor
     attribute_extractor = LLMAttributeExtractor(
         llm_service=llm_service,
         prompt_provider=prompt_template_provider,
     )
-    
+
     # RAG provider
     arm_aware_rag_provider = ArmAwareRAGContextProvider(
         vector_store=vector_store_service,
         embedding_service=embedding_service,
     )
-    
+
     # Initialize the extraction service
     logger.info("Initializing extraction service...")
     service = EnhancedExtractionService(
@@ -110,16 +108,16 @@ async def test_abstract_attributes():
         attribute_extractor=attribute_extractor,
         llm_service=llm_service,
     )
-    
+
     # Read test abstracts (10003 and 10006 from ASCO_2020)
     abstract_path = Path("data/postprocessed/ASCO_Abstracts/ASCO_2020.md")
     if not abstract_path.exists():
         logger.error(f"Abstract file not found: {abstract_path}")
         return
-    
-    with open(abstract_path, "r", encoding="utf-8") as f:
+
+    with open(abstract_path, encoding="utf-8") as f:
         content = f.read()
-    
+
     # Extract abstracts 10003 and 10006
     test_abstracts = []
     for abstract_id in ["10003", "10006"]:
@@ -132,12 +130,14 @@ async def test_abstract_attributes():
             abstract_end = len(content)
         abstract_text = content[abstract_start:abstract_end].strip()
         test_abstracts.append((abstract_id, abstract_text))
-        logger.info(f"Found abstract {abstract_id} (length: {len(abstract_text)} chars)")
-    
+        logger.info(
+            f"Found abstract {abstract_id} (length: {len(abstract_text)} chars)"
+        )
+
     if not test_abstracts:
         logger.error("No test abstracts found")
         return
-    
+
     # Attributes to test
     test_attributes = [
         AttributeType.CANCER_TYPE,
@@ -148,15 +148,15 @@ async def test_abstract_attributes():
         AttributeType.OBJECTIVE_RESPONSE_RATE,
         AttributeType.MEDIAN_DOR,
     ]
-    
+
     logger.info(f"Testing attributes: {[attr.value for attr in test_attributes]}")
-    
+
     # Test each abstract
     for abstract_id, abstract_text in test_abstracts:
         print("\n" + "=" * 80)
         print(f"EXTRACTION RESULTS FOR ABSTRACT {abstract_id}")
         print("=" * 80)
-        
+
         # First, index the abstract into the vector store
         logger.info(f"Indexing abstract {abstract_id} into vector store...")
         chunks = await chunking_service.chunk_content(
@@ -165,9 +165,10 @@ async def test_abstract_attributes():
             document_id=abstract_id,
             filename=str(abstract_path),
         )
-        
+
         # Generate embeddings and add to vector store
         from src.domain.models import ChunkWithEmbedding
+
         chunks_with_embeddings = []
         for chunk in chunks:
             embedding = await embedding_service.generate_embedding(
@@ -184,11 +185,13 @@ async def test_abstract_attributes():
                 embedding=embedding,
             )
             chunks_with_embeddings.append(chunk_with_embedding)
-        
+
         # Add chunks to vector store
         await vector_store_service.upsert_chunks(chunks_with_embeddings)
-        logger.info(f"Indexed {len(chunks_with_embeddings)} chunks for abstract {abstract_id}")
-        
+        logger.info(
+            f"Indexed {len(chunks_with_embeddings)} chunks for abstract {abstract_id}"
+        )
+
         # Extract attributes
         result = await service.extract_attributes_from_abstract_batch(
             abstract_text=abstract_text,
@@ -196,13 +199,13 @@ async def test_abstract_attributes():
             attributes=test_attributes,
             include_api_data=False,  # Don't use API - test abstract extraction only
         )
-        
+
         if result.arm_results:
             for arm_id, arm_result in result.arm_results.items():
                 print(f"\nArm: {arm_id}")
                 print("-" * 80)
                 attributes = arm_result.get("attributes", {})
-                
+
                 for attr_type in test_attributes:
                     attr_data = attributes.get(attr_type)
                     if attr_data:
@@ -215,12 +218,14 @@ async def test_abstract_attributes():
                             value = attr_data.get("value", "N/A")
                             source = attr_data.get("source", "N/A")
                             confidence = attr_data.get("confidence", "N/A")
-                        print(f"  {attr_type.value:30s} = {str(value):40s} [Source: {source}, Confidence: {confidence}]")
+                        print(
+                            f"  {attr_type.value:30s} = {str(value):40s} [Source: {source}, Confidence: {confidence}]"
+                        )
                     else:
                         print(f"  {attr_type.value:30s} = {'Not found':40s}")
         else:
             print("No arm results found")
-        
+
         # Print expected values for each abstract
         print("\n" + "-" * 80)
         print(f"EXPECTED VALUES FOR ABSTRACT {abstract_id}:")
@@ -241,7 +246,7 @@ async def test_abstract_attributes():
             print("  BIOSIMILAR            = false (or empty)")
             print("  OBJECTIVE_RESPONSE_RATE = 36.4%")
             print("  MEDIAN_DOR            = NR (not reached)")
-        
+
         if result.errors:
             print(f"\nErrors: {result.errors}")
         if result.warnings:
@@ -250,4 +255,3 @@ async def test_abstract_attributes():
 
 if __name__ == "__main__":
     asyncio.run(test_abstract_attributes())
-

@@ -291,12 +291,14 @@ class RAGOptimizationConfig:
         if attribute_type == AttributeType.NCT_NUMBER and chunk_metadata:
             chunk_type = chunk_metadata.get("chunk_type", "")
             filename = chunk_metadata.get("filename", "")
-            
+
             # Detect if this is from a publication
             is_publication = (
-                "Publications" in filename or "publication" in filename.lower()
-            ) if filename else False
-            
+                ("Publications" in filename or "publication" in filename.lower())
+                if filename
+                else False
+            )
+
             # For publications, reject background chunks (they often reference other studies)
             if is_publication and chunk_type == "background":
                 return False
@@ -338,9 +340,9 @@ class RAGOptimizationConfig:
 
         # Check for NCT information chunks (both ASCO and ESMO formats)
         if (
-            ("clinical trial information:" in content_lower or "clinical trial identification:" in content_lower)
-            and "nct" in content_lower
-        ):
+            "clinical trial information:" in content_lower
+            or "clinical trial identification:" in content_lower
+        ) and "nct" in content_lower:
             # Only if this is a pure NCT chunk (no other substantial content)
             if len(content_lower.split("\n")) <= 3:
                 return ChunkRelevanceType.NCT_INFO
@@ -455,7 +457,10 @@ class RAGOptimizationConfig:
             return ["methods", "results", "table", "conclusions"]
 
         # Special case: Publication name and year - primarily in title chunk for publications
-        if attribute_type in (AttributeType.PUBLICATION_NAME, AttributeType.PUBLICATION_YEAR):
+        if attribute_type in (
+            AttributeType.PUBLICATION_NAME,
+            AttributeType.PUBLICATION_YEAR,
+        ):
             if is_publication:
                 # For publications, prioritize title chunk where journal name and year appear
                 return ["title", "background", "methods", "results", "conclusions"]

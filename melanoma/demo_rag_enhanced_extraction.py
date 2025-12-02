@@ -38,8 +38,8 @@ async def main():
             LangChainServiceFactory,
             ServiceConfiguration,
         )
-        from src.domain.constants import get_ordered_attributes
         from src.app.rag_enhanced_extraction_service import RAGEnhancedExtractionService
+        from src.domain.constants import get_ordered_attributes
         from src.domain.extraction_models import AttributeType
         from src.infrastructure.arm_aware_rag_provider import ArmAwareRAGContextProvider
         from src.infrastructure.attribute_extractor import LLMAttributeExtractor

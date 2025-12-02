@@ -3,7 +3,6 @@
 import logging
 from typing import Optional
 
-from src.app.clinical_trials_service import ClinicalTrialsService
 from src.domain.extraction_models import AttributeType
 from src.infrastructure.clinical_trials.factory import create_clinical_trials_service
 
@@ -27,7 +26,7 @@ def format_value(value: Optional[str | bool | int]) -> str:
 
 def test_all_attributes(nct_number: str = "NCT02362594"):
     """Test all attributes from the user's list.
-    
+
     Args:
         nct_number: NCT number to test (default: NCT02362594)
     """
@@ -51,11 +50,9 @@ def test_all_attributes(nct_number: str = "NCT02362594"):
         "Trial Name": AttributeType.TRIAL_NAME,
         "Clinical Trial Phase": AttributeType.CLINICAL_TRIAL_PHASE,
         "Study Type": AttributeType.STUDY_TYPE,
-        
         # Endpoints
         "Primary endpoint": AttributeType.PRIMARY_ENDPOINT,
         "Secondary endpoint": AttributeType.SECONDARY_ENDPOINT,
-        
         # Dates
         "Study start date": AttributeType.STUDY_START_DATE,
         "Study completion date": AttributeType.STUDY_COMPLETION_DATE,
@@ -63,15 +60,12 @@ def test_all_attributes(nct_number: str = "NCT02362594"):
         "Study Start (Estimated)": None,  # Same as study_start_date
         "Primary Completion (Estimated)": AttributeType.PRIMARY_COMPLETION_DATE,
         "Study Completion (Estimated)": None,  # Same as study_completion_date
-        
         # Enrollment
         "Enrollment (Estimated)": AttributeType.NUMBER_OF_PATIENTS,
-        
         # Location
         "Trial run in Europe": AttributeType.TRIAL_RUN_IN_EUROPE,
         "Trial run in US": AttributeType.TRIAL_RUN_IN_US,
         "Trial run in China": AttributeType.TRIAL_RUN_IN_CHINA,
-        
         # Eligibility Attributes
         "Chemotherapy Naive": AttributeType.CHEMOTHERAPY_NAIVE,
         "Chemotherapy Failed": AttributeType.CHEMOTHERAPY_FAILED,
@@ -85,7 +79,6 @@ def test_all_attributes(nct_number: str = "NCT02362594"):
         "Biomarker Inclusion": AttributeType.BIOMARKER_INCLUSION,
         "Biomarkers Inclusion Criteria": AttributeType.BIOMARKERS_INCLUSION_CRITERIA,
         "Biomarkers Exclusion Criteria": AttributeType.BIOMARKERS_EXCLUSION_CRITERIA,
-        
         # Arm-specific attributes (from first arm)
         "Dosage": AttributeType.DOSAGE,
         "Type of dosing": AttributeType.TYPE_OF_DOSING,
@@ -110,9 +103,13 @@ def test_all_attributes(nct_number: str = "NCT02362594"):
         else:
             # Check raw data for attributes not in enum
             if attr_name == "Study Start (Estimated)":
-                logger.info(f"{attr_name:.<50} ⚠️  Same as study_start_date: {trial_data.study_start_date}")
+                logger.info(
+                    f"{attr_name:.<50} ⚠️  Same as study_start_date: {trial_data.study_start_date}"
+                )
             elif attr_name == "Study Completion (Estimated)":
-                logger.info(f"{attr_name:.<50} ⚠️  Same as study_completion_date: {trial_data.study_completion_date}")
+                logger.info(
+                    f"{attr_name:.<50} ⚠️  Same as study_completion_date: {trial_data.study_completion_date}"
+                )
 
     # Check raw trial data for additional info
     logger.info("\n" + "-" * 100)
@@ -166,12 +163,11 @@ def test_all_attributes(nct_number: str = "NCT02362594"):
 
 if __name__ == "__main__":
     import sys
-    
+
     # Allow NCT number to be passed as command line argument
     if len(sys.argv) > 1:
         nct_number = sys.argv[1]
     else:
         nct_number = "NCT02362594"  # Default
-    
-    test_all_attributes(nct_number)
 
+    test_all_attributes(nct_number)

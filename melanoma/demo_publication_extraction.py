@@ -20,7 +20,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from src.app.enhanced_extraction_service import EnhancedExtractionService
-from src.domain.constants import get_ordered_attributes, get_ordered_attribute_list
+from src.domain.constants import get_ordered_attribute_list
 from src.domain.models import (
     ChunkingConfiguration,
     ChunkWithEmbedding,
@@ -55,15 +55,15 @@ logger = logging.getLogger(__name__)
 
 def convert_to_json_serializable(obj: Any) -> Any:
     """Recursively convert Pydantic models and other objects to JSON-serializable format.
-    
+
     Args:
         obj: Object to convert (can be dict, list, Pydantic model, datetime, etc.)
-        
+
     Returns:
         JSON-serializable version of the object
     """
     from pydantic import BaseModel
-    
+
     if isinstance(obj, datetime):
         return obj.isoformat()
     elif isinstance(obj, BaseModel):
@@ -89,7 +89,7 @@ async def main(
     previous_results_file: str | None = None,
 ):
     """Main demo function for publications.
-    
+
     Args:
         skip_publications: List of publication IDs to skip (already processed)
         only_publications: List of publication IDs to process (if None, process all)
@@ -105,7 +105,7 @@ async def main(
             logger.info(f"🗑️  Cleaning existing vector database: {chroma_db_path}")
             shutil.rmtree(chroma_db_path)
             logger.info("✅ Vector database cleaned")
-        
+
         # Initialize services
         logger.info("Initializing services...")
 
@@ -187,14 +187,14 @@ async def main(
 
         # Find all publication files
         publications_dir = Path("data/postprocessed/Publications")
-        
+
         if not publications_dir.exists():
             logger.error(f"Publications directory not found: {publications_dir}")
             return
 
         # Process all publication files
         all_publication_files = list(publications_dir.glob("*.md"))
-        
+
         if not all_publication_files:
             logger.error(f"No publication files found in {publications_dir}")
             return
@@ -202,29 +202,29 @@ async def main(
         # Filter publications based on skip/only lists
         publications_to_process = []
         skipped_count = 0
-        
+
         for pub_file in sorted(all_publication_files):
             pub_id = pub_file.stem  # Get filename without extension
-            
+
             # Check if we should skip this publication
             if skip_publications and pub_id in skip_publications:
                 skipped_count += 1
                 logger.debug(f"Skipping {pub_id} (already processed)")
                 continue
-            
+
             # Check if we should only process specific publications
             if only_publications and pub_id not in only_publications:
                 skipped_count += 1
                 logger.debug(f"Skipping {pub_id} (not in only_publications list)")
                 continue
-            
+
             publications_to_process.append(pub_file)
-        
+
         if skipped_count > 0:
             logger.info(f"Skipping {skipped_count} already-processed publications")
-        
+
         logger.info(f"Processing {len(publications_to_process)} publication files")
-        
+
         if not publications_to_process:
             logger.warning("No publications to process after filtering!")
             return
@@ -234,10 +234,12 @@ async def main(
         if previous_results_file and Path(previous_results_file).exists():
             logger.info(f"Loading previous results from: {previous_results_file}")
             try:
-                with open(previous_results_file, "r") as f:
+                with open(previous_results_file) as f:
                     prev_data = json.load(f)
                     previous_results = prev_data.get("publications", [])
-                    logger.info(f"Loaded {len(previous_results)} previous publication results")
+                    logger.info(
+                        f"Loaded {len(previous_results)} previous publication results"
+                    )
             except Exception as e:
                 logger.warning(f"Failed to load previous results: {e}")
 
@@ -251,11 +253,13 @@ async def main(
         all_publications_metadata = []
 
         for idx, pub_file in enumerate(publications_to_process):
-            logger.info(f"\nLoading publication {idx+1}/{len(publications_to_process)}: {pub_file.name}")
-            
+            logger.info(
+                f"\nLoading publication {idx+1}/{len(publications_to_process)}: {pub_file.name}"
+            )
+
             pub_content = pub_file.read_text(encoding="utf-8")
             publication_id = pub_file.stem  # e.g., "Batch-I_3"
-            
+
             # Create chunks from the publication
             chunks = await chunking_strategy.chunk_content(
                 content=pub_content,
@@ -283,14 +287,16 @@ async def main(
                     embedding=embedding,
                 )
                 all_chunks_with_embeddings.append(chunk_with_embedding)
-            
+
             # Store metadata for processing
-            all_publications_metadata.append({
-                "file": pub_file,
-                "publication_id": publication_id,
-                "content": pub_content,
-                "index": idx,
-            })
+            all_publications_metadata.append(
+                {
+                    "file": pub_file,
+                    "publication_id": publication_id,
+                    "content": pub_content,
+                    "index": idx,
+                }
+            )
 
         # Store all chunks in vector store
         await vector_store_service.upsert_chunks(all_chunks_with_embeddings)
@@ -299,7 +305,10 @@ async def main(
         )
 
         # Use all configured attributes for comprehensive extraction
-        from src.domain.extraction_models import AttributeConfigurationFactory, AttributeType
+        from src.domain.extraction_models import (
+            AttributeConfigurationFactory,
+            AttributeType,
+        )
 
         all_configs = AttributeConfigurationFactory.get_all_configurations()
         all_attributes = list(all_configs.keys())
@@ -317,7 +326,7 @@ async def main(
 
         # Order attributes according to canonical business sequence
         attributes_to_extract = get_ordered_attribute_list(filtered_attributes)
-        
+
         logger.info(
             f"Filtered out {len(attributes_to_exclude)} abstract-specific attributes: {[attr.value for attr in attributes_to_exclude]}"
         )
@@ -327,19 +336,23 @@ async def main(
 
         # Process each publication sequentially
         all_results = []
-        
+
         # Pre-calculate previous results map for incremental saving (if provided)
         prev_results_map_for_incremental = {}
         if previous_results:
-            prev_results_map_for_incremental = {p.get("publication_id"): p for p in previous_results}
-        
+            prev_results_map_for_incremental = {
+                p.get("publication_id"): p for p in previous_results
+            }
+
         for idx, pub_meta in enumerate(all_publications_metadata):
             publication_id = pub_meta["publication_id"]
             pub_content = pub_meta["content"]
             pub_file = pub_meta["file"]
-            
+
             logger.info(f"\n{'='*80}")
-            logger.info(f"PROCESSING PUBLICATION {idx+1}/{len(all_publications_metadata)}: {publication_id}")
+            logger.info(
+                f"PROCESSING PUBLICATION {idx+1}/{len(all_publications_metadata)}: {publication_id}"
+            )
             logger.info(f"{'='*80}")
 
             # Perform extraction using batch method
@@ -363,17 +376,23 @@ async def main(
             # This is especially important for long-running jobs that might hit rate limits
             try:
                 # Use a fixed filename for incremental saves (overwrite each time)
-                incremental_output_file = "publication_extraction_results_incremental_latest.json"
-                
+                incremental_output_file = (
+                    "publication_extraction_results_incremental_latest.json"
+                )
+
                 # Prepare incremental results - include new results + previous results that weren't re-processed
                 incremental_publications = []
-                
+
                 # Add new results
                 for result_idx, result in enumerate(all_results):
-                    pub_meta = all_publications_metadata[result_idx] if result_idx < len(all_publications_metadata) else None
+                    pub_meta = (
+                        all_publications_metadata[result_idx]
+                        if result_idx < len(all_publications_metadata)
+                        else None
+                    )
                     if not pub_meta:
                         continue
-                    
+
                     publication_id = pub_meta["publication_id"]
                     # Convert Pydantic models to JSON-serializable format
                     publication_data = {
@@ -388,7 +407,7 @@ async def main(
                         "arm_results": convert_to_json_serializable(result.arm_results),
                     }
                     incremental_publications.append(publication_data)
-                
+
                 # Add previous results that weren't re-processed
                 prev_count = 0
                 if previous_results:
@@ -404,22 +423,35 @@ async def main(
                     for prev_pub in current_prev_map.values():
                         incremental_publications.append(prev_pub)
                     prev_count = len(current_prev_map)
-                
+
                 json_results = {
                     "total_publications": len(incremental_publications),
-                    "total_arms": sum(p.get("total_arms", len(p.get("arm_results", {}))) for p in incremental_publications),
-                    "total_attributes_extracted": sum(p.get("total_attributes_extracted", 0) for p in incremental_publications),
-                    "average_confidence": sum(p.get("overall_confidence", 0) for p in incremental_publications) / len(incremental_publications) if incremental_publications else 0.0,
+                    "total_arms": sum(
+                        p.get("total_arms", len(p.get("arm_results", {})))
+                        for p in incremental_publications
+                    ),
+                    "total_attributes_extracted": sum(
+                        p.get("total_attributes_extracted", 0)
+                        for p in incremental_publications
+                    ),
+                    "average_confidence": sum(
+                        p.get("overall_confidence", 0) for p in incremental_publications
+                    )
+                    / len(incremental_publications)
+                    if incremental_publications
+                    else 0.0,
                     "publications": incremental_publications,
                 }
-                
+
                 # Save incremental results
                 # Convert to JSON-serializable format (already done for new results, but ensure previous results are also converted)
                 json_results_serialized = convert_to_json_serializable(json_results)
                 with open(incremental_output_file, "w", encoding="utf-8") as f:
                     json.dump(json_results_serialized, f, indent=2, ensure_ascii=False)
-                
-                logger.info(f"💾 Incremental results saved to: {incremental_output_file} ({len(all_results)} new + {prev_count} previous = {len(incremental_publications)} total)")
+
+                logger.info(
+                    f"💾 Incremental results saved to: {incremental_output_file} ({len(all_results)} new + {prev_count} previous = {len(incremental_publications)} total)"
+                )
             except Exception as e:
                 logger.warning(f"Failed to save incremental results: {e}")
 
@@ -456,7 +488,7 @@ async def main(
         logger.info("EXTRACTION COMPLETED!")
         logger.info(f"{'='*80}")
         logger.info(f"Processed {len(all_results)} new publications")
-        
+
         # Calculate totals including previous results if provided
         if previous_results:
             prev_results_map = {p.get("publication_id"): p for p in previous_results}
@@ -465,7 +497,9 @@ async def main(
                 pub_id = pub_meta["publication_id"]
                 if pub_id in prev_results_map:
                     del prev_results_map[pub_id]
-            logger.info(f"Total with previous results: {len(all_results)} new + {len(prev_results_map)} previous = {len(all_results) + len(prev_results_map)} total")
+            logger.info(
+                f"Total with previous results: {len(all_results)} new + {len(prev_results_map)} previous = {len(all_results) + len(prev_results_map)} total"
+            )
 
         if all_results:
             total_arms = sum(len(result.arm_results) for result in all_results)
@@ -480,7 +514,9 @@ async def main(
             logger.info(f"Total arms across all publications: {total_arms}")
             logger.info(f"Total attributes extracted: {total_attributes}")
             logger.info(f"Average confidence: {avg_confidence:.2f}")
-            logger.info(f"Total processing time: {total_time}ms ({total_time/1000:.1f}s)")
+            logger.info(
+                f"Total processing time: {total_time}ms ({total_time/1000:.1f}s)"
+            )
 
             # Get extraction summary for the last result
             summary = extraction_service.get_extraction_summary(all_results[-1])
@@ -501,13 +537,17 @@ async def main(
         # Prepare results for JSON serialization
         # Include previous results that weren't re-processed
         all_publications_for_json = []
-        
+
         # Add new results
         for idx, result in enumerate(all_results):
-            pub_meta = all_publications_metadata[idx] if idx < len(all_publications_metadata) else None
+            pub_meta = (
+                all_publications_metadata[idx]
+                if idx < len(all_publications_metadata)
+                else None
+            )
             if not pub_meta:
                 continue
-            
+
             publication_id = pub_meta["publication_id"]
             # Convert Pydantic models to JSON-serializable format
             publication_data = {
@@ -522,7 +562,7 @@ async def main(
                 "arm_results": convert_to_json_serializable(result.arm_results),
             }
             all_publications_for_json.append(publication_data)
-        
+
         # Add previous results that weren't re-processed
         if previous_results:
             prev_results_map = {p.get("publication_id"): p for p in previous_results}
@@ -531,18 +571,31 @@ async def main(
                 pub_id = pub_meta["publication_id"]
                 if pub_id in prev_results_map:
                     del prev_results_map[pub_id]
-            
+
             # Add remaining previous results
             for prev_pub in prev_results_map.values():
                 all_publications_for_json.append(prev_pub)
-        
+
         # Note: Previous results are already in JSON format, new results are already converted
         json_results = {
             "total_publications": len(all_publications_for_json),
-            "total_arms": sum(p.get("total_arms", len(p.get("arm_results", {}))) for p in all_publications_for_json),
-            "total_attributes_extracted": sum(p.get("total_attributes_extracted", 0) for p in all_publications_for_json),
-            "average_confidence": sum(p.get("overall_confidence", 0) for p in all_publications_for_json) / len(all_publications_for_json) if all_publications_for_json else 0,
-            "total_processing_time_ms": sum(p.get("processing_time_ms", 0) for p in all_publications_for_json),
+            "total_arms": sum(
+                p.get("total_arms", len(p.get("arm_results", {})))
+                for p in all_publications_for_json
+            ),
+            "total_attributes_extracted": sum(
+                p.get("total_attributes_extracted", 0)
+                for p in all_publications_for_json
+            ),
+            "average_confidence": sum(
+                p.get("overall_confidence", 0) for p in all_publications_for_json
+            )
+            / len(all_publications_for_json)
+            if all_publications_for_json
+            else 0,
+            "total_processing_time_ms": sum(
+                p.get("processing_time_ms", 0) for p in all_publications_for_json
+            ),
             "publications": all_publications_for_json,
             "summary": summary,
         }
@@ -580,7 +633,7 @@ async def main(
 
 if __name__ == "__main__":
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Extract attributes from publications")
     parser.add_argument(
         "--skip",
@@ -597,33 +650,34 @@ if __name__ == "__main__":
         type=str,
         help="Path to previous results JSON file to merge with",
     )
-    
+
     args = parser.parse_args()
-    
+
     # Parse skip/only lists
     skip_publications = None
     if args.skip:
         if Path(args.skip).exists():
             # Read from file
-            with open(args.skip, "r") as f:
+            with open(args.skip) as f:
                 skip_publications = [line.strip() for line in f if line.strip()]
         else:
             # Parse from comma-separated string
             skip_publications = [p.strip() for p in args.skip.split(",") if p.strip()]
-    
+
     only_publications = None
     if args.only:
         if Path(args.only).exists():
             # Read from file
-            with open(args.only, "r") as f:
+            with open(args.only) as f:
                 only_publications = [line.strip() for line in f if line.strip()]
         else:
             # Parse from comma-separated string
             only_publications = [p.strip() for p in args.only.split(",") if p.strip()]
-    
-    asyncio.run(main(
-        skip_publications=skip_publications,
-        only_publications=only_publications,
-        previous_results_file=args.previous_results,
-    ))
 
+    asyncio.run(
+        main(
+            skip_publications=skip_publications,
+            only_publications=only_publications,
+            previous_results_file=args.previous_results,
+        )
+    )

@@ -8,13 +8,13 @@ from pathlib import Path
 melanoma_dir = Path(__file__).parent
 sys.path.insert(0, str(melanoma_dir))
 
-from src.infrastructure.attribute_extractor import clean_numeric_value
 from src.domain.extraction_models import AttributeType
+from src.infrastructure.attribute_extractor import clean_numeric_value
 
 
 def test_clean_numeric_value():
     """Test the clean_numeric_value function with various inputs."""
-    
+
     test_cases = [
         # (input_value, attribute_type, expected_output, description)
         ("24%", AttributeType.OBJECTIVE_RESPONSE_RATE, 24.0, "Percentage with % sign"),
@@ -37,44 +37,63 @@ def test_clean_numeric_value():
         ("12.5 months", AttributeType.MEDIAN_PFS, 12.5, "Decimal with months"),
         ("6 years", AttributeType.MEDIAN_OS, 72.0, "Years to months for OS"),
         ("18 mo", AttributeType.MEDIAN_PFS, 18.0, "Abbreviated months"),
-        ("100 patients", AttributeType.NUMBER_OF_PATIENTS, 100, "Integer attribute with text"),
+        (
+            "100 patients",
+            AttributeType.NUMBER_OF_PATIENTS,
+            100,
+            "Integer attribute with text",
+        ),
         ("50.0%", AttributeType.OBJECTIVE_RESPONSE_RATE, 50.0, "Decimal percentage"),
-        ("46.1 weeks", AttributeType.MEDIAN_OS, 11.525, "Weeks to months conversion for median OS"),
+        (
+            "46.1 weeks",
+            AttributeType.MEDIAN_OS,
+            11.525,
+            "Weeks to months conversion for median OS",
+        ),
         ("24 weeks", AttributeType.MEDIAN_PFS, 6.0, "Weeks to months for PFS"),
-        ("365 days", AttributeType.MEDIAN_DOR, 12.166666666666666, "Days to months for DOR"),
+        (
+            "365 days",
+            AttributeType.MEDIAN_DOR,
+            12.166666666666666,
+            "Days to months for DOR",
+        ),
         ("2 years", AttributeType.MEDIAN_OS, 24.0, "Years to months for OS"),
         ("12 months", AttributeType.MEDIAN_OS, 12.0, "Months (no conversion needed)"),
         ("8 weeks", AttributeType.TTR, 2.0, "Weeks to months for TTR"),
     ]
-    
+
     print("Testing clean_numeric_value function:\n")
     print(f"{'Input':<25} {'Attribute':<30} {'Expected':<15} {'Got':<15} {'Status'}")
     print("-" * 100)
-    
+
     passed = 0
     failed = 0
-    
+
     for input_value, attr_type, expected, description in test_cases:
         result = clean_numeric_value(input_value, attr_type)
         status = "✓ PASS" if result == expected else "✗ FAIL"
-        
+
         if result == expected:
             passed += 1
         else:
             failed += 1
-        
+
         input_str = repr(input_value) if input_value is not None else "None"
-        attr_str = attr_type.value[:28] if len(attr_type.value) > 28 else attr_type.value
+        attr_str = (
+            attr_type.value[:28] if len(attr_type.value) > 28 else attr_type.value
+        )
         expected_str = repr(expected) if expected is not None else "None"
         result_str = repr(result) if result is not None else "None"
-        
-        print(f"{input_str:<25} {attr_str:<30} {expected_str:<15} {result_str:<15} {status}")
+
+        print(
+            f"{input_str:<25} {attr_str:<30} {expected_str:<15} {result_str:<15} {status}"
+        )
         if result != expected:
             print(f"  └─ Description: {description}")
-    
+
     print("\n" + "=" * 100)
     print(f"Results: {passed} passed, {failed} failed out of {len(test_cases)} tests")
-    
+
     if failed == 0:
         print("✓ All tests passed!")
         return 0
@@ -86,4 +105,3 @@ def test_clean_numeric_value():
 if __name__ == "__main__":
     exit_code = test_clean_numeric_value()
     sys.exit(exit_code)
-

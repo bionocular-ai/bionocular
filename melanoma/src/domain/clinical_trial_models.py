@@ -1,7 +1,7 @@
 """Domain models for clinical trial data."""
 
 from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Optional
 
 
 @dataclass
@@ -10,7 +10,9 @@ class TreatmentArm:
 
     arm_label: str  # e.g., "Experimental: Pembrolizumab"
     arm_description: Optional[str] = None
-    arm_type: Optional[str] = None  # e.g., "Experimental", "Active Comparator", "Placebo Comparator"
+    arm_type: Optional[
+        str
+    ] = None  # e.g., "Experimental", "Active Comparator", "Placebo Comparator"
 
     # Arm-specific intervention attributes
     generic_name: Optional[str] = None
@@ -21,10 +23,12 @@ class TreatmentArm:
     target_protein: Optional[str] = None
     type_of_therapy: Optional[str] = None
     sub_therapy: Optional[str] = None
-    line_of_treatment: Optional[str] = None  # Arm-specific: "Neoadjuvant", "First Line", "2nd Line", "3rd Line+"
+    line_of_treatment: Optional[
+        str
+    ] = None  # Arm-specific: "Neoadjuvant", "First Line", "2nd Line", "3rd Line+"
 
     # Intervention names for this arm
-    intervention_names: List[str] = field(default_factory=list)
+    intervention_names: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -51,7 +55,9 @@ class ClinicalTrialData:
     minimum_age: Optional[str] = None
     maximum_age: Optional[str] = None
     sex: Optional[str] = None
-    drug_info: Optional[str] = None  # Combined intervention names for backward compatibility
+    drug_info: Optional[
+        str
+    ] = None  # Combined intervention names for backward compatibility
 
     # Study-wide eligibility attributes (apply to all arms)
     trial_run_in_europe: Optional[bool] = None
@@ -72,7 +78,7 @@ class ClinicalTrialData:
     biomarkers_exclusion_criteria: Optional[str] = None
 
     # Treatment arms (arm-specific data)
-    treatment_arms: List[TreatmentArm] = field(default_factory=list)
+    treatment_arms: list[TreatmentArm] = field(default_factory=list)
 
     # Legacy fields for backward compatibility (deprecated - use treatment_arms instead)
     generic_name: Optional[str] = None  # From first arm if available
@@ -83,4 +89,3 @@ class ClinicalTrialData:
     target_protein: Optional[str] = None  # From first arm if available
     type_of_therapy: Optional[str] = None  # From first arm if available
     sub_therapy: Optional[str] = None  # From first arm if available
-

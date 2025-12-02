@@ -61,4 +61,3 @@ class ClinicalTrialsGovAPIClient(ClinicalTrialsAPIClient):
                 f"Unexpected error when fetching trial data for {nct_number}: {e}"
             )
             return None
-

@@ -4,11 +4,11 @@
 Usage:
     poetry run python postprocess_publications.py <input_file> [output_file]
     poetry run python postprocess_publications.py --batch <input_dir> [output_dir]
-    
+
 Examples:
     # Process a single file
     poetry run python postprocess_publications.py data/processed/Publications/Batch-I_3.md
-    
+
     # Process all files in a directory
     poetry run python postprocess_publications.py --batch data/processed/Publications/
 """
@@ -84,7 +84,7 @@ def main():
         total_tables = sum(r.tables_repaired for r in results)
 
         print(f"\n{'='*60}")
-        print(f"📊 Batch Processing Summary")
+        print("📊 Batch Processing Summary")
         print(f"{'='*60}")
         print(f"✓ Successful: {successful}/{len(results)}")
         if failed > 0:
@@ -93,7 +93,7 @@ def main():
         print(f"📊 Total tables found: {total_tables}")
 
         if failed > 0:
-            print(f"\n❌ Failed files:")
+            print("\n❌ Failed files:")
             for r in results:
                 if not r.success:
                     print(f"  - {Path(r.input_path).name}: {', '.join(r.errors)}")
@@ -111,12 +111,12 @@ def main():
         result = service.process_file(str(input_file), output_file)
 
         if result.success:
-            print(f"✓ Success!")
+            print("✓ Success!")
             print(f"  Output: {result.output_path}")
             print(f"  Lines removed: {result.lines_removed:,}")
             print(f"  Tables found: {result.tables_repaired}")
         else:
-            print(f"❌ Error processing file:")
+            print("❌ Error processing file:")
             for error in result.errors:
                 print(f"  - {error}")
             sys.exit(1)
@@ -124,4 +124,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -32,20 +32,20 @@ logger = logging.getLogger(__name__)
 
 def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
     """Clean numeric values by removing units, percentages, and other text.
-    
+
     This function extracts pure numeric values from strings that may contain
     units like '%', 'months', 'years', etc.
-    
+
     Args:
         value: The value to clean (can be string, int, float, or None)
         attribute_type: The type of attribute being cleaned
-        
+
     Returns:
         Cleaned numeric value (float/int) or None if not numeric
     """
     if value is None or value == "" or value == "Not found":
         return None
-    
+
     # Skip numeric cleaning for string-based attributes
     # These are non-numeric attributes extracted from abstracts
     string_attributes = [
@@ -70,16 +70,16 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
     ]
     if attribute_type in string_attributes:
         return None
-    
+
     # If value is already a number, return it as-is (but convert to int if needed)
     if isinstance(value, (int, float)):
         if attribute_type == AttributeType.NUMBER_OF_PATIENTS:
             return int(value)
         return float(value)
-    
+
     # Convert to string for processing
     value_str = str(value).strip()
-    
+
     # Handle special cases first
     value_lower = value_str.lower()
     if value_lower in ["not reached", "not-reached", "not_reached", "nr"]:
@@ -98,10 +98,10 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
         ]:
             return "NR"
         return None
-    
+
     # Remove percentage signs
     value_str = value_str.replace("%", "").strip()
-    
+
     # Check for time units that need conversion (for median survival metrics)
     # These attributes should always be in months
     survival_attributes = {
@@ -126,11 +126,15 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
         # Weeks to months (divide by 4)
         if "week" in value_str_lower:
             time_units_pattern = r"\b(weeks?|wks?|w)\b"
-            value_str = re.sub(time_units_pattern, "", value_str, flags=re.IGNORECASE).strip()
+            value_str = re.sub(
+                time_units_pattern, "", value_str, flags=re.IGNORECASE
+            ).strip()
             numeric_match = re.search(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", value_str)
             if numeric_match:
                 try:
-                    numeric_value = float(numeric_match.group(0)) / 4.0  # Convert weeks to months
+                    numeric_value = (
+                        float(numeric_match.group(0)) / 4.0
+                    )  # Convert weeks to months
                     return numeric_value
                 except (ValueError, OverflowError):
                     pass
@@ -138,11 +142,15 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
         # Days to months (divide by ~30.44, but let's use 30 for simplicity)
         elif "day" in value_str_lower:
             time_units_pattern = r"\b(days?|d)\b"
-            value_str = re.sub(time_units_pattern, "", value_str, flags=re.IGNORECASE).strip()
+            value_str = re.sub(
+                time_units_pattern, "", value_str, flags=re.IGNORECASE
+            ).strip()
             numeric_match = re.search(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", value_str)
             if numeric_match:
                 try:
-                    numeric_value = float(numeric_match.group(0)) / 30.0  # Convert days to months
+                    numeric_value = (
+                        float(numeric_match.group(0)) / 30.0
+                    )  # Convert days to months
                     return numeric_value
                 except (ValueError, OverflowError):
                     pass
@@ -150,11 +158,15 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
         # Years to months (multiply by 12)
         elif "year" in value_str_lower:
             time_units_pattern = r"\b(years?|yrs?|y)\b"
-            value_str = re.sub(time_units_pattern, "", value_str, flags=re.IGNORECASE).strip()
+            value_str = re.sub(
+                time_units_pattern, "", value_str, flags=re.IGNORECASE
+            ).strip()
             numeric_match = re.search(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", value_str)
             if numeric_match:
                 try:
-                    numeric_value = float(numeric_match.group(0)) * 12.0  # Convert years to months
+                    numeric_value = (
+                        float(numeric_match.group(0)) * 12.0
+                    )  # Convert years to months
                     return numeric_value
                 except (ValueError, OverflowError):
                     pass
@@ -169,8 +181,12 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
     value_str = re.sub(other_units_pattern, "", value_str, flags=re.IGNORECASE).strip()
 
     # Remove common prefixes/suffixes
-    value_str = re.sub(r"^[<>≤≥=]+", "", value_str).strip()  # Remove comparison operators at start
-    value_str = re.sub(r"[<>≤≥=]+$", "", value_str).strip()  # Remove comparison operators at end
+    value_str = re.sub(
+        r"^[<>≤≥=]+", "", value_str
+    ).strip()  # Remove comparison operators at start
+    value_str = re.sub(
+        r"[<>≤≥=]+$", "", value_str
+    ).strip()  # Remove comparison operators at end
 
     # Extract numeric value (supports decimals, negative numbers, scientific notation)
     numeric_match = re.search(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?", value_str)
@@ -183,7 +199,7 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
             return numeric_value
         except (ValueError, OverflowError):
             pass
-    
+
     # If no numeric value found, return None
     return None
 
@@ -214,7 +230,7 @@ class LLMAttributeExtractor(AttributeExtractor):
             AttributeType.GRADE_3_PLUS_AE: r"(\d+(?:\.\d+)?)\s*%",
             AttributeType.P_VALUE_OS: r"p\s*[=<>]\s*(\d+(?:\.\d+)?)",
         }
-        
+
         # Clinical trial identifier patterns (priority order)
         self.trial_id_patterns = [
             (r"NCT\d{8}", "NCT"),  # NCT number (highest priority)
@@ -270,15 +286,21 @@ class LLMAttributeExtractor(AttributeExtractor):
 
             # Parse and validate response
             extracted_value = self._parse_extraction_response(response, attribute_type)
-            
+
             # For NCT_NUMBER, also try direct extraction from context if LLM failed
             if attribute_type == AttributeType.NCT_NUMBER and (
-                not extracted_value or extracted_value == "Not found" or extracted_value == ""
+                not extracted_value
+                or extracted_value == "Not found"
+                or extracted_value == ""
             ):
-                logger.debug("LLM extraction failed for NCT_NUMBER, trying direct extraction from context")
+                logger.debug(
+                    "LLM extraction failed for NCT_NUMBER, trying direct extraction from context"
+                )
                 extracted_value = self._extract_trial_id_from_context(context)
                 if extracted_value:
-                    logger.info(f"Successfully extracted trial ID directly from context: {extracted_value}")
+                    logger.info(
+                        f"Successfully extracted trial ID directly from context: {extracted_value}"
+                    )
 
             # Calculate confidence score
             confidence = self._calculate_extraction_confidence(
@@ -383,6 +405,7 @@ class LLMAttributeExtractor(AttributeExtractor):
                 # Check if this is a string-based attribute that should not be cleaned as numeric
                 # These are non-numeric attributes extracted from abstracts
                 from ..domain.extraction_models import AttributeConfigurationFactory
+
                 config = AttributeConfigurationFactory.get_configuration(attribute_type)
                 string_based_attributes = [
                     AttributeType.ABSTRACT_NUMBER,
@@ -404,9 +427,11 @@ class LLMAttributeExtractor(AttributeExtractor):
                     AttributeType.PUBLICATION_NAME,
                     AttributeType.PUBLICATION_YEAR,
                 ]
-                
+
                 # If it's a string-based attribute, return as-is without numeric cleaning
-                if attribute_type in string_based_attributes or (config and str(config.value_kind) == "STRING"):
+                if attribute_type in string_based_attributes or (
+                    config and str(config.value_kind) == "STRING"
+                ):
                     # Handle empty or invalid responses
                     if (
                         not response
@@ -415,25 +440,40 @@ class LLMAttributeExtractor(AttributeExtractor):
                         or response.strip() == "''"
                     ):
                         # For PUBLICATION_NAME and PUBLICATION_YEAR, return empty string when not found
-                        if attribute_type in (AttributeType.PUBLICATION_NAME, AttributeType.PUBLICATION_YEAR):
+                        if attribute_type in (
+                            AttributeType.PUBLICATION_NAME,
+                            AttributeType.PUBLICATION_YEAR,
+                        ):
                             return ""
                         return "Not found"
                     # For PUBLICATION_NAME and PUBLICATION_YEAR, check if LLM explicitly said not found
                     response_lower = response.strip().lower()
-                    if attribute_type in (AttributeType.PUBLICATION_NAME, AttributeType.PUBLICATION_YEAR):
-                        if any(phrase in response_lower for phrase in [
-                            "not found", "not available", "not provided", "not in the context",
-                            "does not contain", "cannot find", "unable to find", "no publication"
-                        ]):
+                    if attribute_type in (
+                        AttributeType.PUBLICATION_NAME,
+                        AttributeType.PUBLICATION_YEAR,
+                    ):
+                        if any(
+                            phrase in response_lower
+                            for phrase in [
+                                "not found",
+                                "not available",
+                                "not provided",
+                                "not in the context",
+                                "does not contain",
+                                "cannot find",
+                                "unable to find",
+                                "no publication",
+                            ]
+                        ):
                             return ""
                     return response
-                
+
                 # For other numeric attributes, try to clean the value
                 # Check if this is a numeric attribute by looking at common patterns
                 cleaned_numeric = clean_numeric_value(response, attribute_type)
                 if cleaned_numeric is not None:
                     return cleaned_numeric
-                
+
                 # Handle empty or invalid responses
                 if (
                     not response
@@ -450,15 +490,15 @@ class LLMAttributeExtractor(AttributeExtractor):
 
     def _parse_abstract_number(self, response: str) -> Optional[str]:
         """Parse abstract number from response.
-        
+
         Returns the abstract number as a string (not float).
         """
         # Extract numeric value
-        numeric_match = re.search(r'\d+', response)
+        numeric_match = re.search(r"\d+", response)
         if numeric_match:
             # Return as string to avoid float conversion
             return numeric_match.group(0)
-        
+
         # Check for empty string indication
         if (
             "not found" in response.lower()
@@ -466,12 +506,12 @@ class LLMAttributeExtractor(AttributeExtractor):
             or response.strip() == ""
         ):
             return "Not found"
-        
+
         return None
 
     def _parse_nct_number(self, response: str) -> Optional[str]:
         """Parse clinical trial identifier from response.
-        
+
         Priority: NCT number > EudraCT > Other identifiers
         """
         # Try each pattern in priority order
@@ -482,11 +522,13 @@ class LLMAttributeExtractor(AttributeExtractor):
                     return match.group(0)  # Full match for NCT
                 elif prefix == "EudraCT":
                     # Format EudraCT properly
-                    eudract_value = match.group(1) if match.lastindex else match.group(0)
+                    eudract_value = (
+                        match.group(1) if match.lastindex else match.group(0)
+                    )
                     # Clean up the value
-                    eudract_value = re.sub(r'[^\d-]', '', eudract_value)
+                    eudract_value = re.sub(r"[^\d-]", "", eudract_value)
                     return f"EudraCT: {eudract_value}"
-        
+
         # Fallback: Look for NCT pattern (original logic)
         nct_match = re.search(self.patterns[AttributeType.NCT_NUMBER], response)
         if nct_match:
@@ -495,18 +537,18 @@ class LLMAttributeExtractor(AttributeExtractor):
         # Check if response is just digits (like "3086174" or "3086174.0")
         # Extract digits and format as NCT number
         # Handle decimal numbers by extracting integer part before decimal
-        if '.' in response:
+        if "." in response:
             # Extract integer part before decimal (e.g., "3086174.0" -> "3086174")
-            integer_part = response.split('.')[0]
-            digits_match = re.search(r'\d+', integer_part)
+            integer_part = response.split(".")[0]
+            digits_match = re.search(r"\d+", integer_part)
         else:
-            digits_match = re.search(r'\d+', response)
-        
+            digits_match = re.search(r"\d+", response)
+
         if digits_match:
             digits = digits_match.group(0)
             # Pad to 8 digits if needed (e.g., "3086174" -> "03086174")
             if len(digits) == 7:
-                digits = '0' + digits
+                digits = "0" + digits
             if len(digits) == 8:
                 return f"NCT{digits}"
 
@@ -519,22 +561,22 @@ class LLMAttributeExtractor(AttributeExtractor):
             return "Not found"
 
         return None
-    
+
     def _extract_trial_id_from_context(self, context: list[str]) -> Optional[str]:
         """Extract clinical trial identifier directly from context chunks.
-        
+
         This is a fallback when LLM extraction fails. It searches through
         context chunks for trial identifiers in priority order.
-        
+
         Args:
             context: List of context text chunks
-            
+
         Returns:
             Trial identifier string or None
         """
         # Combine all context chunks
         combined_context = "\n".join(context)
-        
+
         # Try each pattern in priority order
         for pattern, prefix in self.trial_id_patterns:
             match = re.search(pattern, combined_context, re.IGNORECASE)
@@ -543,11 +585,13 @@ class LLMAttributeExtractor(AttributeExtractor):
                     return match.group(0)  # Full match for NCT
                 elif prefix == "EudraCT":
                     # Format EudraCT properly
-                    eudract_value = match.group(1) if match.lastindex else match.group(0)
+                    eudract_value = (
+                        match.group(1) if match.lastindex else match.group(0)
+                    )
                     # Clean up the value - remove non-digit/non-dash characters
-                    eudract_value = re.sub(r'[^\d-]', '', eudract_value)
+                    eudract_value = re.sub(r"[^\d-]", "", eudract_value)
                     return f"EudraCT: {eudract_value}"
-        
+
         return None
 
     def _parse_generic_name(self, response: str) -> Optional[str]:
@@ -602,11 +646,13 @@ class LLMAttributeExtractor(AttributeExtractor):
     def _parse_percentage(self, response: str) -> Optional[float]:
         """Parse percentage value from response."""
         # First try to clean the response using the utility function
-        cleaned_value = clean_numeric_value(response, AttributeType.OBJECTIVE_RESPONSE_RATE)
+        cleaned_value = clean_numeric_value(
+            response, AttributeType.OBJECTIVE_RESPONSE_RATE
+        )
         if cleaned_value is not None:
             if isinstance(cleaned_value, (int, float)) and 0 <= cleaned_value <= 100:
                 return float(cleaned_value)
-        
+
         # Fallback: Look for percentage pattern
         percent_match = re.search(r"(\d+(?:\.\d+)?)", response)
         if percent_match:

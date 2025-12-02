@@ -38,9 +38,7 @@ class ClinicalTrialRepository(ABC):
         pass
 
     @abstractmethod
-    def save_trial_to_cache(
-        self, nct_number: str, api_response: dict
-    ) -> None:
+    def save_trial_to_cache(self, nct_number: str, api_response: dict) -> None:
         """Save API response to cache.
 
         Args:
@@ -85,4 +83,3 @@ class ClinicalTrialParser(ABC):
             ClinicalTrialData domain model
         """
         pass
-

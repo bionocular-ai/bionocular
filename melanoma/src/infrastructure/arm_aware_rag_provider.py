@@ -171,8 +171,7 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
                 filename = metadata_filters.get("filename", "")
                 if filename:
                     is_publication = (
-                        "Publications" in filename
-                        or "publication" in filename.lower()
+                        "Publications" in filename or "publication" in filename.lower()
                     )
 
             required_chunk_types = RAGOptimizationConfig.get_required_chunk_types(
@@ -203,16 +202,19 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
             seen_chunks = set()  # Use (document_id, sequence_number) for deduplication
 
             # Log RAG queries for publication_name and publication_year for debugging
-            if attribute_type in (AttributeType.PUBLICATION_NAME, AttributeType.PUBLICATION_YEAR):
+            if attribute_type in (
+                AttributeType.PUBLICATION_NAME,
+                AttributeType.PUBLICATION_YEAR,
+            ):
                 logger.info(
                     f"RAG queries for {attribute_type.value}: {queries[:5]}"  # Show first 5 queries
                 )
-            
+
             for query_text in queries:
                 try:
                     # Create search query with document_id filter (chunks use abstract_id as document_id)
                     search_filters = {"document_id": abstract_id}
-                    
+
                     # Note: We detect publication from metadata_filters filename for chunk type selection,
                     # but we don't filter by filename since chunks don't store filename in metadata
 
@@ -275,7 +277,9 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
                                     "chunk_type": result.chunk.chunk_type.value
                                     if hasattr(result.chunk, "chunk_type")
                                     else None,
-                                    "filename": result.chunk.metadata.get("filename", "")
+                                    "filename": result.chunk.metadata.get(
+                                        "filename", ""
+                                    )
                                     if result.chunk.metadata
                                     else "",
                                 }
@@ -379,8 +383,7 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
                 filename = metadata_filters.get("filename", "")
                 if filename:
                     is_publication = (
-                        "Publications" in filename
-                        or "publication" in filename.lower()
+                        "Publications" in filename or "publication" in filename.lower()
                     )
 
             required_chunk_types = RAGOptimizationConfig.get_required_chunk_types(
@@ -413,24 +416,27 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
             seen_chunks = set()
 
             # Log RAG queries for publication_name and publication_year for debugging
-            if attribute_type in (AttributeType.PUBLICATION_NAME, AttributeType.PUBLICATION_YEAR):
+            if attribute_type in (
+                AttributeType.PUBLICATION_NAME,
+                AttributeType.PUBLICATION_YEAR,
+            ):
                 logger.info(
                     f"RAG queries for {attribute_type.value}: {queries[:5]}"  # Show first 5 queries
                 )
-            
+
             # For NCT_NUMBER in publications, try all queries to find the best chunks
             # (publication queries come after abstract queries in the list)
             try_all_queries = (
                 attribute_type == AttributeType.NCT_NUMBER and is_publication
             )
-            
+
             for query_text in queries:
                 try:
                     # Start with document_id filter (chunks use abstract_id as document_id)
                     search_filters = {}
                     if document_id:
                         search_filters["document_id"] = document_id
-                    
+
                     # Note: We detect publication from metadata_filters filename for chunk type selection,
                     # but we don't filter by filename since chunks don't store filename in metadata
                     # They use abstract_id/document_id instead
@@ -494,7 +500,9 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
                                     "chunk_type": result.chunk.chunk_type.value
                                     if hasattr(result.chunk, "chunk_type")
                                     else None,
-                                    "filename": result.chunk.metadata.get("filename", "")
+                                    "filename": result.chunk.metadata.get(
+                                        "filename", ""
+                                    )
                                     if result.chunk.metadata
                                     else "",
                                 }
@@ -755,27 +763,28 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
         # Special case: NCT_NUMBER - prioritize chunks that actually contain NCT numbers
         if attribute_type == AttributeType.NCT_NUMBER:
             import re
-            nct_pattern = re.compile(r'NCT\d{8}', re.IGNORECASE)
-            
+
+            nct_pattern = re.compile(r"NCT\d{8}", re.IGNORECASE)
+
             # Separate chunks into those with NCT numbers and those without
             chunks_with_nct = []
             chunks_without_nct = []
-            
+
             for result in search_results:
                 if nct_pattern.search(result.chunk.content):
                     chunks_with_nct.append(result)
                 else:
                     chunks_without_nct.append(result)
-            
+
             # Prioritize chunks with NCT numbers, then sort by similarity within each group
             chunks_with_nct.sort(key=lambda r: r.similarity_score, reverse=True)
             chunks_without_nct.sort(key=lambda r: r.similarity_score, reverse=True)
-            
+
             logger.debug(
                 f"Prioritized NCT_NUMBER: {len(chunks_with_nct)} chunks with NCT numbers, "
                 f"{len(chunks_without_nct)} without"
             )
-            
+
             return chunks_with_nct + chunks_without_nct
 
         # If non-numeric, return as-is (no prioritization needed)
@@ -836,5 +845,3 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
             # Return priority chunks first, then others
             return priority_chunks + non_priority_chunks
-
-

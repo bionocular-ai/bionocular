@@ -34,22 +34,24 @@ class PostprocessingService(PostprocessingServiceInterface):
 
     def _extract_tables_by_id(self, content: str) -> dict[str, str]:
         """Extract all tables from content and return a dict mapping abstract ID to table content.
-        
+
         Tables are identified by their ID in the format: | Table: 784O | or | Table: 7840 |
         Table IDs are normalized (e.g., 7840 -> 784O) to match abstract IDs.
         Handles ESMO 2022 (78xx) and ESMO 2023 (10xx, 11xx) patterns.
         """
         tables_by_id = {}
-        
-        lines = content.split('\n')
+
+        lines = content.split("\n")
         current_table_id = None
         current_table_lines = []
         in_table = False
-        waiting_for_table_start = False  # For cases like "Table: 1123P description" where table starts later
-        
+        waiting_for_table_start = (
+            False  # For cases like "Table: 1123P description" where table starts later
+        )
+
         for i, line in enumerate(lines):
             stripped = line.strip()
-            
+
             # Check if this line starts a new table with an ID
             # Pattern: | Table: 784O | or | Table: 7840 | or | Table: 805P |
             # Also handle: | Table: | 832P | (ID in first column) or plain text "Table: 872P"
@@ -57,29 +59,36 @@ class PostprocessingService(PostprocessingServiceInterface):
             # Also handle ESMO 2024: 10xx patterns (1076O, 1077MO, 1082O, 1083P, etc.)
             # Also handle split IDs: | Table: 109! | 5P | (should be 1095P) or | Table: 111   | L2P | (should be 1112P)
             # Note: [MO] matches single M or O, but we need MO as a sequence, so use (?:MO|M|O) with MO first
-            table_id_match = re.search(r'(?:^\| Table:\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP))|^\| Table:\s*\|\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP))|^Table:\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP)))', stripped)
+            table_id_match = re.search(
+                r"(?:^\| Table:\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP))|^\| Table:\s*\|\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP))|^Table:\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP)))",
+                stripped,
+            )
             if table_id_match:
                 # Get the matched ID (could be from any of the three groups)
-                table_id = table_id_match.group(1) or table_id_match.group(2) or table_id_match.group(3)
+                table_id = (
+                    table_id_match.group(1)
+                    or table_id_match.group(2)
+                    or table_id_match.group(3)
+                )
                 # Save previous table if any
                 if current_table_id and current_table_lines:
-                    table_content = '\n'.join(current_table_lines).strip()
+                    table_content = "\n".join(current_table_lines).strip()
                     if table_content:
                         tables_by_id[current_table_id] = table_content
-                
+
                 # Normalize OCR errors: 7840 -> 784O, 7860 -> 786O, etc.
-                if re.match(r'^78[4-9]0$', table_id):
+                if re.match(r"^78[4-9]0$", table_id):
                     table_id = table_id[:-1] + "O"
-                elif re.match(r'^10[67]\d0$', table_id):
+                elif re.match(r"^10[67]\d0$", table_id):
                     # ESMO 2024: 10760 -> 1076O, 10820 -> 1082O
                     table_id = table_id[:-1] + "O"
-                elif re.match(r'^10[89]\d0$', table_id):
+                elif re.match(r"^10[89]\d0$", table_id):
                     table_id = table_id[:-1] + "O"
-                elif re.match(r'^11[0-9]\d0$', table_id):
+                elif re.match(r"^11[0-9]\d0$", table_id):
                     table_id = table_id[:-1] + "O"
-                
+
                 # Check if this is a markdown table row (starts with |) or plain text
-                if stripped.startswith('|'):
+                if stripped.startswith("|"):
                     # Table starts immediately
                     current_table_id = table_id
                     current_table_lines = [line]
@@ -93,7 +102,7 @@ class PostprocessingService(PostprocessingServiceInterface):
                     waiting_for_table_start = True
             elif waiting_for_table_start:
                 # We're waiting for the actual table to start after a "Table: ID description" line
-                if stripped.startswith('|') and '|' in stripped[1:]:
+                if stripped.startswith("|") and "|" in stripped[1:]:
                     # Table has started
                     current_table_lines.append(line)
                     in_table = True
@@ -106,25 +115,29 @@ class PostprocessingService(PostprocessingServiceInterface):
                     current_table_lines.append(line)
             elif in_table:
                 # Check if this is a table line (starts with | and has at least one more |)
-                if stripped.startswith('|') and '|' in stripped[1:]:
+                if stripped.startswith("|") and "|" in stripped[1:]:
                     # Continue current table
                     current_table_lines.append(line)
                 elif not stripped:
                     # Empty line - might be within table or end of table
                     # Check next few lines to see if table continues
                     next_non_empty = None
-                    for j in range(i+1, min(i+10, len(lines))):
+                    for j in range(i + 1, min(i + 10, len(lines))):
                         if lines[j].strip():
                             next_non_empty = lines[j].strip()
                             break
-                    
-                    if next_non_empty and next_non_empty.startswith('|') and '|' in next_non_empty[1:]:
+
+                    if (
+                        next_non_empty
+                        and next_non_empty.startswith("|")
+                        and "|" in next_non_empty[1:]
+                    ):
                         # Table continues - include empty line
                         current_table_lines.append(line)
                     else:
                         # Table ended - save it
                         if current_table_id and current_table_lines:
-                            table_content = '\n'.join(current_table_lines).strip()
+                            table_content = "\n".join(current_table_lines).strip()
                             if table_content:
                                 tables_by_id[current_table_id] = table_content
                         current_table_id = None
@@ -135,7 +148,7 @@ class PostprocessingService(PostprocessingServiceInterface):
                     # Non-empty, non-table line - table has ended
                     # Save the table
                     if current_table_id and current_table_lines:
-                        table_content = '\n'.join(current_table_lines).strip()
+                        table_content = "\n".join(current_table_lines).strip()
                         if table_content:
                             tables_by_id[current_table_id] = table_content
                     current_table_id = None
@@ -144,37 +157,39 @@ class PostprocessingService(PostprocessingServiceInterface):
                     waiting_for_table_start = False
             else:
                 # Try to handle split table IDs: | Table: 109! | 5P | or | Table: 111   | L2P |
-                split_id_match = re.search(r'^\| Table:\s*(\d+)[!L]?\s*\|\s*([0-9L]?[0-9]P)', stripped)
+                split_id_match = re.search(
+                    r"^\| Table:\s*(\d+)[!L]?\s*\|\s*([0-9L]?[0-9]P)", stripped
+                )
                 if split_id_match:
                     part1 = split_id_match.group(1)
                     part2 = split_id_match.group(2)
                     # Fix OCR errors: "!" -> "5", "L" -> "2"
-                    part2 = part2.replace('L', '2').replace('!', '5')
+                    part2 = part2.replace("L", "2").replace("!", "5")
                     # Combine parts
-                    if part1.startswith('109') and part2.startswith('5'):
-                        table_id = '1095P'
-                    elif part1.startswith('111') and part2.startswith('2'):
-                        table_id = '1112P'
+                    if part1.startswith("109") and part2.startswith("5"):
+                        table_id = "1095P"
+                    elif part1.startswith("111") and part2.startswith("2"):
+                        table_id = "1112P"
                     else:
                         table_id = part1 + part2
-                    
+
                     # Save previous table if any
                     if current_table_id and current_table_lines:
-                        table_content = '\n'.join(current_table_lines).strip()
+                        table_content = "\n".join(current_table_lines).strip()
                         if table_content:
                             tables_by_id[current_table_id] = table_content
-                    
+
                     current_table_id = table_id
                     current_table_lines = [line]
                     in_table = True
                     waiting_for_table_start = False
-        
+
         # Save last table if any
         if current_table_id and current_table_lines:
-            table_content = '\n'.join(current_table_lines).strip()
+            table_content = "\n".join(current_table_lines).strip()
             if table_content:
                 tables_by_id[current_table_id] = table_content
-        
+
         logger.info(f"Extracted {len(tables_by_id)} tables with IDs")
         return tables_by_id
 
@@ -194,19 +209,21 @@ class PostprocessingService(PostprocessingServiceInterface):
             # Each abstract should end with: https://doi.org/10.1016/j.annonc.YYYY.MM.NNNN
             # Pattern handles both plain DOIs and markdown link formats like:
             # https://doi.org/[10.1016/j.annonc.2020.08.1278](https://doi.org/10.1016/j.annonc.2020.08.1278)
-            
+
             # Pattern for DOI links - matches the actual DOI URL
             # Handles:
             # - Plain DOIs: https://doi.org/10.1016/j.annonc.2020.08.1200
             # - OCR errors: https://doi.org/10.1016/i.annonc.2020.08.1261 (i instead of j)
             # - Markdown links: https://doi.org/[10.1016/j.annonc.2020.08.1278](...)
             # - HTML artifacts: https://doi.org/10.1016/j.annonc.2020.08.1223>
-            doi_pattern = r"https://doi\.org/10\.1016/[ij]\.annonc\.\d{4}\.\d{2}\.\d{4}[^\)\s]*"
-            
+            doi_pattern = (
+                r"https://doi\.org/10\.1016/[ij]\.annonc\.\d{4}\.\d{2}\.\d{4}[^\)\s]*"
+            )
+
             # Find all DOI positions in the content
             all_doi_matches = list(re.finditer(doi_pattern, content))
-            
-            # Deduplicate: if two DOIs are very close together (within 100 chars), 
+
+            # Deduplicate: if two DOIs are very close together (within 100 chars),
             # they're likely the same DOI in a markdown link format
             # Keep only the last occurrence (the one in parentheses)
             doi_matches = []
@@ -222,10 +239,10 @@ class PostprocessingService(PostprocessingServiceInterface):
                         doi_matches[-1] = match  # Replace previous with this one
                     else:
                         doi_matches.append(match)
-            
+
             # For ESMO 2022, use abstract ID splitting as primary method (not all abstracts have DOIs)
             is_2022 = "2022" in input_path
-            
+
             # For 2022, prefer abstract ID splitting if we have few DOIs
             if is_2022 and len(doi_matches) < 50:
                 # Use abstract ID splitting for ESMO 2022
@@ -233,24 +250,28 @@ class PostprocessingService(PostprocessingServiceInterface):
                 # Also match image markers that often precede abstracts: ![](_page_X_Picture_Y.jpeg) or ![](_page_X_Figure_Y.jpeg)
                 # ESMO 2022: 78xx patterns, ESMO 2024: 10xx patterns
                 abstract_id_pattern = r"^([78]\d{3}|[78]\d{2}(?:O|MO|P|TiP)|10[67]\d[0O]|10[67]\d[MO]|10[67]\dP|10[67]\dTiP)$"
-                image_marker_pattern = r"^!\[\]\(_page_\d+_(Picture|Figure)_\d+\.jpeg\)$"
+                image_marker_pattern = (
+                    r"^!\[\]\(_page_\d+_(Picture|Figure)_\d+\.jpeg\)$"
+                )
                 # Pattern for "Background:" that appears at start of abstract (after DOI or image)
-                background_pattern = r"^(?:<span[^>]*>)*\s*(?:\*\*)?Background(?:\*\*)?:"
-                
-                lines = content.split('\n')
+                background_pattern = (
+                    r"^(?:<span[^>]*>)*\s*(?:\*\*)?Background(?:\*\*)?:"
+                )
+
+                lines = content.split("\n")
                 abstract_texts = []
-                current_abstract = []
+                current_abstract: list[str] = []
                 in_abstract = False
                 last_was_doi = False
                 last_was_image = False
-                
+
                 for i, line in enumerate(lines):
                     stripped_line = line.strip()
-                    
+
                     # Check if this line is an abstract ID (standalone line with just the ID)
                     if re.match(abstract_id_pattern, stripped_line):
                         if in_abstract and current_abstract:
-                            abstract_text = '\n'.join(current_abstract).strip()
+                            abstract_text = "\n".join(current_abstract).strip()
                             if len(abstract_text) > 50:
                                 abstract_texts.append(abstract_text)
                         current_abstract = [line]
@@ -262,8 +283,8 @@ class PostprocessingService(PostprocessingServiceInterface):
                         if in_abstract and current_abstract:
                             # If we're already in an abstract, this might be a new one
                             # Check if previous line was a DOI or empty, or if we just saw a DOI recently
-                            if i > 0 and (last_was_doi or lines[i-1].strip() == ""):
-                                abstract_text = '\n'.join(current_abstract).strip()
+                            if i > 0 and (last_was_doi or lines[i - 1].strip() == ""):
+                                abstract_text = "\n".join(current_abstract).strip()
                                 if len(abstract_text) > 50:
                                     abstract_texts.append(abstract_text)
                                 current_abstract = [line]
@@ -276,9 +297,11 @@ class PostprocessingService(PostprocessingServiceInterface):
                         last_was_image = True
                         last_was_doi = False
                     # Check for "Background:" that appears after DOI or image (start of new abstract)
-                    elif re.match(background_pattern, stripped_line, re.IGNORECASE) and (last_was_doi or last_was_image):
+                    elif re.match(
+                        background_pattern, stripped_line, re.IGNORECASE
+                    ) and (last_was_doi or last_was_image):
                         if in_abstract and current_abstract:
-                            abstract_text = '\n'.join(current_abstract).strip()
+                            abstract_text = "\n".join(current_abstract).strip()
                             if len(abstract_text) > 50:
                                 abstract_texts.append(abstract_text)
                         current_abstract = [line]
@@ -296,21 +319,27 @@ class PostprocessingService(PostprocessingServiceInterface):
                         # Check if this is a new abstract starting
                         is_new_abstract = False
                         # Don't treat tables as new abstracts - they belong to current abstract
-                        is_table_line = stripped_line.startswith("|") and "|" in stripped_line[1:]
-                        is_table_footer = (stripped_line and not stripped_line.startswith("|") and 
-                                          not stripped_line.startswith("Background") and
-                                          not stripped_line.startswith("Methods") and
-                                          not stripped_line.startswith("Results") and
-                                          not stripped_line.startswith("Conclusions") and
-                                          not stripped_line.startswith("Clinical trial") and
-                                          not stripped_line.startswith("Editorial") and
-                                          not stripped_line.startswith("Legal entity") and
-                                          not stripped_line.startswith("Funding") and
-                                          not stripped_line.startswith("Disclosure") and
-                                          not stripped_line.startswith("https://doi.org") and
-                                          not stripped_line.startswith("![]") and
-                                          i > 0 and lines[i-1].strip().startswith("|"))
-                        
+                        is_table_line = (
+                            stripped_line.startswith("|") and "|" in stripped_line[1:]
+                        )
+                        is_table_footer = (
+                            stripped_line
+                            and not stripped_line.startswith("|")
+                            and not stripped_line.startswith("Background")
+                            and not stripped_line.startswith("Methods")
+                            and not stripped_line.startswith("Results")
+                            and not stripped_line.startswith("Conclusions")
+                            and not stripped_line.startswith("Clinical trial")
+                            and not stripped_line.startswith("Editorial")
+                            and not stripped_line.startswith("Legal entity")
+                            and not stripped_line.startswith("Funding")
+                            and not stripped_line.startswith("Disclosure")
+                            and not stripped_line.startswith("https://doi.org")
+                            and not stripped_line.startswith("![]")
+                            and i > 0
+                            and lines[i - 1].strip().startswith("|")
+                        )
+
                         if is_table_line or is_table_footer:
                             # This is table content - continue with current abstract
                             current_abstract.append(line)
@@ -318,33 +347,61 @@ class PostprocessingService(PostprocessingServiceInterface):
                         elif re.match(abstract_id_pattern, stripped_line):
                             is_new_abstract = True
                         # Check for markdown heading with abstract ID (e.g., "## 850P")
-                        elif re.match(r'^##+\s*([78]\d{3}|[78]\d{2}(?:O|MO|P|TiP))$', stripped_line):
+                        elif re.match(
+                            r"^##+\s*([78]\d{3}|[78]\d{2}(?:O|MO|P|TiP))$",
+                            stripped_line,
+                        ):
                             is_new_abstract = True
                         # Check for image marker - this starts a new abstract
                         elif re.match(image_marker_pattern, stripped_line):
                             is_new_abstract = True
                         # Check for title after empty line (likely new abstract)
                         # But only if previous line was empty AND we haven't seen an image marker recently
-                        elif i > 0 and lines[i-1].strip() == "" and not last_was_image and (
-                            stripped_line.startswith('#') or
-                            (len(stripped_line) > 20 and len(stripped_line) < 200 and
-                             not re.match(r'^(Background|Methods|Results|Conclusions|Trial design|Clinical trial identification|Editorial acknowledgement|Legal entity|Funding|Disclosure):', stripped_line, re.IGNORECASE) and
-                             not re.match(r'^https://', stripped_line) and
-                             not re.match(r'^!\[\]', stripped_line))
+                        elif (
+                            i > 0
+                            and lines[i - 1].strip() == ""
+                            and not last_was_image
+                            and (
+                                stripped_line.startswith("#")
+                                or (
+                                    len(stripped_line) > 20
+                                    and len(stripped_line) < 200
+                                    and not re.match(
+                                        r"^(Background|Methods|Results|Conclusions|Trial design|Clinical trial identification|Editorial acknowledgement|Legal entity|Funding|Disclosure):",
+                                        stripped_line,
+                                        re.IGNORECASE,
+                                    )
+                                    and not re.match(r"^https://", stripped_line)
+                                    and not re.match(r"^!\[\]", stripped_line)
+                                )
+                            )
                         ):
                             # Check if next few lines contain author info
-                            lookahead_lines = lines[i+1:min(i+5, len(lines))]
-                            has_author_info = any('<sup>' in l for l in lookahead_lines)
-                            has_plain_authors = any(re.match(r'^[A-Z]\.\s*[A-Z][a-z]+', l.strip()) for l in lookahead_lines if l.strip())
+                            lookahead_lines = lines[i + 1 : min(i + 5, len(lines))]
+                            has_author_info = any(
+                                "<sup>" in line for line in lookahead_lines
+                            )
+                            has_plain_authors = any(
+                                re.match(r"^[A-Z]\.\s*[A-Z][a-z]+", line.strip())
+                                for line in lookahead_lines
+                                if line.strip()
+                            )
                             # Check for LaTeX-formatted author lines
-                            has_latex_authors = any('$' in l and ('\\text{' in l or '\\frac{' in l) for l in lookahead_lines)
-                            if has_author_info or has_plain_authors or has_latex_authors:
+                            has_latex_authors = any(
+                                "$" in line and ("\\text{" in line or "\\frac{" in line)
+                                for line in lookahead_lines
+                            )
+                            if (
+                                has_author_info
+                                or has_plain_authors
+                                or has_latex_authors
+                            ):
                                 is_new_abstract = True
-                        
+
                         if is_new_abstract:
                             # Start new abstract
                             if current_abstract:
-                                abstract_text = '\n'.join(current_abstract).strip()
+                                abstract_text = "\n".join(current_abstract).strip()
                                 if len(abstract_text) > 50:
                                     abstract_texts.append(abstract_text)
                             current_abstract = [line]
@@ -364,25 +421,45 @@ class PostprocessingService(PostprocessingServiceInterface):
                         # 1. Markdown heading starting with #
                         # 2. Or a line that's not too long and not a section header, followed by author info
                         is_title = False
-                        if stripped_line.startswith('#'):
+                        if stripped_line.startswith("#"):
                             # Markdown heading - likely a title
                             is_title = True
-                        elif (len(stripped_line) > 20 and len(stripped_line) < 200 and 
-                              not re.match(r'^(Background|Methods|Results|Conclusions|Trial design|Clinical trial identification|Editorial acknowledgement|Legal entity|Funding|Disclosure):', stripped_line, re.IGNORECASE) and
-                              not re.match(r'^https://', stripped_line) and
-                              not re.match(r'^!\[\]', stripped_line)):
+                        elif (
+                            len(stripped_line) > 20
+                            and len(stripped_line) < 200
+                            and not re.match(
+                                r"^(Background|Methods|Results|Conclusions|Trial design|Clinical trial identification|Editorial acknowledgement|Legal entity|Funding|Disclosure):",
+                                stripped_line,
+                                re.IGNORECASE,
+                            )
+                            and not re.match(r"^https://", stripped_line)
+                            and not re.match(r"^!\[\]", stripped_line)
+                        ):
                             # Check if next few lines contain author info (have <sup> tags, LaTeX formatting, or look like author names)
                             # This indicates it's likely a title
-                            lookahead_lines = lines[i+1:min(i+5, len(lines))]
-                            has_author_info = any('<sup>' in l for l in lookahead_lines)
+                            lookahead_lines = lines[i + 1 : min(i + 5, len(lines))]
+                            has_author_info = any(
+                                "<sup>" in line for line in lookahead_lines
+                            )
                             # Check for plain author lines (names with initials like "Y. Yang, B. Lian" or "J.T. Moyers<sup>1</sup>")
                             # Pattern matches: "Y. Yang" or "J.T. Moyers" (with or without space after period)
-                            has_plain_authors = any(re.match(r'^[A-Z]\.\s*[A-Z][a-z]+', l.strip()) for l in lookahead_lines if l.strip())
+                            has_plain_authors = any(
+                                re.match(r"^[A-Z]\.\s*[A-Z][a-z]+", line.strip())
+                                for line in lookahead_lines
+                                if line.strip()
+                            )
                             # Check for LaTeX-formatted author lines (e.g., $\frac{\text{...}}$ or $\text{...}$)
-                            has_latex_authors = any('$' in l and ('\\text{' in l or '\\frac{' in l) for l in lookahead_lines)
-                            if has_author_info or has_plain_authors or has_latex_authors:
+                            has_latex_authors = any(
+                                "$" in line and ("\\text{" in line or "\\frac{" in line)
+                                for line in lookahead_lines
+                            )
+                            if (
+                                has_author_info
+                                or has_plain_authors
+                                or has_latex_authors
+                            ):
                                 is_title = True
-                        
+
                         if is_title:
                             # If we just saw an image marker (last_was_image is True), always add title to current abstract
                             # This handles the case: DOI -> image marker -> title
@@ -393,10 +470,17 @@ class PostprocessingService(PostprocessingServiceInterface):
                                 last_was_image = False
                             else:
                                 # Check if current abstract only has an image marker (and possibly empty lines)
-                                non_empty_lines = [l for l in current_abstract if l.strip()]
-                                if (in_abstract and current_abstract and 
-                                    len(non_empty_lines) == 1 and 
-                                    re.match(image_marker_pattern, non_empty_lines[0].strip())):
+                                non_empty_lines = [
+                                    line for line in current_abstract if line.strip()
+                                ]
+                                if (
+                                    in_abstract
+                                    and current_abstract
+                                    and len(non_empty_lines) == 1
+                                    and re.match(
+                                        image_marker_pattern, non_empty_lines[0].strip()
+                                    )
+                                ):
                                     # Add title to existing abstract that started with image marker
                                     current_abstract.append(line)
                                     last_was_doi = False
@@ -404,7 +488,9 @@ class PostprocessingService(PostprocessingServiceInterface):
                                 else:
                                     # Start new abstract with title
                                     if in_abstract and current_abstract:
-                                        abstract_text = '\n'.join(current_abstract).strip()
+                                        abstract_text = "\n".join(
+                                            current_abstract
+                                        ).strip()
                                         if len(abstract_text) > 50:
                                             abstract_texts.append(abstract_text)
                                     current_abstract = [line]
@@ -424,76 +510,80 @@ class PostprocessingService(PostprocessingServiceInterface):
                         # Only reset on non-empty content that's not a title
                         if stripped_line:
                             # Check if this might be a title (don't reset flag yet)
-                            is_potential_title = (
-                                stripped_line.startswith('#') or
-                                (len(stripped_line) > 20 and len(stripped_line) < 200 and
-                                 not re.match(r'^(Background|Methods|Results|Conclusions|Trial design|Clinical trial identification|Editorial acknowledgement|Legal entity|Funding|Disclosure):', stripped_line, re.IGNORECASE) and
-                                 not re.match(r'^https://', stripped_line) and
-                                 not re.match(r'^!\[\]', stripped_line))
+                            is_potential_title = stripped_line.startswith("#") or (
+                                len(stripped_line) > 20
+                                and len(stripped_line) < 200
+                                and not re.match(
+                                    r"^(Background|Methods|Results|Conclusions|Trial design|Clinical trial identification|Editorial acknowledgement|Legal entity|Funding|Disclosure):",
+                                    stripped_line,
+                                    re.IGNORECASE,
+                                )
+                                and not re.match(r"^https://", stripped_line)
+                                and not re.match(r"^!\[\]", stripped_line)
                             )
                             if not is_potential_title:
                                 last_was_doi = False
                                 last_was_image = False
-                
+
                 if in_abstract and current_abstract:
-                    abstract_text = '\n'.join(current_abstract).strip()
+                    abstract_text = "\n".join(current_abstract).strip()
                     if len(abstract_text) > 50:
                         abstract_texts.append(abstract_text)
-                
+
                 if len(abstract_texts) > len(doi_matches):
                     return abstract_texts
-            
+
             if not doi_matches:
                 # Fallback: try splitting by abstract IDs if no DOIs found
                 abstract_id_pattern = r"^(?:#+\s*)?(1\d{3,4}[A-Z]*|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})(?:\s|$)"
-                lines = content.split('\n')
+                lines = content.split("\n")
                 abstract_texts = []
                 current_abstract = []
                 in_abstract = False
-                
+
                 for line in lines:
                     stripped_line = line.strip()
                     if re.match(abstract_id_pattern, stripped_line):
                         if in_abstract and current_abstract:
-                            abstract_text = '\n'.join(current_abstract).strip()
+                            abstract_text = "\n".join(current_abstract).strip()
                             if len(abstract_text) > 50:
                                 abstract_texts.append(abstract_text)
                         current_abstract = [line]
                         in_abstract = True
                     elif in_abstract:
                         current_abstract.append(line)
-                
+
                 if in_abstract and current_abstract:
-                    abstract_text = '\n'.join(current_abstract).strip()
+                    abstract_text = "\n".join(current_abstract).strip()
                     if len(abstract_text) > 50:
                         abstract_texts.append(abstract_text)
-                
+
                 return abstract_texts
-            
+
             # Split content by DOI positions
             # Strategy: Split content at each DOI, then for each section find where the abstract starts
             abstract_texts = []
             # Updated pattern to include ESMO 2022 format: 7840, 7850, etc. (4-digit numbers starting with 78)
             abstract_id_pattern = r"^(?:#+\s*)?(1\d{3,4}[A-Z]*|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})(?:\s|$)"
-            
+
             # Split content at each DOI position
             split_positions = [0]  # Start with beginning
             for match in doi_matches:
                 # Split after the DOI (include the DOI in the abstract)
                 split_positions.append(match.end())
             split_positions.append(len(content))  # End with file end
-            
+
             # Process each section between split positions
             for i in range(len(split_positions) - 1):
                 section_start = split_positions[i]
                 section_end = split_positions[i + 1]
                 section_content = content[section_start:section_end]
-                
+
                 # Find where the abstract actually starts in this section
                 # (look for abstract ID, skip header content)
-                lines = section_content.split('\n')
+                lines = section_content.split("\n")
                 abstract_start_idx = 0
-                
+
                 for j, line in enumerate(lines):
                     stripped = line.strip()
                     # Skip empty lines and header content
@@ -504,14 +594,17 @@ class PostprocessingService(PostprocessingServiceInterface):
                         abstract_start_idx = j
                         break
                     # Also check if we see content that indicates we're in an abstract
-                    if any(keyword in stripped.lower() for keyword in ["background:", "methods:", "results:"]):
+                    if any(
+                        keyword in stripped.lower()
+                        for keyword in ["background:", "methods:", "results:"]
+                    ):
                         # We're already in an abstract, start from beginning of section
                         break
-                
+
                 # Extract the abstract from the found start
                 abstract_lines = lines[abstract_start_idx:]
-                abstract_text = '\n'.join(abstract_lines).strip()
-                
+                abstract_text = "\n".join(abstract_lines).strip()
+
                 # Only add if it looks like a valid abstract
                 if len(abstract_text) > 50:
                     abstract_texts.append(abstract_text)
@@ -541,11 +634,15 @@ class PostprocessingService(PostprocessingServiceInterface):
 
             # Extract all tables with their IDs before splitting abstracts (for ESMO 2022/2023/2024)
             tables_by_id = {}
-            if config.conference_type == ConferenceType.ESMO and ("2022" in input_path or "2023" in input_path or "2024" in input_path):
+            if config.conference_type == ConferenceType.ESMO and (
+                "2022" in input_path or "2023" in input_path or "2024" in input_path
+            ):
                 tables_by_id = self._extract_tables_by_id(content)
 
             # Split content into individual abstracts
-            abstract_texts = self._split_abstracts(content, config.conference_type, input_path)
+            abstract_texts = self._split_abstracts(
+                content, config.conference_type, input_path
+            )
             logger.info(f"Found {len(abstract_texts)} abstracts to process")
 
             # Process each abstract
@@ -554,24 +651,29 @@ class PostprocessingService(PostprocessingServiceInterface):
             structured_metadata_count = 0
             conference_specific_features = 0
             errors = []
-            
+
             # For ESMO 2020/2021/2022/2023/2024, use expected ID list to assign correct IDs
             expected_ids = None
             if config.conference_type == ConferenceType.ESMO:
                 if "2020" in input_path:
                     from infrastructure.esmo_postprocessor import ESMO_2020_EXPECTED_IDS
+
                     expected_ids = ESMO_2020_EXPECTED_IDS
                 elif "2021" in input_path:
                     from infrastructure.esmo_postprocessor import ESMO_2021_EXPECTED_IDS
+
                     expected_ids = ESMO_2021_EXPECTED_IDS
                 elif "2022" in input_path:
                     from infrastructure.esmo_postprocessor import ESMO_2022_EXPECTED_IDS
+
                     expected_ids = ESMO_2022_EXPECTED_IDS
                 elif "2023" in input_path:
                     from infrastructure.esmo_postprocessor import ESMO_2023_EXPECTED_IDS
+
                     expected_ids = ESMO_2023_EXPECTED_IDS
                 elif "2024" in input_path:
                     from infrastructure.esmo_postprocessor import ESMO_2024_EXPECTED_IDS
+
                     expected_ids = ESMO_2024_EXPECTED_IDS
 
             # First pass: normalize OCR errors and collect extracted IDs
@@ -581,27 +683,34 @@ class PostprocessingService(PostprocessingServiceInterface):
             for i, abstract_text in enumerate(abstract_texts):
                 try:
                     parsed_abstract = await processor.parse_abstract(abstract_text)
-                    
+
                     # Filter out invalid abstracts (no title or minimal content)
                     # Skip abstracts that are just image markers, section headers, or have no meaningful content
-                    if parsed_abstract.title == "N/A" or not parsed_abstract.title.strip():
+                    if (
+                        parsed_abstract.title == "N/A"
+                        or not parsed_abstract.title.strip()
+                    ):
                         logger.warning(f"Skipping abstract {i}: No title found")
                         continue
-                    
+
                     # Skip abstracts that are too short (likely just headers or image markers)
                     # Check if abstract has meaningful content beyond just the title
-                    has_content = any([
-                        parsed_abstract.background,
-                        parsed_abstract.methods,
-                        parsed_abstract.results,
-                        parsed_abstract.conclusions,
-                        parsed_abstract.trial_design,
-                        parsed_abstract.authors_and_affiliations
-                    ])
+                    has_content = any(
+                        [
+                            parsed_abstract.background,
+                            parsed_abstract.methods,
+                            parsed_abstract.results,
+                            parsed_abstract.conclusions,
+                            parsed_abstract.trial_design,
+                            parsed_abstract.authors_and_affiliations,
+                        ]
+                    )
                     if not has_content and len(abstract_text.strip()) < 100:
-                        logger.warning(f"Skipping abstract {i}: Insufficient content (likely header/image marker only)")
+                        logger.warning(
+                            f"Skipping abstract {i}: Insufficient content (likely header/image marker only)"
+                        )
                         continue
-                    
+
                     # Normalize known OCR errors first
                     if parsed_abstract.id == "10760":
                         parsed_abstract.id = "1076O"
@@ -611,38 +720,48 @@ class PostprocessingService(PostprocessingServiceInterface):
                         parsed_abstract.id = "1037O"
                     elif parsed_abstract.id == "10400":
                         parsed_abstract.id = "1040O"
-                    elif re.match(r'^78[4-9]0$', parsed_abstract.id):
+                    elif re.match(r"^78[4-9]0$", parsed_abstract.id):
                         parsed_abstract.id = parsed_abstract.id[:-1] + "O"
-                    elif re.match(r'^10[89]\d0$', parsed_abstract.id):
+                    elif re.match(r"^10[89]\d0$", parsed_abstract.id):
                         # ESMO 2023: 10810 -> 1081O, 10820 -> 1082O, etc.
                         parsed_abstract.id = parsed_abstract.id[:-1] + "O"
-                    elif re.match(r'^11[0-9]\d0$', parsed_abstract.id):
+                    elif re.match(r"^11[0-9]\d0$", parsed_abstract.id):
                         # ESMO 2023: 11000 -> 1100O, 11100 -> 1110O, etc.
                         parsed_abstract.id = parsed_abstract.id[:-1] + "O"
-                    
+
                     # Track extracted IDs (if valid)
-                    if parsed_abstract.id != "N/A" and expected_ids and parsed_abstract.id in expected_ids:
+                    if (
+                        parsed_abstract.id != "N/A"
+                        and expected_ids
+                        and parsed_abstract.id in expected_ids
+                    ):
                         extracted_id_to_index[parsed_abstract.id] = i
-                    
+
                     parsed_abstracts_list.append(parsed_abstract)
                 except Exception as e:
                     errors.append(f"Error parsing abstract {i}: {str(e)}")
                     continue
-            
+
             # Second pass: assign IDs only to abstracts with N/A
             if expected_ids:
                 # Track which expected IDs have been assigned
                 assigned_ids = set()
-                
+
                 # First, preserve all correctly extracted IDs
                 for parsed_abstract in parsed_abstracts_list:
-                    if parsed_abstract.id != "N/A" and expected_ids and parsed_abstract.id in expected_ids:
+                    if (
+                        parsed_abstract.id != "N/A"
+                        and expected_ids
+                        and parsed_abstract.id in expected_ids
+                    ):
                         assigned_ids.add(parsed_abstract.id)
-                
+
                 # Then, assign missing IDs sequentially to abstracts with N/A
-                na_indices = [i for i, pa in enumerate(parsed_abstracts_list) if pa.id == "N/A"]
+                na_indices = [
+                    i for i, pa in enumerate(parsed_abstracts_list) if pa.id == "N/A"
+                ]
                 expected_index = 0
-                
+
                 for na_idx in na_indices:
                     # Find next unassigned expected ID
                     while expected_index < len(expected_ids):
@@ -653,13 +772,20 @@ class PostprocessingService(PostprocessingServiceInterface):
                             expected_index += 1
                             break
                         expected_index += 1
-            
+
             # Third pass: Assign tables to abstracts based on table IDs (for ESMO 2022/2023/2024)
             # This replaces any tables that were extracted during parsing with the correct ones based on table IDs
-            if config.conference_type == ConferenceType.ESMO and ("2022" in input_path or "2023" in input_path or "2024" in input_path) and tables_by_id:
+            if (
+                config.conference_type == ConferenceType.ESMO
+                and (
+                    "2022" in input_path or "2023" in input_path or "2024" in input_path
+                )
+                and tables_by_id
+            ):
                 from infrastructure.esmo_postprocessor import ESMOPostprocessor
+
                 esmo_processor = ESMOPostprocessor()
-                
+
                 # First, remove tables from abstracts that don't match their ID
                 # Check if a table in additional_content has a different ID than the abstract
                 for parsed_abstract in parsed_abstracts_list:
@@ -667,39 +793,61 @@ class PostprocessingService(PostprocessingServiceInterface):
                         # Check if the table has an ID that doesn't match the abstract ID
                         # Handle multiple formats: | Table: 832P |, | Table: | 832P |, Table: 832P
                         # Use same pattern as extraction with MO first to match correctly
-                        table_id_match = re.search(r'(?:^\| Table:\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP))|^\| Table:\s*\|\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP))|^Table:\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP)))', parsed_abstract.additional_content, re.MULTILINE)
+                        table_id_match = re.search(
+                            r"(?:^\| Table:\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP))|^\| Table:\s*\|\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP))|^Table:\s*([78]\d{3}|[78]\d{2}(?:MO|O|P|TiP)|10[67]\d(?:0|MO|O|M|P|TiP)|10[89]\d(?:0|MO|O|M|P|TiP)|11[0-9]\d(?:0|MO|O|M|P|TiP)))",
+                            parsed_abstract.additional_content,
+                            re.MULTILINE,
+                        )
                         if table_id_match:
-                            table_id = table_id_match.group(1) or table_id_match.group(2) or table_id_match.group(3)
+                            table_id = (
+                                table_id_match.group(1)
+                                or table_id_match.group(2)
+                                or table_id_match.group(3)
+                            )
                             # Normalize OCR errors
-                            if re.match(r'^78[4-9]0$', table_id):
+                            if re.match(r"^78[4-9]0$", table_id):
                                 table_id = table_id[:-1] + "O"
-                            elif re.match(r'^10[67]\d0$', table_id):
+                            elif re.match(r"^10[67]\d0$", table_id):
                                 table_id = table_id[:-1] + "O"
-                            elif re.match(r'^10[89]\d0$', table_id):
+                            elif re.match(r"^10[89]\d0$", table_id):
                                 table_id = table_id[:-1] + "O"
-                            elif re.match(r'^11[0-9]\d0$', table_id):
+                            elif re.match(r"^11[0-9]\d0$", table_id):
                                 table_id = table_id[:-1] + "O"
                             # If table ID doesn't match abstract ID, remove it
-                            if parsed_abstract.id != "N/A" and table_id != parsed_abstract.id:
+                            if (
+                                parsed_abstract.id != "N/A"
+                                and table_id != parsed_abstract.id
+                            ):
                                 parsed_abstract.additional_content = ""
-                                logger.debug(f"Removed mismatched table {table_id} from abstract {parsed_abstract.id}")
-                
+                                logger.debug(
+                                    f"Removed mismatched table {table_id} from abstract {parsed_abstract.id}"
+                                )
+
                 # Then, assign correct tables based on table IDs
                 for parsed_abstract in parsed_abstracts_list:
-                    if parsed_abstract.id != "N/A" and tables_by_id and parsed_abstract.id in tables_by_id:
+                    if (
+                        parsed_abstract.id != "N/A"
+                        and tables_by_id
+                        and parsed_abstract.id in tables_by_id
+                    ):
                         # Replace or add the table from the extracted tables
                         table_content = tables_by_id[parsed_abstract.id]
                         if table_content:
                             # Clean the table content using the processor's method
-                            parsed_abstract.additional_content = esmo_processor.clean_table_content(table_content)
-                            logger.debug(f"Assigned table to abstract {parsed_abstract.id}")
-            
+                            parsed_abstract.additional_content = (
+                                esmo_processor.clean_table_content(table_content)
+                            )
+                            logger.debug(
+                                f"Assigned table to abstract {parsed_abstract.id}"
+                            )
+
             # Process parsed abstracts
             for i, parsed_abstract in enumerate(parsed_abstracts_list):
                 try:
-
                     # Validate the abstract
-                    validation_issues = await processor.validate_abstract(parsed_abstract)
+                    validation_issues = await processor.validate_abstract(
+                        parsed_abstract
+                    )
                     if validation_issues:
                         abstracts_with_warnings += 1
                         logger.warning(

@@ -483,7 +483,8 @@ CONTEXT:
                 else:
                     # Extract numeric part from string if present
                     import re
-                    numeric_match = re.search(r'\d+', str(value))
+
+                    numeric_match = re.search(r"\d+", str(value))
                     if numeric_match:
                         clean_value = numeric_match.group(0)
                     else:
@@ -492,15 +493,19 @@ CONTEXT:
             # Special handling for NCT_NUMBER - supports NCT, EudraCT, and other identifiers
             elif attribute_type == AttributeType.NCT_NUMBER:
                 import re
+
                 value_str = str(value).strip()
-                
+
                 # Trial identifier patterns (priority order)
                 trial_id_patterns = [
                     (r"NCT\d{8}", "NCT"),  # NCT number (highest priority)
-                    (r"EudraCT[:\s]*(\d{4}-\d{6}-\d{2,3})", "EudraCT"),  # EudraCT format
+                    (
+                        r"EudraCT[:\s]*(\d{4}-\d{6}-\d{2,3})",
+                        "EudraCT",
+                    ),  # EudraCT format
                     (r"EudraCT[:\s]*(\d+)", "EudraCT"),  # EudraCT simple format
                 ]
-                
+
                 # Try each pattern in priority order
                 found_match = False
                 for pattern, prefix in trial_id_patterns:
@@ -512,37 +517,39 @@ CONTEXT:
                             break
                         elif prefix == "EudraCT":
                             # Format EudraCT properly
-                            eudract_value = match.group(1) if match.lastindex else match.group(0)
+                            eudract_value = (
+                                match.group(1) if match.lastindex else match.group(0)
+                            )
                             # Clean up the value - remove non-digit/non-dash characters
-                            eudract_value = re.sub(r'[^\d-]', '', eudract_value)
+                            eudract_value = re.sub(r"[^\d-]", "", eudract_value)
                             clean_value = f"EudraCT: {eudract_value}"
                             found_match = True
                             break
-                
+
                 if not found_match:
                     # If it's already in correct format, use it
-                    if re.match(r'^NCT\d{8}$', value_str):
+                    if re.match(r"^NCT\d{8}$", value_str):
                         clean_value = value_str
                     else:
                         # Try to extract NCT number from the value
-                        nct_match = re.search(r'NCT\d{8}', value_str)
+                        nct_match = re.search(r"NCT\d{8}", value_str)
                         if nct_match:
                             clean_value = nct_match.group(0)
                         else:
                             # If it's just digits (like 3086174.0), convert to NCT format
                             # Handle decimal numbers by extracting integer part before decimal
-                            if '.' in value_str:
+                            if "." in value_str:
                                 # Extract integer part before decimal (e.g., "3086174.0" -> "3086174")
-                                integer_part = value_str.split('.')[0]
-                                digits_match = re.search(r'\d+', integer_part)
+                                integer_part = value_str.split(".")[0]
+                                digits_match = re.search(r"\d+", integer_part)
                             else:
-                                digits_match = re.search(r'\d+', value_str)
-                            
+                                digits_match = re.search(r"\d+", value_str)
+
                             if digits_match:
                                 digits = digits_match.group(0)
                                 # Pad to 8 digits if needed
                                 if len(digits) == 7:
-                                    digits = '0' + digits
+                                    digits = "0" + digits
                                 if len(digits) == 8:
                                     clean_value = f"NCT{digits}"
                                 else:
@@ -554,6 +561,7 @@ CONTEXT:
                 # Check if this is a string-based attribute that should not be cleaned as numeric
                 # These are non-numeric attributes extracted from abstracts
                 from ..domain.extraction_models import AttributeConfigurationFactory
+
                 config = AttributeConfigurationFactory.get_configuration(attribute_type)
                 string_based_attributes = [
                     AttributeType.ABSTRACT_NUMBER,
@@ -575,9 +583,11 @@ CONTEXT:
                     AttributeType.PUBLICATION_NAME,
                     AttributeType.PUBLICATION_YEAR,
                 ]
-                
+
                 # If it's a string-based attribute, return as-is without numeric cleaning
-                if attribute_type in string_based_attributes or (config and str(config.value_kind) == "STRING"):
+                if attribute_type in string_based_attributes or (
+                    config and str(config.value_kind) == "STRING"
+                ):
                     # Convert to string only if not already a string to avoid double conversion
                     if isinstance(value, str):
                         clean_value = value.strip()

@@ -175,7 +175,7 @@ class ClinicalTrialsService:
         self, arm: TreatmentArm, attribute_type: AttributeType
     ) -> Optional[Union[str, bool, int, float]]:
         """Get attribute value from a TreatmentArm object.
-        
+
         Args:
             arm: TreatmentArm object
             attribute_type: Type of attribute to extract
@@ -284,4 +284,3 @@ class ClinicalTrialsService:
     def get_cache_stats(self) -> dict[str, int]:
         """Get cache statistics."""
         return self.repository.get_cache_stats()
-

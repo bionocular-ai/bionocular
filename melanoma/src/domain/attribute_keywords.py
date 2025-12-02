@@ -576,48 +576,102 @@ ATTRIBUTE_KEYWORDS: dict[AttributeType, Union[list[str], list[list[str]]]] = {
     # Logic: [Context: Regardless of cause] AND [Symptom] AND [Grade: 3+]
     # ============================================================================
     AttributeType.GRADE_3_PLUS_TEAE_ANEMIA: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["anemia", "anaemia", "hemoglobin decreased"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
     AttributeType.GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["thrombocytopenia", "platelet count decreased"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
     AttributeType.GRADE_3_PLUS_TEAE_NEUTROPENIA: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["neutropenia", "neutrophil count decreased"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
     AttributeType.GRADE_3_PLUS_TEAE_DIARRHEA: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["diarrhea", "diarrhoea"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
     AttributeType.GRADE_3_PLUS_TEAE_COLITIS: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["colitis"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
     AttributeType.GRADE_3_PLUS_TEAE_PNEUMONITIS: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["pneumonitis", "interstitial lung disease", "ild"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
     AttributeType.GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["alanine aminotransferase", "alt"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
     # Keep existing entries for TEAE_RASH and TEAE_CRS that weren't in the user's request
     AttributeType.GRADE_3_PLUS_TEAE_RASH: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["rash"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],
     AttributeType.GRADE_3_PLUS_TEAE_CRS: [
-        ["teae", "treatment emergent", "regardless of cause", "any adverse event", "all adverse events"],
+        [
+            "teae",
+            "treatment emergent",
+            "regardless of cause",
+            "any adverse event",
+            "all adverse events",
+        ],
         ["crs", "cytokine release syndrome"],
         ["grade 3", "grade 4", "grade 3-4", "grade 3-5", "grade ≥3", "severe", "≥g3"],
     ],

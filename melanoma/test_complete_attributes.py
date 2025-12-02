@@ -3,7 +3,6 @@
 import logging
 from typing import Optional
 
-from src.app.clinical_trials_service import ClinicalTrialsService
 from src.domain.extraction_models import AttributeType
 from src.infrastructure.clinical_trials.factory import create_clinical_trials_service
 
@@ -27,7 +26,7 @@ def format_value(value: Optional[str | bool | int]) -> str:
 
 def test_all_attributes(nct_number: str = "NCT01844505"):
     """Test all attributes from the user's complete list.
-    
+
     Args:
         nct_number: NCT number to test (default: NCT01844505)
     """
@@ -51,25 +50,20 @@ def test_all_attributes(nct_number: str = "NCT01844505"):
         "Trial Name": AttributeType.TRIAL_NAME,
         "Clinical Trial Phase": AttributeType.CLINICAL_TRIAL_PHASE,
         "Study Type": AttributeType.STUDY_TYPE,
-        
         # Endpoints
         "Primary endpoint": AttributeType.PRIMARY_ENDPOINT,
         "Secondary endpoint": AttributeType.SECONDARY_ENDPOINT,
-        
         # Dates
         "Study start date": AttributeType.STUDY_START_DATE,
         "Primary Completion (Estimated)": AttributeType.PRIMARY_COMPLETION_DATE,
         "Study completion date": AttributeType.STUDY_COMPLETION_DATE,
         "First results": AttributeType.FIRST_RESULTS,
-        
         # Enrollment
         "Enrollment (Estimated)": AttributeType.NUMBER_OF_PATIENTS,
-        
         # Location
         "Trial run in Europe": AttributeType.TRIAL_RUN_IN_EUROPE,
         "Trial run in US": AttributeType.TRIAL_RUN_IN_US,
         "Trial run in China": AttributeType.TRIAL_RUN_IN_CHINA,
-        
         # Eligibility Attributes
         "Chemotherapy Naive": AttributeType.CHEMOTHERAPY_NAIVE,
         "Chemotherapy Failed": AttributeType.CHEMOTHERAPY_FAILED,
@@ -83,7 +77,6 @@ def test_all_attributes(nct_number: str = "NCT01844505"):
         "Biomarker Inclusion": AttributeType.BIOMARKER_INCLUSION,
         "Biomarkers Inclusion Criteria": AttributeType.BIOMARKERS_INCLUSION_CRITERIA,
         "Biomarkers Exclusion Criteria": AttributeType.BIOMARKERS_EXCLUSION_CRITERIA,
-        
         # Arm-specific attributes (from first arm)
         "Dosage": AttributeType.DOSAGE,
         "Type of dosing": AttributeType.TYPE_OF_DOSING,
@@ -140,12 +133,11 @@ def test_all_attributes(nct_number: str = "NCT01844505"):
 
 if __name__ == "__main__":
     import sys
-    
+
     # Allow NCT number to be passed as command line argument
     if len(sys.argv) > 1:
         nct_number = sys.argv[1]
     else:
         nct_number = "NCT01844505"  # Default
-    
-    test_all_attributes(nct_number)
 
+    test_all_attributes(nct_number)
