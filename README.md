@@ -2,7 +2,7 @@
 
 A Python backend for processing scientific PDFs about melanoma treatments. This project provides a foundation for building a RAG (Retrieval-Augmented Generation) system that will extract and analyze medical research data.
 
-## 🎯 Project Overview
+## 🎯 Service Overview
 
 Bionocular is designed to:
 - Process scientific PDFs related to melanoma treatments
