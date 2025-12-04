@@ -1,10 +1,10 @@
-"""Tests for the Marker PDF processor."""
+"""Tests for the enhanced Marker PDF processor."""
 
 from unittest.mock import Mock, patch
 
 import pytest
 
-from src.infrastructure.marker_processor import MarkerPDFProcessor
+from src.infrastructure.marker_processor import MarkerPDFProcessor, ModelManager
 
 
 class TestMarkerPDFProcessor:
@@ -286,3 +286,146 @@ class TestMarkerPDFProcessor:
                 result = await processor.is_batch_pdf(pdf_content)
                 # Should return False for 2 pages without batch indicators
                 assert result is False
+
+
+class TestModelManager:
+    """Test cases for ModelManager singleton."""
+
+    def test_singleton_behavior(self):
+        """Test that ModelManager follows singleton pattern."""
+        manager1 = ModelManager()
+        manager2 = ModelManager()
+        assert manager1 is manager2
+
+    @patch("src.infrastructure.marker_processor.create_model_dict")
+    def test_model_dict_creation(self, mock_create_model):
+        """Test model dictionary creation and caching."""
+        mock_model_dict = {"test_model": "test_value"}
+        mock_create_model.return_value = mock_model_dict
+
+        manager = ModelManager()
+        # Reset any existing model dict
+        manager._model_dict = None
+
+        # First call should create models
+        result1 = manager.get_model_dict()
+        assert result1 == mock_model_dict
+        assert mock_create_model.call_count == 1
+
+        # Second call should return cached models
+        result2 = manager.get_model_dict()
+        assert result2 == mock_model_dict
+        assert mock_create_model.call_count == 1  # Still only called once
+
+    def test_cleanup(self):
+        """Test model cleanup functionality."""
+        manager = ModelManager()
+        manager._model_dict = {"test": "value"}
+
+        manager.cleanup()
+        assert manager._model_dict is None
+
+
+class TestEnhancedMarkerProcessor:
+    """Test cases for enhanced functionality."""
+
+    def test_context_manager(self):
+        """Test context manager functionality."""
+        processor = MarkerPDFProcessor()
+
+        with processor as p:
+            assert p is processor
+            assert p.stats["start_time"] is not None
+
+    def test_enhanced_stats(self):
+        """Test enhanced statistics functionality."""
+        processor = MarkerPDFProcessor()
+        processor.stats["start_time"] = 1000.0
+        processor.stats["successful"] = 5
+        processor.stats["failed"] = 2
+
+        with patch("time.time", return_value=1100.0):  # 100 seconds later
+            stats = processor.get_processing_stats()
+
+        assert stats["total_runtime"] == 100.0
+        assert stats["success_rate"] == 5 / 7  # 5 out of 7 total
+        assert stats["avg_time_per_file"] == 100.0 / 7
+
+    @pytest.mark.asyncio
+    async def test_extract_text_with_error_handling(self):
+        """Test text extraction with improved error handling."""
+        processor = MarkerPDFProcessor()
+        pdf_content = b"%PDF-1.4\n%Test PDF content"
+
+        with patch("tempfile.NamedTemporaryFile") as mock_temp:
+            mock_file = Mock()
+            mock_file.name = "/tmp/test.pdf"
+            mock_temp.return_value.__enter__.return_value = mock_file
+
+            with patch("pathlib.Path.unlink") as mock_unlink:
+                with patch("pathlib.Path.exists", return_value=True):
+                    with patch(
+                        "src.infrastructure.marker_processor.PdfConverter"
+                    ) as mock_converter:
+                        # Mock converter failure
+                        mock_converter_instance = Mock()
+                        mock_converter_instance.side_effect = Exception(
+                            "Processing failed"
+                        )
+                        mock_converter.return_value = mock_converter_instance
+
+                        with pytest.raises(Exception, match="Processing failed"):
+                            await processor.extract_text(pdf_content)
+
+                        # Verify cleanup was called
+                        mock_unlink.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_extract_metadata_with_fallback(self):
+        """Test metadata extraction with fallback on errors."""
+        processor = MarkerPDFProcessor()
+        pdf_content = b"%PDF-1.4\n%Test PDF content"
+
+        with patch("tempfile.NamedTemporaryFile") as mock_temp:
+            mock_file = Mock()
+            mock_file.name = "/tmp/test.pdf"
+            mock_temp.return_value.__enter__.return_value = mock_file
+
+            with patch("pathlib.Path.unlink"):
+                with patch("pathlib.Path.exists", return_value=True):
+                    with patch(
+                        "src.infrastructure.marker_processor.PdfConverter"
+                    ) as mock_converter:
+                        # Mock converter failure
+                        mock_converter_instance = Mock()
+                        mock_converter_instance.side_effect = Exception(
+                            "Metadata extraction failed"
+                        )
+                        mock_converter.return_value = mock_converter_instance
+
+                        # Should return fallback metadata instead of raising
+                        result = await processor.extract_metadata(pdf_content)
+
+                        assert result["processor"] == "marker"
+                        assert "error" in result
+                        assert result["error"] == "Metadata extraction failed"
+
+    def test_cleanup_method(self):
+        """Test processor cleanup functionality."""
+        processor = MarkerPDFProcessor()
+
+        with patch.object(processor._model_manager, "cleanup") as mock_cleanup:
+            processor.cleanup()
+            mock_cleanup.assert_called_once()
+
+    def test_failed_files_tracking(self):
+        """Test that failed files are properly tracked in stats."""
+        processor = MarkerPDFProcessor()
+
+        # Simulate failures
+        processor.stats["failed"] = 2
+        processor.stats["failed_files"] = ["file1.pdf", "file2.pdf"]
+
+        stats = processor.get_processing_stats()
+        assert "failed_files" in stats
+        assert len(stats["failed_files"]) == 2

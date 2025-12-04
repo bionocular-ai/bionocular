@@ -2,6 +2,7 @@
 
 import io
 import logging
+from typing import Any
 
 from PyPDF2 import PdfReader
 
@@ -117,3 +118,67 @@ class PyPDF2Processor(PDFProcessorInterface):
 
         similarity = intersection / union if union > 0 else 0
         return similarity < 0.3  # Less than 30% similarity
+
+    async def extract_text(self, file_content: bytes) -> str:
+        """Extract text content from PDF file.
+
+        Args:
+            file_content: PDF file content as bytes
+
+        Returns:
+            Extracted text content
+        """
+        try:
+            pdf_stream = io.BytesIO(file_content)
+            reader = PdfReader(pdf_stream)
+
+            text_content = []
+            for page in reader.pages:
+                text_content.append(page.extract_text())
+
+            return "\n".join(text_content)
+
+        except Exception as e:
+            logger.error(f"Failed to extract text from PDF: {e}")
+            raise RuntimeError(f"Text extraction failed: {e}") from e
+
+    async def extract_metadata(self, file_content: bytes) -> dict[str, Any]:
+        """Extract metadata from PDF file.
+
+        Args:
+            file_content: PDF file content as bytes
+
+        Returns:
+            Extracted metadata dictionary
+        """
+        try:
+            pdf_stream = io.BytesIO(file_content)
+            reader = PdfReader(pdf_stream)
+
+            metadata = {}
+            if reader.metadata:
+                metadata.update(
+                    {
+                        "title": reader.metadata.get("/Title", ""),
+                        "author": reader.metadata.get("/Author", ""),
+                        "subject": reader.metadata.get("/Subject", ""),
+                        "creator": reader.metadata.get("/Creator", ""),
+                        "producer": reader.metadata.get("/Producer", ""),
+                        "creation_date": str(reader.metadata.get("/CreationDate", "")),
+                        "modification_date": str(reader.metadata.get("/ModDate", "")),
+                    }
+                )
+
+            # Add basic file info
+            metadata.update(
+                {
+                    "page_count": len(reader.pages),
+                    "is_batch": await self.is_batch_pdf(file_content),
+                }
+            )
+
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Failed to extract metadata from PDF: {e}")
+            raise RuntimeError(f"Metadata extraction failed: {e}") from e

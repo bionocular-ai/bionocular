@@ -38,7 +38,9 @@ class DocumentModel(Base):
     upload_date: Any = Column(DateTime(timezone=True), server_default=func.now())
     hash: Any = Column(String(64), unique=True, nullable=False, index=True)
     doc_status: Any = Column(Enum(DocumentStatus), default=DocumentStatus.INGESTED)
-    metadata = Column(JSONB, default={})
+    doc_metadata = Column(
+        "metadata", JSONB, default={}
+    )  # Column name is "metadata" but attribute is "doc_metadata"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

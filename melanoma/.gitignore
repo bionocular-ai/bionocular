@@ -1,0 +1,179 @@
+# Processed data files (generated from PDFs)
+data/processed/*.json
+data/processed/*.md
+data/processed/*_meta.json
+data/processed/Publications/
+data/processed/Publications/*
+
+# Keep the directory structure but ignore the generated content
+!data/processed/.gitkeep
+
+# Postprocessed data directories (generated from processed data)
+data/postprocessed/ASCO_Abstracts/
+data/postprocessed/ESMO_Abstracts/
+data/postprocessed/Publications/*.md
+data/processed/ASCO_Abstracts/
+data/processed/ESMO_Abstracts/
+
+# Output files directory (all generated output files)
+data/output/
+
+# Python cache and build files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pytest
+.pytest_cache/
+
+# Ruff
+.ruff_cache/
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Logs
+*.log
+logs/
+
+# Model files (if you add ML models later)
+*.pkl
+*.joblib
+*.model
+
+# Vector databases (for future vector storage)
+chroma_*/
+faiss_*/
+*.faiss
+*.index
+
+# Demo outputs
+demo_chunks/
+comparison_chunks/
+comparison_results/
+
+# Database files
+data/doctorci.db
+*.db
+*.sqlite
+*.sqlite3
+
+# Demo output files
+data/cost_report_*.json
+data/enhanced_extraction_results_*.json
+
+# Debug and analysis scripts
+debug_*.py
+analyze_*.py
+diagnose_*.py
+inspect_*.py
+investigate_*.py
+compare_*.py
+generate_*.py
+json_to_csv.py
+publication_json_to_csv.py
+fix_broken_json.py
+
+# Generated output files
+data/enhanced_extraction_results_*.csv
+data/asco_abstract_attributes_extraction_*.json
+*_test_results.json
+test_after_fixes.json
+*.html
+# But allow specific HTML files if needed
+!*.html.example
+!*.html.template
+
+# Generated reports and analysis outputs
+final_*.json
+final_*.html
+*_report.html
+*_report.json
+*_analysis_report.html
+*_diagnostic_report.json
+*_diagnostic_viewer.html
+query_analysis_report_*.json
+rag_analysis_report.html
+rag_diagnostic_report_*.json
+rag_diagnostic_viewer.html
+numeric_attributes_report.html
+numeric_attributes_test_results.json
+
+# API response samples (may contain sensitive data)
+data/api_response_sample.json
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+!.env.template
+
+# Secret files (be specific to avoid ignoring legitimate files)
+# Only ignore files that are clearly secret files, not source code
+secrets.json
+secrets.yaml
+secrets.yml
+config.local.*
+*.pem
+*.p12
+*.pfx
+# Private key files (but not source code files with "key" in name)
+*.private.key
+*.secret.key

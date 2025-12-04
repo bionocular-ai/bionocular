@@ -1,0 +1,314 @@
+# Therapy Approval Status Classification
+# This file categorizes therapies as Approved/Standard of Care vs Investigational
+# Based on clinical trial data analysis
+
+approved_therapies:
+  immune_checkpoint_inhibitors:
+    - name: "Pembrolizumab"
+      brand_name: "Keytruda"
+      status: "approved"
+      indications:
+        - "Adjuvant therapy for resected melanoma"
+        - "First-line treatment for advanced melanoma"
+        - "Standard comparator in trials"
+      notes: "Frequently used as standard comparator or adjuvant therapy"
+    
+    - name: "Nivolumab"
+      brand_name: "Opdivo"
+      status: "approved"
+      indications:
+        - "US-licensed and EU-authorized"
+        - "Standard adjuvant therapy"
+        - "Used as standard control arm"
+      notes: "Referenced as US-licensed and EU-authorized"
+    
+    - name: "Ipilimumab"
+      brand_name: "Yervoy"
+      status: "approved"
+      indications:
+        - "Standard control arm"
+        - "Established combinations"
+      notes: "Used as standard control arm or in established combinations"
+    
+    - name: "Cemiplimab"
+      brand_name: "Libtayo"
+      status: "approved"
+      indications:
+        - "Cutaneous Squamous Cell Carcinoma (CSCC)"
+        - "Basal Cell Carcinoma (BCC)"
+      notes: "Standard of care for CSCC and BCC"
+    
+    - name: "Avelumab"
+      brand_name: "Bavencio"
+      status: "approved"
+      indications:
+        - "Merkel Cell Carcinoma"
+      notes: "Used in Merkel Cell Carcinoma"
+    
+    - name: "Atezolizumab"
+      brand_name: "Tecentriq"
+      status: "approved"
+      indications:
+        - "Used in combination with targeted therapies"
+      notes: "Used in combination with targeted therapies"
+
+  targeted_therapies:
+    - name: "Dabrafenib + Trametinib"
+      brand_names: ["Tafinlar", "Mekinist"]
+      status: "approved"
+      indications:
+        - "Standard adjuvant treatment for BRAF-mutant melanoma"
+      notes: "Standard adjuvant treatment for BRAF-mutant melanoma"
+    
+    - name: "Vemurafenib + Cobimetinib"
+      brand_names: ["Zelboraf", "Cotellic"]
+      status: "approved"
+      indications:
+        - "Used as comparator arm"
+      notes: "Used as comparator arm"
+    
+    - name: "Encorafenib + Binimetinib"
+      brand_names: ["Braftovi", "Mektovi"]
+      status: "approved"
+      indications:
+        - "Used as standard comparator arm"
+      notes: "Used as standard comparator arm"
+
+  chemotherapy:
+    - name: "Dacarbazine"
+      status: "approved"
+      indications:
+        - "Standard control"
+        - "Investigator's Choice"
+      notes: "Listed as standard control or Investigator's Choice"
+    
+    - name: "Temozolomide"
+      status: "approved"
+      indications:
+        - "Adjuvant therapy comparator"
+      notes: "Used as adjuvant therapy comparator"
+    
+    - name: "Fotemustine"
+      status: "approved"
+      indications:
+        - "Comparator in brain metastasis trials"
+      notes: "Used as comparator in brain metastasis trials"
+
+  local_therapies:
+    - name: "T-VEC"
+      full_name: "Talimogene laherparepvec"
+      brand_name: "Imlygic"
+      status: "approved"
+      indications:
+        - "Oncolytic virus used in combinations"
+      notes: "Oncolytic virus used in combinations"
+    
+    - name: "Imiquimod"
+      status: "approved"
+      indications:
+        - "Control or alternative to surgery/radiotherapy"
+      notes: "Used as control or alternative to surgery/radiotherapy"
+    
+    - name: "Melphalan"
+      status: "approved"
+      indications:
+        - "Isolated Hepatic Perfusion for Uveal Melanoma"
+      notes: "Used in Isolated Hepatic Perfusion for Uveal Melanoma"
+
+investigational_therapies:
+  novel_checkpoint_inhibitors:
+    - name: "Relatlimab"
+      mechanism: "Anti-LAG-3"
+      status: "investigational"
+      notes: "Frequently tested in fixed-dose combination with Nivolumab"
+      phase: "Phase 2/3"
+    
+    - name: "Fianlimab"
+      mechanism: "Anti-LAG-3"
+      status: "investigational"
+      notes: "Investigational agent tested with Cemiplimab"
+      phase: "Phase 1/2"
+    
+    - name: "Tiragolumab"
+      mechanism: "Anti-TIGIT"
+      status: "investigational"
+      notes: "Anti-TIGIT antibody tested in combination with Atezolizumab"
+      phase: "Phase 1/2"
+    
+    - name: "Vibostolimab"
+      mechanism: "Anti-TIGIT"
+      status: "investigational"
+      notes: "Anti-TIGIT agent coformulated with Pembrolizumab"
+      phase: "Phase 1/2"
+    
+    - name: "Quavonlimab"
+      alias: "Qmab"
+      mechanism: "Anti-CTLA-4"
+      status: "investigational"
+      phase: "Phase 1/2"
+    
+    - name: "Gotistobart"
+      alias: "ONC-392"
+      mechanism: "Anti-CTLA-4"
+      status: "investigational"
+      phase: "Phase 1/2"
+    
+    - name: "Domatinostat"
+      mechanism: "HDAC inhibitor"
+      status: "investigational"
+      notes: "HDAC inhibitor tested with checkpoint inhibitors"
+      phase: "Phase 1/2"
+
+  cell_therapies:
+    - name: "Lifileucel"
+      alias: "LN-144"
+      mechanism: "Autologous Tumor Infiltrating Lymphocytes"
+      status: "investigational"
+      phase: "Phase 2"
+    
+    - name: "OBX-115"
+      mechanism: "Engineered TILs with membrane-bound IL15"
+      status: "investigational"
+      phase: "Phase 1/2"
+    
+    - name: "Tebentafusp"
+      alias: "IMCgp100"
+      mechanism: "Bispecific fusion protein for Uveal Melanoma"
+      status: "investigational"
+      notes: "While approved in some regions, appears as investigational arm against Investigator's Choice in many trials"
+      phase: "Phase 2/3"
+    
+    - name: "SCIB1"
+      mechanism: "DNA plasmid vaccine"
+      status: "investigational"
+      phase: "Phase 1/2"
+    
+    - name: "PRAME TCR/IL-15 NK Cells"
+      mechanism: "TCR-engineered NK cells"
+      status: "investigational"
+      phase: "Phase 1"
+
+  vaccines:
+    - name: "mRNA-4157"
+      alias: "V940"
+      mechanism: "Personalized cancer vaccine"
+      status: "investigational"
+      notes: "Tested with Pembrolizumab"
+      phase: "Phase 2"
+    
+    - name: "Seviprotimut-L"
+      mechanism: "Melanoma vaccine"
+      status: "investigational"
+      phase: "Phase 3"
+    
+    - name: "TLPLDC"
+      mechanism: "Autologous dendritic cell vaccine"
+      status: "investigational"
+      phase: "Phase 2"
+    
+    - name: "IFx-Hu2.0"
+      mechanism: "Vaccine for non-melanoma skin cancer"
+      status: "investigational"
+      phase: "Phase 1/2"
+
+  oncolytic_viruses:
+    - name: "TILT-123"
+      mechanism: "Oncolytic adenovirus coding for TNFalpha and IL-2"
+      status: "investigational"
+      phase: "Phase 1/2"
+    
+    - name: "RP1"
+      full_name: "Vusolimogene oderparepvec"
+      mechanism: "HSV-1 based oncolytic virus"
+      status: "investigational"
+      phase: "Phase 2"
+    
+    - name: "Daromun"
+      components: ["L19IL2", "L19TNF"]
+      mechanism: "Intratumoral cytokine therapy"
+      status: "investigational"
+      phase: "Phase 2/3"
+    
+    - name: "PV-10"
+      mechanism: "Chemoablation agent"
+      status: "investigational"
+      phase: "Phase 2"
+
+  small_molecules:
+    - name: "Lenvatinib"
+      mechanism: "Multi-kinase inhibitor"
+      status: "investigational"
+      notes: "Tested in combination with Pembrolizumab"
+      phase: "Phase 2"
+    
+    - name: "Darovasertib"
+      alias: "IDE196"
+      mechanism: "PKC inhibitor for Uveal Melanoma"
+      status: "investigational"
+      phase: "Phase 2"
+    
+    - name: "Sitravatinib"
+      mechanism: "Multi-kinase inhibitor"
+      status: "investigational"
+      notes: "Tested in Uveal Melanoma"
+      phase: "Phase 2"
+    
+    - name: "Ripretinib"
+      alias: "DCC-2618"
+      mechanism: "KIT/PDGFRα inhibitor"
+      status: "investigational"
+      phase: "Phase 1/2"
+    
+    - name: "Tunlametinib"
+      alias: "HL-085"
+      mechanism: "MEK inhibitor for NRAS-mutated melanoma"
+      status: "investigational"
+      phase: "Phase 2"
+    
+    - name: "Navtemadlin"
+      alias: "KRT-232"
+      mechanism: "MDM2 inhibitor"
+      status: "investigational"
+      phase: "Phase 2"
+
+  radiopharmaceuticals:
+    - name: "212Pb-VMT01"
+      mechanism: "Targeted alpha-particle therapy"
+      status: "investigational"
+      phase: "Phase 1"
+    
+    - name: "225Ac-MTI-201"
+      mechanism: "Targeted alpha-particle therapy"
+      status: "investigational"
+      phase: "Phase 1"
+
+# Control/Comparator arms
+control_arms:
+  - "Placebo"
+  - "Standard of Care"
+  - "Investigator's Choice"
+  - "Investigator's Choice Chemotherapy"
+  - "Best Alternative Care"
+  - "Historical Systemic Therapies"
+  - "Observation"
+  - "No Systemic Therapy"
+
+# Keywords that indicate approved/standard therapy
+approved_indicators:
+  - "US-licensed"
+  - "EU-authorized"
+  - "Standard of Care"
+  - "Standard"
+  - "Approved"
+  - "Historical"
+
+# Keywords that indicate investigational therapy
+investigational_indicators:
+  - "Phase 1"
+  - "Phase I"
+  - "First-in-Human"
+  - "FIH"
+  - "Investigational"
+  - "Experimental"
+  - "Novel"
+
