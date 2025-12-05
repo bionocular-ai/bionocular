@@ -16,7 +16,17 @@ export default function Home() {
   const [activeNav, setActiveNav] = useState('');
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
-  const particlesRef = useRef<any[]>([]);
+
+  interface Particle {
+    x: number;
+    y: number;
+    z: number;
+    vx: number;
+    vy: number;
+    r: number;
+    a: number;
+  }
+  const particlesRef = useRef<Particle[]>([]);
 
   // Rotating headlines
   useEffect(() => {
@@ -145,24 +155,30 @@ export default function Home() {
     );
     sections.forEach((sec) => sectionObserver.observe(sec));
 
-    // Handle initial hash
-    if (window.location.hash) {
-      scrollToHash(window.location.hash);
-      setActiveNav(window.location.hash);
+    // Handle initial hash - use requestAnimationFrame to avoid setState in effect
+    const initialHash = window.location.hash;
+    if (initialHash) {
+      requestAnimationFrame(() => {
+        scrollToHash(initialHash);
+        setActiveNav(initialHash);
+      });
     }
 
-    window.addEventListener('hashchange', () => {
+    const handleHashChange = () => {
       if (window.location.hash) {
         scrollToHash(window.location.hash);
         setActiveNav(window.location.hash);
       }
-    });
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
 
     return () => {
       anchors.forEach((anchor) => {
         anchor.removeEventListener('click', handleAnchorClick);
       });
       sectionObserver.disconnect();
+      window.removeEventListener('hashchange', handleHashChange);
     };
   }, []);
 
