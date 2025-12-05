@@ -22,21 +22,14 @@ import {
 import { organizeAttributesBySection } from '@/lib/utils/trial-utils';
 import { AbstractTimeline } from '@/components/timeline/AbstractTimeline';
 
-export default function AbstractDetailPage() {
-  const { data: session } = useSession();
-  const params = useParams();
-  const router = useRouter();
-  const abstractId = params.abstractId as string;
-  const [expandedSections, setExpandedSections] = React.useState<string[]>([]);
-  const [isAllExpanded, setIsAllExpanded] = React.useState(false);
+// Header component moved outside to avoid re-creation on render
+interface HeaderProps {
+  session: { user?: { email?: string | null; name?: string | null } } | null;
+  onNavigateToDashboard: () => void;
+}
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['abstract', abstractId],
-    queryFn: () => trialsApi.getByAbstractId(abstractId),
-  });
-
-  // Helper component for header
-  const Header = () => (
+function Header({ session, onNavigateToDashboard }: HeaderProps) {
+  return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shrink-0">
       <div className="w-full px-3 sm:px-4 md:px-6">
         <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
@@ -61,7 +54,7 @@ export default function AbstractDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push('/dashboard')}
+              onClick={onNavigateToDashboard}
               className="group border-gray-300 text-xs sm:text-sm text-gray-700 font-medium transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20"
               aria-label="Navigate to main categories"
             >
@@ -81,11 +74,29 @@ export default function AbstractDetailPage() {
       </div>
     </header>
   );
+}
+
+export default function AbstractDetailPage() {
+  const { data: session } = useSession();
+  const params = useParams();
+  const router = useRouter();
+  const abstractId = params.abstractId as string;
+  const [expandedSections, setExpandedSections] = React.useState<string[]>([]);
+  const [isAllExpanded, setIsAllExpanded] = React.useState(false);
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['abstract', abstractId],
+    queryFn: () => trialsApi.getByAbstractId(abstractId),
+  });
+
+  const handleNavigateToDashboard = React.useCallback(() => {
+    router.push('/dashboard');
+  }, [router]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen w-full bg-gray-50">
-        <Header />
+        <Header session={session} onNavigateToDashboard={handleNavigateToDashboard} />
         <main className="flex-1 overflow-auto bg-gray-50">
           <div className="container mx-auto py-10">
             <div className="flex items-center justify-center min-h-[400px]">
@@ -103,7 +114,7 @@ export default function AbstractDetailPage() {
   if (error || !data) {
     return (
       <div className="flex flex-col min-h-screen w-full bg-gray-50">
-        <Header />
+        <Header session={session} onNavigateToDashboard={handleNavigateToDashboard} />
         <main className="flex-1 overflow-auto bg-gray-50">
           <div className="container mx-auto py-10">
             <Card className="border-destructive">
@@ -111,7 +122,7 @@ export default function AbstractDetailPage() {
                 <div className="text-center py-12">
                   <h2 className="text-xl font-semibold text-destructive mb-2">Abstract Not Found</h2>
                   <p className="text-muted-foreground mb-4">
-                    The abstract you're looking for could not be found.
+                    The abstract you&apos;re looking for could not be found.
                   </p>
                   <Button 
                     onClick={() => router.push('/dashboard')} 
@@ -135,7 +146,7 @@ export default function AbstractDetailPage() {
   if (!details) {
     return (
       <div className="flex flex-col min-h-screen w-full bg-gray-50">
-        <Header />
+        <Header session={session} onNavigateToDashboard={handleNavigateToDashboard} />
         <main className="flex-1 overflow-auto bg-gray-50">
           <div className="container mx-auto py-10">
             <Card className="border-destructive">
@@ -168,7 +179,7 @@ export default function AbstractDetailPage() {
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-gray-50">
-      <Header />
+      <Header session={session} onNavigateToDashboard={handleNavigateToDashboard} />
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto bg-gray-50">
@@ -371,14 +382,17 @@ export default function AbstractDetailPage() {
                   </CardHeader>
                   <CardContent className="bg-white pt-6">
                     {(() => {
+                      type NestedSectionData = { Efficacy?: Record<string, string>; Safety?: Record<string, string> };
+                      type SectionDataType = Record<string, string> | NestedSectionData;
+                      
                       // Helper function to check if section data is nested (Results with Efficacy/Safety)
-                      const isNestedSection = (sectionData: any): boolean => {
+                      const isNestedSection = (sectionData: SectionDataType): sectionData is NestedSectionData => {
                         return sectionData && typeof sectionData === 'object' && 
                                ('Efficacy' in sectionData || 'Safety' in sectionData);
                       };
                       
                       // Helper function to count total attributes in nested section
-                      const countNestedAttributes = (sectionData: any): number => {
+                      const countNestedAttributes = (sectionData: SectionDataType): number => {
                         if (!isNestedSection(sectionData)) return 0;
                         const efficacyCount = sectionData.Efficacy ? Object.keys(sectionData.Efficacy).length : 0;
                         const safetyCount = sectionData.Safety ? Object.keys(sectionData.Safety).length : 0;
@@ -426,7 +440,7 @@ export default function AbstractDetailPage() {
                                             </tr>
                                           </thead>
                                           <tbody className="bg-white divide-y divide-gray-100">
-                                            {Object.entries(sectionData.Efficacy).map(([key, value], index) => (
+                                            {Object.entries(sectionData.Efficacy).map(([key, value]) => (
                                               <tr key={key} className="hover:bg-blue-50/50 transition-colors duration-150">
                                                 <td className="py-3 px-5 text-sm font-medium text-gray-700 whitespace-nowrap">{key}</td>
                                                 <td className="py-3 px-5 text-sm text-gray-900 break-words">{String(value)}</td>
@@ -457,7 +471,7 @@ export default function AbstractDetailPage() {
                                             </tr>
                                           </thead>
                                           <tbody className="bg-white divide-y divide-gray-100">
-                                            {Object.entries(sectionData.Safety).map(([key, value], index) => (
+                                            {Object.entries(sectionData.Safety).map(([key, value]) => (
                                               <tr key={key} className="hover:bg-blue-50/50 transition-colors duration-150">
                                                 <td className="py-3 px-5 text-sm font-medium text-gray-700 whitespace-nowrap">{key}</td>
                                                 <td className="py-3 px-5 text-sm text-gray-900 break-words">{String(value)}</td>

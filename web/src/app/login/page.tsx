@@ -15,7 +15,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -188,7 +188,7 @@ export default function LoginPage() {
               Forgot Password?
             </Link>
             <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link
                 href="/signup"
                 className="font-semibold hover:underline hover:opacity-80 transition-opacity"

@@ -23,6 +23,7 @@ class TrialResponse(BaseModel):
     sponsor: str = Field(..., description="Sponsor name")
     status: str = Field(..., description="Trial status")
     abstract_id: str = Field(default="", description="Abstract ID")
+    publication_name: str = Field(default="", description="Publication name (e.g., 'J Clin Oncol 37:693-702. 2019')")
     cancer_type: str = Field(
         default="", description="Primary cancer type (for backward compatibility)"
     )

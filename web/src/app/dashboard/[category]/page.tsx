@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserMenu } from '@/components/user-menu';
-import { trialsApi } from '@/lib/api';
+import { trialsApi, Trial } from '@/lib/api';
 import { Loader2, ChevronDown, Check, LayoutGrid } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -64,22 +64,20 @@ export default function CategoryDashboardPage() {
     refetchOnWindowFocus: false,
   });
 
-  // Filter trials by category - include trials that have this category in their cancer_types array
-  // or match the primary cancer_type (for backward compatibility)
+  // Filter trials by category - only include trials where the selected category is the primary cancer_type
+  // This ensures that when filtering for "Cutaneous Squamous Cell Carcinoma", we don't see trials
+  // that are primarily "Basal Cell Carcinoma" even if they have both types in their cancer_types array
   // Also filter out trials without NCT numbers
   const trials = React.useMemo(() => {
     const allTrials = data?.trials || [];
-    return allTrials.filter((trial: any) => {
+    return allTrials.filter((trial: Trial) => {
       // Filter out trials without NCT numbers
       if (!trial.nct_id || !trial.nct_id.trim()) {
         return false;
       }
       
-      // Check if category is in the cancer_types array (supports combinations)
-      if (trial.cancer_types && Array.isArray(trial.cancer_types)) {
-        return trial.cancer_types.includes(categoryName);
-      }
-      // Fallback to primary cancer_type for backward compatibility
+      // Strict filtering: only match if the primary cancer_type matches the selected category
+      // This ensures we only see trials that are primarily for the selected cancer type
       return trial.cancer_type === categoryName;
     });
   }, [data?.trials, categoryName]);

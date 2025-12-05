@@ -53,7 +53,7 @@ function flattenTrials(trials: Trial[]): Trial[] {
 }
 
 export function TrialDataTable({ data, showAbstractId = false, hideNctId = false, nctFilter = '', sponsorFilter = '' }: TrialDataTableProps) {
-  const [globalFilter, setGlobalFilter] = useState('');
+  const [globalFilter] = useState('');
 
   // Flatten trials with multiple arms
   const flattenedData = useMemo(() => {
@@ -87,7 +87,7 @@ export function TrialDataTable({ data, showAbstractId = false, hideNctId = false
     ...(!hideNctId ? [{
       accessorKey: 'nct_id' as const,
       header: 'TRIAL ID NCT',
-      cell: ({ row }: { row: any }) => {
+      cell: ({ row }: { row: { getValue: (key: string) => unknown; original: Trial } }) => {
         const nctId = row.getValue('nct_id') as string;
         if (!nctId) {
           return <span className="text-muted-foreground text-xs text-left">—</span>;
@@ -106,19 +106,31 @@ export function TrialDataTable({ data, showAbstractId = false, hideNctId = false
     ...(showAbstractId ? [{
       accessorKey: 'abstract_id' as const,
       header: 'ABSTRACT/PUBLICATION ID',
-      cell: ({ row }: { row: any }) => {
-        const abstractId = row.getValue('abstract_id') as string;
-        if (!abstractId) {
+      cell: ({ row }: { row: { getValue: (key: string) => unknown; original: Trial } }) => {
+        const trial = row.original;
+        const abstractId = trial.abstract_id;
+        const publicationName = trial.publication_name;
+        const isPublication = trial.type === 'publication';
+        
+        // For publications, show publication_name if available, otherwise fall back to abstract_id
+        // For abstracts, show abstract_id
+        const displayValue = (isPublication && publicationName) ? publicationName : abstractId;
+        
+        if (!displayValue) {
           return <span className="text-muted-foreground text-xs text-left">—</span>;
         }
+        
+        // Use abstract_id for the link (it's the identifier)
+        const linkId = abstractId || displayValue;
+        
         return (
           <Link
-            href={`/trial/abstract/${abstractId}`}
+            href={`/trial/abstract/${linkId}`}
             className="inline-flex items-center px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
             style={{ color: '#1A73E8' }}
-            title={abstractId}
+            title={abstractId || displayValue}
           >
-            <span className="max-w-[500px] truncate">{abstractId}</span>
+            <span className="max-w-[500px] truncate">{displayValue}</span>
           </Link>
         );
       },

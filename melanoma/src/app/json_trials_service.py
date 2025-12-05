@@ -244,6 +244,15 @@ class JSONTrialsService:
                 attributes, "publication_year"
             ) or self._extract_attribute_value(attributes, "published_year")
 
+        # Extract publication_name for publications
+        publication_name = self._extract_attribute_value(
+            attributes, "AttributeType.PUBLICATION_NAME"
+        )
+        if not publication_name:
+            publication_name = self._extract_attribute_value(
+                attributes, "publication_name"
+            )
+
         # Clean up phase value (remove "PHASE" prefix if present)
         if phase:
             phase = phase.replace("PHASE", "").strip()
@@ -305,6 +314,7 @@ class JSONTrialsService:
             "sponsor": sponsor,
             "status": status,
             "abstract_id": abstract_id,  # From AttributeType.ABSTRACT_NUMBER or publication_id
+            "publication_name": publication_name,  # Publication name (e.g., "J Clin Oncol 37:693-702. 2019")
             "cancer_type": primary_cancer_type,  # Primary type for backward compatibility
             "cancer_types": cancer_types,  # Array of all normalized types (for filtering)
             "year": year,

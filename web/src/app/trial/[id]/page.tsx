@@ -39,7 +39,7 @@ export default function TrialDetailPage() {
           <CardHeader>
             <CardTitle className="text-destructive">Trial Not Found</CardTitle>
             <CardDescription>
-              The trial you're looking for could not be found.
+              The trial you&apos;re looking for could not be found.
             </CardDescription>
           </CardHeader>
           <CardContent>

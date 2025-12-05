@@ -96,7 +96,7 @@ export default function CategoriesPage() {
 
           {/* Categories Grid - 2 columns layout */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-5">
-            {SKIN_CANCER_CATEGORIES.map((category, index) => {
+            {SKIN_CANCER_CATEGORIES.map((category) => {
               const slug = categoryToSlug(category);
               return (
                 <Link
