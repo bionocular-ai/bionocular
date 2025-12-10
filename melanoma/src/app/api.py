@@ -16,7 +16,6 @@ from ..infrastructure.database import (
     get_db_session,
     init_database,
 )
-from ..infrastructure.marker_processor import MarkerPDFProcessor
 from ..infrastructure.repository import SQLAlchemyDocumentRepository
 from ..infrastructure.storage import LocalFileStorage
 from .clinical_api import router as clinical_router
@@ -92,10 +91,13 @@ def get_ingestion_service(db: Session = Depends(get_db_session)) -> IngestionSer
         pdf_processor = NullPDFProcessor()
     else:
         # Use Marker processor for superior accuracy (requires heavy dependencies)
+        # Import lazily to avoid import errors if marker-pdf is not installed
         use_llm = os.getenv("MARKER_USE_LLM", "false").lower() == "true"
         extract_images = os.getenv("MARKER_EXTRACT_IMAGES", "true").lower() == "true"
 
         try:
+            from ..infrastructure.marker_processor import MarkerPDFProcessor
+
             pdf_processor = MarkerPDFProcessor(
                 use_llm=use_llm, extract_images=extract_images
             )
