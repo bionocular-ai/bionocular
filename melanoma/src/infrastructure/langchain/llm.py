@@ -15,7 +15,9 @@ try:
 except (
     ImportError
 ):  # pragma: no cover - fallback for environments without langchain_openai
-    from langchain_community.chat_models import ChatOpenAI as _ChatOpenAI
+    from langchain_community.chat_models import (
+        ChatOpenAI as _ChatOpenAI,  # type: ignore[no-redef]
+    )
 
 from langchain_core.language_models import BaseLLM
 from langchain_core.prompts import PromptTemplate
