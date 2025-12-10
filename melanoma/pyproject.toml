@@ -8,28 +8,36 @@ packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+# Core API dependencies (lightweight for production)
 fastapi = "^0.104.1"
 uvicorn = {extras = ["standard"], version = "^0.24.0"}
 pydantic = "^2.5.0"
 sqlalchemy = "^2.0.23"
 psycopg2-binary = "^2.9.9"
-pypdf2 = "^3.0.1"
-pdfplumber = "^0.10.3"
 python-multipart = "^0.0.6"
 python-dotenv = "^1.0.0"
 alembic = "^1.12.1"
+requests = "^2.31.0"
+tenacity = "^9.1.2"
+# Lightweight langchain for API calls only (if needed)
+langchain-openai = "^0.3.33"
+
+[tool.poetry.group.processing]
+optional = true
+
+[tool.poetry.group.processing.dependencies]
+# Heavy dependencies for LOCAL PDF processing and embedding generation only
+# These should NOT be installed in production/Render deployment
+pypdf2 = "^3.0.1"
+pdfplumber = "^0.10.3"
 marker-pdf = "1.8.2"
-# Embedding and Vector Store Dependencies
 sentence-transformers = "^2.7.0"
 chromadb = ">=0.5.0"
 numpy = ">=2.1.0"
 langchain = "^0.3.27"
 langchain-community = "^0.3.29"
-langchain-openai = "^0.3.33"
 langchain-huggingface = "^0.3.1"
-tenacity = "^9.1.2"
 langchain-chroma = "^0.2.6"
-requests = "^2.31.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

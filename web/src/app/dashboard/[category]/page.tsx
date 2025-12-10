@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserMenu } from '@/components/user-menu';
 import { trialsApi, Trial } from '@/lib/api';
-import { Loader2, ChevronDown, Check, LayoutGrid } from 'lucide-react';
+import { Loader2, ChevronDown, Check, LayoutGrid, BarChart3, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -315,6 +315,28 @@ export default function CategoryDashboardPage() {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+
+          {/* Comparative Analytics Link */}
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <Link href={`/dashboard/${categorySlug}/analytics`}>
+              <div className="group relative overflow-hidden rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-4 transition-all duration-200 hover:shadow-md hover:border-blue-300 hover:from-blue-100 hover:to-indigo-100 cursor-pointer">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-sm">
+                    <BarChart3 className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-sm font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">
+                      Comparative Analytics
+                    </h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Compare efficacy & safety metrics across treatments
+                    </p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" />
+                </div>
+              </div>
+            </Link>
+          </div>
         </aside>
 
         {/* Right Content - Table */}

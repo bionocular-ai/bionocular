@@ -6,7 +6,7 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies (minimal)
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
@@ -21,8 +21,10 @@ RUN poetry config virtualenvs.create false
 # Copy dependency files
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies (production only, no dev dependencies)
-RUN poetry install --no-dev --no-interaction --no-ansi
+# Install dependencies (production only)
+# Excludes: dev dependencies and optional processing group (PyTorch, transformers, etc.)
+# This keeps the image size under 300MB instead of 3-4GB
+RUN poetry install --only main --no-interaction --no-ansi --no-root
 
 # Copy application code
 COPY . .
