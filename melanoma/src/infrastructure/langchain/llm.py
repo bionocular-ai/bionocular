@@ -9,23 +9,27 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Any, Optional, cast
 
-# Prefer langchain_openai, fallback to community. Alias to avoid mypy no-redef.
-try:
-    from langchain_openai import ChatOpenAI as _ChatOpenAI
-except (
-    ImportError
-):  # pragma: no cover - fallback for environments without langchain_openai
-    from langchain_community.chat_models import (
-        ChatOpenAI as _ChatOpenAI,  # type: ignore[no-redef]
-    )
-
 from langchain_core.language_models import BaseLLM
 from langchain_core.prompts import PromptTemplate
 
 from ...domain.extraction_interfaces import LLMService
 
-# Public alias used throughout this module
-ChatOpenAI = _ChatOpenAI
+
+# Prefer langchain_openai, fallback to community. Use function to avoid mypy no-redef.
+def _get_chat_openai():
+    try:
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI
+    except (
+        ImportError
+    ):  # pragma: no cover - fallback for environments without langchain_openai
+        from langchain_community.chat_models import ChatOpenAI
+
+        return ChatOpenAI
+
+
+ChatOpenAI = _get_chat_openai()  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
