@@ -10,9 +10,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional, cast
 
 try:
-    from langchain_openai import ChatOpenAI
+    from langchain_openai import ChatOpenAI  # type: ignore[no-redef]
 except ImportError:
-    from langchain_community.chat_models import ChatOpenAI
+    from langchain_community.chat_models import ChatOpenAI  # type: ignore[assignment]
 from langchain_core.language_models import BaseLLM
 from langchain_core.prompts import PromptTemplate
 
