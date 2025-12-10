@@ -28,7 +28,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import HeadToHeadChart from '@/components/charts/HeadToHeadChart';
-import { transformHeadToHeadData } from '@/lib/chart-transformers';
+import { transformHeadToHeadData, getUniqueTreatments } from '@/lib/chart-transformers';
 import { analyticsApi } from '@/lib/api';
 import { HeadToHeadDataPoint, ChartMetric, TrialDataFile } from '@/types/analytics';
 import {
@@ -72,12 +72,77 @@ const COMPANY_OPTIONS = [
   { value: 'pfizer', label: 'Pfizer' },
 ];
 
+// Known industry sponsors (pharmaceutical companies)
+const INDUSTRY_SPONSORS = [
+  'bristol-myers squibb', 'bms', 'bristol myers',
+  'merck', 'msd',
+  'novartis',
+  'roche', 'genentech',
+  'pfizer',
+  'amgen',
+  'gilead',
+  'astrazeneca',
+  'lilly', 'eli lilly',
+  'sanofi',
+  'glaxosmithkline', 'gsk',
+  'abbvie',
+  'biogen',
+  'regeneron',
+  'moderna',
+  'johnson & johnson', 'janssen',
+  'bayer',
+  'boehringer',
+  'takeda',
+  'celgene',
+  'iovance',
+  'junshi',
+  'pharmaceutical', 'pharma', 'biotech', 'biotechnology',
+];
+
+// Helper function to determine if funding is industry or non-industry
+function isIndustryFunded(sponsorsValue: any): boolean | null {
+  if (!sponsorsValue) return null;
+  
+  const sponsorsStr = typeof sponsorsValue === 'object' && 'value' in sponsorsValue
+    ? String(sponsorsValue.value || '')
+    : String(sponsorsValue || '');
+  
+  if (!sponsorsStr || sponsorsStr.toLowerCase() === 'not found' || sponsorsStr.toLowerCase() === 'none') {
+    return null;
+  }
+  
+  const sponsorsLower = sponsorsStr.toLowerCase();
+  
+  // Check for explicit non-industry indicators
+  if (sponsorsLower.includes('non-industry') || 
+      sponsorsLower.includes('non industry') ||
+      sponsorsLower.includes('investigator sponsored') ||
+      sponsorsLower.includes('academic') ||
+      sponsorsLower.includes('university') ||
+      sponsorsLower.includes('government') ||
+      sponsorsLower.includes('nih') ||
+      sponsorsLower.includes('national cancer institute')) {
+    return false;
+  }
+  
+  // Check for industry sponsors
+  for (const industrySponsor of INDUSTRY_SPONSORS) {
+    if (sponsorsLower.includes(industrySponsor)) {
+      return true;
+    }
+  }
+  
+  // If we can't determine, return null (unknown)
+  return null;
+}
+
 const THERAPY_TYPE_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: 'immunotherapy', label: 'Immunotherapy' },
-  { value: 'targeted', label: 'Targeted Therapy' },
-  { value: 'chemotherapy', label: 'Chemotherapy' },
-  { value: 'combination', label: 'Combination' },
+  { value: 'Immunotherapy', label: 'Immunotherapy' },
+  { value: 'Cellular therapy', label: 'Cellular therapy' },
+  { value: 'Targeted Therapy', label: 'Targeted Therapy' },
+  { value: 'Oncolytic Virus', label: 'Oncolytic Virus' },
+  { value: 'Chemotherapy', label: 'Chemotherapy' },
 ];
 
 const LINE_OF_TREATMENT_OPTIONS = [
@@ -90,15 +155,8 @@ const LINE_OF_TREATMENT_OPTIONS = [
 ];
 
 const RESOURCE_TYPE_OPTIONS = [
-  { value: 'all', label: 'All Sources' },
-  { value: 'abstract', label: 'Conference Abstracts' },
+  { value: 'conference', label: 'Conference' },
   { value: 'publication', label: 'Publications' },
-];
-
-const CONFERENCE_OPTIONS = [
-  { value: 'all', label: 'All Conferences' },
-  { value: 'ASCO', label: 'ASCO' },
-  { value: 'ESMO', label: 'ESMO' },
 ];
 
 const PUBLICATION_OPTIONS = [
@@ -490,8 +548,7 @@ export default function CategoryAnalyticsPage() {
   const [company, setCompany] = useState('all');
   const [therapyType, setTherapyType] = useState('all');
   const [lineOfTreatment, setLineOfTreatment] = useState('all');
-  const [resourceType, setResourceType] = useState('abstract');
-  const [sourceFilter, setSourceFilter] = useState('all');
+  const [resourceType, setResourceType] = useState('conference');
   const [fundingType, setFundingType] = useState('all');
   const [biomarker, setBiomarker] = useState('all');
   const [biomarkerType, setBiomarkerType] = useState('all');
@@ -521,23 +578,310 @@ export default function CategoryAnalyticsPage() {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isFullscreen]);
 
+  // Determine which metric to display (efficacy or safety)
+  const displayMetric = useMemo(() => {
+    if (efficacyParam !== 'none') return efficacyParam;
+    if (safetyParam !== 'none') return safetyParam;
+    return null;
+  }, [efficacyParam, safetyParam]);
+
+  // Get available therapies for the selected cancer category
+  const availableTherapies = useMemo(() => {
+    if (!analyticsData || !analyticsData.abstracts) {
+      return { approved: APPROVED_THERAPIES, nonApproved: NON_APPROVED_THERAPIES };
+    }
+
+    // Filter by cancer type first
+    let categoryTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
+    
+    if (categoryName) {
+      categoryTrials = categoryTrials.filter(trial => {
+        for (const arm of Object.values(trial.arm_results)) {
+          const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'];
+          if (cancerTypeAttr === null || cancerTypeAttr === undefined) continue;
+          
+          const cancerType = typeof cancerTypeAttr === 'object' && 'value' in cancerTypeAttr
+            ? String(cancerTypeAttr.value || '')
+            : String(cancerTypeAttr || '');
+          
+          if (cancerType && cancerType.toLowerCase() === categoryName.toLowerCase()) {
+            return true;
+          }
+        }
+        return false;
+      });
+    }
+
+    // Extract unique treatment names from filtered trials
+    const treatmentSet = new Set<string>();
+    for (const trial of categoryTrials) {
+      for (const arm of Object.values(trial.arm_results)) {
+        if (arm.arm_name) {
+          treatmentSet.add(arm.arm_name);
+        }
+      }
+    }
+
+    const allTreatments = Array.from(treatmentSet).sort();
+    
+    // Classify treatments as approved or non-approved
+    // Using the same logic as chart-transformers
+    const APPROVED_TREATMENTS_SET = new Set([
+      'pembrolizumab', 'nivolumab', 'ipilimumab', 'dabrafenib', 'trametinib',
+      'vemurafenib', 'cobimetinib', 'encorafenib', 'binimetinib', 'atezolizumab',
+      'talimogene laherparepvec', 't-vec', 'cemiplimab', 'avelumab',
+    ]);
+
+    const approved: string[] = [];
+    const nonApproved: string[] = [];
+
+    for (const treatment of allTreatments) {
+      const normalized = treatment.toLowerCase();
+      let isApproved = false;
+
+      // Check if any approved treatment is in the name
+      for (const approvedDrug of APPROVED_TREATMENTS_SET) {
+        if (normalized.includes(approvedDrug)) {
+          isApproved = true;
+          break;
+        }
+      }
+
+      // Check for combination therapies with approved drugs
+      if (!isApproved && normalized.includes('+')) {
+        const parts = normalized.split('+').map(p => p.trim());
+        const hasApproved = parts.some(part => 
+          Array.from(APPROVED_TREATMENTS_SET).some(approved => part.includes(approved))
+        );
+        if (hasApproved) {
+          isApproved = true;
+        }
+      }
+
+      if (isApproved) {
+        approved.push(treatment);
+      } else {
+        nonApproved.push(treatment);
+      }
+    }
+
+    return {
+      approved: approved.length > 0 ? approved : APPROVED_THERAPIES,
+      nonApproved: nonApproved.length > 0 ? nonApproved : NON_APPROVED_THERAPIES,
+    };
+  }, [analyticsData, categoryName]);
+
+  // Clear selected therapies if they're not available in the current category
+  useEffect(() => {
+    const availableAll = [...availableTherapies.approved, ...availableTherapies.nonApproved];
+    setSelectedApproved(prev => prev.filter(t => availableTherapies.approved.includes(t)));
+    setSelectedNonApproved(prev => prev.filter(t => availableTherapies.nonApproved.includes(t)));
+  }, [availableTherapies]);
+
   // Transform and filter data
   const chartData = useMemo<HeadToHeadDataPoint[]>(() => {
     if (!analyticsData) return [];
-    if (efficacyParam === 'none') return [];
+    if (!displayMetric) return [];
+    if (!analyticsData.abstracts) return [];
 
     // Transform backend data to TrialDataFile format for the transformer
-    // Cast abstracts to the expected type (structurally compatible)
+    // Note: The API returns both abstracts and publications under the 'abstracts' key
+    // We need to filter them based on whether they have abstract_id or publication_id
+    let allTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
+
+    // Filter by cancer type (category)
+    if (categoryName) {
+      allTrials = allTrials.filter(trial => {
+        // Check if any arm has the matching cancer type
+        for (const arm of Object.values(trial.arm_results)) {
+          const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'];
+          if (cancerTypeAttr === null || cancerTypeAttr === undefined) continue;
+          
+          const cancerType = typeof cancerTypeAttr === 'object' && 'value' in cancerTypeAttr
+            ? String(cancerTypeAttr.value || '')
+            : String(cancerTypeAttr || '');
+          
+          if (cancerType && cancerType.toLowerCase() === categoryName.toLowerCase()) {
+            return true;
+          }
+        }
+        return false;
+      });
+    }
+
+    // Filter by resource type (Conference or Publications)
+    let filteredAbstracts: TrialDataFile['abstracts'];
+    if (resourceType === 'conference') {
+      // Filter to only show abstracts from ASCO or ESMO
+      filteredAbstracts = allTrials.filter(trial => {
+        // Must have abstract_id (not publication_id)
+        if (!trial.abstract_id || trial.publication_id) return false;
+        
+        // Check if conference is ASCO or ESMO
+        for (const arm of Object.values(trial.arm_results)) {
+          const conferenceAttr = arm.attributes['AttributeType.CONFERENCE'];
+          if (conferenceAttr === null || conferenceAttr === undefined) continue;
+          
+          const conference = typeof conferenceAttr === 'object' && 'value' in conferenceAttr
+            ? String(conferenceAttr.value || '')
+            : String(conferenceAttr || '');
+          
+          if (!conference) continue;
+          
+          const conferenceUpper = conference.toUpperCase();
+          if (conferenceUpper === 'ASCO' || conferenceUpper === 'ESMO') {
+            return true;
+          }
+        }
+        return false;
+      });
+    } else if (resourceType === 'publication') {
+      // Filter to only show publications (must have publication_id, not abstract_id)
+      filteredAbstracts = allTrials.filter(trial => {
+        return !!trial.publication_id && !trial.abstract_id;
+      });
+    } else {
+      // If 'all' or unknown, show all
+      filteredAbstracts = allTrials;
+    }
+
+    // Filter by therapy type if selected
+    if (therapyType !== 'all') {
+      filteredAbstracts = filteredAbstracts.map(trial => {
+        const filteredArmResults: Record<string, any> = {};
+        
+        for (const [armId, arm] of Object.entries(trial.arm_results)) {
+          const therapyTypeAttr = arm.attributes['AttributeType.TYPE_OF_THERAPY'];
+          if (therapyTypeAttr === null || therapyTypeAttr === undefined) continue;
+          
+          const armTherapyType = typeof therapyTypeAttr === 'object' && 'value' in therapyTypeAttr
+            ? String(therapyTypeAttr.value || '')
+            : String(therapyTypeAttr || '');
+          
+          if (!armTherapyType) continue;
+          
+          // Normalize and compare (case-insensitive to handle "Targeted therapy" vs "Targeted Therapy")
+          const armTypeNormalized = armTherapyType.trim().toLowerCase();
+          const filterTypeNormalized = therapyType.trim().toLowerCase();
+          
+          // Check if therapy type matches (case-insensitive)
+          if (armTypeNormalized === filterTypeNormalized) {
+            filteredArmResults[armId] = arm;
+          }
+        }
+        
+        // Return trial with filtered arms, or null if no arms remain
+        if (Object.keys(filteredArmResults).length === 0) {
+          return null;
+        }
+        
+        return {
+          ...trial,
+          arm_results: filteredArmResults,
+        };
+      }).filter((trial): trial is NonNullable<typeof trial> => trial !== null);
+    }
+
+    // Filter by funding type if selected
+    if (fundingType !== 'all') {
+      filteredAbstracts = filteredAbstracts.map(trial => {
+        const filteredArmResults: Record<string, any> = {};
+        
+        for (const [armId, arm] of Object.entries(trial.arm_results)) {
+          const sponsorsAttr = arm.attributes['AttributeType.SPONSORS'];
+          const isIndustry = isIndustryFunded(sponsorsAttr);
+          
+          // Include arm if funding type matches
+          if (fundingType === 'industry' && isIndustry === true) {
+            filteredArmResults[armId] = arm;
+          } else if (fundingType === 'non-industry' && isIndustry === false) {
+            filteredArmResults[armId] = arm;
+          }
+        }
+        
+        // Return trial with filtered arms, or null if no arms remain
+        if (Object.keys(filteredArmResults).length === 0) {
+          return null;
+        }
+        
+        return {
+          ...trial,
+          arm_results: filteredArmResults,
+        };
+      }).filter((trial): trial is NonNullable<typeof trial> => trial !== null);
+    }
+
+    // Filter by safety parameter if selected (and not being used as display metric)
+    if (safetyParam !== 'none' && efficacyParam !== 'none') {
+      const safetyMetricKey = `AttributeType.${safetyParam}`;
+      filteredAbstracts = filteredAbstracts.map(trial => {
+        const filteredArmResults: Record<string, any> = {};
+        
+        // Only include arms that have the selected safety parameter with a valid value
+        for (const [armId, arm] of Object.entries(trial.arm_results)) {
+          // Check if the attribute key exists in the attributes object
+          if (!(safetyMetricKey in arm.attributes)) {
+            continue;
+          }
+          
+          const safetyAttr = arm.attributes[safetyMetricKey];
+          
+          // Use the same extraction logic as the transformer
+          // Check if safety attribute exists and has a valid numeric value
+          if (safetyAttr !== null && safetyAttr !== undefined) {
+            let safetyValue: number | null = null;
+            
+            // Handle different attribute formats (same as extractNumericValue logic)
+            if (typeof safetyAttr === 'number') {
+              safetyValue = safetyAttr;
+            } else if (typeof safetyAttr === 'string') {
+              const parsed = parseFloat(safetyAttr);
+              safetyValue = isNaN(parsed) ? null : parsed;
+            } else if (typeof safetyAttr === 'object' && 'value' in safetyAttr) {
+              const value = safetyAttr.value;
+              if (value === null || value === 'Not found' || value === 'NR') {
+                safetyValue = null;
+              } else if (typeof value === 'number') {
+                safetyValue = value;
+              } else if (typeof value === 'string') {
+                // Handle ranges like "12.5-15.3" by taking the first number
+                const match = value.match(/[\d.]+/);
+                if (match) {
+                  const parsed = parseFloat(match[0]);
+                  safetyValue = isNaN(parsed) ? null : parsed;
+                }
+              }
+            }
+            
+            // Include arm if we have a valid numeric value (including 0, which is valid for percentages)
+            if (safetyValue !== null && !isNaN(safetyValue)) {
+              filteredArmResults[armId] = arm;
+            }
+          }
+        }
+        
+        // Return trial with filtered arms, or null if no arms remain
+        if (Object.keys(filteredArmResults).length === 0) {
+          return null;
+        }
+        
+        return {
+          ...trial,
+          arm_results: filteredArmResults,
+        };
+      }).filter((trial): trial is NonNullable<typeof trial> => trial !== null);
+    }
+
     const trialData: TrialDataFile = {
-      total_abstracts: analyticsData.total_abstracts,
+      total_abstracts: filteredAbstracts.length,
       total_arms: analyticsData.total_arms,
       total_attributes_extracted: analyticsData.total_attributes_extracted,
       average_confidence: analyticsData.average_confidence,
-      abstracts: analyticsData.abstracts as unknown as TrialDataFile['abstracts'],
+      abstracts: filteredAbstracts,
     };
 
     let data = transformHeadToHeadData(trialData, {
-      targetMetric: efficacyParam as ChartMetric,
+      targetMetric: displayMetric as ChartMetric,
       minTrialCount: 1,
     });
 
@@ -551,7 +895,18 @@ export default function CategoryAnalyticsPage() {
     data.sort((a, b) => b.averageValue - a.averageValue);
 
     return data;
-  }, [analyticsData, efficacyParam, selectedApproved, selectedNonApproved]);
+  }, [analyticsData, displayMetric, efficacyParam, safetyParam, fundingType, resourceType, therapyType, categoryName, selectedApproved, selectedNonApproved]);
+
+  // Determine the label for the displayed metric
+  const metricLabel = useMemo(() => {
+    if (efficacyParam !== 'none') {
+      return EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label || efficacyParam;
+    }
+    if (safetyParam !== 'none') {
+      return SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label || safetyParam;
+    }
+    return 'No Metric Selected';
+  }, [efficacyParam, safetyParam]);
 
   // Calculate summary metrics
   const summaryMetric = useMemo(() => {
@@ -561,8 +916,6 @@ export default function CategoryAnalyticsPage() {
     const change = 12.4;
     return { value: avg, change };
   }, [chartData]);
-
-  const efficacyLabel = EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label || efficacyParam;
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-slate-50">
@@ -663,7 +1016,7 @@ export default function CategoryAnalyticsPage() {
             <TherapyMultiSelect
               label="Approved Therapies"
               maxLabel="Max 5"
-              options={APPROVED_THERAPIES}
+              options={availableTherapies.approved}
               selected={selectedApproved}
               onChange={setSelectedApproved}
               maxSelect={5}
@@ -671,19 +1024,13 @@ export default function CategoryAnalyticsPage() {
             <TherapyMultiSelect
               label="Non-Approved"
               maxLabel="Max 5"
-              options={NON_APPROVED_THERAPIES}
+              options={availableTherapies.nonApproved}
               selected={selectedNonApproved}
               onChange={setSelectedNonApproved}
               maxSelect={5}
             />
 
-            {/* Row 4 - Dynamic based on resource type */}
-            <FilterSelect
-              label={resourceType === 'publication' ? 'Journal' : 'Conference'}
-              value={sourceFilter}
-              options={resourceType === 'publication' ? PUBLICATION_OPTIONS : CONFERENCE_OPTIONS}
-              onChange={setSourceFilter}
-            />
+            {/* Row 4 */}
             <FilterSelect
               label="Type of Funding"
               value={fundingType}
@@ -738,13 +1085,14 @@ export default function CategoryAnalyticsPage() {
                 setCompany('all');
                 setTherapyType('all');
                 setLineOfTreatment('all');
-                setResourceType('abstract');
-                setSourceFilter('all');
+                setResourceType('conference');
                 setFundingType('all');
                 setBiomarker('all');
                 setBiomarkerType('all');
                 setSelectedApproved([]);
                 setSelectedNonApproved([]);
+                setEfficacyParam('MEDIAN_OS');
+                setSafetyParam('none');
               }}
             >
               Reset Filters
@@ -760,10 +1108,10 @@ export default function CategoryAnalyticsPage() {
           {/* Compact Chart Header */}
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-4 flex-shrink-0">
             <div className="flex items-center gap-3 min-w-0">
-              <h2 className="text-sm font-semibold text-slate-700">{efficacyLabel} by Drug/Intervention</h2>
+              <h2 className="text-sm font-semibold text-slate-700">{metricLabel} by Drug/Intervention</h2>
               <div className="flex items-center gap-2 flex-shrink-0">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-700">
-                  {efficacyLabel.split(' ')[0]}
+                  {metricLabel.split(' ')[0]}
                 </span>
                 <span className="text-xl font-bold text-slate-900">{summaryMetric.value.toFixed(1)}</span>
                 <span className="flex items-center text-xs font-semibold text-emerald-600">
@@ -827,14 +1175,14 @@ export default function CategoryAnalyticsPage() {
                     <div>
                       <p className="text-sm font-medium text-slate-700">No data available</p>
                       <p className="text-xs text-slate-500 mt-1">
-                        No trials with {efficacyLabel} data found for the selected filters
+                        No trials with {metricLabel} data found for the selected filters
                       </p>
                     </div>
                   </div>
                 ) : (
                   <HeadToHeadChart
                     data={chartData}
-                    metric={efficacyParam as ChartMetric}
+                    metric={displayMetric as ChartMetric}
                     title=""
                     description=""
                     height={450}
@@ -888,10 +1236,10 @@ export default function CategoryAnalyticsPage() {
                 </Link>
                 <div className="h-5 w-px bg-slate-200" />
               </div>
-              <h2 className="text-base font-semibold text-slate-700">{efficacyLabel} by Drug/Intervention</h2>
+              <h2 className="text-base font-semibold text-slate-700">{metricLabel} by Drug/Intervention</h2>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-blue-100 text-blue-700">
-                  {efficacyLabel.split(' ')[0]}
+                  {metricLabel.split(' ')[0]}
                 </span>
                 <span className="text-2xl font-bold text-slate-900">{summaryMetric.value.toFixed(1)}</span>
                 <span className="flex items-center text-sm font-semibold text-emerald-600">
@@ -936,14 +1284,14 @@ export default function CategoryAnalyticsPage() {
                     <div>
                       <p className="text-base font-medium text-slate-700">No data available</p>
                       <p className="text-sm text-slate-500 mt-1">
-                        No trials with {efficacyLabel} data found for the selected filters
+                        No trials with {metricLabel} data found for the selected filters
                       </p>
                     </div>
                   </div>
                 ) : (
                   <HeadToHeadChart
                     data={chartData}
-                    metric={efficacyParam as ChartMetric}
+                    metric={displayMetric as ChartMetric}
                     title=""
                     description=""
                     height={windowHeight - 140}
