@@ -313,7 +313,7 @@ class ClinicalExtractionService:
             raise RuntimeError(f"Trial data extraction from text failed: {e}") from e
 
     def get_extraction_statistics(
-        self, trial_data_list: list[ClinicalTrialData]
+        self, trial_data_list: list["ClinicalTrialData"]
     ) -> dict[str, Any]:
         """Get statistics about the extraction results.
 
