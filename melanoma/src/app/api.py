@@ -838,6 +838,64 @@ async def get_trial_by_abstract_id(
         ) from e
 
 
+@app.get("/api/analytics/data")
+async def get_analytics_data(
+    db: Session = Depends(get_db_session),
+) -> dict:
+    """Get all abstracts/publications with full arm data for analytics.
+
+    Returns:
+        Dictionary with abstracts array containing full arm_results for chart visualization
+
+    Raises:
+        HTTPException: If data source query fails
+    """
+    try:
+        data_source = get_trials_data_source()
+
+        if data_source == "json":
+            # Use JSON file as data source
+            json_service = JSONTrialsService()
+            abstracts = json_service._load_json_files()
+
+            # Calculate summary stats
+            total_arms = sum(len(a.get("arm_results", {})) for a in abstracts)
+            total_attributes = sum(
+                a.get("total_attributes_extracted", 0) for a in abstracts
+            )
+            confidences = [
+                a.get("overall_confidence", 0)
+                for a in abstracts
+                if a.get("overall_confidence")
+            ]
+            avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+
+            return {
+                "total_abstracts": len(abstracts),
+                "total_arms": total_arms,
+                "total_attributes_extracted": total_attributes,
+                "average_confidence": avg_confidence,
+                "abstracts": abstracts,
+            }
+        else:
+            # Use database as data source
+            # For database, we'd need to implement a similar data structure
+            # For now, return empty structure
+            return {
+                "total_abstracts": 0,
+                "total_arms": 0,
+                "total_attributes_extracted": 0,
+                "average_confidence": 0,
+                "abstracts": [],
+            }
+
+    except Exception as e:
+        logger.error(f"Error fetching analytics data: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
 @app.get("/filesystem")
 async def get_filesystem_info() -> dict:
     """Get information about the filesystem structure."""

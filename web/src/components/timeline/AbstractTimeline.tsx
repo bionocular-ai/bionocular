@@ -6,7 +6,6 @@ import { extractKeyMetrics, formatAbstractIdForDisplay } from '@/lib/utils/trial
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 interface AbstractTimelineProps {
   nctId: string;
@@ -19,11 +18,10 @@ interface TimelineItem {
   year: string;
   date: string;
   metrics?: Record<string, { value: string; shortForm: string }>;
+  publicationName?: string;
 }
 
 export function AbstractTimeline({ nctId, currentAbstractId }: AbstractTimelineProps) {
-  const router = useRouter();
-  
   const { data, isLoading } = useQuery({
     queryKey: ['trials', 'nct', nctId],
     queryFn: () => trialsApi.getByNctId(nctId, 0, 100),
@@ -44,13 +42,15 @@ export function AbstractTimeline({ nctId, currentAbstractId }: AbstractTimelineP
             const fullData = await trialsApi.getByAbstractId(trial.abstract_id!);
             const metrics = extractKeyMetrics(fullData);
             
-            if (metrics.conference && metrics.year) {
+            // Include items that have a year (conference is optional, will be "Publication" for publications)
+            if (metrics.year) {
               return {
                 abstractId: trial.abstract_id!,
-                conference: metrics.conference,
+                conference: metrics.conference || 'Publication',
                 year: metrics.year,
-                date: metrics.date || `${metrics.conference} ${metrics.year}`,
+                date: metrics.date || (metrics.conference ? `${metrics.conference} ${metrics.year}` : metrics.year),
                 metrics: metrics.metrics,
+                publicationName: metrics.publicationName,
               } as Omit<TimelineItem, 'isCurrent'>;
             }
           } catch (error) {
@@ -142,7 +142,7 @@ export function AbstractTimeline({ nctId, currentAbstractId }: AbstractTimelineP
               const items = groupedByYear[year];
               return (
                 <div key={year}>
-                  {items.map((item, itemIndex) => {
+                  {items.map((item) => {
                     // Determine if this item is current based on currentAbstractId prop
                     const isCurrent = item.abstractId === currentAbstractId;
                     
@@ -183,14 +183,26 @@ export function AbstractTimeline({ nctId, currentAbstractId }: AbstractTimelineP
                           {/* Header */}
                           <div className="mb-3">
                             <h4 className="text-base font-bold text-gray-900 mb-1.5">
-                              {item.conference} {item.year}
+                              {item.publicationName || `${item.conference} ${item.year}`}
                             </h4>
                             <div className="flex items-center gap-1.5 text-xs text-gray-600">
-                              <span>{item.date}</span>
-                              <span className="text-gray-400">•</span>
-                              <span className="font-mono text-xs text-gray-700 hover:text-blue-600 transition-colors">
-                                #{formatAbstractIdForDisplay(item.abstractId)}
-                              </span>
+                              {item.publicationName ? (
+                                <>
+                                  <span>{item.conference} {item.year}</span>
+                                  <span className="text-gray-400">•</span>
+                                  <span className="font-mono text-xs text-gray-700 hover:text-blue-600 transition-colors">
+                                    #{formatAbstractIdForDisplay(item.abstractId)}
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>{item.date}</span>
+                                  <span className="text-gray-400">•</span>
+                                  <span className="font-mono text-xs text-gray-700 hover:text-blue-600 transition-colors">
+                                    #{formatAbstractIdForDisplay(item.abstractId)}
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                           

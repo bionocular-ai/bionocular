@@ -12,12 +12,15 @@ Tests for the embedding generation service including:
 
 import pytest
 
-from src.domain.constants import EmbeddingDefaults
-from src.domain.models import (
+# Skip entire test module if langchain dependencies are not available
+pytest.importorskip("langchain", reason="langchain dependencies not installed")
+
+from src.domain.constants import EmbeddingDefaults  # noqa: E402
+from src.domain.models import (  # noqa: E402
     EmbeddingConfiguration,
     EmbeddingModel,
 )
-from src.infrastructure.langchain import LangChainEmbeddingService
+from src.infrastructure.langchain import LangChainEmbeddingService  # noqa: E402
 
 
 class TestEmbeddingService:

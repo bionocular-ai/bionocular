@@ -2,7 +2,7 @@ import { auth } from "@/auth"
 import { NextResponse } from "next/server"
 import { ROUTES, PUBLIC_ROUTES } from "@/lib/constants"
 
-// Next.js 16 middleware pattern - using auth as proxy
+// Next.js 16 proxy pattern - using auth as proxy
 export default auth((req) => {
   const { pathname } = req.nextUrl
   const isLoggedIn = !!req.auth
