@@ -5,12 +5,14 @@ oncology abstracts using LangChain's structured output capabilities.
 """
 
 import logging
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from ..infrastructure.langchain import ClinicalTrialData
+if TYPE_CHECKING:
+    from ..infrastructure.langchain import ClinicalTrialData  # noqa: F401
+
 from .clinical_extraction_service import ClinicalExtractionService
 from .langchain_factory_service import LangChainServiceFactory, ServiceConfiguration
 from .pipeline_service import EndToEndPipelineService
@@ -265,6 +267,8 @@ async def extract_clinical_data_batch(
                 failed_extractions += 1
 
         # Calculate statistics
+        from ..infrastructure.langchain import ClinicalTrialData
+
         trial_data_list: list[ClinicalTrialData] = []
         for result in results:
             if result.get("success") and "trial_data" in result:
@@ -316,6 +320,8 @@ async def validate_clinical_data(
     """
     try:
         # Convert dict to ClinicalTrialData
+        from ..infrastructure.langchain import ClinicalTrialData
+
         trial_data = ClinicalTrialData(**request.trial_data)
 
         # Validate data
@@ -368,6 +374,8 @@ async def export_clinical_data(
     """
     try:
         # Convert dicts to langchain ClinicalTrialData objects
+        from ..infrastructure.langchain import ClinicalTrialData
+
         trial_data_list = [
             ClinicalTrialData.model_construct(**data)
             if isinstance(data, dict)

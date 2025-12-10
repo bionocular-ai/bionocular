@@ -6,15 +6,18 @@ oncology abstract processing.
 """
 
 import logging
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from langchain_core.language_models import BaseLLM
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseLLM  # noqa: F401
 
 from ..domain.models import ChunkWithEmbedding
-from ..infrastructure.langchain import (
-    ClinicalTrialData,
-    LangChainClinicalService,
-)
+
+if TYPE_CHECKING:
+    from ..infrastructure.langchain import (  # noqa: F401
+        ClinicalTrialData,
+        LangChainClinicalService,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +38,7 @@ class ClinicalDataProcessor:
             "low_confidence": 0.3,
         }
 
-    def validate_trial_data(self, trial_data: ClinicalTrialData) -> dict[str, Any]:
+    def validate_trial_data(self, trial_data: "ClinicalTrialData") -> dict[str, Any]:
         """Validate clinical trial data quality.
 
         Args:
@@ -111,7 +114,7 @@ class ClinicalDataProcessor:
 
         return validation_results
 
-    def enrich_trial_data(self, trial_data: ClinicalTrialData) -> ClinicalTrialData:
+    def enrich_trial_data(self, trial_data: "ClinicalTrialData") -> "ClinicalTrialData":
         """Enrich clinical trial data with additional information.
 
         Args:
@@ -138,7 +141,7 @@ class ClinicalDataProcessor:
         return trial_data
 
     def format_trial_data_for_display(
-        self, trial_data: ClinicalTrialData
+        self, trial_data: "ClinicalTrialData"
     ) -> dict[str, Any]:
         """Format trial data for display purposes.
 
@@ -180,7 +183,7 @@ class ClinicalExtractionService:
 
     def __init__(
         self,
-        llm: BaseLLM,
+        llm: "BaseLLM",
         prompts_path: Optional[str] = None,
     ):
         """Initialize the clinical extraction service.
@@ -189,6 +192,11 @@ class ClinicalExtractionService:
             llm: LLM instance for data extraction
             prompts_path: Path to custom prompts file
         """
+        # Lazy import to avoid import errors if langchain dependencies are not installed
+        from langchain_core.language_models import BaseLLM  # noqa: F401
+
+        from ..infrastructure.langchain import LangChainClinicalService  # noqa: F401
+
         self.llm = llm
         self.prompts_path = prompts_path
 
@@ -207,7 +215,7 @@ class ClinicalExtractionService:
         chunks: list[ChunkWithEmbedding],
         enrich_data: bool = True,
         validate_data: bool = True,
-    ) -> list[ClinicalTrialData]:
+    ) -> list["ClinicalTrialData"]:
         """Extract clinical data from chunks.
 
         Args:
@@ -261,7 +269,7 @@ class ClinicalExtractionService:
         text: str,
         enrich_data: bool = True,
         validate_data: bool = True,
-    ) -> ClinicalTrialData:
+    ) -> "ClinicalTrialData":
         """Extract clinical trial data from text.
 
         Args:
@@ -296,6 +304,8 @@ class ClinicalExtractionService:
             if trial_data_list:
                 return trial_data_list[0]
             # Return empty ClinicalTrialData with all Optional fields as None
+            from ..infrastructure.langchain import ClinicalTrialData
+
             return ClinicalTrialData.model_construct()
 
         except Exception as e:
@@ -349,7 +359,7 @@ class ClinicalExtractionService:
         }
 
     def format_trial_data_for_export(
-        self, trial_data_list: list[ClinicalTrialData], format_type: str = "json"
+        self, trial_data_list: list["ClinicalTrialData"], format_type: str = "json"
     ) -> str:
         """Format trial data for export.
 

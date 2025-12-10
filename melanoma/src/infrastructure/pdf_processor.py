@@ -4,8 +4,6 @@ import io
 import logging
 from typing import Any
 
-from PyPDF2 import PdfReader
-
 from ..domain.interfaces import PDFProcessorInterface
 
 logger = logging.getLogger(__name__)
@@ -40,6 +38,9 @@ class PyPDF2Processor(PDFProcessorInterface):
     async def validate_pdf(self, file_content: bytes) -> bool:
         """Validate that the file is a valid PDF."""
         try:
+            # Lazy import to avoid import errors if PyPDF2 is not installed
+            from PyPDF2 import PdfReader
+
             # Try to read the PDF
             pdf_stream = io.BytesIO(file_content)
             reader = PdfReader(pdf_stream)
@@ -67,6 +68,9 @@ class PyPDF2Processor(PDFProcessorInterface):
     async def is_batch_pdf(self, file_content: bytes) -> bool:
         """Determine if a PDF contains multiple documents."""
         try:
+            # Lazy import to avoid import errors if PyPDF2 is not installed
+            from PyPDF2 import PdfReader
+
             pdf_stream = io.BytesIO(file_content)
             reader = PdfReader(pdf_stream)
 
@@ -129,6 +133,9 @@ class PyPDF2Processor(PDFProcessorInterface):
             Extracted text content
         """
         try:
+            # Lazy import to avoid import errors if PyPDF2 is not installed
+            from PyPDF2 import PdfReader
+
             pdf_stream = io.BytesIO(file_content)
             reader = PdfReader(pdf_stream)
 
@@ -152,6 +159,9 @@ class PyPDF2Processor(PDFProcessorInterface):
             Extracted metadata dictionary
         """
         try:
+            # Lazy import to avoid import errors if PyPDF2 is not installed
+            from PyPDF2 import PdfReader
+
             pdf_stream = io.BytesIO(file_content)
             reader = PdfReader(pdf_stream)
 

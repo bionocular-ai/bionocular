@@ -5,15 +5,17 @@ providing targeted context for each arm and attribute combination.
 """
 
 import logging
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..domain.extraction_interfaces import RAGContextProvider
 from ..domain.extraction_models import AttributeType
 from ..domain.models import SearchQuery, SearchResult
 from ..domain.rag_optimization_config import RAGOptimizationConfig
 from ..domain.treatment_arm_models import ArmSpecificContext, TreatmentArm
-from .langchain import LangChainEmbeddingService, LangChainVectorStore
 from .rag_config_loader import RAGConfigLoader
+
+if TYPE_CHECKING:
+    from .langchain import LangChainEmbeddingService, LangChainVectorStore  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +29,8 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
     def __init__(
         self,
-        vector_store: LangChainVectorStore,
-        embedding_service: LangChainEmbeddingService,
+        vector_store: "LangChainVectorStore",
+        embedding_service: "LangChainEmbeddingService",
     ):
         """Initialize arm-aware RAG context provider.
 
@@ -36,6 +38,8 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
             vector_store: LangChain vector store for similarity search
             embedding_service: LangChain embedding service
         """
+        # Lazy import to avoid import errors if langchain dependencies are not installed
+
         self.vector_store = vector_store
         self.embedding_service = embedding_service
 

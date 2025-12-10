@@ -7,7 +7,7 @@ maintaining clean architecture principles.
 
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..domain.models import (
     ChunkingConfiguration,
@@ -15,12 +15,15 @@ from ..domain.models import (
     RAGQuery,
     SearchResult,
 )
-from ..infrastructure.langchain import (
-    LangChainChunkingService,
-    LangChainEmbeddingService,
-    LangChainLLMService,
-    LangChainVectorStore,
-)
+
+if TYPE_CHECKING:
+    from ..infrastructure.langchain import (  # noqa: F401
+        LangChainChunkingService,
+        LangChainEmbeddingService,
+        LangChainLLMService,
+        LangChainVectorStore,
+    )
+
 from .clinical_extraction_service import ClinicalExtractionService
 from .rag_orchestration_service import LangChainRAGService, RAGPipelineOrchestrator
 
@@ -197,6 +200,14 @@ class EndToEndPipelineService:
     def _initialize_services(self) -> None:
         """Initialize all pipeline services."""
         try:
+            # Lazy import to avoid import errors if langchain dependencies are not installed
+            from ..infrastructure.langchain import (
+                LangChainChunkingService,
+                LangChainEmbeddingService,
+                LangChainLLMService,
+                LangChainVectorStore,
+            )
+
             # Initialize chunking service
             self.chunking_service = LangChainChunkingService(
                 self.configuration.chunking_config

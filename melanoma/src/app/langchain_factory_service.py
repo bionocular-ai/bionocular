@@ -6,21 +6,25 @@ while maintaining clean architecture principles.
 """
 
 import logging
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from langchain_core.language_models import BaseLLM
+if TYPE_CHECKING:
+    from langchain_core.language_models import BaseLLM  # noqa: F401
 
 from ..domain.models import (
     ChunkingConfiguration,
     EmbeddingConfiguration,
     EmbeddingModel,
 )
-from ..infrastructure.langchain import (
-    LangChainChunkingService,
-    LangChainEmbeddingService,
-    LangChainLLMService,
-    LangChainVectorStore,
-)
+
+if TYPE_CHECKING:
+    from ..infrastructure.langchain import (  # noqa: F401
+        LangChainChunkingService,
+        LangChainEmbeddingService,
+        LangChainLLMService,
+        LangChainVectorStore,
+    )
+
 from .clinical_extraction_service import ClinicalExtractionService
 from .pipeline_service import EndToEndPipelineService, PipelineConfiguration
 from .rag_orchestration_service import LangChainRAGService, RAGPipelineOrchestrator
@@ -135,7 +139,7 @@ class LangChainServiceFactory:
 
     def create_chunking_service(
         self, custom_config: Optional[ChunkingConfiguration] = None
-    ) -> LangChainChunkingService:
+    ) -> "LangChainChunkingService":
         """Create a LangChain chunking service.
 
         Args:
@@ -145,6 +149,9 @@ class LangChainServiceFactory:
             Configured chunking service
         """
         try:
+            # Lazy import to avoid import errors if langchain dependencies are not installed
+            from ..infrastructure.langchain import LangChainChunkingService
+
             if custom_config is None:
                 from ..domain.models import ChunkingStrategy
 
@@ -166,13 +173,16 @@ class LangChainServiceFactory:
             logger.error(f"Failed to create chunking service: {e}")
             raise RuntimeError(f"Chunking service creation failed: {e}") from e
 
-    def create_embedding_service(self) -> LangChainEmbeddingService:
+    def create_embedding_service(self) -> "LangChainEmbeddingService":
         """Create a LangChain embedding service.
 
         Returns:
             Configured embedding service
         """
         try:
+            # Lazy import to avoid import errors if langchain dependencies are not installed
+            from ..infrastructure.langchain import LangChainEmbeddingService
+
             service = LangChainEmbeddingService()
             self._created_services["embedding"] = service
 
@@ -184,8 +194,8 @@ class LangChainServiceFactory:
             raise RuntimeError(f"Embedding service creation failed: {e}") from e
 
     def create_vector_store(
-        self, embedding_service: Optional[LangChainEmbeddingService] = None
-    ) -> LangChainVectorStore:
+        self, embedding_service: Optional["LangChainEmbeddingService"] = None
+    ) -> "LangChainVectorStore":
         """Create a LangChain vector store.
 
         Args:
@@ -195,6 +205,9 @@ class LangChainServiceFactory:
             Configured vector store
         """
         try:
+            # Lazy import to avoid import errors if langchain dependencies are not installed
+            from ..infrastructure.langchain import LangChainVectorStore
+
             if embedding_service is None:
                 embedding_service = self.create_embedding_service()
 
@@ -224,13 +237,16 @@ class LangChainServiceFactory:
             logger.error(f"Failed to create vector store: {e}")
             raise RuntimeError(f"Vector store creation failed: {e}") from e
 
-    def create_llm_service(self) -> LangChainLLMService:
+    def create_llm_service(self) -> "LangChainLLMService":
         """Create a LangChain LLM service.
 
         Returns:
             Configured LLM service
         """
         try:
+            # Lazy import to avoid import errors if langchain dependencies are not installed
+            from ..infrastructure.langchain import LangChainLLMService
+
             service = LangChainLLMService(provider=self.configuration.llm_provider)
             self._created_services["llm"] = service
 
@@ -244,7 +260,7 @@ class LangChainServiceFactory:
             raise RuntimeError(f"LLM service creation failed: {e}") from e
 
     def create_clinical_service(
-        self, llm: Optional[BaseLLM] = None
+        self, llm: Optional["BaseLLM"] = None
     ) -> ClinicalExtractionService:
         """Create a clinical extraction service.
 
@@ -279,10 +295,10 @@ class LangChainServiceFactory:
 
     def create_rag_service(
         self,
-        chunking_service: Optional[LangChainChunkingService] = None,
-        embedding_service: Optional[LangChainEmbeddingService] = None,
-        vector_store: Optional[LangChainVectorStore] = None,
-        llm_service: Optional[LangChainLLMService] = None,
+        chunking_service: Optional["LangChainChunkingService"] = None,
+        embedding_service: Optional["LangChainEmbeddingService"] = None,
+        vector_store: Optional["LangChainVectorStore"] = None,
+        llm_service: Optional["LangChainLLMService"] = None,
     ) -> LangChainRAGService:
         """Create a complete RAG service.
 

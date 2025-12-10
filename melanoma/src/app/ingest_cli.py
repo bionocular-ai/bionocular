@@ -10,7 +10,6 @@ import sys
 
 from ..domain.models import DocumentType, IngestionRequest
 from ..infrastructure.database import create_storage_directories, init_database
-from ..infrastructure.pdf_processor import PyPDF2Processor
 from ..infrastructure.storage import LocalFileStorage
 from .ingestion_service import IngestionService
 
@@ -182,6 +181,9 @@ async def main() -> None:
 
         # Create services
         storage = LocalFileStorage()
+        # Lazy import to avoid import errors if PyPDF2 is not installed
+        from ..infrastructure.pdf_processor import PyPDF2Processor
+
         pdf_processor = PyPDF2Processor()
 
         # Note: For CLI, we'll use a mock repository since we don't have a DB session

@@ -7,11 +7,12 @@ and retrieval-augmented generation for clinical abstracts.
 
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain_core.language_models import BaseLLM
+if TYPE_CHECKING:
+    from langchain.chains import RetrievalQA  # noqa: F401
+    from langchain.prompts import PromptTemplate  # noqa: F401
+    from langchain_core.language_models import BaseLLM  # noqa: F401
 
 from ..domain.interfaces import RAGServiceInterface
 from ..domain.models import (
@@ -24,12 +25,14 @@ from ..domain.models import (
     SearchQuery,
     SearchResult,
 )
-from ..infrastructure.langchain import (
-    LangChainChunkingService,
-    LangChainEmbeddingService,
-    LangChainLLMService,
-    LangChainVectorStore,
-)
+
+if TYPE_CHECKING:
+    from ..infrastructure.langchain import (  # noqa: F401
+        LangChainChunkingService,
+        LangChainEmbeddingService,
+        LangChainLLMService,
+        LangChainVectorStore,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +48,10 @@ class RAGPipelineOrchestrator:
 
     def __init__(
         self,
-        chunking_service: LangChainChunkingService,
-        embedding_service: LangChainEmbeddingService,
-        vector_store: LangChainVectorStore,
-        llm_service: LangChainLLMService,
+        chunking_service: "LangChainChunkingService",
+        embedding_service: "LangChainEmbeddingService",
+        vector_store: "LangChainVectorStore",
+        llm_service: "LangChainLLMService",
     ):
         """Initialize the RAG pipeline orchestrator.
 
@@ -58,6 +61,8 @@ class RAGPipelineOrchestrator:
             vector_store: LangChain vector store
             llm_service: LangChain LLM service
         """
+        # Lazy import to avoid import errors if langchain dependencies are not installed
+
         self.chunking_service = chunking_service
         self.embedding_service = embedding_service
         self.vector_store = vector_store
@@ -232,7 +237,7 @@ class LangChainRAGService(RAGServiceInterface):
     def __init__(
         self,
         pipeline_orchestrator: RAGPipelineOrchestrator,
-        llm: BaseLLM,
+        llm: "BaseLLM",
         temperature: float = 0.1,
     ):
         """Initialize the LangChain RAG service.
@@ -242,6 +247,9 @@ class LangChainRAGService(RAGServiceInterface):
             llm: LLM instance for generation
             temperature: Temperature for generation
         """
+        # Lazy import to avoid import errors if langchain dependencies are not installed
+        from langchain_core.language_models import BaseLLM  # noqa: F401
+
         self.pipeline_orchestrator = pipeline_orchestrator
         self.llm = llm
         self.temperature = temperature
@@ -251,12 +259,16 @@ class LangChainRAGService(RAGServiceInterface):
 
         logger.info("LangChain RAG service initialized")
 
-    def _create_rag_chain(self) -> RetrievalQA:
+    def _create_rag_chain(self) -> "RetrievalQA":
         """Create the LangChain RAG chain.
 
         Returns:
             Configured RetrievalQA chain
         """
+        # Lazy import to avoid import errors if langchain dependencies are not installed
+        from langchain.chains import RetrievalQA
+        from langchain.prompts import PromptTemplate
+
         # Create custom prompt template for clinical queries
         prompt_template = """
 You are a medical research assistant specializing in melanoma treatments.
