@@ -12,9 +12,10 @@ It orchestrates all components to provide end-to-end RAG functionality.
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from langchain.schema import HumanMessage, SystemMessage
+if TYPE_CHECKING:
+    from langchain.schema import HumanMessage, SystemMessage  # noqa: F401
 
 from ..domain.models import (
     RAGQuery,
@@ -22,12 +23,14 @@ from ..domain.models import (
     SearchQuery,
     SearchResult,
 )
-from ..infrastructure.langchain import (
-    LangChainChunkingService,
-    LangChainEmbeddingService,
-    LangChainLLMService,
-    LangChainVectorStore,
-)
+
+if TYPE_CHECKING:
+    from ..infrastructure.langchain import (  # noqa: F401
+        LangChainChunkingService,
+        LangChainEmbeddingService,
+        LangChainLLMService,
+        LangChainVectorStore,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +44,10 @@ class CompleteRAGService:
 
     def __init__(
         self,
-        chunking_service: LangChainChunkingService,
-        embedding_service: LangChainEmbeddingService,
-        vector_store: LangChainVectorStore,
-        llm_service: LangChainLLMService,
+        chunking_service: "LangChainChunkingService",
+        embedding_service: "LangChainEmbeddingService",
+        vector_store: "LangChainVectorStore",
+        llm_service: "LangChainLLMService",
     ):
         """Initialize the complete RAG service.
 
@@ -222,6 +225,9 @@ Answer:
 """
 
         try:
+            # Lazy import to avoid import errors if langchain dependencies are not installed
+            from langchain.schema import HumanMessage, SystemMessage
+
             # Generate response using LLM
             messages = [
                 SystemMessage(

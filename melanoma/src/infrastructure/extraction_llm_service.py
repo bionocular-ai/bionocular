@@ -8,7 +8,6 @@ import logging
 from typing import Any
 
 from ..domain.extraction_interfaces import LLMService
-from .langchain import LangChainLLMService
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +21,9 @@ class ExtractionLLMService(LLMService):
 
     def __init__(self):
         """Initialize extraction LLM service."""
+        # Lazy import to avoid import errors if langchain dependencies are not installed
+        from .langchain import LangChainLLMService
+
         self.langchain_llm = LangChainLLMService()
         logger.info("Extraction LLM service initialized")
 

@@ -11,13 +11,15 @@ optimized context retrieval for attribute extraction with support for:
 import asyncio
 import hashlib
 import logging
-from typing import Any, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..domain.extraction_interfaces import RAGContextProvider
 from ..domain.extraction_models import AttributeType
 from ..domain.models import SearchQuery, SearchResult
-from .langchain import LangChainEmbeddingService, LangChainVectorStore
 from .rag_config_loader import RAGConfigLoader
+
+if TYPE_CHECKING:
+    from .langchain import LangChainEmbeddingService, LangChainVectorStore  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -174,8 +176,8 @@ class RAGContextProviderImpl(RAGContextProvider):
 
     def __init__(
         self,
-        vector_store: LangChainVectorStore,
-        embedding_service: LangChainEmbeddingService,
+        vector_store: "LangChainVectorStore",
+        embedding_service: "LangChainEmbeddingService",
         enable_caching: bool = True,
         cache_ttl: int = 3600,
     ):
@@ -187,6 +189,8 @@ class RAGContextProviderImpl(RAGContextProvider):
             enable_caching: Whether to enable result caching
             cache_ttl: Cache time-to-live in seconds
         """
+        # Lazy import to avoid import errors if langchain dependencies are not installed
+
         self.vector_store = vector_store
         self.embedding_service = embedding_service
         self.enable_caching = enable_caching
