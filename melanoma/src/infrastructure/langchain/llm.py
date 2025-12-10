@@ -12,7 +12,9 @@ from typing import Any, Optional, cast
 # Prefer langchain_openai, fallback to community. Alias to avoid mypy no-redef.
 try:
     from langchain_openai import ChatOpenAI as _ChatOpenAI
-except ImportError:  # pragma: no cover - fallback for environments without langchain_openai
+except (
+    ImportError
+):  # pragma: no cover - fallback for environments without langchain_openai
     from langchain_community.chat_models import ChatOpenAI as _ChatOpenAI
 
 from langchain_core.language_models import BaseLLM
