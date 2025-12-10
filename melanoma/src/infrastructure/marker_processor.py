@@ -9,10 +9,16 @@ import traceback
 from pathlib import Path
 from typing import Any, Optional
 
-from marker.config.parser import ConfigParser  # type: ignore
-from marker.converters.pdf import PdfConverter  # type: ignore
-from marker.models import create_model_dict  # type: ignore
-from marker.output import text_from_rendered  # type: ignore
+try:
+    from marker.config.parser import ConfigParser  # type: ignore
+    from marker.converters.pdf import PdfConverter  # type: ignore
+    from marker.models import create_model_dict  # type: ignore
+    from marker.output import text_from_rendered  # type: ignore
+except ImportError as e:
+    raise ImportError(
+        "marker-pdf dependencies are required for MarkerPDFProcessor. "
+        "Install with: poetry install --with processing"
+    ) from e
 
 from ..domain.interfaces import PDFProcessorInterface
 

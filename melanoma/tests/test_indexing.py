@@ -17,13 +17,16 @@ from uuid import uuid4
 
 import pytest
 
-from src.domain.models import (
+# Skip entire test module if langchain dependencies are not available
+pytest.importorskip("langchain", reason="langchain dependencies not installed")
+
+from src.domain.models import (  # noqa: E402
     ChunkType,
     ChunkWithEmbedding,
     EmbeddingModel,
     SearchQuery,
 )
-from src.infrastructure.langchain import LangChainVectorStore
+from src.infrastructure.langchain import LangChainVectorStore  # noqa: E402
 
 
 class TestVectorStore:

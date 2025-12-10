@@ -4,7 +4,13 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from src.infrastructure.marker_processor import MarkerPDFProcessor, ModelManager
+# Skip entire test module if marker dependencies are not available
+pytest.importorskip("marker", reason="marker-pdf dependencies not installed")
+
+from src.infrastructure.marker_processor import (  # noqa: E402
+    MarkerPDFProcessor,
+    ModelManager,
+)
 
 
 class TestMarkerPDFProcessor:

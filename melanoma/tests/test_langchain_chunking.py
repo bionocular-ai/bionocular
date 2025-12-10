@@ -6,6 +6,9 @@ from uuid import uuid4
 
 import pytest
 
+# Skip entire test module if langchain dependencies are not available
+pytest.importorskip("langchain", reason="langchain dependencies not installed")
+
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 

@@ -11,11 +11,17 @@ import re
 from typing import Any, Optional
 from uuid import uuid4
 
-from langchain.text_splitter import (
-    MarkdownHeaderTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
-from langchain_core.documents import Document
+try:
+    from langchain.text_splitter import (
+        MarkdownHeaderTextSplitter,
+        RecursiveCharacterTextSplitter,
+    )
+    from langchain_core.documents import Document
+except ImportError as e:
+    raise ImportError(
+        "langchain dependencies are required for LangChainChunkingService. "
+        "Install with: poetry install --with processing"
+    ) from e
 
 from ...domain.interfaces import ChunkingStrategyInterface
 from ...domain.models import (
