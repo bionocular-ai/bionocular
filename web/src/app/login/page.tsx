@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Mail, Lock } from 'lucide-react';
 import { isValidEmail, validatePassword } from '@/lib/auth-utils';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
@@ -211,6 +211,24 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100">
+        <Card className="w-full max-w-md shadow-2xl border-0 bg-white rounded-2xl">
+          <CardContent className="p-8">
+            <div className="flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#1A73E8' }} />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }
 
