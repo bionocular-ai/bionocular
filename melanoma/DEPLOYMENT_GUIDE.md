@@ -190,7 +190,74 @@ Visit these URLs to verify:
 
 ---
 
-## Step 4: Deploy Frontend to Cloudflare Pages
+## Step 4: Deploy Frontend to Render (Alternative to Cloudflare Pages)
+
+If you prefer to deploy your frontend to Render instead of Cloudflare Pages, follow these steps:
+
+### 4.1 Prepare Frontend
+
+The frontend is already configured to use `NEXT_PUBLIC_API_URL`. No code changes needed! ✅
+
+### 4.2 Create Render Web Service for Frontend
+
+1. Go to [Render Dashboard](https://dashboard.render.com/)
+2. Click **"New +"** → **"Web Service"**
+3. Connect your GitHub repository (if not already connected)
+4. Select your repository (`bionocular`)
+
+### 4.3 Configure Service
+
+**Basic Settings:**
+- **Name**: `bionocular-web` (or `bionocular-frontend`)
+- **Root Directory**: `web` ⚠️ **Important!**
+- **Runtime**: **Node**
+- **Region**: Choose closest to you (e.g., Oregon, Singapore)
+- **Instance Type**: **Free** (or Starter for better performance)
+
+**Build Settings:**
+- **Build Command**: `npm install && npm run build`
+- **Start Command**: `npm start`
+
+**Environment Variables:**
+```
+NODE_ENV=production
+NEXT_PUBLIC_API_URL=https://bionocular-api.onrender.com
+```
+
+**Note**: Replace `https://bionocular-api.onrender.com` with your actual backend Render service URL.
+
+### 4.4 Deploy
+
+1. Click **"Create Web Service"**
+2. Wait for build to complete (~3-5 minutes)
+3. Copy your service URL (e.g., `https://bionocular-web.onrender.com`)
+
+**Build Timeline:**
+- Dependency installation: ~1-2 minutes
+- Next.js build: ~1-2 minutes
+- Service start: ~10-20 seconds
+
+### 4.5 Test Frontend
+
+1. Visit your Render frontend URL
+2. Navigate to the dashboard
+3. Verify trials are loading from your backend API
+
+**Note**: First request after deployment may take ~30-45 seconds (Render free tier spin-up).
+
+### 4.6 Update Backend CORS
+
+Make sure your backend's `ALLOWED_ORIGINS` environment variable includes your frontend URL:
+
+```
+ALLOWED_ORIGINS=https://bionocular-web.onrender.com,https://bionocular.ai,https://www.bionocular.ai
+```
+
+Then restart your backend service.
+
+---
+
+## Step 4 (Alternative): Deploy Frontend to Cloudflare Pages
 
 ### 4.1 Prepare Frontend
 

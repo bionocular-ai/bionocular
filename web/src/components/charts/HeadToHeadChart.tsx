@@ -349,7 +349,7 @@ export default function HeadToHeadChart({
   }, [isPinned]);
   
   // Handle click outside chart to unpin
-  const handleChartContainerClick = useCallback((_e: React.MouseEvent) => {
+  const handleChartContainerClick = useCallback(() => {
     // Only unpin if clicking outside a dot (dots have their own handler with stopPropagation)
     if (isPinned) {
       setIsPinned(false);

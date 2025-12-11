@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
@@ -28,9 +28,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import HeadToHeadChart from '@/components/charts/HeadToHeadChart';
-import { transformHeadToHeadData, getUniqueTreatments } from '@/lib/chart-transformers';
+import { transformHeadToHeadData } from '@/lib/chart-transformers';
 import { analyticsApi } from '@/lib/api';
-import { HeadToHeadDataPoint, ChartMetric, TrialDataFile } from '@/types/analytics';
+import { HeadToHeadDataPoint, ChartMetric, TrialDataFile, ArmResult } from '@/types/analytics';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -100,7 +100,7 @@ const INDUSTRY_SPONSORS = [
 ];
 
 // Helper function to determine if funding is industry or non-industry
-function isIndustryFunded(sponsorsValue: any): boolean | null {
+function isIndustryFunded(sponsorsValue: unknown): boolean | null {
   if (!sponsorsValue) return null;
   
   const sponsorsStr = typeof sponsorsValue === 'object' && 'value' in sponsorsValue
@@ -157,16 +157,6 @@ const LINE_OF_TREATMENT_OPTIONS = [
 const RESOURCE_TYPE_OPTIONS = [
   { value: 'conference', label: 'Conference' },
   { value: 'publication', label: 'Publications' },
-];
-
-const PUBLICATION_OPTIONS = [
-  { value: 'all', label: 'All Journals' },
-  { value: 'nejm', label: 'NEJM' },
-  { value: 'lancet', label: 'Lancet Oncology' },
-  { value: 'jco', label: 'Journal of Clinical Oncology' },
-  { value: 'annals', label: 'Annals of Oncology' },
-  { value: 'nature', label: 'Nature Medicine' },
-  { value: 'jama', label: 'JAMA Oncology' },
 ];
 
 const FUNDING_TYPE_OPTIONS = [
@@ -671,11 +661,33 @@ export default function CategoryAnalyticsPage() {
     };
   }, [analyticsData, categoryName]);
 
+  // Track previous availableTherapies to detect changes
+  const prevAvailableTherapiesRef = useRef(availableTherapies);
+  
   // Clear selected therapies if they're not available in the current category
+  // Only update when availableTherapies actually changes (not on every render)
   useEffect(() => {
-    const availableAll = [...availableTherapies.approved, ...availableTherapies.nonApproved];
-    setSelectedApproved(prev => prev.filter(t => availableTherapies.approved.includes(t)));
-    setSelectedNonApproved(prev => prev.filter(t => availableTherapies.nonApproved.includes(t)));
+    const prev = prevAvailableTherapiesRef.current;
+    const current = availableTherapies;
+    
+    // Check if availableTherapies actually changed
+    const approvedChanged = prev.approved.length !== current.approved.length ||
+      prev.approved.some((t, i) => t !== current.approved[i]);
+    const nonApprovedChanged = prev.nonApproved.length !== current.nonApproved.length ||
+      prev.nonApproved.some((t, i) => t !== current.nonApproved[i]);
+    
+    if (approvedChanged || nonApprovedChanged) {
+      // Use setTimeout to defer state updates outside of render cycle
+      const timeoutId = setTimeout(() => {
+        setSelectedApproved(prevSelected => prevSelected.filter(t => current.approved.includes(t)));
+        setSelectedNonApproved(prevSelected => prevSelected.filter(t => current.nonApproved.includes(t)));
+        prevAvailableTherapiesRef.current = current;
+      }, 0);
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      prevAvailableTherapiesRef.current = current;
+    }
   }, [availableTherapies]);
 
   // Transform and filter data
@@ -748,7 +760,7 @@ export default function CategoryAnalyticsPage() {
     // Filter by therapy type if selected
     if (therapyType !== 'all') {
       filteredAbstracts = filteredAbstracts.map(trial => {
-        const filteredArmResults: Record<string, any> = {};
+        const filteredArmResults: Record<string, ArmResult> = {};
         
         for (const [armId, arm] of Object.entries(trial.arm_results)) {
           const therapyTypeAttr = arm.attributes['AttributeType.TYPE_OF_THERAPY'];
@@ -785,7 +797,7 @@ export default function CategoryAnalyticsPage() {
     // Filter by funding type if selected
     if (fundingType !== 'all') {
       filteredAbstracts = filteredAbstracts.map(trial => {
-        const filteredArmResults: Record<string, any> = {};
+        const filteredArmResults: Record<string, ArmResult> = {};
         
         for (const [armId, arm] of Object.entries(trial.arm_results)) {
           const sponsorsAttr = arm.attributes['AttributeType.SPONSORS'];
@@ -815,7 +827,7 @@ export default function CategoryAnalyticsPage() {
     if (safetyParam !== 'none' && efficacyParam !== 'none') {
       const safetyMetricKey = `AttributeType.${safetyParam}`;
       filteredAbstracts = filteredAbstracts.map(trial => {
-        const filteredArmResults: Record<string, any> = {};
+        const filteredArmResults: Record<string, ArmResult> = {};
         
         // Only include arms that have the selected safety parameter with a valid value
         for (const [armId, arm] of Object.entries(trial.arm_results)) {
