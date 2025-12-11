@@ -1,6 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { env, isDevelopment } from "@/lib/env"
+import { env } from "@/lib/env"
 import { isValidEmail, sanitizeInput, validatePassword, rateLimiter } from "@/lib/auth-utils"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -48,19 +48,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // if (!isValid) return null
           // return { id: user.id, email: user.email, name: user.name }
 
-          // Demo authentication (only in development)
-          if (isDevelopment) {
-            if (email === env.demo.email && password === env.demo.password) {
-              rateLimiter.reset(email) // Reset on successful login
-              return {
-                id: "demo-user-1",
-                email: env.demo.email,
-                name: "Demo User",
-              }
+          // Demo authentication (works in both development and production)
+          // Uses DEMO_EMAIL and DEMO_PASSWORD environment variables
+          if (email === env.demo.email && password === env.demo.password) {
+            rateLimiter.reset(email) // Reset on successful login
+            return {
+              id: "demo-user-1",
+              email: env.demo.email,
+              name: "Demo User",
             }
           }
 
-          // In production, if we reach here, credentials are invalid
+          // If we reach here, credentials are invalid
           // Don't reveal whether email exists or password is wrong
           return null
         } catch (error) {
