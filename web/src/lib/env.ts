@@ -14,6 +14,12 @@ function getOptionalEnvVar(key: string, defaultValue?: string): string | undefin
  */
 // Helper to get AUTH_SECRET with proper fallback
 function getAuthSecret(): string {
+  // FIX: Prevent client-side validation error
+  // AUTH_SECRET is not available (and not needed) in the browser
+  if (typeof window !== 'undefined') {
+    return '';
+  }
+
   const secret = getOptionalEnvVar('AUTH_SECRET') || getOptionalEnvVar('NEXTAUTH_SECRET');
   
   if (secret) {
