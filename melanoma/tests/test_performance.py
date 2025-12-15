@@ -38,14 +38,22 @@ class AsyncTestClient:
             # If we're in an async context, we can't use run_until_complete
             # This shouldn't happen in pytest sync tests, but handle it gracefully
             raise RuntimeError("Cannot run async in already running loop")
-        except RuntimeError:
-            # No event loop, create one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                return loop.run_until_complete(coro)
-            finally:
-                loop.close()
+        except RuntimeError as e:
+            # Check if this is the "no running event loop" error
+            if (
+                "no running event loop" in str(e).lower()
+                or "no current event loop" in str(e).lower()
+            ):
+                # No event loop, create one
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    return loop.run_until_complete(coro)
+                finally:
+                    loop.close()
+            else:
+                # Re-raise if it's a different RuntimeError
+                raise
 
     def get(self, url, **kwargs):
         return self._run_async(self.client.get(url, **kwargs))

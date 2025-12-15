@@ -3,9 +3,13 @@
 import json
 import logging
 import os
+import time
 
-from fastapi import Depends, FastAPI, File, Form, HTTPException, UploadFile
+import psutil
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import StreamingResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -28,6 +32,25 @@ from .trials_api import (
     extract_trial_data,
     get_trials_data_source,
 )
+
+# Singleton pattern for JSONTrialsService with stats tracking
+_json_service_instance: JSONTrialsService | None = None
+_service_stats = {
+    "instance_creations": 0,
+    "instance_reuses": 0,
+}
+
+
+def get_json_trials_service() -> JSONTrialsService:
+    """Get or create singleton instance of JSONTrialsService."""
+    global _json_service_instance, _service_stats
+    if _json_service_instance is None:
+        _json_service_instance = JSONTrialsService()
+        _service_stats["instance_creations"] += 1
+    else:
+        _service_stats["instance_reuses"] += 1
+    return _json_service_instance
+
 
 # Configure logging
 logging.basicConfig(
@@ -67,6 +90,21 @@ app.add_middleware(
     allow_methods=["*"],  # Allow all methods
     allow_headers=["*"],  # Allow all headers
 )
+
+# Add compression middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+# Request timing middleware
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    """Add X-Process-Time header to responses."""
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = time.time() - start_time
+    response.headers["X-Process-Time"] = str(process_time)
+    return response
+
 
 # Include routers
 app.include_router(langchain_router)
@@ -842,9 +880,15 @@ async def get_trial_by_abstract_id(
 
 @app.get("/api/analytics/data")
 async def get_analytics_data(
+    skip: int = 0,
+    limit: int = 100,
     db: Session = Depends(get_db_session),
 ) -> dict:
     """Get all abstracts/publications with full arm data for analytics.
+
+    Args:
+        skip: Number of records to skip (for pagination)
+        limit: Maximum number of records to return
 
     Returns:
         Dictionary with abstracts array containing full arm_results for chart visualization
@@ -856,28 +900,35 @@ async def get_analytics_data(
         data_source = get_trials_data_source()
 
         if data_source == "json":
-            # Use JSON file as data source
-            json_service = JSONTrialsService()
-            abstracts = json_service._load_json_files()
+            # Use JSON file as data source with singleton pattern
+            json_service = get_json_trials_service()
+            all_abstracts = json_service._load_json_files()
 
-            # Calculate summary stats
-            total_arms = sum(len(a.get("arm_results", {})) for a in abstracts)
+            # Calculate summary stats from full dataset
+            total_arms = sum(len(a.get("arm_results", {})) for a in all_abstracts)
             total_attributes = sum(
-                a.get("total_attributes_extracted", 0) for a in abstracts
+                a.get("total_attributes_extracted", 0) for a in all_abstracts
             )
             confidences = [
                 a.get("overall_confidence", 0)
-                for a in abstracts
+                for a in all_abstracts
                 if a.get("overall_confidence")
             ]
             avg_confidence = sum(confidences) / len(confidences) if confidences else 0
 
+            # Apply pagination
+            paginated_abstracts = all_abstracts[skip : skip + limit]
+            has_more = (skip + limit) < len(all_abstracts)
+
             return {
-                "total_abstracts": len(abstracts),
+                "total_abstracts": len(all_abstracts),
                 "total_arms": total_arms,
                 "total_attributes_extracted": total_attributes,
                 "average_confidence": avg_confidence,
-                "abstracts": abstracts,
+                "abstracts": paginated_abstracts,
+                "skip": skip,
+                "limit": limit,
+                "has_more": has_more,
             }
         else:
             # Use database as data source
@@ -889,6 +940,9 @@ async def get_analytics_data(
                 "total_attributes_extracted": 0,
                 "average_confidence": 0,
                 "abstracts": [],
+                "skip": skip,
+                "limit": limit,
+                "has_more": False,
             }
 
     except Exception as e:
@@ -896,6 +950,176 @@ async def get_analytics_data(
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
         ) from e
+
+
+@app.get("/api/resources")
+async def get_resources() -> dict:
+    """Get resource usage information for monitoring."""
+    try:
+        process = psutil.Process()
+        memory_info = process.memory_info()
+        children = process.children(recursive=True)
+
+        # Calculate total memory including children
+        total_rss = memory_info.rss
+        for child in children:
+            try:
+                total_rss += child.memory_info().rss
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+
+        # Get system stats
+        system_memory = psutil.virtual_memory()
+        cpu_percent = psutil.cpu_percent(interval=0.1)
+
+        # Calculate reuse rate
+        total_requests = (
+            _service_stats["instance_creations"] + _service_stats["instance_reuses"]
+        )
+        reuse_rate = (
+            (_service_stats["instance_reuses"] / total_requests * 100)
+            if total_requests > 0
+            else 0
+        )
+
+        # Get JSON cache info
+        json_cache = {}
+        if _json_service_instance and _json_service_instance._cache:
+            json_cache = {
+                "cached": True,
+                "abstract_count": len(_json_service_instance._cache),
+            }
+        else:
+            json_cache = {"cached": False, "abstract_count": 0}
+
+        return {
+            "process": {
+                "memory_mb": total_rss / (1024 * 1024),
+                "cpu_percent": cpu_percent,
+                "num_children": len(children),
+            },
+            "system": {
+                "total_memory_gb": system_memory.total / (1024**3),
+                "available_memory_gb": system_memory.available / (1024**3),
+                "memory_percent": system_memory.percent,
+                "cpu_percent": cpu_percent,
+            },
+            "service": {
+                "instance_creations": _service_stats["instance_creations"],
+                "instance_reuses": _service_stats["instance_reuses"],
+                "reuse_rate_percent": reuse_rate,
+                "total_requests": total_requests,
+            },
+            "json_cache": json_cache,
+        }
+    except Exception as e:
+        logger.error(f"Error getting resources: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/analytics/arms/{abstract_id}")
+async def get_analytics_arms(abstract_id: str) -> dict:
+    """Get arm results for a specific abstract ID (lazy loading)."""
+    try:
+        data_source = get_trials_data_source()
+
+        if data_source == "json":
+            json_service = get_json_trials_service()
+            all_abstracts = json_service._load_json_files()
+
+            # Find the abstract by ID
+            for abstract in all_abstracts:
+                if (
+                    abstract.get("abstract_id") == abstract_id
+                    or abstract.get("publication_id") == abstract_id
+                ):
+                    return {
+                        "abstract_id": abstract_id,
+                        "arm_results": abstract.get("arm_results", {}),
+                    }
+
+            # Not found
+            raise HTTPException(
+                status_code=404, detail=f"Abstract with ID '{abstract_id}' not found"
+            )
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail="Database data source not supported for this endpoint",
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching arms for {abstract_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/analytics/data/stream")
+async def stream_analytics_data():
+    """Stream analytics data as NDJSON (newline-delimited JSON)."""
+
+    async def generate():
+        try:
+            data_source = get_trials_data_source()
+
+            if data_source == "json":
+                json_service = get_json_trials_service()
+                all_abstracts = json_service._load_json_files()
+
+                # Calculate summary stats
+                total_arms = sum(len(a.get("arm_results", {})) for a in all_abstracts)
+                total_attributes = sum(
+                    a.get("total_attributes_extracted", 0) for a in all_abstracts
+                )
+                confidences = [
+                    a.get("overall_confidence", 0)
+                    for a in all_abstracts
+                    if a.get("overall_confidence")
+                ]
+                avg_confidence = (
+                    sum(confidences) / len(confidences) if confidences else 0
+                )
+
+                # Create summary line
+                summary = {
+                    "type": "summary",
+                    "total_abstracts": len(all_abstracts),
+                    "total_arms": total_arms,
+                    "total_attributes_extracted": total_attributes,
+                    "average_confidence": avg_confidence,
+                }
+
+                # Yield summary first
+                yield json.dumps(summary) + "\n"
+                # Then yield each abstract
+                for abstract in all_abstracts:
+                    yield json.dumps(abstract) + "\n"
+            else:
+                # Return empty stream for database source
+                summary = {
+                    "type": "summary",
+                    "total_abstracts": 0,
+                    "total_arms": 0,
+                    "total_attributes_extracted": 0,
+                    "average_confidence": 0,
+                }
+                yield json.dumps(summary) + "\n"
+
+        except Exception as e:
+            logger.error(f"Error streaming analytics data: {str(e)}", exc_info=True)
+            error_msg = json.dumps({"error": str(e)}) + "\n"
+            yield error_msg.encode()
+
+    return StreamingResponse(
+        generate(),
+        media_type="application/x-ndjson",
+        headers={"Content-Disposition": 'attachment; filename="analytics_data.ndjson"'},
+    )
 
 
 @app.get("/filesystem")
