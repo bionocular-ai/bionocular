@@ -14767,7 +14767,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Cutaneous Squamous Cell Carcinoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -21069,7 +21069,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Resected Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -25216,7 +25216,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT00949702",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -27326,7 +27326,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Acral Melanoma, Mucosal Melanoma, Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -29369,7 +29369,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01415167",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -31433,7 +31433,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01415167",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -33509,7 +33509,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01597908",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -35591,7 +35591,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01597908",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -41862,7 +41862,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01689519",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -43944,7 +43944,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01689519",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -48137,7 +48137,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01295827",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -48155,7 +48155,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -50202,7 +50202,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01295827",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -50220,7 +50220,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -52267,7 +52267,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01295827",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -52285,7 +52285,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -54362,7 +54362,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -62789,7 +62789,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -64870,7 +64870,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -66951,7 +66951,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -69026,7 +69026,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01844505",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -69038,13 +69038,13 @@
               "extracted_at": "2025-11-19T17:57:56.108339"
             },
             "trial_name": {
-              "value": "No Name",
+              "value": "CheckMate 067",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -71139,7 +71139,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01844505",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -71151,13 +71151,13 @@
               "extracted_at": "2025-11-19T17:57:56.108390"
             },
             "trial_name": {
-              "value": "No Name",
+              "value": "CheckMate 067",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -73252,7 +73252,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01844505",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -73264,13 +73264,13 @@
               "extracted_at": "2025-11-19T17:57:56.108399"
             },
             "trial_name": {
-              "value": "No Name",
+              "value": "CheckMate 067",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -81836,7 +81836,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -83898,7 +83898,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -85960,7 +85960,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -100658,13 +100658,13 @@
               "extracted_at": "2025-11-19T18:14:51.557707"
             },
             "trial_name": {
-              "value": "No Name",
+              "value": "CheckMate 204",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Cutaneous melanoma with Brain metastasis",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -102793,13 +102793,13 @@
               "extracted_at": "2025-11-19T18:14:51.557746"
             },
             "trial_name": {
-              "value": "No Name",
+              "value": "CheckMate 204",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Cutaneous melanoma with Brain metastasis",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -130116,7 +130116,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -140681,7 +140681,7 @@
             },
             "cancer_type": {
               "attribute_type": "cancer_type",
-              "value": null,
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -142777,7 +142777,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01721746",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -144860,7 +144860,7 @@
             },
             "nct_number": {
               "attribute_type": "nct_number",
-              "value": null,
+              "value": "NCT01721746",
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -157441,7 +157441,7 @@
               "confidence": 0.0
             },
             "AttributeType.CANCER_TYPE": {
-              "value": "Not found",
+              "value": "Resected Cutaneous Melanoma",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -159003,7 +159003,7 @@
               "confidence": 0.0
             },
             "AttributeType.CANCER_TYPE": {
-              "value": "Not found",
+              "value": "Resected Cutaneous Melanoma",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -162125,7 +162125,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT03698019",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -171533,7 +171533,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT02908672",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -191925,7 +191925,7 @@
               "confidence": 0.0
             },
             "AttributeType.CANCER_TYPE": {
-              "value": "Not found",
+              "value": "Cutaneous melanoma with Brain metastasis",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -193487,7 +193487,7 @@
               "confidence": 0.0
             },
             "AttributeType.CANCER_TYPE": {
-              "value": "Not found",
+              "value": "Cutaneous melanoma with Brain metastasis",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -198183,7 +198183,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT02097810",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -198197,7 +198197,7 @@
               "confidence": 0.0
             },
             "AttributeType.CANCER_TYPE": {
-              "value": "Not found",
+              "value": "Advanced Solid Tumors, Metastatic Solid Tumors",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -199745,7 +199745,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT02097810",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -210715,7 +210715,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT00110019",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -220123,7 +220123,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT02908672",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -226409,7 +226409,7 @@
               "confidence": 0.9
             },
             "AttributeType.CANCER_TYPE": {
-              "value": "Not found",
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -227971,7 +227971,7 @@
               "confidence": 0.9
             },
             "AttributeType.CANCER_TYPE": {
-              "value": "Not found",
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -229533,7 +229533,7 @@
               "confidence": 0.9
             },
             "AttributeType.CANCER_TYPE": {
-              "value": "Not found",
+              "value": "Unresectable Cutaneous Melanoma",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -231093,7 +231093,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT01866319",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -232655,7 +232655,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT01866319",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -234217,7 +234217,7 @@
               "confidence": 1.0
             },
             "AttributeType.NCT_NUMBER": {
-              "value": "Not found",
+              "value": "NCT01866319",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",

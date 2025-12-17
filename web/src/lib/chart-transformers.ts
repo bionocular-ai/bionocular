@@ -35,6 +35,54 @@ const APPROVED_TREATMENTS = new Set([
 ]);
 
 // ============================================================================
+// Attribute Key Mapping (abstracts use AttributeType.X, publications use lowercase)
+// ============================================================================
+
+/**
+ * Get attribute value checking both uppercase (AttributeType.X) and lowercase (x) key formats
+ * Publications use lowercase keys, abstracts use AttributeType.X format
+ */
+function getAttribute(attributes: Record<string, AttributeInput>, metricName: string): AttributeInput {
+  // Try AttributeType.X format first (used by abstracts)
+  const uppercaseKey = `AttributeType.${metricName}`;
+  if (attributes[uppercaseKey] !== undefined) {
+    return attributes[uppercaseKey];
+  }
+  
+  // Try lowercase format (used by publications)
+  const lowercaseKey = metricName.toLowerCase();
+  if (attributes[lowercaseKey] !== undefined) {
+    return attributes[lowercaseKey];
+  }
+  
+  // Handle special aliases (e.g., ORR -> OBJECTIVE_RESPONSE_RATE)
+  const ALIASES: Record<string, string[]> = {
+    'ORR': ['OBJECTIVE_RESPONSE_RATE', 'objective_response_rate'],
+    'PFS': ['MEDIAN_PFS', 'median_pfs'],
+    'OS': ['MEDIAN_OS', 'median_os'],
+    'DCR': ['DISEASE_CONTROL_RATE', 'disease_control_rate'],
+    'DOR': ['MEDIAN_DOR', 'median_dor', 'DOR_RATE', 'dor_rate'],
+    'CBR': ['CLINICAL_BENEFIT_RATE', 'clinical_benefit_rate'],
+    'CR': ['COMPLETE_RESPONSE', 'complete_response'],
+  };
+  
+  const aliases = ALIASES[metricName];
+  if (aliases) {
+    for (const alias of aliases) {
+      const aliasUpperKey = `AttributeType.${alias}`;
+      if (attributes[aliasUpperKey] !== undefined) {
+        return attributes[aliasUpperKey];
+      }
+      if (attributes[alias] !== undefined) {
+        return attributes[alias];
+      }
+    }
+  }
+  
+  return undefined;
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -141,9 +189,9 @@ function getApprovalStatus(treatmentName: string): ApprovalStatus {
  * Build study ID from trial data
  */
 function buildStudyId(trial: ClinicalTrialRaw, arm: ArmResult): string {
-  const conference = extractStringValue(arm.attributes['AttributeType.CONFERENCE']);
-  const year = extractStringValue(arm.attributes['AttributeType.PUBLISHED_YEAR']);
-  const abstractNum = extractStringValue(arm.attributes['AttributeType.ABSTRACT_NUMBER']);
+  const conference = extractStringValue(getAttribute(arm.attributes, 'CONFERENCE'));
+  const year = extractStringValue(getAttribute(arm.attributes, 'PUBLISHED_YEAR'));
+  const abstractNum = extractStringValue(getAttribute(arm.attributes, 'ABSTRACT_NUMBER'));
   
   if (trial.abstract_id) return trial.abstract_id;
   if (trial.publication_id) return trial.publication_id;
@@ -208,8 +256,6 @@ export function transformHeadToHeadData(
     trials: TrialDataPoint[];
   }>();
 
-  const metricKey = `AttributeType.${targetMetric}`;
-
   for (const trial of allTrials) {
     for (const [, arm] of Object.entries(trial.arm_results)) {
       const rawTreatmentName = arm.arm_name;
@@ -224,19 +270,19 @@ export function transformHeadToHeadData(
         }
       }
 
-      // Extract metric value
-      const metricAttr = arm.attributes[metricKey];
+      // Extract metric value (check both uppercase and lowercase keys)
+      const metricAttr = getAttribute(arm.attributes, targetMetric);
       const metricValue = extractNumericValue(metricAttr);
       if (metricValue === null) continue;
 
       // Filter by phase if specified
-      const phase = extractStringValue(arm.attributes['AttributeType.CLINICAL_TRIAL_PHASE']);
+      const phase = extractStringValue(getAttribute(arm.attributes, 'CLINICAL_TRIAL_PHASE'));
       if (selectedPhases.length > 0 && phase && !selectedPhases.includes(phase)) {
         continue;
       }
 
       // Filter by year if specified
-      const yearStr = extractStringValue(arm.attributes['AttributeType.PUBLISHED_YEAR']);
+      const yearStr = extractStringValue(getAttribute(arm.attributes, 'PUBLISHED_YEAR'));
       const year = parseInt(yearStr, 10);
       if (!isNaN(year) && (year < yearRange[0] || year > yearRange[1])) {
         continue;
@@ -251,23 +297,23 @@ export function transformHeadToHeadData(
       group.values.push(metricValue);
 
       // Extract patient count
-      const patientCount = extractNumericValue(arm.attributes['AttributeType.NUMBER_OF_PATIENTS']);
+      const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS'));
       if (patientCount !== null) {
         group.patients.push(patientCount);
       }
 
       // Build trial data point
       const studyId = buildStudyId(trial, arm);
-      const nctNumber = extractStringValue(arm.attributes['AttributeType.NCT_NUMBER']);
-      const conference = extractStringValue(arm.attributes['AttributeType.CONFERENCE']);
-      const trialName = extractStringValue(arm.attributes['AttributeType.TRIAL_NAME']);
+      const nctNumber = extractStringValue(getAttribute(arm.attributes, 'NCT_NUMBER'));
+      const conference = extractStringValue(getAttribute(arm.attributes, 'CONFERENCE'));
+      const trialName = extractStringValue(getAttribute(arm.attributes, 'TRIAL_NAME'));
       
       // Get abstract ID or publication ID directly from trial object
       // This matches the logic in TrialDataTable.tsx
       const abstractId = trial.abstract_id || trial.publication_id || '';
       
       // Get publication name from attributes (for publications)
-      const publicationNameAttr = extractStringValue(arm.attributes['AttributeType.PUBLICATION_NAME']);
+      const publicationNameAttr = extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_NAME'));
       
       group.trials.push({
         studyId,
@@ -348,7 +394,7 @@ export function getUniquePhases(data: TrialDataFile | TrialDataFile[]): string[]
     const trials = [...(file.abstracts || []), ...(file.publications || [])];
     for (const trial of trials) {
       for (const arm of Object.values(trial.arm_results)) {
-        const phase = extractStringValue(arm.attributes['AttributeType.CLINICAL_TRIAL_PHASE']);
+        const phase = extractStringValue(getAttribute(arm.attributes, 'CLINICAL_TRIAL_PHASE'));
         if (phase && phase !== 'Not found') phases.add(phase);
       }
     }
@@ -369,7 +415,7 @@ export function getYearRange(data: TrialDataFile | TrialDataFile[]): [number, nu
     const trials = [...(file.abstracts || []), ...(file.publications || [])];
     for (const trial of trials) {
       for (const arm of Object.values(trial.arm_results)) {
-        const yearStr = extractStringValue(arm.attributes['AttributeType.PUBLISHED_YEAR']);
+        const yearStr = extractStringValue(getAttribute(arm.attributes, 'PUBLISHED_YEAR'));
         const year = parseInt(yearStr, 10);
         if (!isNaN(year)) {
           minYear = Math.min(minYear, year);

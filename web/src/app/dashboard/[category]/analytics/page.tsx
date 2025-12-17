@@ -155,6 +155,7 @@ const LINE_OF_TREATMENT_OPTIONS = [
 ];
 
 const RESOURCE_TYPE_OPTIONS = [
+  { value: 'all', label: 'All' },
   { value: 'conference', label: 'Conference' },
   { value: 'publication', label: 'Publications' },
 ];
@@ -538,13 +539,13 @@ export default function CategoryAnalyticsPage() {
   const [company, setCompany] = useState('all');
   const [therapyType, setTherapyType] = useState('all');
   const [lineOfTreatment, setLineOfTreatment] = useState('all');
-  const [resourceType, setResourceType] = useState('conference');
+  const [resourceType, setResourceType] = useState('all');
   const [fundingType, setFundingType] = useState('all');
   const [biomarker, setBiomarker] = useState('all');
   const [biomarkerType, setBiomarkerType] = useState('all');
   const [selectedApproved, setSelectedApproved] = useState<string[]>([]);
   const [selectedNonApproved, setSelectedNonApproved] = useState<string[]>([]);
-  const [efficacyParam, setEfficacyParam] = useState('MEDIAN_OS');
+  const [efficacyParam, setEfficacyParam] = useState('OBJECTIVE_RESPONSE_RATE');
   const [safetyParam, setSafetyParam] = useState('none');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowHeight, setWindowHeight] = useState(700);
@@ -587,7 +588,8 @@ export default function CategoryAnalyticsPage() {
     if (categoryName) {
       categoryTrials = categoryTrials.filter(trial => {
         for (const arm of Object.values(trial.arm_results)) {
-          const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'];
+          // Check both key formats: abstracts use 'AttributeType.CANCER_TYPE', publications use 'cancer_type'
+          const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'] || arm.attributes['cancer_type'];
           if (cancerTypeAttr === null || cancerTypeAttr === undefined) continue;
           
           const cancerType = typeof cancerTypeAttr === 'object' && 'value' in cancerTypeAttr
@@ -706,7 +708,8 @@ export default function CategoryAnalyticsPage() {
       allTrials = allTrials.filter(trial => {
         // Check if any arm has the matching cancer type
         for (const arm of Object.values(trial.arm_results)) {
-          const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'];
+          // Check both key formats: abstracts use 'AttributeType.CANCER_TYPE', publications use 'cancer_type'
+          const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'] || arm.attributes['cancer_type'];
           if (cancerTypeAttr === null || cancerTypeAttr === undefined) continue;
           
           const cancerType = typeof cancerTypeAttr === 'object' && 'value' in cancerTypeAttr
@@ -1097,13 +1100,13 @@ export default function CategoryAnalyticsPage() {
                 setCompany('all');
                 setTherapyType('all');
                 setLineOfTreatment('all');
-                setResourceType('conference');
+                setResourceType('all');
                 setFundingType('all');
                 setBiomarker('all');
                 setBiomarkerType('all');
                 setSelectedApproved([]);
                 setSelectedNonApproved([]);
-                setEfficacyParam('MEDIAN_OS');
+                setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
                 setSafetyParam('none');
               }}
             >
