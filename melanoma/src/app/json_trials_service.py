@@ -40,14 +40,14 @@ class JSONTrialsService:
             else:
                 # Default: use all known abstract files
                 json_file_paths = [
-                    "data/output/ASCO_2020.json",
-                    "data/output/ASCO_2021.json",
-                    "data/output/ASCO_2022.json",
-                    "data/output/ASCO_2023.json",
-                    "data/output/ASCO_2024.json",
-                    "data/output/ASCO_2025.json",
-                    "data/output/ESMO_2020-2024.json",
-                    "data/output/Publications_70.json",
+                    "data/deployed/ASCO_2020.json",
+                    "data/deployed/ASCO_2021.json",
+                    "data/deployed/ASCO_2022.json",
+                    "data/deployed/ASCO_2023.json",
+                    "data/deployed/ASCO_2024.json",
+                    "data/deployed/ASCO_2025.json",
+                    "data/deployed/ESMO_2020-2024.json",
+                    "data/deployed/Publications_70.json",
                 ]
 
         # Normalize to list

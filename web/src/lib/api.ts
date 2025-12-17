@@ -152,7 +152,7 @@ export interface AnalyticsDataResponse {
 
 export const analyticsApi = {
   getData: async (): Promise<AnalyticsDataResponse> => {
-    const response = await apiClient.get<AnalyticsDataResponse>('/api/analytics/data');
+    const response = await apiClient.get<AnalyticsDataResponse>('/api/analytics/data?limit=2000');
     return response.data;
   },
 };
