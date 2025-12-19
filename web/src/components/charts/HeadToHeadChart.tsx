@@ -240,6 +240,8 @@ export default function HeadToHeadChart({
   referenceValue,
   compact = false,
 }: HeadToHeadChartProps) {
+  // Ensure height is always a valid positive number (fixes SSR warnings)
+  const chartHeight = Math.max(height || 500, 100);
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
   const [isPinned, setIsPinned] = useState(false);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -651,12 +653,12 @@ export default function HeadToHeadChart({
         )}
 
         <div 
-          style={{ width: '100%', height: height, WebkitTapHighlightColor: 'transparent' }} 
+          style={{ width: '100%', height: chartHeight, minWidth: 0, minHeight: 100, WebkitTapHighlightColor: 'transparent' }} 
           className="relative outline-none [&_*]:outline-none [&_svg]:outline-none [&_svg_*]:outline-none" 
           onMouseLeave={handleChartMouseLeave} 
           tabIndex={-1}
         >
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
             <BarChart data={data} margin={margin}>
               <CartesianGrid
                 strokeDasharray="3 3"

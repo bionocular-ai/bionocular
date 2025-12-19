@@ -30,7 +30,7 @@ import { UserMenu } from '@/components/user-menu';
 import HeadToHeadChart from '@/components/charts/HeadToHeadChart';
 import { transformHeadToHeadData } from '@/lib/chart-transformers';
 import { analyticsApi } from '@/lib/api';
-import { HeadToHeadDataPoint, ChartMetric, TrialDataFile, ArmResult } from '@/types/analytics';
+import { HeadToHeadDataPoint, ChartMetric, TrialDataFile } from '@/types/analytics';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,69 +72,7 @@ const COMPANY_OPTIONS = [
   { value: 'pfizer', label: 'Pfizer' },
 ];
 
-// Known industry sponsors (pharmaceutical companies)
-const INDUSTRY_SPONSORS = [
-  'bristol-myers squibb', 'bms', 'bristol myers',
-  'merck', 'msd',
-  'novartis',
-  'roche', 'genentech',
-  'pfizer',
-  'amgen',
-  'gilead',
-  'astrazeneca',
-  'lilly', 'eli lilly',
-  'sanofi',
-  'glaxosmithkline', 'gsk',
-  'abbvie',
-  'biogen',
-  'regeneron',
-  'moderna',
-  'johnson & johnson', 'janssen',
-  'bayer',
-  'boehringer',
-  'takeda',
-  'celgene',
-  'iovance',
-  'junshi',
-  'pharmaceutical', 'pharma', 'biotech', 'biotechnology',
-];
-
-// Helper function to determine if funding is industry or non-industry
-function isIndustryFunded(sponsorsValue: unknown): boolean | null {
-  if (!sponsorsValue) return null;
-  
-  const sponsorsStr = typeof sponsorsValue === 'object' && 'value' in sponsorsValue
-    ? String(sponsorsValue.value || '')
-    : String(sponsorsValue || '');
-  
-  if (!sponsorsStr || sponsorsStr.toLowerCase() === 'not found' || sponsorsStr.toLowerCase() === 'none') {
-    return null;
-  }
-  
-  const sponsorsLower = sponsorsStr.toLowerCase();
-  
-  // Check for explicit non-industry indicators
-  if (sponsorsLower.includes('non-industry') || 
-      sponsorsLower.includes('non industry') ||
-      sponsorsLower.includes('investigator sponsored') ||
-      sponsorsLower.includes('academic') ||
-      sponsorsLower.includes('university') ||
-      sponsorsLower.includes('government') ||
-      sponsorsLower.includes('nih') ||
-      sponsorsLower.includes('national cancer institute')) {
-    return false;
-  }
-  
-  // Check for industry sponsors
-  for (const industrySponsor of INDUSTRY_SPONSORS) {
-    if (sponsorsLower.includes(industrySponsor)) {
-      return true;
-    }
-  }
-  
-  // If we can't determine, return null (unknown)
-  return null;
-}
+// Note: Funding type filtering is now handled by the backend API
 
 const THERAPY_TYPE_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -527,26 +465,44 @@ export default function CategoryAnalyticsPage() {
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
 
-  // Fetch analytics data from backend
-  const { data: analyticsData, isLoading, error } = useQuery({
-    queryKey: ['analytics', 'data'],
-    queryFn: analyticsApi.getData,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
-  });
-
   // Filter states
   const [company, setCompany] = useState('all');
   const [therapyType, setTherapyType] = useState('all');
   const [lineOfTreatment, setLineOfTreatment] = useState('all');
-  const [resourceType, setResourceType] = useState('all');
-  const [fundingType, setFundingType] = useState('all');
+  const [resourceType, setResourceType] = useState<'all' | 'conference' | 'publication'>('all');
+  const [fundingType, setFundingType] = useState<'all' | 'industry' | 'non-industry'>('all');
   const [biomarker, setBiomarker] = useState('all');
   const [biomarkerType, setBiomarkerType] = useState('all');
   const [selectedApproved, setSelectedApproved] = useState<string[]>([]);
   const [selectedNonApproved, setSelectedNonApproved] = useState<string[]>([]);
   const [efficacyParam, setEfficacyParam] = useState('OBJECTIVE_RESPONSE_RATE');
   const [safetyParam, setSafetyParam] = useState('none');
+
+  // Build filter parameters for API call
+  const apiFilters = useMemo(() => {
+    const filters: Parameters<typeof analyticsApi.getData>[0] = {
+      resource_type: resourceType as 'all' | 'conference' | 'publication',
+      cancer_type: categoryName || undefined,
+      therapy_type: therapyType,
+      funding_type: fundingType as 'all' | 'industry' | 'non-industry',
+      limit: 2000, // Request all matching records
+    };
+    
+    // Add has_metric filter if safety param is selected (and not being used as display metric)
+    if (safetyParam !== 'none' && efficacyParam !== 'none') {
+      filters.has_metric = safetyParam;
+    }
+    
+    return filters;
+  }, [resourceType, categoryName, therapyType, fundingType, safetyParam, efficacyParam]);
+
+  // Fetch analytics data from backend with filters
+  const { data: analyticsData, isLoading, error } = useQuery({
+    queryKey: ['analytics', 'data', apiFilters],
+    queryFn: () => analyticsApi.getData(apiFilters),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowHeight, setWindowHeight] = useState(700);
 
@@ -692,207 +648,22 @@ export default function CategoryAnalyticsPage() {
     }
   }, [availableTherapies]);
 
-  // Transform and filter data
+  // Transform data for chart (backend already filtered the data)
   const chartData = useMemo<HeadToHeadDataPoint[]>(() => {
     if (!analyticsData) return [];
     if (!displayMetric) return [];
     if (!analyticsData.abstracts) return [];
 
+    // Backend has already filtered the data, so we just need to transform it
     // Transform backend data to TrialDataFile format for the transformer
-    // Note: The API returns both abstracts and publications under the 'abstracts' key
-    // We need to filter them based on whether they have abstract_id or publication_id
-    let allTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
-
-    // Filter by cancer type (category)
-    if (categoryName) {
-      allTrials = allTrials.filter(trial => {
-        // Check if any arm has the matching cancer type
-        for (const arm of Object.values(trial.arm_results)) {
-          // Check both key formats: abstracts use 'AttributeType.CANCER_TYPE', publications use 'cancer_type'
-          const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'] || arm.attributes['cancer_type'];
-          if (cancerTypeAttr === null || cancerTypeAttr === undefined) continue;
-          
-          const cancerType = typeof cancerTypeAttr === 'object' && 'value' in cancerTypeAttr
-            ? String(cancerTypeAttr.value || '')
-            : String(cancerTypeAttr || '');
-          
-          if (cancerType && cancerType.toLowerCase() === categoryName.toLowerCase()) {
-            return true;
-          }
-        }
-        return false;
-      });
-    }
-
-    // Filter by resource type (Conference or Publications)
-    let filteredAbstracts: TrialDataFile['abstracts'];
-    if (resourceType === 'conference') {
-      // Filter to only show abstracts from ASCO or ESMO
-      filteredAbstracts = allTrials.filter(trial => {
-        // Must have abstract_id (not publication_id)
-        if (!trial.abstract_id || trial.publication_id) return false;
-        
-        // Check if conference is ASCO or ESMO
-        for (const arm of Object.values(trial.arm_results)) {
-          const conferenceAttr = arm.attributes['AttributeType.CONFERENCE'];
-          if (conferenceAttr === null || conferenceAttr === undefined) continue;
-          
-          const conference = typeof conferenceAttr === 'object' && 'value' in conferenceAttr
-            ? String(conferenceAttr.value || '')
-            : String(conferenceAttr || '');
-          
-          if (!conference) continue;
-          
-          const conferenceUpper = conference.toUpperCase();
-          if (conferenceUpper === 'ASCO' || conferenceUpper === 'ESMO') {
-            return true;
-          }
-        }
-        return false;
-      });
-    } else if (resourceType === 'publication') {
-      // Filter to only show publications (must have publication_id, not abstract_id)
-      filteredAbstracts = allTrials.filter(trial => {
-        return !!trial.publication_id && !trial.abstract_id;
-      });
-    } else {
-      // If 'all' or unknown, show all
-      filteredAbstracts = allTrials;
-    }
-
-    // Filter by therapy type if selected
-    if (therapyType !== 'all') {
-      filteredAbstracts = filteredAbstracts.map(trial => {
-        const filteredArmResults: Record<string, ArmResult> = {};
-        
-        for (const [armId, arm] of Object.entries(trial.arm_results)) {
-          const therapyTypeAttr = arm.attributes['AttributeType.TYPE_OF_THERAPY'];
-          if (therapyTypeAttr === null || therapyTypeAttr === undefined) continue;
-          
-          const armTherapyType = typeof therapyTypeAttr === 'object' && 'value' in therapyTypeAttr
-            ? String(therapyTypeAttr.value || '')
-            : String(therapyTypeAttr || '');
-          
-          if (!armTherapyType) continue;
-          
-          // Normalize and compare (case-insensitive to handle "Targeted therapy" vs "Targeted Therapy")
-          const armTypeNormalized = armTherapyType.trim().toLowerCase();
-          const filterTypeNormalized = therapyType.trim().toLowerCase();
-          
-          // Check if therapy type matches (case-insensitive)
-          if (armTypeNormalized === filterTypeNormalized) {
-            filteredArmResults[armId] = arm;
-          }
-        }
-        
-        // Return trial with filtered arms, or null if no arms remain
-        if (Object.keys(filteredArmResults).length === 0) {
-          return null;
-        }
-        
-        return {
-          ...trial,
-          arm_results: filteredArmResults,
-        };
-      }).filter((trial): trial is NonNullable<typeof trial> => trial !== null);
-    }
-
-    // Filter by funding type if selected
-    if (fundingType !== 'all') {
-      filteredAbstracts = filteredAbstracts.map(trial => {
-        const filteredArmResults: Record<string, ArmResult> = {};
-        
-        for (const [armId, arm] of Object.entries(trial.arm_results)) {
-          const sponsorsAttr = arm.attributes['AttributeType.SPONSORS'];
-          const isIndustry = isIndustryFunded(sponsorsAttr);
-          
-          // Include arm if funding type matches
-          if (fundingType === 'industry' && isIndustry === true) {
-            filteredArmResults[armId] = arm;
-          } else if (fundingType === 'non-industry' && isIndustry === false) {
-            filteredArmResults[armId] = arm;
-          }
-        }
-        
-        // Return trial with filtered arms, or null if no arms remain
-        if (Object.keys(filteredArmResults).length === 0) {
-          return null;
-        }
-        
-        return {
-          ...trial,
-          arm_results: filteredArmResults,
-        };
-      }).filter((trial): trial is NonNullable<typeof trial> => trial !== null);
-    }
-
-    // Filter by safety parameter if selected (and not being used as display metric)
-    if (safetyParam !== 'none' && efficacyParam !== 'none') {
-      const safetyMetricKey = `AttributeType.${safetyParam}`;
-      filteredAbstracts = filteredAbstracts.map(trial => {
-        const filteredArmResults: Record<string, ArmResult> = {};
-        
-        // Only include arms that have the selected safety parameter with a valid value
-        for (const [armId, arm] of Object.entries(trial.arm_results)) {
-          // Check if the attribute key exists in the attributes object
-          if (!(safetyMetricKey in arm.attributes)) {
-            continue;
-          }
-          
-          const safetyAttr = arm.attributes[safetyMetricKey];
-          
-          // Use the same extraction logic as the transformer
-          // Check if safety attribute exists and has a valid numeric value
-          if (safetyAttr !== null && safetyAttr !== undefined) {
-            let safetyValue: number | null = null;
-            
-            // Handle different attribute formats (same as extractNumericValue logic)
-            if (typeof safetyAttr === 'number') {
-              safetyValue = safetyAttr;
-            } else if (typeof safetyAttr === 'string') {
-              const parsed = parseFloat(safetyAttr);
-              safetyValue = isNaN(parsed) ? null : parsed;
-            } else if (typeof safetyAttr === 'object' && 'value' in safetyAttr) {
-              const value = safetyAttr.value;
-              if (value === null || value === 'Not found' || value === 'NR') {
-                safetyValue = null;
-              } else if (typeof value === 'number') {
-                safetyValue = value;
-              } else if (typeof value === 'string') {
-                // Handle ranges like "12.5-15.3" by taking the first number
-                const match = value.match(/[\d.]+/);
-                if (match) {
-                  const parsed = parseFloat(match[0]);
-                  safetyValue = isNaN(parsed) ? null : parsed;
-                }
-              }
-            }
-            
-            // Include arm if we have a valid numeric value (including 0, which is valid for percentages)
-            if (safetyValue !== null && !isNaN(safetyValue)) {
-              filteredArmResults[armId] = arm;
-            }
-          }
-        }
-        
-        // Return trial with filtered arms, or null if no arms remain
-        if (Object.keys(filteredArmResults).length === 0) {
-          return null;
-        }
-        
-        return {
-          ...trial,
-          arm_results: filteredArmResults,
-        };
-      }).filter((trial): trial is NonNullable<typeof trial> => trial !== null);
-    }
+    const allTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
 
     const trialData: TrialDataFile = {
-      total_abstracts: filteredAbstracts.length,
+      total_abstracts: analyticsData.total_abstracts,
       total_arms: analyticsData.total_arms,
       total_attributes_extracted: analyticsData.total_attributes_extracted,
       average_confidence: analyticsData.average_confidence,
-      abstracts: filteredAbstracts,
+      abstracts: allTrials,
     };
 
     let data = transformHeadToHeadData(trialData, {
@@ -900,7 +671,7 @@ export default function CategoryAnalyticsPage() {
       minTrialCount: 1,
     });
 
-    // Filter by selected therapies
+    // Filter by selected therapies (this is still client-side as it's UI state)
     const allSelected = [...selectedApproved, ...selectedNonApproved];
     if (allSelected.length > 0) {
       data = data.filter(d => allSelected.includes(d.treatmentName));
@@ -910,7 +681,7 @@ export default function CategoryAnalyticsPage() {
     data.sort((a, b) => b.averageValue - a.averageValue);
 
     return data;
-  }, [analyticsData, displayMetric, efficacyParam, safetyParam, fundingType, resourceType, therapyType, categoryName, selectedApproved, selectedNonApproved]);
+  }, [analyticsData, displayMetric, selectedApproved, selectedNonApproved]);
 
   // Determine the label for the displayed metric
   const metricLabel = useMemo(() => {
@@ -1024,7 +795,7 @@ export default function CategoryAnalyticsPage() {
               label="Type of Resource"
               value={resourceType}
               options={RESOURCE_TYPE_OPTIONS}
-              onChange={setResourceType}
+              onChange={(value) => setResourceType(value as 'all' | 'conference' | 'publication')}
             />
 
             {/* Row 3 - Therapy Selection */}
@@ -1050,7 +821,7 @@ export default function CategoryAnalyticsPage() {
               label="Type of Funding"
               value={fundingType}
               options={FUNDING_TYPE_OPTIONS}
-              onChange={setFundingType}
+              onChange={(value) => setFundingType(value as 'all' | 'industry' | 'non-industry')}
             />
 
             {/* Row 5 */}
