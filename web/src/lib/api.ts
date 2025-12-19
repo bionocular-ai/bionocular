@@ -150,9 +150,45 @@ export interface AnalyticsDataResponse {
   abstracts: AnalyticsAbstract[];
 }
 
+export interface AnalyticsFilters {
+  resource_type?: 'all' | 'conference' | 'publication';
+  cancer_type?: string;
+  therapy_type?: string;
+  funding_type?: 'all' | 'industry' | 'non-industry';
+  has_metric?: string;
+  skip?: number;
+  limit?: number;
+}
+
 export const analyticsApi = {
-  getData: async (): Promise<AnalyticsDataResponse> => {
-    const response = await apiClient.get<AnalyticsDataResponse>('/api/analytics/data?limit=2000');
+  getData: async (filters: AnalyticsFilters = {}): Promise<AnalyticsDataResponse> => {
+    const params = new URLSearchParams();
+    
+    if (filters.skip !== undefined) {
+      params.append('skip', filters.skip.toString());
+    }
+    if (filters.limit !== undefined) {
+      params.append('limit', filters.limit.toString());
+    } else {
+      params.append('limit', '2000'); // Default limit
+    }
+    if (filters.resource_type && filters.resource_type !== 'all') {
+      params.append('resource_type', filters.resource_type);
+    }
+    if (filters.cancer_type) {
+      params.append('cancer_type', filters.cancer_type);
+    }
+    if (filters.therapy_type && filters.therapy_type !== 'all') {
+      params.append('therapy_type', filters.therapy_type);
+    }
+    if (filters.funding_type && filters.funding_type !== 'all') {
+      params.append('funding_type', filters.funding_type);
+    }
+    if (filters.has_metric) {
+      params.append('has_metric', filters.has_metric);
+    }
+    
+    const response = await apiClient.get<AnalyticsDataResponse>(`/api/analytics/data?${params.toString()}`);
     return response.data;
   },
 };

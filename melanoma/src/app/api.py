@@ -3,7 +3,9 @@
 import json
 import logging
 import os
+import re
 import time
+from typing import Any
 
 import psutil
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -26,6 +28,7 @@ from .clinical_api import router as clinical_router
 from .ingestion_service import IngestionService
 from .json_trials_service import JSONTrialsService
 from .langchain_api import router as langchain_router
+from .sqlite_trials_service import SQLiteTrialsService
 from .trials_api import (
     TrialResponse,
     TrialsListResponse,
@@ -35,6 +38,7 @@ from .trials_api import (
 
 # Singleton pattern for JSONTrialsService with stats tracking
 _json_service_instance: JSONTrialsService | None = None
+_sqlite_service_instance: SQLiteTrialsService | None = None
 _service_stats = {
     "instance_creations": 0,
     "instance_reuses": 0,
@@ -50,6 +54,27 @@ def get_json_trials_service() -> JSONTrialsService:
     else:
         _service_stats["instance_reuses"] += 1
     return _json_service_instance
+
+
+def get_sqlite_trials_service() -> SQLiteTrialsService:
+    """Get or create singleton instance of SQLiteTrialsService."""
+    global _sqlite_service_instance
+    if _sqlite_service_instance is None:
+        _sqlite_service_instance = SQLiteTrialsService()
+    return _sqlite_service_instance
+
+
+def get_trials_service():
+    """Get the appropriate trials service based on data source configuration.
+
+    Returns:
+        JSONTrialsService or SQLiteTrialsService instance
+    """
+    data_source = get_trials_data_source()
+    if data_source == "sqlite":
+        return get_sqlite_trials_service()
+    else:
+        return get_json_trials_service()
 
 
 # Configure logging
@@ -878,10 +903,296 @@ async def get_trial_by_abstract_id(
         ) from e
 
 
+def _extract_attribute_value(attributes: dict, attribute_key: str) -> str:
+    """Extract attribute value from attributes dictionary.
+
+    Args:
+        attributes: Dictionary of attributes
+        attribute_key: The attribute key to look for (e.g., "AttributeType.CANCER_TYPE" or "cancer_type")
+
+    Returns:
+        The attribute value as string, or empty string if not found
+    """
+    # Try the full attribute key first (for abstracts)
+    attr = attributes.get(attribute_key)
+    if attr is not None:
+        if isinstance(attr, dict) and "value" in attr:
+            value = attr.get("value", "")
+            if value and str(value).lower() != "not found":
+                return str(value)
+        elif not isinstance(attr, dict):
+            value = str(attr)
+            if value.lower() != "not found":
+                return value
+
+    # For publications, try the simplified key format
+    if attribute_key.startswith("AttributeType."):
+        base_key = attribute_key.replace("AttributeType.", "").lower()
+        attr = attributes.get(base_key)
+        if attr is not None:
+            if isinstance(attr, dict) and "value" in attr:
+                value = attr.get("value", "")
+                if value and str(value).lower() != "not found":
+                    return str(value)
+            elif not isinstance(attr, dict):
+                value = str(attr)
+                if value.lower() != "not found":
+                    return value
+
+    return ""
+
+
+def _extract_numeric_value(attr: Any) -> float | None:
+    """Extract numeric value from attribute.
+
+    Args:
+        attr: Attribute value (can be dict, string, number, etc.)
+
+    Returns:
+        Numeric value or None if not numeric
+    """
+    if attr is None:
+        return None
+
+    if isinstance(attr, bool):
+        return None
+
+    if isinstance(attr, (int, float)):
+        return float(attr)
+
+    if isinstance(attr, str):
+        try:
+            parsed = float(attr)
+            return parsed if not (parsed != parsed) else None  # Check for NaN
+        except (ValueError, TypeError):
+            # Try to extract first number from string (e.g., "12.5-15.3" -> 12.5)
+            match = re.search(r"[\d.]+", attr)
+            if match:
+                try:
+                    return float(match.group())
+                except (ValueError, TypeError):
+                    pass
+            return None
+
+    if isinstance(attr, dict) and "value" in attr:
+        value = attr.get("value")
+        if value is None or value == "Not found" or value == "NR":
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                parsed = float(value)
+                return parsed if not (parsed != parsed) else None
+            except (ValueError, TypeError):
+                # Try to extract first number
+                match = re.search(r"[\d.]+", value)
+                if match:
+                    try:
+                        return float(match.group())
+                    except (ValueError, TypeError):
+                        pass
+                return None
+
+    return None
+
+
+def _is_industry_funded(sponsors_value: Any) -> bool | None:
+    """Determine if funding is industry or non-industry.
+
+    Args:
+        sponsors_value: Sponsors attribute value
+
+    Returns:
+        True if industry, False if non-industry, None if unknown
+    """
+    if not sponsors_value:
+        return None
+
+    sponsors_str = ""
+    if isinstance(sponsors_value, dict) and "value" in sponsors_value:
+        sponsors_str = str(sponsors_value.get("value", ""))
+    else:
+        sponsors_str = str(sponsors_value)
+
+    if not sponsors_str or sponsors_str.lower() in ("not found", "none"):
+        return None
+
+    sponsors_lower = sponsors_str.lower()
+
+    # Check for explicit non-industry indicators FIRST (these take precedence)
+    # This handles cases like "Genentech, institutional funding from University"
+    non_industry_indicators = [
+        "non-industry",
+        "non industry",
+        "investigator sponsored",
+        "investigator-initiated",
+        "academic",
+        "university",
+        "institutional funding",
+        "government",
+        "nih",
+        "national cancer institute",
+        "nci",
+    ]
+    for indicator in non_industry_indicators:
+        if indicator in sponsors_lower:
+            return False
+
+    # Check for industry sponsors (common pharmaceutical companies)
+    # Only if no non-industry indicators were found
+    industry_indicators = [
+        "merck",
+        "bristol-myers",
+        "bms",
+        "roche",
+        "genentech",
+        "novartis",
+        "pfizer",
+        "astrazeneca",
+        "gsk",
+        "glaxosmithkline",
+        "sanofi",
+        "lilly",
+        "eli lilly",
+        "amgen",
+        "regeneron",
+        "biogen",
+        "gilead",
+        "abbvie",
+        "johnson & johnson",
+        "janssen",
+    ]
+    for indicator in industry_indicators:
+        if indicator in sponsors_lower:
+            return True
+
+    return None
+
+
+def _filter_analytics_data(
+    abstracts: list[dict],
+    resource_type: str = "all",
+    cancer_type: str | None = None,
+    therapy_type: str = "all",
+    funding_type: str = "all",
+    has_metric: str | None = None,
+) -> list[dict]:
+    """Filter analytics data based on various criteria.
+
+    Args:
+        abstracts: List of abstract/publication dictionaries
+        resource_type: 'all', 'conference', or 'publication'
+        cancer_type: Optional cancer type to filter by
+        therapy_type: Therapy type filter ('all' or specific type)
+        funding_type: Funding type filter ('all', 'industry', 'non-industry')
+        has_metric: Optional metric name to filter arms that have this metric
+
+    Returns:
+        Filtered list of abstracts with filtered arm_results
+    """
+    filtered = []
+
+    for abstract in abstracts:
+        arm_results = abstract.get("arm_results", {})
+        if not arm_results:
+            continue
+
+        # Filter by resource type
+        if resource_type == "conference":
+            # Must have abstract_id (not publication_id)
+            if not abstract.get("abstract_id") or abstract.get("publication_id"):
+                continue
+            # Check if conference is ASCO or ESMO
+            has_asco_esmo = False
+            for arm in arm_results.values():
+                conference = _extract_attribute_value(
+                    arm.get("attributes", {}), "AttributeType.CONFERENCE"
+                )
+                if conference.upper() in ("ASCO", "ESMO"):
+                    has_asco_esmo = True
+                    break
+            if not has_asco_esmo:
+                continue
+        elif resource_type == "publication":
+            # Must have publication_id (not abstract_id)
+            if not abstract.get("publication_id") or abstract.get("abstract_id"):
+                continue
+
+        # Filter by cancer type
+        if cancer_type:
+            has_matching_cancer_type = False
+            for arm in arm_results.values():
+                cancer_type_attr = _extract_attribute_value(
+                    arm.get("attributes", {}), "AttributeType.CANCER_TYPE"
+                )
+                if not cancer_type_attr:
+                    cancer_type_attr = _extract_attribute_value(
+                        arm.get("attributes", {}), "cancer_type"
+                    )
+                if cancer_type_attr and cancer_type_attr.lower() == cancer_type.lower():
+                    has_matching_cancer_type = True
+                    break
+            if not has_matching_cancer_type:
+                continue
+
+        # Filter arms by therapy type, funding type, and has_metric
+        filtered_arm_results = {}
+        for arm_id, arm in arm_results.items():
+            attributes = arm.get("attributes", {})
+
+            # Filter by therapy type
+            if therapy_type != "all":
+                therapy_type_attr = _extract_attribute_value(
+                    attributes, "AttributeType.TYPE_OF_THERAPY"
+                )
+                if (
+                    not therapy_type_attr
+                    or therapy_type_attr.lower().strip() != therapy_type.lower().strip()
+                ):
+                    continue
+
+            # Filter by funding type
+            if funding_type != "all":
+                sponsors_attr = attributes.get(
+                    "AttributeType.SPONSORS"
+                ) or attributes.get("sponsors")
+                is_industry = _is_industry_funded(sponsors_attr)
+                if funding_type == "industry" and is_industry is not True:
+                    continue
+                if funding_type == "non-industry" and is_industry is not False:
+                    continue
+
+            # Filter by has_metric (arm must have this metric with a valid value)
+            if has_metric:
+                metric_key = f"AttributeType.{has_metric}"
+                metric_attr = attributes.get(metric_key) or attributes.get(
+                    has_metric.lower()
+                )
+                metric_value = _extract_numeric_value(metric_attr)
+                if metric_value is None:
+                    continue
+
+            filtered_arm_results[arm_id] = arm
+
+        # Only include abstract if it has at least one arm after filtering
+        if filtered_arm_results:
+            filtered_abstract = abstract.copy()
+            filtered_abstract["arm_results"] = filtered_arm_results
+            filtered.append(filtered_abstract)
+
+    return filtered
+
+
 @app.get("/api/analytics/data")
 async def get_analytics_data(
     skip: int = 0,
     limit: int = 100,
+    resource_type: str = "all",
+    cancer_type: str | None = None,
+    therapy_type: str = "all",
+    funding_type: str = "all",
+    has_metric: str | None = None,
     db: Session = Depends(get_db_session),
 ) -> dict:
     """Get all abstracts/publications with full arm data for analytics.
@@ -889,6 +1200,11 @@ async def get_analytics_data(
     Args:
         skip: Number of records to skip (for pagination)
         limit: Maximum number of records to return
+        resource_type: Filter by resource type ('all', 'conference', 'publication')
+        cancer_type: Optional cancer type to filter by
+        therapy_type: Therapy type filter ('all' or specific type)
+        funding_type: Funding type filter ('all', 'industry', 'non-industry')
+        has_metric: Optional metric name to filter arms that have this metric
 
     Returns:
         Dictionary with abstracts array containing full arm_results for chart visualization
@@ -899,29 +1215,40 @@ async def get_analytics_data(
     try:
         data_source = get_trials_data_source()
 
-        if data_source == "json":
-            # Use JSON file as data source with singleton pattern
-            json_service = get_json_trials_service()
-            all_abstracts = json_service._load_json_files()
+        if data_source in ("json", "sqlite"):
+            # Use JSON file or SQLite database as data source
+            trials_service = get_trials_service()
+            all_abstracts = trials_service._load_json_files()
 
-            # Calculate summary stats from full dataset
-            total_arms = sum(len(a.get("arm_results", {})) for a in all_abstracts)
+            # Apply filters before calculating stats and pagination
+            filtered_abstracts = _filter_analytics_data(
+                all_abstracts,
+                resource_type=resource_type,
+                cancer_type=cancer_type,
+                therapy_type=therapy_type,
+                funding_type=funding_type,
+                has_metric=has_metric,
+            )
+
+            # Calculate summary stats from filtered dataset
+            total_arms = sum(len(a.get("arm_results", {})) for a in filtered_abstracts)
             total_attributes = sum(
-                a.get("total_attributes_extracted", 0) for a in all_abstracts
+                a.get("total_attributes_extracted", 0) for a in filtered_abstracts
             )
             confidences = [
                 a.get("overall_confidence", 0)
-                for a in all_abstracts
+                for a in filtered_abstracts
                 if a.get("overall_confidence")
             ]
             avg_confidence = sum(confidences) / len(confidences) if confidences else 0
 
-            # Apply pagination
-            paginated_abstracts = all_abstracts[skip : skip + limit]
-            has_more = (skip + limit) < len(all_abstracts)
+            # Apply pagination to filtered results (ensure skip is non-negative)
+            skip = max(0, skip)
+            paginated_abstracts = filtered_abstracts[skip : skip + limit]
+            has_more = (skip + limit) < len(filtered_abstracts)
 
             return {
-                "total_abstracts": len(all_abstracts),
+                "total_abstracts": len(filtered_abstracts),
                 "total_arms": total_arms,
                 "total_attributes_extracted": total_attributes,
                 "average_confidence": avg_confidence,
@@ -947,6 +1274,212 @@ async def get_analytics_data(
 
     except Exception as e:
         logger.error(f"Error fetching analytics data: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/analytics/chart-data")
+async def get_analytics_chart_data(
+    target_metric: str = "MEDIAN_OS",
+    resource_type: str = "all",
+    cancer_type: str | None = None,
+    therapy_type: str = "all",
+    funding_type: str = "all",
+    has_metric: str | None = None,
+    db: Session = Depends(get_db_session),
+) -> dict:
+    """Get pre-aggregated chart data for analytics visualization.
+
+    This endpoint returns data in a chart-ready format, reducing payload size
+    significantly compared to the full analytics data endpoint.
+
+    Args:
+        target_metric: Metric to aggregate (e.g., "MEDIAN_OS", "OBJECTIVE_RESPONSE_RATE")
+        resource_type: Filter by resource type ('all', 'conference', 'publication')
+        cancer_type: Optional cancer type to filter by
+        therapy_type: Therapy type filter ('all' or specific type)
+        funding_type: Funding type filter ('all', 'industry', 'non-industry')
+        has_metric: Optional metric name to filter arms that have this metric
+
+    Returns:
+        Dictionary with pre-aggregated chart data
+    """
+    try:
+        data_source = get_trials_data_source()
+
+        if data_source not in ("json", "sqlite"):
+            return {
+                "treatmentGroups": [],
+                "summary": {
+                    "totalAbstracts": 0,
+                    "totalArms": 0,
+                    "totalAttributesExtracted": 0,
+                    "averageConfidence": 0.0,
+                },
+            }
+
+        # Get filtered data
+        trials_service = get_trials_service()
+        all_abstracts = trials_service._load_json_files()
+
+        # Apply filters
+        filtered_abstracts = _filter_analytics_data(
+            all_abstracts,
+            resource_type=resource_type,
+            cancer_type=cancer_type,
+            therapy_type=therapy_type,
+            funding_type=funding_type,
+            has_metric=has_metric,
+        )
+
+        # Aggregate by treatment name
+        treatment_groups: dict[str, dict] = {}
+        approved_treatments = {
+            "pembrolizumab",
+            "nivolumab",
+            "ipilimumab",
+            "dabrafenib",
+            "trametinib",
+            "vemurafenib",
+            "cobimetinib",
+            "encorafenib",
+            "binimetinib",
+            "atezolizumab",
+            "talimogene laherparepvec",
+            "t-vec",
+            "lifileucel",
+        }
+
+        for abstract in filtered_abstracts:
+            for arm in abstract.get("arm_results", {}).values():
+                arm_name = arm.get("arm_name", "")
+                if not arm_name:
+                    continue
+
+                # Normalize treatment name (sort combination components)
+                treatment_parts = sorted(
+                    [p.strip() for p in arm_name.replace("+", "/").split("/")],
+                    key=str.lower,
+                )
+                treatment_name = " + ".join(treatment_parts)
+
+                # Get metric value
+                attributes = arm.get("attributes", {})
+                metric_key = f"AttributeType.{target_metric}"
+                metric_attr = attributes.get(metric_key) or attributes.get(
+                    target_metric.lower()
+                )
+                metric_value = _extract_numeric_value(metric_attr)
+
+                if metric_value is None:
+                    continue
+
+                # Initialize group if needed
+                if treatment_name not in treatment_groups:
+                    # Determine approval status
+                    normalized_name = treatment_name.lower()
+                    is_approved = any(
+                        approved in normalized_name for approved in approved_treatments
+                    )
+
+                    treatment_groups[treatment_name] = {
+                        "treatmentName": treatment_name,
+                        "approvalStatus": "Approved"
+                        if is_approved
+                        else "Investigational",
+                        "values": [],
+                        "patients": [],
+                        "trials": [],
+                    }
+
+                group = treatment_groups[treatment_name]
+                group["values"].append(metric_value)
+
+                # Extract patient count
+                patient_attr = attributes.get(
+                    "AttributeType.NUMBER_OF_PATIENTS"
+                ) or attributes.get("number_of_patients")
+                patient_count = _extract_numeric_value(patient_attr)
+                if patient_count is not None:
+                    group["patients"].append(patient_count)
+
+                # Add minimal trial metadata
+                group["trials"].append(
+                    {
+                        "abstractId": abstract.get("abstract_id")
+                        or abstract.get("publication_id")
+                        or "",
+                        "value": metric_value,
+                        "nctNumber": _extract_attribute_value(
+                            attributes, "AttributeType.NCT_NUMBER"
+                        )
+                        or "",
+                    }
+                )
+
+        # Calculate aggregates
+        result_groups = []
+        for treatment_name, group in treatment_groups.items():
+            values = group["values"]
+            if not values:
+                continue
+
+            patients = group["patients"]
+            total_patients = sum(patients) if patients else 0
+
+            # Calculate statistics
+            sorted_values = sorted(values)
+            n = len(sorted_values)
+            median = (
+                sorted_values[n // 2]
+                if n % 2 == 1
+                else (sorted_values[n // 2 - 1] + sorted_values[n // 2]) / 2
+            )
+
+            result_groups.append(
+                {
+                    "treatmentName": treatment_name,
+                    "approvalStatus": group["approvalStatus"],
+                    "averageValue": sum(values) / len(values),
+                    "medianValue": median,
+                    "minValue": min(values),
+                    "maxValue": max(values),
+                    "trialCount": len(group["trials"]),
+                    "totalPatients": total_patients,
+                    "trials": group["trials"][
+                        :10
+                    ],  # Limit trial details to reduce payload
+                }
+            )
+
+        # Sort by average value (descending)
+        result_groups.sort(key=lambda x: x["averageValue"], reverse=True)
+
+        # Calculate summary stats
+        total_arms = sum(len(a.get("arm_results", {})) for a in filtered_abstracts)
+        total_attributes = sum(
+            a.get("total_attributes_extracted", 0) for a in filtered_abstracts
+        )
+        confidences = [
+            a.get("overall_confidence", 0)
+            for a in filtered_abstracts
+            if a.get("overall_confidence")
+        ]
+        avg_confidence = sum(confidences) / len(confidences) if confidences else 0
+
+        return {
+            "treatmentGroups": result_groups,
+            "summary": {
+                "totalAbstracts": len(filtered_abstracts),
+                "totalArms": total_arms,
+                "totalAttributesExtracted": total_attributes,
+                "averageConfidence": avg_confidence,
+            },
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching chart data: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
         ) from e
