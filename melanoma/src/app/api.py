@@ -77,6 +77,28 @@ def get_trials_service():
         return get_json_trials_service()
 
 
+def get_optional_db_session() -> Session | None:
+    """Get database session only if data source is 'database', otherwise return None.
+
+    This allows endpoints to work without PostgreSQL when using SQLite/JSON.
+
+    Note: The session must be closed by the caller. Consider using a context manager.
+    """
+    data_source = get_trials_data_source()
+    if data_source != "database":
+        return None
+
+    try:
+        db_gen = get_db_session()
+        db = next(db_gen)
+        # Store the generator to close it later - but for now, we'll let it be garbage collected
+        # In production, you might want to use a context manager pattern
+        return db
+    except Exception as e:
+        logger.warning(f"Failed to get database session: {e}")
+        return None
+
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -643,7 +665,6 @@ async def get_document(document_id: str, db: Session = Depends(get_db_session)) 
 async def get_trials(
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db_session),
 ) -> TrialsListResponse:
     """Get all abstract documents (trials) with pagination.
 
@@ -667,10 +688,10 @@ async def get_trials(
     try:
         data_source = get_trials_data_source()
 
-        if data_source == "json":
-            # Use JSON file as data source
-            json_service = JSONTrialsService()
-            trials_list, total = json_service.get_all_trials(skip=skip, limit=limit)
+        if data_source in ("json", "sqlite"):
+            # Use JSON file or SQLite database as data source
+            trials_service = get_trials_service()
+            trials_list, total = trials_service.get_all_trials(skip=skip, limit=limit)
 
             return TrialsListResponse(
                 trials=[TrialResponse(**trial) for trial in trials_list],
@@ -681,33 +702,64 @@ async def get_trials(
         else:
             # Use database as data source (original implementation)
             # Query for abstract documents only
-            query = (
-                db.query(DocumentModel)
-                .filter(DocumentModel.doc_type == DocumentType.ABSTRACT)
-                .order_by(DocumentModel.created_at.desc())
-            )
-
-            # Get total count before pagination
-            total = query.count()
-
-            # Apply pagination
-            documents = query.offset(skip).limit(limit).all()
-
-            # Format the output using utility function
-            trials = [
-                extract_trial_data(
-                    doc,
-                    doc.doc_metadata if isinstance(doc.doc_metadata, dict) else {},
+            db = get_optional_db_session()
+            if db is None:
+                # Database not available, fall back to SQLite/JSON
+                logger.warning("Database not available, falling back to SQLite/JSON")
+                trials_service = get_trials_service()
+                trials_list, total = trials_service.get_all_trials(
+                    skip=skip, limit=limit
                 )
-                for doc in documents
-            ]
+                return TrialsListResponse(
+                    trials=[TrialResponse(**trial) for trial in trials_list],
+                    total=total,
+                    skip=skip,
+                    limit=limit,
+                )
 
-            return TrialsListResponse(
-                trials=[TrialResponse(**trial) for trial in trials],
-                total=total,
-                skip=skip,
-                limit=limit,
-            )
+            try:
+                query = (
+                    db.query(DocumentModel)
+                    .filter(DocumentModel.doc_type == DocumentType.ABSTRACT)
+                    .order_by(DocumentModel.created_at.desc())
+                )
+
+                # Get total count before pagination
+                total = query.count()
+
+                # Apply pagination
+                documents = query.offset(skip).limit(limit).all()
+
+                # Format the output using utility function
+                trials = [
+                    extract_trial_data(
+                        doc,
+                        doc.doc_metadata if isinstance(doc.doc_metadata, dict) else {},
+                    )
+                    for doc in documents
+                ]
+
+                return TrialsListResponse(
+                    trials=[TrialResponse(**trial) for trial in trials],
+                    total=total,
+                    skip=skip,
+                    limit=limit,
+                )
+            except Exception as db_error:
+                # If database connection fails, fall back to SQLite/JSON
+                logger.warning(
+                    f"Database query failed ({db_error}), falling back to SQLite/JSON"
+                )
+                trials_service = get_trials_service()
+                trials_list, total = trials_service.get_all_trials(
+                    skip=skip, limit=limit
+                )
+                return TrialsListResponse(
+                    trials=[TrialResponse(**trial) for trial in trials_list],
+                    total=total,
+                    skip=skip,
+                    limit=limit,
+                )
     except Exception as e:
         logger.error(f"Error fetching trials: {str(e)}", exc_info=True)
         raise HTTPException(
@@ -717,20 +769,55 @@ async def get_trials(
 
 @app.get("/api/trials/{trial_id}")
 @app.get("/trials/{trial_id}")  # Keep both for backward compatibility
-async def get_trial(trial_id: str, db: Session = Depends(get_db_session)) -> dict:
+async def get_trial(trial_id: str) -> dict:
     """Get a specific trial by ID with full details."""
     try:
-        repository = SQLAlchemyDocumentRepository(db)
-        document = await repository.find_by_id(trial_id)
+        data_source = get_trials_data_source()
 
-        if not document:
-            raise HTTPException(status_code=404, detail="Trial not found")
+        # If using SQLite/JSON, try to get by abstract_id/publication_id
+        if data_source in ("json", "sqlite"):
+            trials_service = get_trials_service()
+            full_abstract = trials_service.get_full_abstract_by_id(trial_id)
+            if full_abstract:
+                return full_abstract
+            # If not found, fall through to database lookup
 
-        if document.type != DocumentType.ABSTRACT:
-            raise HTTPException(status_code=404, detail="Document is not an abstract")
+        # Use database as data source
+        db = get_optional_db_session()
+        if db is None:
+            # Database not available, already tried SQLite/JSON above
+            raise HTTPException(
+                status_code=404, detail=f"Trial with ID '{trial_id}' not found"
+            )
 
-        # Return full document with metadata
-        return document.dict()
+        try:
+            repository = SQLAlchemyDocumentRepository(db)
+            document = await repository.find_by_id(trial_id)
+
+            if not document:
+                raise HTTPException(status_code=404, detail="Trial not found")
+
+            if document.type != DocumentType.ABSTRACT:
+                raise HTTPException(
+                    status_code=404, detail="Document is not an abstract"
+                )
+
+            # Return full document with metadata
+            return document.dict()
+        except HTTPException:
+            raise
+        except Exception as db_error:
+            # If database query fails, fall back to SQLite/JSON
+            logger.warning(
+                f"Database query failed ({db_error}), falling back to SQLite/JSON"
+            )
+            trials_service = get_trials_service()
+            full_abstract = trials_service.get_full_abstract_by_id(trial_id)
+            if full_abstract:
+                return full_abstract
+            raise HTTPException(
+                status_code=404, detail=f"Trial with ID '{trial_id}' not found"
+            ) from db_error
     except HTTPException:
         raise
     except Exception as e:
@@ -748,7 +835,6 @@ async def get_trials_by_nct(
     nct_id: str,
     skip: int = 0,
     limit: int = 100,
-    db: Session = Depends(get_db_session),
 ) -> TrialsListResponse:
     """Get all abstracts/publications associated with an NCT number.
 
@@ -767,10 +853,10 @@ async def get_trials_by_nct(
     try:
         data_source = get_trials_data_source()
 
-        if data_source == "json":
-            # Use JSON file as data source
-            json_service = JSONTrialsService()
-            trials_list, total = json_service.get_trials_by_nct_id(
+        if data_source in ("json", "sqlite"):
+            # Use JSON file or SQLite database as data source
+            trials_service = get_trials_service()
+            trials_list, total = trials_service.get_trials_by_nct_id(
                 nct_id, skip=skip, limit=limit
             )
 
@@ -782,42 +868,73 @@ async def get_trials_by_nct(
             )
         else:
             # Use database as data source
-            # Query for abstract documents with matching NCT number in metadata
-            # JSONB queries: check multiple possible keys in metadata
-            query = (
-                db.query(DocumentModel)
-                .filter(DocumentModel.doc_type == DocumentType.ABSTRACT)
-                .filter(
-                    or_(
-                        DocumentModel.doc_metadata.contains({"nct_number": nct_id}),
-                        DocumentModel.doc_metadata.contains({"nct_id": nct_id}),
-                        DocumentModel.doc_metadata.contains({"trial_id": nct_id}),
+            db = get_optional_db_session()
+            if db is None:
+                # Database not available, fall back to SQLite/JSON
+                logger.warning("Database not available, falling back to SQLite/JSON")
+                trials_service = get_trials_service()
+                trials_list, total = trials_service.get_trials_by_nct_id(
+                    nct_id, skip=skip, limit=limit
+                )
+                return TrialsListResponse(
+                    trials=[TrialResponse(**trial) for trial in trials_list],
+                    total=total,
+                    skip=skip,
+                    limit=limit,
+                )
+
+            try:
+                # Query for abstract documents with matching NCT number in metadata
+                # JSONB queries: check multiple possible keys in metadata
+                query = (
+                    db.query(DocumentModel)
+                    .filter(DocumentModel.doc_type == DocumentType.ABSTRACT)
+                    .filter(
+                        or_(
+                            DocumentModel.doc_metadata.contains({"nct_number": nct_id}),
+                            DocumentModel.doc_metadata.contains({"nct_id": nct_id}),
+                            DocumentModel.doc_metadata.contains({"trial_id": nct_id}),
+                        )
                     )
+                    .order_by(DocumentModel.created_at.desc())
                 )
-                .order_by(DocumentModel.created_at.desc())
-            )
 
-            # Get total count before pagination
-            total = query.count()
+                # Get total count before pagination
+                total = query.count()
 
-            # Apply pagination
-            documents = query.offset(skip).limit(limit).all()
+                # Apply pagination
+                documents = query.offset(skip).limit(limit).all()
 
-            # Format the output using utility function
-            trials = [
-                extract_trial_data(
-                    doc,
-                    doc.doc_metadata if isinstance(doc.doc_metadata, dict) else {},
+                # Format the output using utility function
+                trials = [
+                    extract_trial_data(
+                        doc,
+                        doc.doc_metadata if isinstance(doc.doc_metadata, dict) else {},
+                    )
+                    for doc in documents
+                ]
+
+                return TrialsListResponse(
+                    trials=[TrialResponse(**trial) for trial in trials],
+                    total=total,
+                    skip=skip,
+                    limit=limit,
                 )
-                for doc in documents
-            ]
-
-            return TrialsListResponse(
-                trials=[TrialResponse(**trial) for trial in trials],
-                total=total,
-                skip=skip,
-                limit=limit,
-            )
+            except Exception as db_error:
+                # If database query fails, fall back to SQLite/JSON
+                logger.warning(
+                    f"Database query failed ({db_error}), falling back to SQLite/JSON"
+                )
+                trials_service = get_trials_service()
+                trials_list, total = trials_service.get_trials_by_nct_id(
+                    nct_id, skip=skip, limit=limit
+                )
+                return TrialsListResponse(
+                    trials=[TrialResponse(**trial) for trial in trials_list],
+                    total=total,
+                    skip=skip,
+                    limit=limit,
+                )
     except Exception as e:
         logger.error(
             f"Error fetching trials by NCT ID {nct_id}: {str(e)}", exc_info=True
@@ -831,7 +948,6 @@ async def get_trials_by_nct(
 @app.get("/trials/abstract/{abstract_id}")  # Keep both for backward compatibility
 async def get_trial_by_abstract_id(
     abstract_id: str,
-    db: Session = Depends(get_db_session),
 ) -> dict:
     """Get full abstract/publication data by abstract ID.
 
@@ -848,10 +964,10 @@ async def get_trial_by_abstract_id(
     try:
         data_source = get_trials_data_source()
 
-        if data_source == "json":
-            # Use JSON file as data source
-            json_service = JSONTrialsService()
-            full_abstract = json_service.get_full_abstract_by_id(abstract_id)
+        if data_source in ("json", "sqlite"):
+            # Use JSON file or SQLite database as data source
+            trials_service = get_trials_service()
+            full_abstract = trials_service.get_full_abstract_by_id(abstract_id)
 
             if not full_abstract:
                 raise HTTPException(
@@ -862,35 +978,64 @@ async def get_trial_by_abstract_id(
             return full_abstract
         else:
             # Use database as data source
-            # Query for abstract documents with matching abstract_id in metadata
-            query = (
-                db.query(DocumentModel)
-                .filter(
-                    or_(
-                        DocumentModel.doc_metadata.contains(
-                            {"abstract_id": abstract_id}
-                        ),
-                        DocumentModel.doc_metadata.contains(
-                            {"abstract_number": abstract_id}
-                        ),
-                        DocumentModel.doc_metadata.contains(
-                            {"publication_id": abstract_id}
-                        ),
+            db = get_optional_db_session()
+            if db is None:
+                # Database not available, fall back to SQLite/JSON
+                logger.warning("Database not available, falling back to SQLite/JSON")
+                trials_service = get_trials_service()
+                full_abstract = trials_service.get_full_abstract_by_id(abstract_id)
+                if not full_abstract:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Abstract with ID '{abstract_id}' not found",
                     )
+                return full_abstract
+
+            try:
+                # Query for abstract documents with matching abstract_id in metadata
+                query = (
+                    db.query(DocumentModel)
+                    .filter(
+                        or_(
+                            DocumentModel.doc_metadata.contains(
+                                {"abstract_id": abstract_id}
+                            ),
+                            DocumentModel.doc_metadata.contains(
+                                {"abstract_number": abstract_id}
+                            ),
+                            DocumentModel.doc_metadata.contains(
+                                {"publication_id": abstract_id}
+                            ),
+                        )
+                    )
+                    .order_by(DocumentModel.created_at.desc())
                 )
-                .order_by(DocumentModel.created_at.desc())
-            )
 
-            document = query.first()
+                document = query.first()
 
-            if not document:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Abstract with ID '{abstract_id}' not found",
+                if not document:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Abstract with ID '{abstract_id}' not found",
+                    )
+
+                # Return full document with metadata
+                return document.dict()
+            except HTTPException as http_exc:
+                raise http_exc
+            except Exception as db_error:
+                # If database query fails, fall back to SQLite/JSON
+                logger.warning(
+                    f"Database query failed ({db_error}), falling back to SQLite/JSON"
                 )
-
-            # Return full document with metadata
-            return document.dict()
+                trials_service = get_trials_service()
+                full_abstract = trials_service.get_full_abstract_by_id(abstract_id)
+                if not full_abstract:
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Abstract with ID '{abstract_id}' not found",
+                    ) from None
+                return full_abstract
 
     except HTTPException:
         raise

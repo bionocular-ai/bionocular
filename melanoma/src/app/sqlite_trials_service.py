@@ -261,3 +261,86 @@ class SQLiteTrialsService:
 
         finally:
             conn.close()
+
+    def get_trials_by_nct_id(
+        self, nct_id: str, skip: int = 0, limit: int = 100
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Get trials by NCT ID with pagination.
+
+        Args:
+            nct_id: NCT number (e.g., "NCT02388906")
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            Tuple of (trials list, total count)
+        """
+        if not self.db_path.exists():
+            return [], 0
+
+        try:
+            # Load all abstracts and filter by NCT ID
+            all_abstracts = self._load_json_files()
+            matching_abstracts = []
+
+            for abstract in all_abstracts:
+                # Check all arms for matching NCT number
+                arm_results = abstract.get("arm_results", {})
+                for arm in arm_results.values():
+                    attributes = arm.get("attributes", {})
+                    nct_attr = attributes.get(
+                        "AttributeType.NCT_NUMBER"
+                    ) or attributes.get("nct_number")
+                    if nct_attr:
+                        nct_value = (
+                            nct_attr.get("value")
+                            if isinstance(nct_attr, dict)
+                            else nct_attr
+                        )
+                        if str(nct_value).upper().strip() == nct_id.upper().strip():
+                            matching_abstracts.append(abstract)
+                            break
+
+            # Apply pagination
+            total = len(matching_abstracts)
+            paginated = matching_abstracts[skip : skip + limit]
+
+            # Convert to trial format (similar to get_all_trials)
+            trials = []
+            for abstract in paginated:
+                arm_results = abstract.get("arm_results", {})
+                first_arm: dict[str, Any] = (
+                    next(iter(arm_results.values()), {}) if arm_results else {}
+                )
+                attributes = first_arm.get("attributes", {})
+
+                # Extract basic info
+                trial_info = {
+                    "id": abstract.get("abstract_id")
+                    or abstract.get("publication_id")
+                    or "",
+                    "abstract_id": abstract.get("abstract_id"),
+                    "publication_id": abstract.get("publication_id"),
+                    "file": abstract.get("file"),
+                    "nct_id": nct_id,  # We know this matches
+                }
+
+                # Extract additional info from attributes
+                if attributes:
+                    # Extract other fields similar to get_all_trials
+                    nct_attr = attributes.get(
+                        "AttributeType.NCT_NUMBER"
+                    ) or attributes.get("nct_number")
+                    if nct_attr:
+                        if isinstance(nct_attr, dict):
+                            trial_info["nct_id"] = nct_attr.get("value", nct_id)
+                        else:
+                            trial_info["nct_id"] = str(nct_attr)
+
+                trials.append(trial_info)
+
+            return trials, total
+
+        except Exception as e:
+            logger.error(f"Error finding trials by NCT ID {nct_id}: {e}", exc_info=True)
+            return [], 0
