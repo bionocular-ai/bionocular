@@ -30,8 +30,9 @@ RUN poetry install --only main --no-interaction --no-ansi --no-root
 COPY . .
 
 # Build SQLite database from JSON files
-# This creates trials.db in the project root
-RUN python scripts/build_db.py --db-path ./trials.db || echo "Warning: Failed to build SQLite database (JSON files may not be available during build)"
+# Create the directory structure and build database at the expected location
+RUN mkdir -p data/trials_db && \
+    python scripts/build_db.py --db-path data/trials_db/trials.db || echo "Warning: Failed to build SQLite database (JSON files may not be available during build)"
 
 # Expose port
 EXPOSE 8000
