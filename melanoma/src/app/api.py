@@ -211,7 +211,7 @@ async def startup_event() -> None:
             logger.info("Database initialized successfully")
         else:
             logger.info(
-                "Using JSON file data source - skipping database initialization"
+                f"Using {data_source} data source - skipping database initialization"
             )
 
         # Create storage directories
