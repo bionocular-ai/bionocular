@@ -64,6 +64,7 @@ def sample_json_data():
                         "arm_name": "ipilimumab",
                         "attributes": {
                             "cancer_type": {"value": "Uveal Melanoma"},
+                            "AttributeType.NCT_NUMBER": {"value": "NCT789012"},
                         },
                     },
                 },

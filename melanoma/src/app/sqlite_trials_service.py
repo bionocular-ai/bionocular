@@ -10,6 +10,12 @@ import os
 import sqlite3
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
+
+from ..domain.cancer_type_normalizer import (
+    get_primary_cancer_type,
+    normalize_cancer_type_with_splitting,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -123,13 +129,197 @@ class SQLiteTrialsService:
         finally:
             conn.close()
 
+    def _extract_attribute_value(
+        self, attributes: dict[str, Any], attribute_key: str
+    ) -> str:
+        """Extract attribute value from the attributes dictionary.
+
+        Args:
+            attributes: Dictionary of attributes with AttributeType keys
+            attribute_key: The attribute key to look for (e.g., "AttributeType.NCT_NUMBER")
+
+        Returns:
+            The attribute value, or empty string if not found
+        """
+        # Try the full attribute key first (for abstracts)
+        attr = attributes.get(attribute_key)
+        if attr and isinstance(attr, dict):
+            value = attr.get("value", "")
+            # Skip "Not found" values
+            if value and value != "Not found":
+                return str(value)
+
+        # For publications, try the simplified key format (e.g., "nct_number" instead of "AttributeType.NCT_NUMBER")
+        # Extract the base key name from AttributeType.NCT_NUMBER -> nct_number
+        if attribute_key.startswith("AttributeType."):
+            base_key = attribute_key.replace("AttributeType.", "").lower()
+            attr = attributes.get(base_key)
+            if attr and isinstance(attr, dict):
+                value = attr.get("value", "")
+                if value and value != "Not found":
+                    return str(value)
+
+        return ""
+
+    def _extract_trial_from_abstract(self, abstract: dict[str, Any]) -> dict[str, Any]:
+        """Extract trial data from an abstract entry.
+
+        Args:
+            abstract: Abstract dictionary from SQLite (can be abstract or publication)
+
+        Returns:
+            Formatted trial data dictionary matching TrialResponse format
+        """
+        abstract_id = (
+            abstract.get("abstract_id") or abstract.get("publication_id") or ""
+        )
+        is_publication = bool(
+            abstract.get("publication_id") and not abstract.get("abstract_id")
+        )
+        arm_results = abstract.get("arm_results", {})
+
+        # Get attributes from first arm (most abstracts have one arm)
+        attributes = {}
+        if arm_results:
+            first_arm: dict[str, Any] = next(iter(arm_results.values()), {})
+            attributes = first_arm.get("attributes", {})
+
+        # Extract various attributes
+        nct_number = self._extract_attribute_value(
+            attributes, "AttributeType.NCT_NUMBER"
+        )
+        if not nct_number:
+            nct_number = self._extract_attribute_value(attributes, "nct_number")
+
+        trial_name = self._extract_attribute_value(
+            attributes, "AttributeType.TRIAL_NAME"
+        )
+        if not trial_name:
+            trial_name = self._extract_attribute_value(attributes, "trial_name")
+
+        phase = self._extract_attribute_value(
+            attributes, "AttributeType.CLINICAL_TRIAL_PHASE"
+        )
+        if not phase:
+            phase = self._extract_attribute_value(attributes, "clinical_trial_phase")
+
+        sponsor = self._extract_attribute_value(attributes, "AttributeType.SPONSORS")
+        if not sponsor:
+            sponsor = self._extract_attribute_value(attributes, "sponsors")
+
+        cancer_type = self._extract_attribute_value(
+            attributes, "AttributeType.CANCER_TYPE"
+        )
+        if not cancer_type:
+            cancer_type = self._extract_attribute_value(attributes, "cancer_type")
+
+        # Normalize cancer type(s) to the 10 main categories
+        cancer_types = []
+        primary_cancer_type = ""
+        if cancer_type:
+            cancer_types = normalize_cancer_type_with_splitting(cancer_type)
+            primary_cancer_type = get_primary_cancer_type(cancer_type)
+        else:
+            primary_cancer_type = ""
+
+        year = self._extract_attribute_value(attributes, "AttributeType.PUBLISHED_YEAR")
+        if not year:
+            year = self._extract_attribute_value(
+                attributes, "publication_year"
+            ) or self._extract_attribute_value(attributes, "published_year")
+
+        # Extract publication_name for publications
+        publication_name = self._extract_attribute_value(
+            attributes, "AttributeType.PUBLICATION_NAME"
+        )
+        if not publication_name:
+            publication_name = self._extract_attribute_value(
+                attributes, "publication_name"
+            )
+
+        # Clean up phase value (remove "PHASE" prefix if present)
+        if phase:
+            phase = phase.replace("PHASE", "").strip()
+
+        # Generate a stable ID from abstract_id
+        trial_id = str(uuid4())
+
+        # Try to get status from attributes (if available)
+        status = (
+            self._extract_attribute_value(attributes, "AttributeType.STATUS")
+            or "Unknown"
+        )
+
+        # Extract arms data for flattening on frontend
+        arms = []
+        if arm_results:
+            for _arm_key, arm_data in arm_results.items():
+                arm_attributes = arm_data.get("attributes", {})
+                arm_name = self._extract_attribute_value(
+                    arm_attributes, "AttributeType.ARM_NAME"
+                )
+                generic_name = self._extract_attribute_value(
+                    arm_attributes, "AttributeType.GENERIC_NAME"
+                )
+
+                # Fallback: try to get from arm_data directly if not in attributes
+                if not arm_name:
+                    arm_name = arm_data.get("arm_name", "")
+                if not generic_name:
+                    generic_name = arm_data.get("generic_name", "")
+
+                if arm_name or generic_name:
+                    arms.append(
+                        {
+                            "arm_name": arm_name or "",
+                            "generic_name": generic_name or "",
+                        }
+                    )
+
+        # If no arms found, create a single arm entry with available data
+        if not arms:
+            generic_name = self._extract_attribute_value(
+                attributes, "AttributeType.GENERIC_NAME"
+            )
+            if generic_name:
+                arms.append(
+                    {
+                        "arm_name": "",
+                        "generic_name": generic_name,
+                    }
+                )
+
+        result = {
+            "id": trial_id,
+            "nct_id": nct_number,
+            "title": trial_name or abstract_id or "Untitled",
+            "phase": phase or "",
+            "sponsor": sponsor or "",
+            "status": status,
+            "abstract_id": abstract_id,
+            "publication_name": publication_name,
+            "cancer_type": primary_cancer_type,
+            "cancer_types": cancer_types,
+            "year": year,
+            "type": "publication" if is_publication else "abstract",
+        }
+
+        # Add arms if we have them
+        if arms:
+            result["arms"] = arms
+            # Also add first arm's data for backward compatibility
+            if arms:
+                result["generic_name"] = arms[0].get("generic_name", "")
+                result["arm_name"] = arms[0].get("arm_name", "")
+
+        return result
+
     def get_all_trials(
         self, skip: int = 0, limit: int = 100
     ) -> tuple[list[dict[str, Any]], int]:
         """Get all trials with pagination.
 
-        This is a simplified version that returns basic trial info.
-        For full analytics data, use _load_json_files() instead.
+        Only returns trials that have an NCT number.
 
         Args:
             skip: Number of records to skip
@@ -138,64 +328,30 @@ class SQLiteTrialsService:
         Returns:
             Tuple of (list of trial dictionaries, total count)
         """
-        if not self.db_path.exists():
-            return [], 0
-
-        conn = self._get_connection()
         try:
-            # Get total count
-            cursor = conn.execute("SELECT COUNT(*) FROM abstracts")
-            total = cursor.fetchone()[0]
+            abstracts = self._load_json_files()
 
-            # Get paginated results
-            cursor = conn.execute(
-                """
-                SELECT
-                    abstract_id,
-                    publication_id,
-                    file,
-                    arm_results
-                FROM abstracts
-                LIMIT ? OFFSET ?
-            """,
-                (limit, skip),
-            )
+            # Transform abstracts to trials
+            trials = [
+                self._extract_trial_from_abstract(abstract) for abstract in abstracts
+            ]
 
-            trials = []
-            for row in cursor.fetchall():
-                arm_results = (
-                    json.loads(row["arm_results"]) if row["arm_results"] else {}
-                )
+            # Filter out trials without NCT numbers
+            trials_with_nct = [
+                trial
+                for trial in trials
+                if trial.get("nct_id") and trial["nct_id"].strip()
+            ]
 
-                # Extract basic info from first arm
-                trial_info = {
-                    "id": row["abstract_id"] or row["publication_id"] or "",
-                    "abstract_id": row["abstract_id"],
-                    "publication_id": row["publication_id"],
-                    "file": row["file"],
-                }
+            # Apply pagination
+            total = len(trials_with_nct)
+            paginated_trials = trials_with_nct[skip : skip + limit]
 
-                # Try to extract NCT number and other info from arm_results
-                if arm_results:
-                    first_arm: dict[str, Any] = next(iter(arm_results.values()), {})
-                    attributes = first_arm.get("attributes", {})
+            return paginated_trials, total
 
-                    # Extract NCT number
-                    nct_attr = attributes.get(
-                        "AttributeType.NCT_NUMBER"
-                    ) or attributes.get("nct_number")
-                    if nct_attr:
-                        if isinstance(nct_attr, dict):
-                            trial_info["nct_id"] = nct_attr.get("value", "")
-                        else:
-                            trial_info["nct_id"] = str(nct_attr)
-
-                trials.append(trial_info)
-
-            return trials, total
-
-        finally:
-            conn.close()
+        except Exception as e:
+            logger.error(f"Error loading trials from SQLite: {e}", exc_info=True)
+            return [], 0
 
     def get_full_abstract_by_id(self, abstract_id: str) -> dict[str, Any] | None:
         """Get full abstract data by abstract_id or publication_id.
