@@ -18,8 +18,13 @@ DATABASE_URL = os.getenv(
 )
 STORAGE_DIR = os.getenv("STORAGE_DIR", "./storage")
 
-# Create database engine
-engine = create_engine(DATABASE_URL)
+# Create database engine (lazy connection - only connects when actually used)
+# Use pool_pre_ping to handle connection errors gracefully
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,  # Verify connections before using them
+    connect_args={"connect_timeout": 5},  # 5 second timeout
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Base class for models
@@ -46,7 +51,12 @@ class DocumentModel(Base):
 
 
 def get_db_session() -> Generator:
-    """Get a database session."""
+    """Get a database session.
+
+    Note: This will attempt to connect to the database. If DATABASE_URL is not set
+    or the database is unavailable, the connection will fail. Endpoints that use
+    SQLite/JSON data sources should handle this gracefully.
+    """
     db = SessionLocal()
     try:
         yield db
