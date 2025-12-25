@@ -28,17 +28,38 @@ import {
 
 // Mapping of slugs to category names for accurate conversion
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'resected-cutaneous-melanoma': 'Resected Cutaneous Melanoma',
-  'unresectable-cutaneous-melanoma': 'Unresectable Cutaneous Melanoma',
-  'cutaneous-melanoma-with-brain-metastasis': 'Cutaneous melanoma with Brain metastasis',
-  'cutaneous-melanoma-with-cns-metastasis': 'Cutaneous Melanoma with CNS metastasis',
+  'cutaneous-melanoma': 'Cutaneous melanoma',
+  'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
   'uveal-melanoma': 'Uveal Melanoma',
   'mucosal-melanoma': 'Mucosal Melanoma',
   'acral-melanoma': 'Acral Melanoma',
   'basal-cell-carcinoma': 'Basal Cell Carcinoma',
   'merkel-cell-carcinoma': 'Merkel Cell Carcinoma',
   'cutaneous-squamous-cell-carcinoma': 'Cutaneous Squamous Cell Carcinoma',
+  // Legacy slugs for backward compatibility
+  'resected-cutaneous-melanoma': 'Cutaneous melanoma',
+  'unresectable-cutaneous-melanoma': 'Cutaneous melanoma',
+  'cutaneous-melanoma-with-brain-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
+  'cutaneous-melanoma-with-cns-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
 };
+
+// Normalize cancer type names to handle legacy data
+function normalizeCancerType(cancerType: string | null | undefined): string | null {
+  if (!cancerType) return null;
+  const normalized = cancerType.trim();
+  
+  // Map old names to new names
+  if (normalized === 'Resected Cutaneous Melanoma' || normalized === 'Unresectable Cutaneous Melanoma') {
+    return 'Cutaneous melanoma';
+  }
+  if (normalized === 'Cutaneous melanoma with Brain metastasis' || 
+      normalized === 'Cutaneous Melanoma with CNS metastasis' ||
+      normalized === 'Cutaneous melanoma with Brain/CNS metastasis') {
+    return 'Cutaneous melanoma with Brain/CNS metastasis';
+  }
+  
+  return normalized;
+}
 
 // Helper function to convert slug back to category name
 function slugToCategory(slug: string): string {
@@ -76,9 +97,13 @@ export default function CategoryDashboardPage() {
         return false;
       }
       
+      // Normalize both the trial's cancer type and the selected category for comparison
+      const normalizedTrialType = normalizeCancerType(trial.cancer_type);
+      const normalizedCategory = normalizeCancerType(categoryName);
+      
       // Strict filtering: only match if the primary cancer_type matches the selected category
       // This ensures we only see trials that are primarily for the selected cancer type
-      return trial.cancer_type === categoryName;
+      return normalizedTrialType === normalizedCategory;
     });
   }, [data?.trials, categoryName]);
 

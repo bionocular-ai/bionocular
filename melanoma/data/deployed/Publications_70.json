@@ -162,9 +162,9 @@
               "extracted_at": "2025-11-19T16:54:20.905577"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Relapse-free survival",
@@ -182,7 +182,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "* Estimated life expectancy greater than 3 years\n* Must start the study treatment no more than 120 days from the start date of definitive therapy (the date of surgical removal of nodal metastases or the date of initiation of definitive radiation therapy, as applicable)\n* Eastern Co-Operative Group (Eastern Cooperative Oncology Group \\[ECOG\\]) performance score of 0 or 1\n* Absolute neutrophil count (ANC) ≥ 1.5 x 10\\^9/L\n* Platelet count ≥ 100 x 10\\^9/L\n* Hemoglobin ≥ 9 g/dL (may have been transfused)\n* Total bilirubin level ≤ 1.5 x the upper limit of normal (ULN) range\n* Aspartate aminotransferase (AST) and alanine aminotransferase (ALT) levels ≤ 2.5 x ULN\n* Estimated creatinine clearance ≥ 30 mL/min according to the Cockcroft-Gault formula or by 24-hour urine collection for creatinine clearance or according to local institutional standard\n* Women of childbearing potential must have a negative serum or urine pregnancy test at screening\n* Both male and female subjects must be willing to use highly effective contraception (that is, methods with a failure rate of less than 1% per year) throughout the study and for at least 30 days after last avelumab treatment administration if the risk of conception exists\n\n  \\* (NOTE: The effects of the study treatment on the developing human fetus are unknown; thus, women of childbearing potential and men must agree to use highly effective contraception, as stipulated in national or local guidelines adjuvant, neo-adjuvant or concurrent use of chemotherapy, immunotherapy or an investigational agent) for MCC at any time\n* Any prior intra-lesional MCC therapy within 180 days from day 1 of study treatment\n* Residual toxicity from prior therapy grade \\> 1 (National Cancer Institute \\[NCI\\]-Common Terminology Criteria for Adverse Events \\[NCI-CTCAE v 5.0\\]) that could interfere with study endpoints or put patient safety at risk\n* Previous malignant disease (other than Merkel cell carcinoma) diagnosed within 3 years from day 1 of study treatment that could interfere with study endpoints or put patient safety at risk\n\n  \\* (NOTE: Exception will be made for adequately treated basal or squamous cell carcinoma of the skin or carcinoma in situ \\[skin, bladder, cervical, colorectal, breast\\] or low grade prostatic intraepithelial neoplasia or Grade 1 prostate cancer; any other neoplasm, which is adjudged by the treating investigator to have a low risk of recurrence during the study, could be enrolled only after written approval from the medical monitor)\n* Use of any systemic immunosuppressive treatments including corticosteroids, cyclosporine, mycophenolate mofetil et cetera, ongoing or within the last 3 months prior to day 1 of treatment\n\n  \\* (NOTE: Patients on physiologic dose of corticosteroids \\[≤ 10 mg/day of prednisone or equivalent\\] for long-term hormone-replacement therapy or those requiring short, intermittent courses of corticosteroids for hypersensitivity prophylaxis \\[such as for iodinated computed tomography (CT) contrast prophylaxis\\] or those using intranasal, inhaled, topical steroids, or local steroid injection \\[e.g., intra-articular injection\\] can be allowed)\n* Immunosuppressed status due to known human immunodeficiency virus (HIV) infection, severe uncontrolled diabetes, concurrent hematological malignancy, or other comorbidities\n* Uncontrolled intercurrent illness including, but not limited to, active serious infection, active hepatitis B or hepatitis C infection, uncontrolled seizure disorder, substance abuse disorder, or psychiatric illness/social situations that would limit compliance with study requirements or would put the patient at increased risk of complications during the study period\n* Clinically significant (i.e., active) cardiovascular disease: cerebral vascular accident/stroke (\\< 6 months prior to enrollment), myocardial infarction (\\< 6 months prior to enrollment), unstable angina, congestive heart failure (≥ New York Heart Association Classification Class II), or serious cardiac arrhythmia requiring medication\n* Active or history of any serious autoimmune disease, prior organ transplantation, including allogeneic stem-cell transplantation or immune-deficiencies that required treatment with systemic immunosuppressive drugs and could flare-up during study treatment\n\n  \\* (NOTE: Patients with diabetes type I, vitiligo, psoriasis, or hypo- or hyperthyroid diseases not requiring immunosuppressive treatment are eligible)\n* Other severe acute or chronic medical conditions including immune-mediated colitis, inflammatory bowel disease, pneumonitis, pulmonary fibrosis or psychiatric conditions including recent (within the past year) or active suicidal ideation or behavior; or laboratory abnormalities that may increase the risk associated with study participation or study treatment administration or may interfere with the interpretation of study results and, in the judgment of the investigator, would make the patient inappropriate for entry into this study\n* Known prior severe hypersensitivity to investigational product or any component in its formulations that could interfere with study endpoints or put patient safety at risk\n* Pregnant or breast-feeding women",
+              "value": "* Estimated life expectancy greater than 3 years\n* Must start the study treatment no more than 120 days from the start date of definitive therapy (the date of surgical removal of nodal metastases or the date of initiation of definitive radiation therapy, as applicable)\n* Eastern Co-Operative Group (Eastern Cooperative Oncology Group \\[ECOG\\]) performance score of 0 or 1\n* Absolute neutrophil count (ANC) \u2265 1.5 x 10\\^9/L\n* Platelet count \u2265 100 x 10\\^9/L\n* Hemoglobin \u2265 9 g/dL (may have been transfused)\n* Total bilirubin level \u2264 1.5 x the upper limit of normal (ULN) range\n* Aspartate aminotransferase (AST) and alanine aminotransferase (ALT) levels \u2264 2.5 x ULN\n* Estimated creatinine clearance \u2265 30 mL/min according to the Cockcroft-Gault formula or by 24-hour urine collection for creatinine clearance or according to local institutional standard\n* Women of childbearing potential must have a negative serum or urine pregnancy test at screening\n* Both male and female subjects must be willing to use highly effective contraception (that is, methods with a failure rate of less than 1% per year) throughout the study and for at least 30 days after last avelumab treatment administration if the risk of conception exists\n\n  \\* (NOTE: The effects of the study treatment on the developing human fetus are unknown; thus, women of childbearing potential and men must agree to use highly effective contraception, as stipulated in national or local guidelines adjuvant, neo-adjuvant or concurrent use of chemotherapy, immunotherapy or an investigational agent) for MCC at any time\n* Any prior intra-lesional MCC therapy within 180 days from day 1 of study treatment\n* Residual toxicity from prior therapy grade \\> 1 (National Cancer Institute \\[NCI\\]-Common Terminology Criteria for Adverse Events \\[NCI-CTCAE v 5.0\\]) that could interfere with study endpoints or put patient safety at risk\n* Previous malignant disease (other than Merkel cell carcinoma) diagnosed within 3 years from day 1 of study treatment that could interfere with study endpoints or put patient safety at risk\n\n  \\* (NOTE: Exception will be made for adequately treated basal or squamous cell carcinoma of the skin or carcinoma in situ \\[skin, bladder, cervical, colorectal, breast\\] or low grade prostatic intraepithelial neoplasia or Grade 1 prostate cancer; any other neoplasm, which is adjudged by the treating investigator to have a low risk of recurrence during the study, could be enrolled only after written approval from the medical monitor)\n* Use of any systemic immunosuppressive treatments including corticosteroids, cyclosporine, mycophenolate mofetil et cetera, ongoing or within the last 3 months prior to day 1 of treatment\n\n  \\* (NOTE: Patients on physiologic dose of corticosteroids \\[\u2264 10 mg/day of prednisone or equivalent\\] for long-term hormone-replacement therapy or those requiring short, intermittent courses of corticosteroids for hypersensitivity prophylaxis \\[such as for iodinated computed tomography (CT) contrast prophylaxis\\] or those using intranasal, inhaled, topical steroids, or local steroid injection \\[e.g., intra-articular injection\\] can be allowed)\n* Immunosuppressed status due to known human immunodeficiency virus (HIV) infection, severe uncontrolled diabetes, concurrent hematological malignancy, or other comorbidities\n* Uncontrolled intercurrent illness including, but not limited to, active serious infection, active hepatitis B or hepatitis C infection, uncontrolled seizure disorder, substance abuse disorder, or psychiatric illness/social situations that would limit compliance with study requirements or would put the patient at increased risk of complications during the study period\n* Clinically significant (i.e., active) cardiovascular disease: cerebral vascular accident/stroke (\\< 6 months prior to enrollment), myocardial infarction (\\< 6 months prior to enrollment), unstable angina, congestive heart failure (\u2265 New York Heart Association Classification Class II), or serious cardiac arrhythmia requiring medication\n* Active or history of any serious autoimmune disease, prior organ transplantation, including allogeneic stem-cell transplantation or immune-deficiencies that required treatment with systemic immunosuppressive drugs and could flare-up during study treatment\n\n  \\* (NOTE: Patients with diabetes type I, vitiligo, psoriasis, or hypo- or hyperthyroid diseases not requiring immunosuppressive treatment are eligible)\n* Other severe acute or chronic medical conditions including immune-mediated colitis, inflammatory bowel disease, pneumonitis, pulmonary fibrosis or psychiatric conditions including recent (within the past year) or active suicidal ideation or behavior; or laboratory abnormalities that may increase the risk associated with study participation or study treatment administration or may interfere with the interpretation of study results and, in the judgment of the investigator, would make the patient inappropriate for entry into this study\n* Known prior severe hypersensitivity to investigational product or any component in its formulations that could interfere with study endpoints or put patient safety at risk\n* Pregnant or breast-feeding women",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -2276,9 +2276,9 @@
               "extracted_at": "2025-11-19T16:56:46.489911"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR)",
@@ -4337,9 +4337,9 @@
               "extracted_at": "2025-11-19T16:58:55.328150"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Neoadjuvant: Number of Participants With Drug-Related Select Adverse Events (AEs)",
@@ -4436,7 +4436,7 @@
             },
             "mechanism_of_action": {
               "attribute_type": "mechanism_of_action",
-              "value": "anti–programmed death-1",
+              "value": "anti\u2013programmed death-1",
               "confidence": 0.8,
               "source_chunks": [
                 "chunk_0",
@@ -6434,9 +6434,9 @@
               "extracted_at": "2025-11-19T17:01:20.211429"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Part A: Number of Participants With Confirmed Best Overall Response (BOR) as Per Response Evaluation Criteria in Solid Tumors Version (RECIST) 1.1",
@@ -8583,9 +8583,9 @@
               "extracted_at": "2025-11-19T17:04:18.190913"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Part A: Number of Participants With Confirmed Best Overall Response (BOR) as Per Response Evaluation Criteria in Solid Tumors Version (RECIST) 1.1",
@@ -10687,9 +10687,9 @@
               "extracted_at": "2025-11-19T17:06:28.557171"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Part A: Number of Participants With Confirmed Best Overall Response (BOR) as Per Response Evaluation Criteria in Solid Tumors Version (RECIST) 1.1",
@@ -12648,7 +12648,7 @@
             },
             "publication_name": {
               "attribute_type": "publication_name",
-              "value": "Cancer Immunology, Immunotherapy (2021) 70:2087–2093",
+              "value": "Cancer Immunology, Immunotherapy (2021) 70:2087\u20132093",
               "confidence": 1.0,
               "source_chunks": [
                 "chunk_0",
@@ -12785,9 +12785,9 @@
               "extracted_at": "2025-11-19T17:08:40.028720"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Neoadjuvant: Number of Participants With Drug-Related Select Adverse Events (AEs)",
@@ -13451,7 +13451,7 @@
             },
             "immune_related_ae": {
               "attribute_type": "immune_related_ae",
-              "value": "Fatigue °I",
+              "value": "Fatigue \u00b0I",
               "confidence": 0.8,
               "source_chunks": [
                 "chunk_0",
@@ -14849,9 +14849,9 @@
               "extracted_at": "2025-11-19T17:10:56.012031"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Neoadjuvant",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Number of Participants With Pathologic Complete Response (pCR) as Assessed by Independent Central Pathology Review",
@@ -16913,9 +16913,9 @@
               "extracted_at": "2025-11-19T17:13:02.037367"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR)",
@@ -19053,9 +19053,9 @@
               "extracted_at": "2025-11-19T17:15:31.973375"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Dose Limiting Toxicity",
@@ -21151,9 +21151,9 @@
               "extracted_at": "2025-11-19T17:18:01.866124"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Neoadjuvant",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Arm C: Number of Participants With the Pathologic Response Rate",
@@ -23224,9 +23224,9 @@
               "extracted_at": "2025-11-19T17:20:14.012873"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Neoadjuvant",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "The proportion of viable melanoma tissue, compared to baseline, in dissected lymph node and / or in-transit tumour tissue after 12 weeks of neoadjuvant treatment.",
@@ -23249,7 +23249,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "Inclusion Criteria:\n\n* Age ≥18 years\n* Histologically confirmed AJCC Stage IIIB or IIIC (Tx, T1-4, N1b, N2b, N2c, N3, Mo) cutaneous melanoma or unknown primary determined to be BRAF V600 mutation positive, with sufficient nodal or in-transit disease to enable biopsies prior to surgery.Patients must have disease that is measurable per RECIST version 1.1\n* Able to swallow and retain oral medication and must not have any clinically significant gastrointestinal abnormalities that may alter absorption\n* Eastern Cooperative Oncology Group (ECOG) Performance Status of 0-1\n* Adequate baseline organ function\n* Women of childbearing potential must have a negative serum pregnancy test within 7 days of first dose of study treatment and agree to use effective contraception from 14 days prior to commencing study treatment, throughout the treatment period and for 4 months after the last dose of study treatment\n* Men with any female partner of childbearing potential must agree to use effective contraception from 14 days prior to commencing study treatment, throughout the treatment period and for 4 months after the last dose of study treatment\n\nExclusion Criteria:\n\n* Known mucosal or ocular melanoma or any unresectable in-transit metastases\n* Evidence of distant metastatic disease on screening evaluation\n* Prior anti-cancer treatment for melanoma (chemotherapy, immunotherapy, biologic therapy, vaccine therapy, investigational treatment or radiotherapy)",
+              "value": "Inclusion Criteria:\n\n* Age \u226518 years\n* Histologically confirmed AJCC Stage IIIB or IIIC (Tx, T1-4, N1b, N2b, N2c, N3, Mo) cutaneous melanoma or unknown primary determined to be BRAF V600 mutation positive, with sufficient nodal or in-transit disease to enable biopsies prior to surgery.Patients must have disease that is measurable per RECIST version 1.1\n* Able to swallow and retain oral medication and must not have any clinically significant gastrointestinal abnormalities that may alter absorption\n* Eastern Cooperative Oncology Group (ECOG) Performance Status of 0-1\n* Adequate baseline organ function\n* Women of childbearing potential must have a negative serum pregnancy test within 7 days of first dose of study treatment and agree to use effective contraception from 14 days prior to commencing study treatment, throughout the treatment period and for 4 months after the last dose of study treatment\n* Men with any female partner of childbearing potential must agree to use effective contraception from 14 days prior to commencing study treatment, throughout the treatment period and for 4 months after the last dose of study treatment\n\nExclusion Criteria:\n\n* Known mucosal or ocular melanoma or any unresectable in-transit metastases\n* Evidence of distant metastatic disease on screening evaluation\n* Prior anti-cancer treatment for melanoma (chemotherapy, immunotherapy, biologic therapy, vaccine therapy, investigational treatment or radiotherapy)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -25098,7 +25098,7 @@
             },
             "cancer_stage": {
               "attribute_type": "cancer_stage",
-              "value": "Stage IIIB–C",
+              "value": "Stage IIIB\u2013C",
               "confidence": 0.8,
               "source_chunks": [
                 "chunk_0",
@@ -25316,9 +25316,9 @@
               "extracted_at": "2025-11-19T17:22:45.850621"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -27408,9 +27408,9 @@
               "extracted_at": "2025-11-19T17:25:26.507424"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate",
@@ -27428,7 +27428,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "Inclusion Criteria:\n\n* Histologically or cytologically confirmed inoperable stage III or IV melanoma that began on acral skin or mucosa\n\n  * Patients with cutaneous melanoma that began on sun exposed sites of the skin and whose pathology demonstrates signs of sun damage (solar elastosis) involving the skin surrounding their primary melanoma are eligible\n* Must have sufficient tumor tissue available for FISH and DNA sequencing\n\n  * Patients must have either a true amplification of 4q12 or a detectable mutation of c-KIT\n  * If no banked tumor tissue is available, or if the available banked tumor tissue is insufficient for the necessary testing, then a repeat biopsy procedure will be required to collect the necessary tumor sample\n* Measurable disease according to Response Evaluation Criteria in Solid Tumors (RECIST) criteria\n* No known untreated brain or epidural metastases\n\n  * Brain metastases that have been treated and deemed stable are allowed\n* ECOG performance status (PS) 0-2 OR Karnofsky PS 60-100%\n* Life expectancy greater than 3 months\n* WBC ≥ 3,000/mm³\n* ANC ≥ 1,500/mm³\n* Platelet count ≥ 100,000/mm³\n* Bilirubin ≤ 1.5 times upper limit of normal (ULN)\n\n  * Patients with unexplained hyperbilirubinemia that is clinically consistent with an inherited disorder of bilirubin metabolism (e.g., Gilbert's syndrome) may be eligible\n* AST and ALT ≤ 2.5 times ULN (5 times ULN if hepatic metastases are present)\n* Creatinine ≤ 1.5 times ULN\n* PT and PTT ≤ 1.5 times ULN\n* Not pregnant or nursing\n* Negative pregnancy test\n* Fertile patients must use effective contraception before and during study participation\n* No history of allergic reactions attributed to compounds of similar chemical or biological composition to imatinib mesylate\n* No concurrent uncontrolled illness including, but not limited to, any of the following:\n\n  * Ongoing or active infection\n  * Symptomatic congestive heart failure\n  * Unstable anginapectoris\n  * Cardiac arrhythmia resulting in hemodynamic instability\n  * Intestinal malabsorption disorders\n  * Psychiatric illness or social situations that would limit study compliance\n* Recovered to grade 1 from all prior therapies with the exception of alopecia\n* At least 2 weeks since prior radiotherapy (≤ 3,000 cGy to fields including substantial marrow)\n* At least 2 weeks since prior isolated limb infusion or perfusion (must have evidence of progression despite this therapy)\n* At least 2 weeks since prior chemotherapy\n* No more than 2 prior chemotherapy regimen for metastatic melanoma\n* Prior therapies with vaccines, targeted agents not believed to affect the kit proteins, cytokines, interferon-α, or intratumoral injections will NOT be considered prior therapy unless administered with a chemotherapy drug\n* No prior therapy with an inhibitor of the kit protein\n* No other concurrent investigational agents\n* No other concurrent anticancer agents or therapies\n* No concurrent antiretroviral therapy for HIV-positive patients\n* No concurrent inhibitors of CYP3A4, including any of the following:\n\n  * Fluconazole, itraconazole, ketoconazole, macrolide antibiotics (azithromycin, clarithromycin, erythromycin, troleandomycin),midazolam, nifedipine, verapamil, diltiazem, terfenadine, cyclosporine and cisapride\n  * Herbal extracts and tinctures with CYP3A4 inhibitory activity, including the following:\n\n    * Hydrastis canadensis (goldenseal), Hypericum perforatum (St",
+              "value": "Inclusion Criteria:\n\n* Histologically or cytologically confirmed inoperable stage III or IV melanoma that began on acral skin or mucosa\n\n  * Patients with cutaneous melanoma that began on sun exposed sites of the skin and whose pathology demonstrates signs of sun damage (solar elastosis) involving the skin surrounding their primary melanoma are eligible\n* Must have sufficient tumor tissue available for FISH and DNA sequencing\n\n  * Patients must have either a true amplification of 4q12 or a detectable mutation of c-KIT\n  * If no banked tumor tissue is available, or if the available banked tumor tissue is insufficient for the necessary testing, then a repeat biopsy procedure will be required to collect the necessary tumor sample\n* Measurable disease according to Response Evaluation Criteria in Solid Tumors (RECIST) criteria\n* No known untreated brain or epidural metastases\n\n  * Brain metastases that have been treated and deemed stable are allowed\n* ECOG performance status (PS) 0-2 OR Karnofsky PS 60-100%\n* Life expectancy greater than 3 months\n* WBC \u2265 3,000/mm\u00b3\n* ANC \u2265 1,500/mm\u00b3\n* Platelet count \u2265 100,000/mm\u00b3\n* Bilirubin \u2264 1.5 times upper limit of normal (ULN)\n\n  * Patients with unexplained hyperbilirubinemia that is clinically consistent with an inherited disorder of bilirubin metabolism (e.g., Gilbert's syndrome) may be eligible\n* AST and ALT \u2264 2.5 times ULN (5 times ULN if hepatic metastases are present)\n* Creatinine \u2264 1.5 times ULN\n* PT and PTT \u2264 1.5 times ULN\n* Not pregnant or nursing\n* Negative pregnancy test\n* Fertile patients must use effective contraception before and during study participation\n* No history of allergic reactions attributed to compounds of similar chemical or biological composition to imatinib mesylate\n* No concurrent uncontrolled illness including, but not limited to, any of the following:\n\n  * Ongoing or active infection\n  * Symptomatic congestive heart failure\n  * Unstable anginapectoris\n  * Cardiac arrhythmia resulting in hemodynamic instability\n  * Intestinal malabsorption disorders\n  * Psychiatric illness or social situations that would limit study compliance\n* Recovered to grade 1 from all prior therapies with the exception of alopecia\n* At least 2 weeks since prior radiotherapy (\u2264 3,000 cGy to fields including substantial marrow)\n* At least 2 weeks since prior isolated limb infusion or perfusion (must have evidence of progression despite this therapy)\n* At least 2 weeks since prior chemotherapy\n* No more than 2 prior chemotherapy regimen for metastatic melanoma\n* Prior therapies with vaccines, targeted agents not believed to affect the kit proteins, cytokines, interferon-\u03b1, or intratumoral injections will NOT be considered prior therapy unless administered with a chemotherapy drug\n* No prior therapy with an inhibitor of the kit protein\n* No other concurrent investigational agents\n* No other concurrent anticancer agents or therapies\n* No concurrent antiretroviral therapy for HIV-positive patients\n* No concurrent inhibitors of CYP3A4, including any of the following:\n\n  * Fluconazole, itraconazole, ketoconazole, macrolide antibiotics (azithromycin, clarithromycin, erythromycin, troleandomycin),midazolam, nifedipine, verapamil, diltiazem, terfenadine, cyclosporine and cisapride\n  * Herbal extracts and tinctures with CYP3A4 inhibitory activity, including the following:\n\n    * Hydrastis canadensis (goldenseal), Hypericum perforatum (St",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -29469,9 +29469,9 @@
               "extracted_at": "2025-11-19T17:27:33.040834"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Number of Participants with Dose-Limiting Toxicities",
@@ -31533,9 +31533,9 @@
               "extracted_at": "2025-11-19T17:27:33.040856"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Number of Participants with Dose-Limiting Toxicities",
@@ -33609,9 +33609,9 @@
               "extracted_at": "2025-11-19T17:30:05.200126"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -35691,9 +35691,9 @@
               "extracted_at": "2025-11-19T17:30:05.200158"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -37785,9 +37785,9 @@
               "extracted_at": "2025-11-19T17:32:55.941325"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Intracranial Response (IR) Rate in Cohort A",
@@ -39872,9 +39872,9 @@
               "extracted_at": "2025-11-19T17:36:07.535061"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Part A: Maximum Plasma Concentration (Cmax) of a Single Dose of Dabrafenib Administered Alone and in Combination With Trametnib",
@@ -39882,7 +39882,7 @@
               "confidence": 0.9
             },
             "secondary_endpoint": {
-              "value": "Part A: Steady State Concentration of Trametinib With Concomitant Administration of Dabrafenib; Part B: AUC [0-tau] of Dabrafenib (DAB) and Its Metabolite in Combination With Trametinib; Part B: Pre-dose (Trough) Concentration at the End of the Dosing Interval (Ctau) and Maximum Plasma Concentration (Cmax) of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B: Tmax of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B (Analyte=GSK1120212): AUC (0-tau) Assessment of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Ctau and Cmax Assessments of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Tmax Assessment of Trametinib in Combination With Dabrafenib; Part B: Number of Participants With BRAFi-naïve Mutant Metastatic Melanoma With the Best Overall Response as Assessed by Investigator; Part B: Duration of Response as Assessed by the Investigator in Participants With BRAFi-naïve Mutant Metastatic Melanoma; Part B: Progression-free Survival (PFS) as Assessed by the Investigator in Participants With BRAFi-naïve Mutant Metastatic Melanoma; Part B: Overall Survival (OS) in BRAFi Naïve Melanoma Participants; Part B: Pre- and Post-dose H-scores for Individual Participants; Part C (Randomized): Overall Survival (OS); Part C: Plasma Concentrations of Dabrafenib and Its Metabolites; Part C: Plasma Concentrations of Trametinib; Part C: Oral Clearance (CL/F) of Dabrafenib and Trametinib; Part C: Oral Volume of Distribution (V/F) of Dabrafenib and Trametinib; Part D: Cmax of Dabrafenib Metabolites; Part D: Tmax of Dabrafenib Metabolites; Part D: Area Under the Concentration-time Curve (AUC) of Dabrafenib Metabolites; Part D: Cmax Assessment of Trametinib; Part D: Tmax Assessment of Trametinib; Part D: Area Under the Concentration-time Curve Assessment of Trametinib; Part D: Number of Participants With the Best Overall Response as Assessed by the Investigator in Participants; Part D: Duration of Response as Assessed by the Investigator; Part D: Progression-free Survival (PFS) as Assessed by the Investigator; Part D: Overall Survival (OS)",
+              "value": "Part A: Steady State Concentration of Trametinib With Concomitant Administration of Dabrafenib; Part B: AUC [0-tau] of Dabrafenib (DAB) and Its Metabolite in Combination With Trametinib; Part B: Pre-dose (Trough) Concentration at the End of the Dosing Interval (Ctau) and Maximum Plasma Concentration (Cmax) of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B: Tmax of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B (Analyte=GSK1120212): AUC (0-tau) Assessment of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Ctau and Cmax Assessments of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Tmax Assessment of Trametinib in Combination With Dabrafenib; Part B: Number of Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma With the Best Overall Response as Assessed by Investigator; Part B: Duration of Response as Assessed by the Investigator in Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma; Part B: Progression-free Survival (PFS) as Assessed by the Investigator in Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma; Part B: Overall Survival (OS) in BRAFi Na\u00efve Melanoma Participants; Part B: Pre- and Post-dose H-scores for Individual Participants; Part C (Randomized): Overall Survival (OS); Part C: Plasma Concentrations of Dabrafenib and Its Metabolites; Part C: Plasma Concentrations of Trametinib; Part C: Oral Clearance (CL/F) of Dabrafenib and Trametinib; Part C: Oral Volume of Distribution (V/F) of Dabrafenib and Trametinib; Part D: Cmax of Dabrafenib Metabolites; Part D: Tmax of Dabrafenib Metabolites; Part D: Area Under the Concentration-time Curve (AUC) of Dabrafenib Metabolites; Part D: Cmax Assessment of Trametinib; Part D: Tmax Assessment of Trametinib; Part D: Area Under the Concentration-time Curve Assessment of Trametinib; Part D: Number of Participants With the Best Overall Response as Assessed by the Investigator in Participants; Part D: Duration of Response as Assessed by the Investigator; Part D: Progression-free Survival (PFS) as Assessed by the Investigator; Part D: Overall Survival (OS)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -41962,9 +41962,9 @@
               "extracted_at": "2025-11-19T17:38:37.949687"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -44044,9 +44044,9 @@
               "extracted_at": "2025-11-19T17:38:37.949742"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -46138,9 +46138,9 @@
               "extracted_at": "2025-11-19T17:41:50.970103"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Number of Participants With Dose-Limiting Toxicities (DLTs) During DES in Combination Cohorts",
@@ -48237,9 +48237,9 @@
               "extracted_at": "2025-11-19T17:44:32.097363"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -50302,9 +50302,9 @@
               "extracted_at": "2025-11-19T17:44:32.097398"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -52367,9 +52367,9 @@
               "extracted_at": "2025-11-19T17:44:32.097407"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -54444,9 +54444,9 @@
               "extracted_at": "2025-11-19T17:46:55.859013"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Number of Participants Experiencing Dose-Limiting Toxicities (DLTs) According to National Cancer Institute Common Terminology Criteria for Adverse Events Version 4.0 (NCI-CTCAE v.4.0) in Participants With Solid Tumors (Parts A and A1)",
@@ -54454,7 +54454,7 @@
               "confidence": 0.9
             },
             "secondary_endpoint": {
-              "value": "ORR According to Immune-related Response Criteria (irRC) as Assessed by Investigator in Melanoma Participants (Parts B Plus D); ORR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 28 (AUC 0-28) in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Infinity (AUC 0-inf) in Solid Tumor Participants (Parts A and A1); Maximum Concentration (Cmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Time to Maximum Concentration (Tmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Terminal Half-Life (t ½) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 21 (AUC 0-21) in Solid Tumor Participants (Part A2); Area Under the Concentration-Time Curve of Pembrolizumab From Day 21 to Day 42 (AUC21-42) in Solid Tumor Participants (Part A2); Lowest Plasma Concentration (Ctrough) of Pembrolizumab in Solid Tumor Participants (Parts A, A1, and A2); Ctrough of Pembrolizumab in Melanoma Participants (Parts B and D); Ctrough of Pembrolizumab in NSCLC Participants (Parts C and F); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to Programmed Death-Ligand 1 (PD-L1) Immunohistochemical (IHC) Expression Status in Ipilimumab (Ipi)-Exposed and Ipi-Naive Melanoma Participants (Parts B Plus D); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to PD-L1 IHC Expression Status in Prior Treatment (TRT)-Naïve and Previously-Treated NSCLC Participants (Parts C Plus F); Disease Control Rate (DCR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Duration of Response (DOR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Progression Free Survival (PFS) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B Plus D); Overall Survival (OS) in Melanoma Participants (Parts B Plus D); DCR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DOR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); PFS According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DCR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); DOR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); PFS According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); OS in NSCLC Participants (Parts C Plus F); DCR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); DOR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); PFS According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F)",
+              "value": "ORR According to Immune-related Response Criteria (irRC) as Assessed by Investigator in Melanoma Participants (Parts B Plus D); ORR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 28 (AUC 0-28) in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Infinity (AUC 0-inf) in Solid Tumor Participants (Parts A and A1); Maximum Concentration (Cmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Time to Maximum Concentration (Tmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Terminal Half-Life (t \u00bd) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 21 (AUC 0-21) in Solid Tumor Participants (Part A2); Area Under the Concentration-Time Curve of Pembrolizumab From Day 21 to Day 42 (AUC21-42) in Solid Tumor Participants (Part A2); Lowest Plasma Concentration (Ctrough) of Pembrolizumab in Solid Tumor Participants (Parts A, A1, and A2); Ctrough of Pembrolizumab in Melanoma Participants (Parts B and D); Ctrough of Pembrolizumab in NSCLC Participants (Parts C and F); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to Programmed Death-Ligand 1 (PD-L1) Immunohistochemical (IHC) Expression Status in Ipilimumab (Ipi)-Exposed and Ipi-Naive Melanoma Participants (Parts B Plus D); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to PD-L1 IHC Expression Status in Prior Treatment (TRT)-Na\u00efve and Previously-Treated NSCLC Participants (Parts C Plus F); Disease Control Rate (DCR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Duration of Response (DOR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Progression Free Survival (PFS) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B Plus D); Overall Survival (OS) in Melanoma Participants (Parts B Plus D); DCR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DOR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); PFS According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DCR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); DOR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); PFS According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); OS in NSCLC Participants (Parts C Plus F); DCR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); DOR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); PFS According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -56556,9 +56556,9 @@
               "extracted_at": "2025-11-19T17:49:12.599313"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Response in the Brain by mRECIST",
@@ -58657,9 +58657,9 @@
               "extracted_at": "2025-11-19T17:52:27.327427"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Phase 1b: Number of Participants With Dose-limiting Toxicities",
@@ -58677,7 +58677,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "Inclusion Criteria:\n\n* Histologically confirmed diagnosis of malignant melanoma * Phase 2:\n\n  * Either treatment naïve or received only one line of systemic anticancer therapy if v-raf murine sarcoma viral oncogene homolog B1 (BRAF) wild-type or up to two lines of systemic anticancer therapy including one BRAF inhibitor-containing regimen if BRAF mutant * Subjects treated with prior ipilimumab must have had partial response (PR), complete response (CR), or at least 6 months of stable disease followed by disease progression",
+              "value": "Inclusion Criteria:\n\n* Histologically confirmed diagnosis of malignant melanoma * Phase 2:\n\n  * Either treatment na\u00efve or received only one line of systemic anticancer therapy if v-raf murine sarcoma viral oncogene homolog B1 (BRAF) wild-type or up to two lines of systemic anticancer therapy including one BRAF inhibitor-containing regimen if BRAF mutant * Subjects treated with prior ipilimumab must have had partial response (PR), complete response (CR), or at least 6 months of stable disease followed by disease progression",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -60758,9 +60758,9 @@
               "extracted_at": "2025-11-19T17:52:27.327473"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Phase 1b: Number of Participants With Dose-limiting Toxicities",
@@ -60778,7 +60778,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "Inclusion Criteria:\n\n* Histologically confirmed diagnosis of malignant melanoma * Phase 2:\n\n  * Either treatment naïve or received only one line of systemic anticancer therapy if v-raf murine sarcoma viral oncogene homolog B1 (BRAF) wild-type or up to two lines of systemic anticancer therapy including one BRAF inhibitor-containing regimen if BRAF mutant * Subjects treated with prior ipilimumab must have had partial response (PR), complete response (CR), or at least 6 months of stable disease followed by disease progression",
+              "value": "Inclusion Criteria:\n\n* Histologically confirmed diagnosis of malignant melanoma * Phase 2:\n\n  * Either treatment na\u00efve or received only one line of systemic anticancer therapy if v-raf murine sarcoma viral oncogene homolog B1 (BRAF) wild-type or up to two lines of systemic anticancer therapy including one BRAF inhibitor-containing regimen if BRAF mutant * Subjects treated with prior ipilimumab must have had partial response (PR), complete response (CR), or at least 6 months of stable disease followed by disease progression",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -62871,9 +62871,9 @@
               "extracted_at": "2025-11-19T17:55:29.625685"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -62896,7 +62896,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -64952,9 +64952,9 @@
               "extracted_at": "2025-11-19T17:55:29.625717"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -64977,7 +64977,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -67033,9 +67033,9 @@
               "extracted_at": "2025-11-19T17:55:29.625725"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -67058,7 +67058,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -69126,9 +69126,9 @@
               "extracted_at": "2025-11-19T17:58:00.479245"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -71239,9 +71239,9 @@
               "extracted_at": "2025-11-19T17:58:00.479281"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -73352,9 +73352,9 @@
               "extracted_at": "2025-11-19T17:58:00.479291"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Not found",
@@ -75477,9 +75477,9 @@
               "extracted_at": "2025-11-19T18:00:59.639146"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -75502,7 +75502,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -77620,9 +77620,9 @@
               "extracted_at": "2025-11-19T18:00:59.639177"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -77645,7 +77645,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -79763,9 +79763,9 @@
               "extracted_at": "2025-11-19T18:00:59.639185"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -79788,7 +79788,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -81918,9 +81918,9 @@
               "extracted_at": "2025-11-19T18:04:02.516809"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -81943,7 +81943,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -83980,9 +83980,9 @@
               "extracted_at": "2025-11-19T18:04:02.516842"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -84005,7 +84005,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -86042,9 +86042,9 @@
               "extracted_at": "2025-11-19T18:04:02.516850"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -86067,7 +86067,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -88116,9 +88116,9 @@
               "extracted_at": "2025-11-19T18:06:22.356717"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR) - BRAF Wild-type (WT) Participants",
@@ -90197,9 +90197,9 @@
               "extracted_at": "2025-11-19T18:06:22.356762"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR) - BRAF Wild-type (WT) Participants",
@@ -92290,9 +92290,9 @@
               "extracted_at": "2025-11-19T18:08:59.948822"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR) - BRAF Wild-type (WT) Participants",
@@ -94414,9 +94414,9 @@
               "extracted_at": "2025-11-19T18:08:59.948868"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR) - BRAF Wild-type (WT) Participants",
@@ -96550,9 +96550,9 @@
               "extracted_at": "2025-11-19T18:11:43.565262"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Intracranial response rate",
@@ -96570,7 +96570,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "Cohort 1 and 3\n\nInclusion Criteria:\n\n1 Patients must have at least 1 radiological definitive brain metastasis that is ≥ 5mm and ≤40mm measurable per RECIST version 1.1 guidelines In patients with prior BRAF inhibitor treatment, intracranial disease progression must be demonstrated (RECIST \\>20% or new measurable brain metastases) compared with nadir of intracranial response during BRAF inhibitor treatment, and confirmed with a second MRI brain scan at any time from the beginning of the drug washout period (dabrafenib=5 days, trametinib=14 days)",
+              "value": "Cohort 1 and 3\n\nInclusion Criteria:\n\n1 Patients must have at least 1 radiological definitive brain metastasis that is \u2265 5mm and \u226440mm measurable per RECIST version 1.1 guidelines In patients with prior BRAF inhibitor treatment, intracranial disease progression must be demonstrated (RECIST \\>20% or new measurable brain metastases) compared with nadir of intracranial response during BRAF inhibitor treatment, and confirmed with a second MRI brain scan at any time from the beginning of the drug washout period (dabrafenib=5 days, trametinib=14 days)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -98642,9 +98642,9 @@
               "extracted_at": "2025-11-19T18:11:43.565307"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Intracranial response rate",
@@ -98662,7 +98662,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "Cohort 1 and 3\n\nInclusion Criteria:\n\n1 Patients must have at least 1 radiological definitive brain metastasis that is ≥ 5mm and ≤40mm measurable per RECIST version 1.1 guidelines In patients with prior BRAF inhibitor treatment, intracranial disease progression must be demonstrated (RECIST \\>20% or new measurable brain metastases) compared with nadir of intracranial response during BRAF inhibitor treatment, and confirmed with a second MRI brain scan at any time from the beginning of the drug washout period (dabrafenib=5 days, trametinib=14 days)",
+              "value": "Cohort 1 and 3\n\nInclusion Criteria:\n\n1 Patients must have at least 1 radiological definitive brain metastasis that is \u2265 5mm and \u226440mm measurable per RECIST version 1.1 guidelines In patients with prior BRAF inhibitor treatment, intracranial disease progression must be demonstrated (RECIST \\>20% or new measurable brain metastases) compared with nadir of intracranial response during BRAF inhibitor treatment, and confirmed with a second MRI brain scan at any time from the beginning of the drug washout period (dabrafenib=5 days, trametinib=14 days)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -100746,9 +100746,9 @@
               "extracted_at": "2025-11-19T18:14:54.605190"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Intracranial Clinical Benefit Rate (CBR)",
@@ -100766,7 +100766,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n1\\ Subjects must have at least 1 measurable brain metastasis ≥ 0.5 cm in and ≤ 3 cm in longest diameter that has not been previously irradiated lesions or prior excision must have occurred ≥ 3 weeks before the start of dosing for this study\n4",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n1\\ Subjects must have at least 1 measurable brain metastasis \u2265 0.5 cm in and \u2264 3 cm in longest diameter that has not been previously irradiated lesions or prior excision must have occurred \u2265 3 weeks before the start of dosing for this study\n4",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -102881,9 +102881,9 @@
               "extracted_at": "2025-11-19T18:14:54.605221"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Intracranial Clinical Benefit Rate (CBR)",
@@ -102901,7 +102901,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n1\\ Subjects must have at least 1 measurable brain metastasis ≥ 0.5 cm in and ≤ 3 cm in longest diameter that has not been previously irradiated lesions or prior excision must have occurred ≥ 3 weeks before the start of dosing for this study\n4",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n1\\ Subjects must have at least 1 measurable brain metastasis \u2265 0.5 cm in and \u2264 3 cm in longest diameter that has not been previously irradiated lesions or prior excision must have occurred \u2265 3 weeks before the start of dosing for this study\n4",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -105028,9 +105028,9 @@
               "extracted_at": "2025-11-19T18:18:51.062165"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Survival (OS) (Time-to-Death) Difference Between MDX-010 in Combination With gp 100 Melanoma Peptide Vaccine Versus gp 100 Melanoma Peptide Vaccine Alone",
@@ -107108,9 +107108,9 @@
               "extracted_at": "2025-11-19T18:18:51.062198"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Survival (OS) (Time-to-Death) Difference Between MDX-010 in Combination With gp 100 Melanoma Peptide Vaccine Versus gp 100 Melanoma Peptide Vaccine Alone",
@@ -109188,9 +109188,9 @@
               "extracted_at": "2025-11-19T18:18:51.062207"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Survival (OS) (Time-to-Death) Difference Between MDX-010 in Combination With gp 100 Melanoma Peptide Vaccine Versus gp 100 Melanoma Peptide Vaccine Alone",
@@ -111280,9 +111280,9 @@
               "extracted_at": "2025-11-19T18:21:34.540167"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -111305,7 +111305,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -113350,9 +113350,9 @@
               "extracted_at": "2025-11-19T18:21:34.540213"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -113375,7 +113375,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -115420,9 +115420,9 @@
               "extracted_at": "2025-11-19T18:21:34.540230"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -115445,7 +115445,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -117502,9 +117502,9 @@
               "extracted_at": "2025-11-19T18:23:59.116484"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -119608,9 +119608,9 @@
               "extracted_at": "2025-11-19T18:23:59.116531"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Progression Free Survival (PFS)",
@@ -121726,9 +121726,9 @@
               "extracted_at": "2025-11-19T18:27:20.413730"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Proportion of participants with Adverse Events (AEs)",
@@ -123853,9 +123853,9 @@
               "extracted_at": "2025-11-19T18:27:20.413771"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Proportion of participants with Adverse Events (AEs)",
@@ -125980,9 +125980,9 @@
               "extracted_at": "2025-11-19T18:27:20.413787"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Proportion of participants with Adverse Events (AEs)",
@@ -128119,9 +128119,9 @@
               "extracted_at": "2025-11-19T18:31:30.282757"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Percentage of Participants With Dose-limiting Toxicities (DLTs) (Part 1A)",
@@ -128139,7 +128139,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "Inclusion Criteria:\n\n* Histologically- or cytologically-confirmed diagnosis of advanced/unresectable or metastatic MEL or RCC (Part 1A only) with predominantly clear cell elements\n* Previously untreated stage III/IV advanced or metastatic MEL (Part 1C only)\n* MEL subjects may be treatment naïve or may have received prior lines of therapy for metastatic disease (Parts 1A and 1B)\n* RCC subjects must have received ≥1 prior line of therapy for metastatic disease (Part 1A)\n* Measurable disease as defined by RECIST 1.1\n* Must provide a tumor sample (archival or newly obtained biopsy) that is adequate for determination of PD (programmed cell death)-Ligand 1 status by immunohistochemistry at a central pathology laboratory prior to enrollment * Has received prior anti-cancer therapy, monoclonal antibody, chemotherapy, or an investigational agent or device within 4 weeks or 5 half-lives (whichever is longer) before first dose of trial drug or not recovered (≤ Grade 1 or at baseline) from AEs due to previously administered agents (Parts 1A and 1B)\n* Diagnosis of immunodeficiency or is receiving chronic systemic steroid therapy (dosing exceeding 10 mg daily of prednisone equivalent) or any other form of immunosuppressive therapy within 7 days prior to the first dose of study drug\n* Known additional malignancy that is progressing or requires active treatment with the exception of early stage cancers (carcinoma in situ or Stage 1) treated with curative intent, basal cell carcinoma of the skin, squamous cell carcinoma of the skin, or in situ cervical cancer or in situ breast cancer that has undergone potentially curative therapy\n* Known active central nervous system (CNS) metastases and/or carcinomatous meningitis\n* Severe hypersensitivity to any pembrolizumab excipients\n* Active autoimmune disease requiring systemic treatment in the past 2 years\n* History of (non-infectious) pneumonitis that required steroids or has current pneumonitis\n* Active infection requiring systemic therapy\n* Pregnant or breastfeeding, or expecting to conceive or father children within the projected duration of the trial from screening through 120 days after the last dose of study drug\n* Prior therapy with interferon alfa (in neoadjuvant, adjuvant, or metastatic settings) (Part 1A only)\n* Uncontrolled thyroid dysfunction\n* Uncontrolled diabetes mellitus",
+              "value": "Inclusion Criteria:\n\n* Histologically- or cytologically-confirmed diagnosis of advanced/unresectable or metastatic MEL or RCC (Part 1A only) with predominantly clear cell elements\n* Previously untreated stage III/IV advanced or metastatic MEL (Part 1C only)\n* MEL subjects may be treatment na\u00efve or may have received prior lines of therapy for metastatic disease (Parts 1A and 1B)\n* RCC subjects must have received \u22651 prior line of therapy for metastatic disease (Part 1A)\n* Measurable disease as defined by RECIST 1.1\n* Must provide a tumor sample (archival or newly obtained biopsy) that is adequate for determination of PD (programmed cell death)-Ligand 1 status by immunohistochemistry at a central pathology laboratory prior to enrollment * Has received prior anti-cancer therapy, monoclonal antibody, chemotherapy, or an investigational agent or device within 4 weeks or 5 half-lives (whichever is longer) before first dose of trial drug or not recovered (\u2264 Grade 1 or at baseline) from AEs due to previously administered agents (Parts 1A and 1B)\n* Diagnosis of immunodeficiency or is receiving chronic systemic steroid therapy (dosing exceeding 10 mg daily of prednisone equivalent) or any other form of immunosuppressive therapy within 7 days prior to the first dose of study drug\n* Known additional malignancy that is progressing or requires active treatment with the exception of early stage cancers (carcinoma in situ or Stage 1) treated with curative intent, basal cell carcinoma of the skin, squamous cell carcinoma of the skin, or in situ cervical cancer or in situ breast cancer that has undergone potentially curative therapy\n* Known active central nervous system (CNS) metastases and/or carcinomatous meningitis\n* Severe hypersensitivity to any pembrolizumab excipients\n* Active autoimmune disease requiring systemic treatment in the past 2 years\n* History of (non-infectious) pneumonitis that required steroids or has current pneumonitis\n* Active infection requiring systemic therapy\n* Pregnant or breastfeeding, or expecting to conceive or father children within the projected duration of the trial from screening through 120 days after the last dose of study drug\n* Prior therapy with interferon alfa (in neoadjuvant, adjuvant, or metastatic settings) (Part 1A only)\n* Uncontrolled thyroid dysfunction\n* Uncontrolled diabetes mellitus",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -130198,9 +130198,9 @@
               "extracted_at": "2025-11-19T18:34:02.738874"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Response Rate (OR) Per irRECIST",
@@ -132295,9 +132295,9 @@
               "extracted_at": "2025-11-19T18:36:42.040257"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Survival (OS)",
@@ -134376,9 +134376,9 @@
               "extracted_at": "2025-11-19T18:36:42.040281"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Survival (OS)",
@@ -136469,9 +136469,9 @@
               "extracted_at": "2025-11-19T18:39:37.471205"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Survival (OS)",
@@ -138610,9 +138610,9 @@
               "extracted_at": "2025-11-19T18:39:37.471237"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "First Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Overall Survival (OS)",
@@ -140763,9 +140763,9 @@
               "extracted_at": "2025-11-19T18:44:16.173119"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Disease Assessment for Objective Response Rate",
@@ -140783,7 +140783,7 @@
               "confidence": 0.0
             },
             "biomarkers_inclusion_criteria": {
-              "value": "Patients must meet all of the following inclusion criteria to be eligible for participation in the study:\n\nCriteria for Inclusion:\n\n1 Patients must have progressed following ≥ one prior systemic therapy including a programmed cell death protein-1 (PD-1) blocking antibody; and if proto-oncogene B-Raf (BRAF) V600 mutation-positive, a BRAF inhibitor or BRAF inhibitor in combination with mitogen-activated extracellular signal-regulated kinase (MEK) inhibitor\n3 Patients must have an Eastern Cooperative Oncology Group (ECOG) performance status of 0 or 1 and an estimated life expectancy of ≥ 3 months\n7",
+              "value": "Patients must meet all of the following inclusion criteria to be eligible for participation in the study:\n\nCriteria for Inclusion:\n\n1 Patients must have progressed following \u2265 one prior systemic therapy including a programmed cell death protein-1 (PD-1) blocking antibody; and if proto-oncogene B-Raf (BRAF) V600 mutation-positive, a BRAF inhibitor or BRAF inhibitor in combination with mitogen-activated extracellular signal-regulated kinase (MEK) inhibitor\n3 Patients must have an Eastern Cooperative Oncology Group (ECOG) performance status of 0 or 1 and an estimated life expectancy of \u2265 3 months\n7",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -140851,7 +140851,7 @@
               "extracted_at": "2025-11-19T18:44:18.773401"
             },
             "dosage": {
-              "value": "1×10^9 –150×10^9 TIL cells",
+              "value": "1\u00d710^9 \u2013150\u00d710^9 TIL cells",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -142877,9 +142877,9 @@
               "extracted_at": "2025-11-19T18:47:09.017675"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR)",
@@ -142902,7 +142902,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Men \\& women ≥ 18 years of age\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0-1\n* Histologically confirmed Stage III (unresectable)/Stage IV melanoma\n* Measurable disease by computed tomography (CT)/magnetic resonance imaging (MRI) per Response Evaluation Criteria in Solid Tumors (RECIST) 1.1 criteria\n* Objective evidence of disease progression (clinical or radiological) during or after at least 1 (V600 Wildtype) or at least 2 (V600 mutation positive) prior treatment regimens\n* Pre-treatment fresh core, excision or punch tumor biopsy\n* Archival Formalin-fixed paraffin-embedded (FFPE) tumor material if available\n\nExclusion Criteria:\n\n* Any treatment in a BMS-936558 (Nivolumab) trial\n* Subjects with condition requiring systemic treatment with either corticosteroids (\\> 10mg daily prednisone/equivalent) or other immunosuppressive medications within 14 days of study drug administration\n* Active, known or suspected autoimmune disease\n* Unknown BRAF status\n* Active brain metastasis or leptomeningeal metastasis\n* Ocular melanoma\n* Prior therapy with anti programmed death-1 (anti-PD-1), anti programmed death-ligand 1 (anti-PD-L1) or anti-programmed death-ligand 2 (anti-PD-L2)",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Men \\& women \u2265 18 years of age\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0-1\n* Histologically confirmed Stage III (unresectable)/Stage IV melanoma\n* Measurable disease by computed tomography (CT)/magnetic resonance imaging (MRI) per Response Evaluation Criteria in Solid Tumors (RECIST) 1.1 criteria\n* Objective evidence of disease progression (clinical or radiological) during or after at least 1 (V600 Wildtype) or at least 2 (V600 mutation positive) prior treatment regimens\n* Pre-treatment fresh core, excision or punch tumor biopsy\n* Archival Formalin-fixed paraffin-embedded (FFPE) tumor material if available\n\nExclusion Criteria:\n\n* Any treatment in a BMS-936558 (Nivolumab) trial\n* Subjects with condition requiring systemic treatment with either corticosteroids (\\> 10mg daily prednisone/equivalent) or other immunosuppressive medications within 14 days of study drug administration\n* Active, known or suspected autoimmune disease\n* Unknown BRAF status\n* Active brain metastasis or leptomeningeal metastasis\n* Ocular melanoma\n* Prior therapy with anti programmed death-1 (anti-PD-1), anti programmed death-ligand 1 (anti-PD-L1) or anti-programmed death-ligand 2 (anti-PD-L2)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -144960,9 +144960,9 @@
               "extracted_at": "2025-11-19T18:47:09.017723"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR)",
@@ -144985,7 +144985,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Men \\& women ≥ 18 years of age\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0-1\n* Histologically confirmed Stage III (unresectable)/Stage IV melanoma\n* Measurable disease by computed tomography (CT)/magnetic resonance imaging (MRI) per Response Evaluation Criteria in Solid Tumors (RECIST) 1.1 criteria\n* Objective evidence of disease progression (clinical or radiological) during or after at least 1 (V600 Wildtype) or at least 2 (V600 mutation positive) prior treatment regimens\n* Pre-treatment fresh core, excision or punch tumor biopsy\n* Archival Formalin-fixed paraffin-embedded (FFPE) tumor material if available\n\nExclusion Criteria:\n\n* Any treatment in a BMS-936558 (Nivolumab) trial\n* Subjects with condition requiring systemic treatment with either corticosteroids (\\> 10mg daily prednisone/equivalent) or other immunosuppressive medications within 14 days of study drug administration\n* Active, known or suspected autoimmune disease\n* Unknown BRAF status\n* Active brain metastasis or leptomeningeal metastasis\n* Ocular melanoma\n* Prior therapy with anti programmed death-1 (anti-PD-1), anti programmed death-ligand 1 (anti-PD-L1) or anti-programmed death-ligand 2 (anti-PD-L2)",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Men \\& women \u2265 18 years of age\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0-1\n* Histologically confirmed Stage III (unresectable)/Stage IV melanoma\n* Measurable disease by computed tomography (CT)/magnetic resonance imaging (MRI) per Response Evaluation Criteria in Solid Tumors (RECIST) 1.1 criteria\n* Objective evidence of disease progression (clinical or radiological) during or after at least 1 (V600 Wildtype) or at least 2 (V600 mutation positive) prior treatment regimens\n* Pre-treatment fresh core, excision or punch tumor biopsy\n* Archival Formalin-fixed paraffin-embedded (FFPE) tumor material if available\n\nExclusion Criteria:\n\n* Any treatment in a BMS-936558 (Nivolumab) trial\n* Subjects with condition requiring systemic treatment with either corticosteroids (\\> 10mg daily prednisone/equivalent) or other immunosuppressive medications within 14 days of study drug administration\n* Active, known or suspected autoimmune disease\n* Unknown BRAF status\n* Active brain metastasis or leptomeningeal metastasis\n* Ocular melanoma\n* Prior therapy with anti programmed death-1 (anti-PD-1), anti programmed death-ligand 1 (anti-PD-L1) or anti-programmed death-ligand 2 (anti-PD-L2)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -147055,9 +147055,9 @@
               "extracted_at": "2025-11-19T18:49:49.427190"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR)",
@@ -147080,7 +147080,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Men \\& women ≥ 18 years of age\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0-1\n* Histologically confirmed Stage III (unresectable)/Stage IV melanoma\n* Measurable disease by computed tomography (CT)/magnetic resonance imaging (MRI) per Response Evaluation Criteria in Solid Tumors (RECIST) 1.1 criteria\n* Objective evidence of disease progression (clinical or radiological) during or after at least 1 (V600 Wildtype) or at least 2 (V600 mutation positive) prior treatment regimens\n* Pre-treatment fresh core, excision or punch tumor biopsy\n* Archival Formalin-fixed paraffin-embedded (FFPE) tumor material if available\n\nExclusion Criteria:\n\n* Any treatment in a BMS-936558 (Nivolumab) trial\n* Subjects with condition requiring systemic treatment with either corticosteroids (\\> 10mg daily prednisone/equivalent) or other immunosuppressive medications within 14 days of study drug administration\n* Active, known or suspected autoimmune disease\n* Unknown BRAF status\n* Active brain metastasis or leptomeningeal metastasis\n* Ocular melanoma\n* Prior therapy with anti programmed death-1 (anti-PD-1), anti programmed death-ligand 1 (anti-PD-L1) or anti-programmed death-ligand 2 (anti-PD-L2)",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Men \\& women \u2265 18 years of age\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0-1\n* Histologically confirmed Stage III (unresectable)/Stage IV melanoma\n* Measurable disease by computed tomography (CT)/magnetic resonance imaging (MRI) per Response Evaluation Criteria in Solid Tumors (RECIST) 1.1 criteria\n* Objective evidence of disease progression (clinical or radiological) during or after at least 1 (V600 Wildtype) or at least 2 (V600 mutation positive) prior treatment regimens\n* Pre-treatment fresh core, excision or punch tumor biopsy\n* Archival Formalin-fixed paraffin-embedded (FFPE) tumor material if available\n\nExclusion Criteria:\n\n* Any treatment in a BMS-936558 (Nivolumab) trial\n* Subjects with condition requiring systemic treatment with either corticosteroids (\\> 10mg daily prednisone/equivalent) or other immunosuppressive medications within 14 days of study drug administration\n* Active, known or suspected autoimmune disease\n* Unknown BRAF status\n* Active brain metastasis or leptomeningeal metastasis\n* Ocular melanoma\n* Prior therapy with anti programmed death-1 (anti-PD-1), anti programmed death-ligand 1 (anti-PD-L1) or anti-programmed death-ligand 2 (anti-PD-L2)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -149154,9 +149154,9 @@
               "extracted_at": "2025-11-19T18:49:49.427217"
             },
             "line_of_treatment": {
-              "value": "Not found",
-              "source": "clinical_trials_api",
-              "confidence": 0.0
+              "value": "Second Line",
+              "source": "manual_update",
+              "confidence": 1.0
             },
             "primary_endpoint": {
               "value": "Objective Response Rate (ORR)",
@@ -149179,7 +149179,7 @@
               "confidence": 0.0
             },
             "biomarkers_exclusion_criteria": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Men \\& women ≥ 18 years of age\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0-1\n* Histologically confirmed Stage III (unresectable)/Stage IV melanoma\n* Measurable disease by computed tomography (CT)/magnetic resonance imaging (MRI) per Response Evaluation Criteria in Solid Tumors (RECIST) 1.1 criteria\n* Objective evidence of disease progression (clinical or radiological) during or after at least 1 (V600 Wildtype) or at least 2 (V600 mutation positive) prior treatment regimens\n* Pre-treatment fresh core, excision or punch tumor biopsy\n* Archival Formalin-fixed paraffin-embedded (FFPE) tumor material if available\n\nExclusion Criteria:\n\n* Any treatment in a BMS-936558 (Nivolumab) trial\n* Subjects with condition requiring systemic treatment with either corticosteroids (\\> 10mg daily prednisone/equivalent) or other immunosuppressive medications within 14 days of study drug administration\n* Active, known or suspected autoimmune disease\n* Unknown BRAF status\n* Active brain metastasis or leptomeningeal metastasis\n* Ocular melanoma\n* Prior therapy with anti programmed death-1 (anti-PD-1), anti programmed death-ligand 1 (anti-PD-L1) or anti-programmed death-ligand 2 (anti-PD-L2)",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Men \\& women \u2265 18 years of age\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0-1\n* Histologically confirmed Stage III (unresectable)/Stage IV melanoma\n* Measurable disease by computed tomography (CT)/magnetic resonance imaging (MRI) per Response Evaluation Criteria in Solid Tumors (RECIST) 1.1 criteria\n* Objective evidence of disease progression (clinical or radiological) during or after at least 1 (V600 Wildtype) or at least 2 (V600 mutation positive) prior treatment regimens\n* Pre-treatment fresh core, excision or punch tumor biopsy\n* Archival Formalin-fixed paraffin-embedded (FFPE) tumor material if available\n\nExclusion Criteria:\n\n* Any treatment in a BMS-936558 (Nivolumab) trial\n* Subjects with condition requiring systemic treatment with either corticosteroids (\\> 10mg daily prednisone/equivalent) or other immunosuppressive medications within 14 days of study drug administration\n* Active, known or suspected autoimmune disease\n* Unknown BRAF status\n* Active brain metastasis or leptomeningeal metastasis\n* Ocular melanoma\n* Prior therapy with anti programmed death-1 (anti-PD-1), anti programmed death-ligand 1 (anti-PD-L1) or anti-programmed death-ligand 2 (anti-PD-L2)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -154403,7 +154403,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "Key Inclusion Criteria:\n\n* At least 1 measurable lesion\n* Eastern Cooperative Oncology Group (ECOG) performance status ≤1\n* Adequate bone marrow function\n* Adequate renal function\n* Adequate hepatic function\n* Archived or newly obtained tumor material\n* Patients must consent to undergo biopsies of CSCC lesions (Groups 2, 4, and 6)\n* Surgical or radiological treatment of lesions contraindicated\n\nKey Exclusion Criteria:\n\n* Ongoing or recent (within 5 years) evidence of significant autoimmune disease that required treatment with systemic immunosuppressive treatments, which may suggest risk for immune-related adverse events\n* Prior treatment with an agent that blocks the PD-1/PD-L1pathway\n* Prior treatment with a BRAF inhibitor\n* Prior treatment with other immune-modulating agents within fewer than 4 weeks prior to the first dose of cemiplimab, or associated with immune-mediated adverse events that were ≥ grade 1 within 90 days prior to the first dose of cemiplimab, or associated with toxicity that resulted in discontinuation of the immune-modulating agent",
+              "value": "Key Inclusion Criteria:\n\n* At least 1 measurable lesion\n* Eastern Cooperative Oncology Group (ECOG) performance status \u22641\n* Adequate bone marrow function\n* Adequate renal function\n* Adequate hepatic function\n* Archived or newly obtained tumor material\n* Patients must consent to undergo biopsies of CSCC lesions (Groups 2, 4, and 6)\n* Surgical or radiological treatment of lesions contraindicated\n\nKey Exclusion Criteria:\n\n* Ongoing or recent (within 5 years) evidence of significant autoimmune disease that required treatment with systemic immunosuppressive treatments, which may suggest risk for immune-related adverse events\n* Prior treatment with an agent that blocks the PD-1/PD-L1pathway\n* Prior treatment with a BRAF inhibitor\n* Prior treatment with other immune-modulating agents within fewer than 4 weeks prior to the first dose of cemiplimab, or associated with immune-mediated adverse events that were \u2265 grade 1 within 90 days prior to the first dose of cemiplimab, or associated with toxicity that resulted in discontinuation of the immune-modulating agent",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -155965,7 +155965,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "Key Inclusion Criteria:\n\n* At least 1 measurable lesion\n* Eastern Cooperative Oncology Group (ECOG) performance status ≤1\n* Adequate bone marrow function\n* Adequate renal function\n* Adequate hepatic function\n* Archived or newly obtained tumor material\n* Patients must consent to undergo biopsies of CSCC lesions (Groups 2, 4, and 6)\n* Surgical or radiological treatment of lesions contraindicated\n\nKey Exclusion Criteria:\n\n* Ongoing or recent (within 5 years) evidence of significant autoimmune disease that required treatment with systemic immunosuppressive treatments, which may suggest risk for immune-related adverse events\n* Prior treatment with an agent that blocks the PD-1/PD-L1pathway\n* Prior treatment with a BRAF inhibitor\n* Prior treatment with other immune-modulating agents within fewer than 4 weeks prior to the first dose of cemiplimab, or associated with immune-mediated adverse events that were ≥ grade 1 within 90 days prior to the first dose of cemiplimab, or associated with toxicity that resulted in discontinuation of the immune-modulating agent",
+              "value": "Key Inclusion Criteria:\n\n* At least 1 measurable lesion\n* Eastern Cooperative Oncology Group (ECOG) performance status \u22641\n* Adequate bone marrow function\n* Adequate renal function\n* Adequate hepatic function\n* Archived or newly obtained tumor material\n* Patients must consent to undergo biopsies of CSCC lesions (Groups 2, 4, and 6)\n* Surgical or radiological treatment of lesions contraindicated\n\nKey Exclusion Criteria:\n\n* Ongoing or recent (within 5 years) evidence of significant autoimmune disease that required treatment with systemic immunosuppressive treatments, which may suggest risk for immune-related adverse events\n* Prior treatment with an agent that blocks the PD-1/PD-L1pathway\n* Prior treatment with a BRAF inhibitor\n* Prior treatment with other immune-modulating agents within fewer than 4 weeks prior to the first dose of cemiplimab, or associated with immune-mediated adverse events that were \u2265 grade 1 within 90 days prior to the first dose of cemiplimab, or associated with toxicity that resulted in discontinuation of the immune-modulating agent",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -157534,7 +157534,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Men and women, at least 16 years of age;\n* World Health Organization (WHO) Performance Status 0 or 1;\n* Cytologically or histologically confirmed resectable stage III melanoma of cutaneous or unknown primary origin with one or more macroscopic lymph node metastases (clinical detectable), that can be biopsied and a maximum of 3 additional resectable in-transit metastases Clinical detectable lymph nodes are defined as either a palpable node, confirmed as melanoma by pathology, or a non-palpable but enlarged lymph node according to RECISTv1.1 (at least 15 mm in short axis), confirmed as melanoma by pathology, or a PET scan positive lymph node of any size confirmed as melanoma by pathology;\n* No other malignancies, except adequately treated and with a cancer-related life-expectancy of more than 5 years;\n* No prior immunotherapy targeting CTLA-4, PD-1 or PD-L1;\n* No prior targeted therapy targeting BRAF and/or MEK;\n* No immunosuppressive medications within 6 months prior study inclusion (steroids equivalent to prednisolone ≤10 mg are allowed);\n* Screening laboratory values must meet the following criteria: WBC ≥2.0x109/L, neutrophils ≥1.5x109/L, platelets ≥100x109/L, hemoglobin ≥5.5 mmol/L, creatinine ≤1.5xupper limit of normal (ULN), AST ≤1.5x ULN, ALT ≤1.5x ULN, bilirubin ≤1.5x ULN (except for subjects with Gilbert syndrome who must have a total bilirubin \\<3.0 mg/dL);\n* LDH level \\<1.5x ULN;\n* Women of childbearing potential (WOCP) must use appropriate method(s) of contraception, i.e * Subjects with underlying medical conditions or active infection that, in the investigator's opinion, will make the administration of study drug hazardous or obscure the interpretation of toxicity or adverse events;\n* Women who are pregnant or breastfeeding;\n* Concurrent medical condition requiring the use of immunosuppressive medications, or immunosuppressive doses of systemic or absorbable topical corticosteroids \\>10 mg prednisolone daily equivalent;\n* Use of other investigational drugs before study drug administration 30 days or 5 half-times before study inclusion;\n* Psychological, familial, sociological, or geographical conditions that potentially hamper compliance with the study protocol and follow-up schedule; those conditions should be discussed with the subject before registration in the trial.",
+              "value": "Inclusion Criteria:\n\n* Men and women, at least 16 years of age;\n* World Health Organization (WHO) Performance Status 0 or 1;\n* Cytologically or histologically confirmed resectable stage III melanoma of cutaneous or unknown primary origin with one or more macroscopic lymph node metastases (clinical detectable), that can be biopsied and a maximum of 3 additional resectable in-transit metastases Clinical detectable lymph nodes are defined as either a palpable node, confirmed as melanoma by pathology, or a non-palpable but enlarged lymph node according to RECISTv1.1 (at least 15 mm in short axis), confirmed as melanoma by pathology, or a PET scan positive lymph node of any size confirmed as melanoma by pathology;\n* No other malignancies, except adequately treated and with a cancer-related life-expectancy of more than 5 years;\n* No prior immunotherapy targeting CTLA-4, PD-1 or PD-L1;\n* No prior targeted therapy targeting BRAF and/or MEK;\n* No immunosuppressive medications within 6 months prior study inclusion (steroids equivalent to prednisolone \u226410 mg are allowed);\n* Screening laboratory values must meet the following criteria: WBC \u22652.0x109/L, neutrophils \u22651.5x109/L, platelets \u2265100x109/L, hemoglobin \u22655.5 mmol/L, creatinine \u22641.5xupper limit of normal (ULN), AST \u22641.5x ULN, ALT \u22641.5x ULN, bilirubin \u22641.5x ULN (except for subjects with Gilbert syndrome who must have a total bilirubin \\<3.0 mg/dL);\n* LDH level \\<1.5x ULN;\n* Women of childbearing potential (WOCP) must use appropriate method(s) of contraception, i.e * Subjects with underlying medical conditions or active infection that, in the investigator's opinion, will make the administration of study drug hazardous or obscure the interpretation of toxicity or adverse events;\n* Women who are pregnant or breastfeeding;\n* Concurrent medical condition requiring the use of immunosuppressive medications, or immunosuppressive doses of systemic or absorbable topical corticosteroids \\>10 mg prednisolone daily equivalent;\n* Use of other investigational drugs before study drug administration 30 days or 5 half-times before study inclusion;\n* Psychological, familial, sociological, or geographical conditions that potentially hamper compliance with the study protocol and follow-up schedule; those conditions should be discussed with the subject before registration in the trial.",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -159096,7 +159096,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Men and women, at least 16 years of age;\n* World Health Organization (WHO) Performance Status 0 or 1;\n* Cytologically or histologically confirmed resectable stage III melanoma of cutaneous or unknown primary origin with one or more macroscopic lymph node metastases (clinical detectable), that can be biopsied and a maximum of 3 additional resectable in-transit metastases Clinical detectable lymph nodes are defined as either a palpable node, confirmed as melanoma by pathology, or a non-palpable but enlarged lymph node according to RECISTv1.1 (at least 15 mm in short axis), confirmed as melanoma by pathology, or a PET scan positive lymph node of any size confirmed as melanoma by pathology;\n* No other malignancies, except adequately treated and with a cancer-related life-expectancy of more than 5 years;\n* No prior immunotherapy targeting CTLA-4, PD-1 or PD-L1;\n* No prior targeted therapy targeting BRAF and/or MEK;\n* No immunosuppressive medications within 6 months prior study inclusion (steroids equivalent to prednisolone ≤10 mg are allowed);\n* Screening laboratory values must meet the following criteria: WBC ≥2.0x109/L, neutrophils ≥1.5x109/L, platelets ≥100x109/L, hemoglobin ≥5.5 mmol/L, creatinine ≤1.5xupper limit of normal (ULN), AST ≤1.5x ULN, ALT ≤1.5x ULN, bilirubin ≤1.5x ULN (except for subjects with Gilbert syndrome who must have a total bilirubin \\<3.0 mg/dL);\n* LDH level \\<1.5x ULN;\n* Women of childbearing potential (WOCP) must use appropriate method(s) of contraception, i.e * Subjects with underlying medical conditions or active infection that, in the investigator's opinion, will make the administration of study drug hazardous or obscure the interpretation of toxicity or adverse events;\n* Women who are pregnant or breastfeeding;\n* Concurrent medical condition requiring the use of immunosuppressive medications, or immunosuppressive doses of systemic or absorbable topical corticosteroids \\>10 mg prednisolone daily equivalent;\n* Use of other investigational drugs before study drug administration 30 days or 5 half-times before study inclusion;\n* Psychological, familial, sociological, or geographical conditions that potentially hamper compliance with the study protocol and follow-up schedule; those conditions should be discussed with the subject before registration in the trial.",
+              "value": "Inclusion Criteria:\n\n* Men and women, at least 16 years of age;\n* World Health Organization (WHO) Performance Status 0 or 1;\n* Cytologically or histologically confirmed resectable stage III melanoma of cutaneous or unknown primary origin with one or more macroscopic lymph node metastases (clinical detectable), that can be biopsied and a maximum of 3 additional resectable in-transit metastases Clinical detectable lymph nodes are defined as either a palpable node, confirmed as melanoma by pathology, or a non-palpable but enlarged lymph node according to RECISTv1.1 (at least 15 mm in short axis), confirmed as melanoma by pathology, or a PET scan positive lymph node of any size confirmed as melanoma by pathology;\n* No other malignancies, except adequately treated and with a cancer-related life-expectancy of more than 5 years;\n* No prior immunotherapy targeting CTLA-4, PD-1 or PD-L1;\n* No prior targeted therapy targeting BRAF and/or MEK;\n* No immunosuppressive medications within 6 months prior study inclusion (steroids equivalent to prednisolone \u226410 mg are allowed);\n* Screening laboratory values must meet the following criteria: WBC \u22652.0x109/L, neutrophils \u22651.5x109/L, platelets \u2265100x109/L, hemoglobin \u22655.5 mmol/L, creatinine \u22641.5xupper limit of normal (ULN), AST \u22641.5x ULN, ALT \u22641.5x ULN, bilirubin \u22641.5x ULN (except for subjects with Gilbert syndrome who must have a total bilirubin \\<3.0 mg/dL);\n* LDH level \\<1.5x ULN;\n* Women of childbearing potential (WOCP) must use appropriate method(s) of contraception, i.e * Subjects with underlying medical conditions or active infection that, in the investigator's opinion, will make the administration of study drug hazardous or obscure the interpretation of toxicity or adverse events;\n* Women who are pregnant or breastfeeding;\n* Concurrent medical condition requiring the use of immunosuppressive medications, or immunosuppressive doses of systemic or absorbable topical corticosteroids \\>10 mg prednisolone daily equivalent;\n* Use of other investigational drugs before study drug administration 30 days or 5 half-times before study inclusion;\n* Psychological, familial, sociological, or geographical conditions that potentially hamper compliance with the study protocol and follow-up schedule; those conditions should be discussed with the subject before registration in the trial.",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -176350,7 +176350,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Naïve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
+              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Na\u00efve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -177912,7 +177912,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Naïve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
+              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Na\u00efve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -179474,7 +179474,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Naïve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
+              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Na\u00efve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -181048,7 +181048,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Naïve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
+              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Na\u00efve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -182610,7 +182610,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Naïve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
+              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Na\u00efve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -184172,7 +184172,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Naïve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
+              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous melanoma or unknown primary melanoma (AJCC Stage IIIB, IIIC, or IV)\n* Presence of BRAF V600E or V600K mutation in tumor tissue prior to randomization\n* Na\u00efve untreated patients or patients who have progressed on or after prior first line immunotherapy for resectable locally advanced or metastatic melanoma; prior adjuvant therapy is permitted (e.g",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -185751,7 +185751,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* adults, \\>/=18 years of age\n* metastatic melanoma, stage IIIC or IV (AJCC)\n* treatment-naïve (no prior systemic anticancer therapy)\n* positive for BRAF V600E mutation\n* measurable disease by RECIST criteria\n* negative pregnancy test and, for fertile men and women, effective contraception during treatment and for 6 months after completion\n\nExclusion Criteria:\n\n* active central nervous system metastases\n* history of carcinomatous meningitis\n* severe cardiovascular disease within 6 months prior to study drug administration\n* previous malignancy within 5 years prior to study, except for basal or squamous cell carcinoma of the skin, melanoma in-situ, or carcinoma in-situ of the cervix",
+              "value": "Inclusion Criteria:\n\n* adults, \\>/=18 years of age\n* metastatic melanoma, stage IIIC or IV (AJCC)\n* treatment-na\u00efve (no prior systemic anticancer therapy)\n* positive for BRAF V600E mutation\n* measurable disease by RECIST criteria\n* negative pregnancy test and, for fertile men and women, effective contraception during treatment and for 6 months after completion\n\nExclusion Criteria:\n\n* active central nervous system metastases\n* history of carcinomatous meningitis\n* severe cardiovascular disease within 6 months prior to study drug administration\n* previous malignancy within 5 years prior to study, except for basal or squamous cell carcinoma of the skin, melanoma in-situ, or carcinoma in-situ of the cervix",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -187313,7 +187313,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* adults, \\>/=18 years of age\n* metastatic melanoma, stage IIIC or IV (AJCC)\n* treatment-naïve (no prior systemic anticancer therapy)\n* positive for BRAF V600E mutation\n* measurable disease by RECIST criteria\n* negative pregnancy test and, for fertile men and women, effective contraception during treatment and for 6 months after completion\n\nExclusion Criteria:\n\n* active central nervous system metastases\n* history of carcinomatous meningitis\n* severe cardiovascular disease within 6 months prior to study drug administration\n* previous malignancy within 5 years prior to study, except for basal or squamous cell carcinoma of the skin, melanoma in-situ, or carcinoma in-situ of the cervix",
+              "value": "Inclusion Criteria:\n\n* adults, \\>/=18 years of age\n* metastatic melanoma, stage IIIC or IV (AJCC)\n* treatment-na\u00efve (no prior systemic anticancer therapy)\n* positive for BRAF V600E mutation\n* measurable disease by RECIST criteria\n* negative pregnancy test and, for fertile men and women, effective contraception during treatment and for 6 months after completion\n\nExclusion Criteria:\n\n* active central nervous system metastases\n* history of carcinomatous meningitis\n* severe cardiovascular disease within 6 months prior to study drug administration\n* previous malignancy within 5 years prior to study, except for basal or squamous cell carcinoma of the skin, melanoma in-situ, or carcinoma in-situ of the cervix",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -195024,7 +195024,7 @@
               "confidence": 0.0
             },
             "AttributeType.PUBLICATION_NAME": {
-              "value": "Lancet 2012; 380: 358–65",
+              "value": "Lancet 2012; 380: 358\u201365",
               "confidence": 1.0,
               "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
@@ -196586,7 +196586,7 @@
               "confidence": 0.0
             },
             "AttributeType.PUBLICATION_NAME": {
-              "value": "Lancet 2012; 380: 358–65",
+              "value": "Lancet 2012; 380: 358\u201365",
               "confidence": 1.0,
               "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
@@ -202993,7 +202993,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous or melanoma of unknown primary AJCC Stage IIIC or IV (uveal and mucosal melanoma are excluded)\n* Presence of NRAS Q61 mutation in tumor tissue prior to randomization as determined by a Novartis designated central laboratory\n* Naïve untreated patients or patients who have progressed on or after any number of prior lines of immunotherapy for unresectable locally advanced or metastatic melanoma\n* Evidence of at least one measurable lesion as detected by radiological or photographic methods\n* Adequate bone marrow, organ function, cardiac and laboratory parameters\n* Normal functioning of daily living activities\n\nExclusion Criteria:\n\n* Any untreated CNS metastases\n* Uveal or mucosal melanoma\n* History of or current evidence of retinal vein occlusion (RVO) or risk factors of RVO\n* Patients with washout period \\< 6 weeks from the last dose of ipilimumab or other immunotherapy",
+              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous or melanoma of unknown primary AJCC Stage IIIC or IV (uveal and mucosal melanoma are excluded)\n* Presence of NRAS Q61 mutation in tumor tissue prior to randomization as determined by a Novartis designated central laboratory\n* Na\u00efve untreated patients or patients who have progressed on or after any number of prior lines of immunotherapy for unresectable locally advanced or metastatic melanoma\n* Evidence of at least one measurable lesion as detected by radiological or photographic methods\n* Adequate bone marrow, organ function, cardiac and laboratory parameters\n* Normal functioning of daily living activities\n\nExclusion Criteria:\n\n* Any untreated CNS metastases\n* Uveal or mucosal melanoma\n* History of or current evidence of retinal vein occlusion (RVO) or risk factors of RVO\n* Patients with washout period \\< 6 weeks from the last dose of ipilimumab or other immunotherapy",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -204555,7 +204555,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous or melanoma of unknown primary AJCC Stage IIIC or IV (uveal and mucosal melanoma are excluded)\n* Presence of NRAS Q61 mutation in tumor tissue prior to randomization as determined by a Novartis designated central laboratory\n* Naïve untreated patients or patients who have progressed on or after any number of prior lines of immunotherapy for unresectable locally advanced or metastatic melanoma\n* Evidence of at least one measurable lesion as detected by radiological or photographic methods\n* Adequate bone marrow, organ function, cardiac and laboratory parameters\n* Normal functioning of daily living activities\n\nExclusion Criteria:\n\n* Any untreated CNS metastases\n* Uveal or mucosal melanoma\n* History of or current evidence of retinal vein occlusion (RVO) or risk factors of RVO\n* Patients with washout period \\< 6 weeks from the last dose of ipilimumab or other immunotherapy",
+              "value": "Inclusion Criteria:\n\n* Diagnosis of locally advanced, unresectable or metastatic cutaneous or melanoma of unknown primary AJCC Stage IIIC or IV (uveal and mucosal melanoma are excluded)\n* Presence of NRAS Q61 mutation in tumor tissue prior to randomization as determined by a Novartis designated central laboratory\n* Na\u00efve untreated patients or patients who have progressed on or after any number of prior lines of immunotherapy for unresectable locally advanced or metastatic melanoma\n* Evidence of at least one measurable lesion as detected by radiological or photographic methods\n* Adequate bone marrow, organ function, cardiac and laboratory parameters\n* Normal functioning of daily living activities\n\nExclusion Criteria:\n\n* Any untreated CNS metastases\n* Uveal or mucosal melanoma\n* History of or current evidence of retinal vein occlusion (RVO) or risk factors of RVO\n* Patients with washout period \\< 6 weeks from the last dose of ipilimumab or other immunotherapy",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -212386,7 +212386,7 @@
               "confidence": 0.9
             },
             "AttributeType.SECONDARY_ENDPOINT": {
-              "value": "Part A: Steady State Concentration of Trametinib With Concomitant Administration of Dabrafenib; Part B: AUC [0-tau] of Dabrafenib (DAB) and Its Metabolite in Combination With Trametinib; Part B: Pre-dose (Trough) Concentration at the End of the Dosing Interval (Ctau) and Maximum Plasma Concentration (Cmax) of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B: Tmax of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B (Analyte=GSK1120212): AUC (0-tau) Assessment of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Ctau and Cmax Assessments of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Tmax Assessment of Trametinib in Combination With Dabrafenib; Part B: Number of Participants With BRAFi-naïve Mutant Metastatic Melanoma With the Best Overall Response as Assessed by Investigator; Part B: Duration of Response as Assessed by the Investigator in Participants With BRAFi-naïve Mutant Metastatic Melanoma; Part B: Progression-free Survival (PFS) as Assessed by the Investigator in Participants With BRAFi-naïve Mutant Metastatic Melanoma; Part B: Overall Survival (OS) in BRAFi Naïve Melanoma Participants; Part B: Pre- and Post-dose H-scores for Individual Participants; Part C (Randomized): Overall Survival (OS); Part C: Plasma Concentrations of Dabrafenib and Its Metabolites; Part C: Plasma Concentrations of Trametinib; Part C: Oral Clearance (CL/F) of Dabrafenib and Trametinib; Part C: Oral Volume of Distribution (V/F) of Dabrafenib and Trametinib; Part D: Cmax of Dabrafenib Metabolites; Part D: Tmax of Dabrafenib Metabolites; Part D: Area Under the Concentration-time Curve (AUC) of Dabrafenib Metabolites; Part D: Cmax Assessment of Trametinib; Part D: Tmax Assessment of Trametinib; Part D: Area Under the Concentration-time Curve Assessment of Trametinib; Part D: Number of Participants With the Best Overall Response as Assessed by the Investigator in Participants; Part D: Duration of Response as Assessed by the Investigator; Part D: Progression-free Survival (PFS) as Assessed by the Investigator; Part D: Overall Survival (OS)",
+              "value": "Part A: Steady State Concentration of Trametinib With Concomitant Administration of Dabrafenib; Part B: AUC [0-tau] of Dabrafenib (DAB) and Its Metabolite in Combination With Trametinib; Part B: Pre-dose (Trough) Concentration at the End of the Dosing Interval (Ctau) and Maximum Plasma Concentration (Cmax) of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B: Tmax of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B (Analyte=GSK1120212): AUC (0-tau) Assessment of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Ctau and Cmax Assessments of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Tmax Assessment of Trametinib in Combination With Dabrafenib; Part B: Number of Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma With the Best Overall Response as Assessed by Investigator; Part B: Duration of Response as Assessed by the Investigator in Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma; Part B: Progression-free Survival (PFS) as Assessed by the Investigator in Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma; Part B: Overall Survival (OS) in BRAFi Na\u00efve Melanoma Participants; Part B: Pre- and Post-dose H-scores for Individual Participants; Part C (Randomized): Overall Survival (OS); Part C: Plasma Concentrations of Dabrafenib and Its Metabolites; Part C: Plasma Concentrations of Trametinib; Part C: Oral Clearance (CL/F) of Dabrafenib and Trametinib; Part C: Oral Volume of Distribution (V/F) of Dabrafenib and Trametinib; Part D: Cmax of Dabrafenib Metabolites; Part D: Tmax of Dabrafenib Metabolites; Part D: Area Under the Concentration-time Curve (AUC) of Dabrafenib Metabolites; Part D: Cmax Assessment of Trametinib; Part D: Tmax Assessment of Trametinib; Part D: Area Under the Concentration-time Curve Assessment of Trametinib; Part D: Number of Participants With the Best Overall Response as Assessed by the Investigator in Participants; Part D: Duration of Response as Assessed by the Investigator; Part D: Progression-free Survival (PFS) as Assessed by the Investigator; Part D: Overall Survival (OS)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -213948,7 +213948,7 @@
               "confidence": 0.9
             },
             "AttributeType.SECONDARY_ENDPOINT": {
-              "value": "Part A: Steady State Concentration of Trametinib With Concomitant Administration of Dabrafenib; Part B: AUC [0-tau] of Dabrafenib (DAB) and Its Metabolite in Combination With Trametinib; Part B: Pre-dose (Trough) Concentration at the End of the Dosing Interval (Ctau) and Maximum Plasma Concentration (Cmax) of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B: Tmax of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B (Analyte=GSK1120212): AUC (0-tau) Assessment of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Ctau and Cmax Assessments of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Tmax Assessment of Trametinib in Combination With Dabrafenib; Part B: Number of Participants With BRAFi-naïve Mutant Metastatic Melanoma With the Best Overall Response as Assessed by Investigator; Part B: Duration of Response as Assessed by the Investigator in Participants With BRAFi-naïve Mutant Metastatic Melanoma; Part B: Progression-free Survival (PFS) as Assessed by the Investigator in Participants With BRAFi-naïve Mutant Metastatic Melanoma; Part B: Overall Survival (OS) in BRAFi Naïve Melanoma Participants; Part B: Pre- and Post-dose H-scores for Individual Participants; Part C (Randomized): Overall Survival (OS); Part C: Plasma Concentrations of Dabrafenib and Its Metabolites; Part C: Plasma Concentrations of Trametinib; Part C: Oral Clearance (CL/F) of Dabrafenib and Trametinib; Part C: Oral Volume of Distribution (V/F) of Dabrafenib and Trametinib; Part D: Cmax of Dabrafenib Metabolites; Part D: Tmax of Dabrafenib Metabolites; Part D: Area Under the Concentration-time Curve (AUC) of Dabrafenib Metabolites; Part D: Cmax Assessment of Trametinib; Part D: Tmax Assessment of Trametinib; Part D: Area Under the Concentration-time Curve Assessment of Trametinib; Part D: Number of Participants With the Best Overall Response as Assessed by the Investigator in Participants; Part D: Duration of Response as Assessed by the Investigator; Part D: Progression-free Survival (PFS) as Assessed by the Investigator; Part D: Overall Survival (OS)",
+              "value": "Part A: Steady State Concentration of Trametinib With Concomitant Administration of Dabrafenib; Part B: AUC [0-tau] of Dabrafenib (DAB) and Its Metabolite in Combination With Trametinib; Part B: Pre-dose (Trough) Concentration at the End of the Dosing Interval (Ctau) and Maximum Plasma Concentration (Cmax) of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B: Tmax of Dabrafenib and Its Metabolite in Combination With Trametinib; Part B (Analyte=GSK1120212): AUC (0-tau) Assessment of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Ctau and Cmax Assessments of Trametinib in Combination With Dabrafenib; Part B (Analyte=GSK1120212): Tmax Assessment of Trametinib in Combination With Dabrafenib; Part B: Number of Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma With the Best Overall Response as Assessed by Investigator; Part B: Duration of Response as Assessed by the Investigator in Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma; Part B: Progression-free Survival (PFS) as Assessed by the Investigator in Participants With BRAFi-na\u00efve Mutant Metastatic Melanoma; Part B: Overall Survival (OS) in BRAFi Na\u00efve Melanoma Participants; Part B: Pre- and Post-dose H-scores for Individual Participants; Part C (Randomized): Overall Survival (OS); Part C: Plasma Concentrations of Dabrafenib and Its Metabolites; Part C: Plasma Concentrations of Trametinib; Part C: Oral Clearance (CL/F) of Dabrafenib and Trametinib; Part C: Oral Volume of Distribution (V/F) of Dabrafenib and Trametinib; Part D: Cmax of Dabrafenib Metabolites; Part D: Tmax of Dabrafenib Metabolites; Part D: Area Under the Concentration-time Curve (AUC) of Dabrafenib Metabolites; Part D: Cmax Assessment of Trametinib; Part D: Tmax Assessment of Trametinib; Part D: Area Under the Concentration-time Curve Assessment of Trametinib; Part D: Number of Participants With the Best Overall Response as Assessed by the Investigator in Participants; Part D: Duration of Response as Assessed by the Investigator; Part D: Progression-free Survival (PFS) as Assessed by the Investigator; Part D: Overall Survival (OS)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -215532,12 +215532,12 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Participants with histologically confirmed melanoma, either unresectable stage IIIc or stage IV metastatic melanoma, as defined by the American Joint Committee on Cancer 7th edition Unresectability of stage IIIc disease must have confirmation from a surgical oncologist\n* Participants must be naïve to treatment for locally advanced unresectable or metastatic disease (ie, no prior systemic anti-cancer therapy for advanced disease; stage IIIc and IV)",
+              "value": "Inclusion Criteria:\n\n* Participants with histologically confirmed melanoma, either unresectable stage IIIc or stage IV metastatic melanoma, as defined by the American Joint Committee on Cancer 7th edition Unresectability of stage IIIc disease must have confirmation from a surgical oncologist\n* Participants must be na\u00efve to treatment for locally advanced unresectable or metastatic disease (ie, no prior systemic anti-cancer therapy for advanced disease; stage IIIc and IV)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "Prior adjuvant immunotherapy (including ipilimumab) is allowed\n* Documentation of BRAF V600 mutation-positive status in melanoma tumor tissue (archival or newly obtained tumor samples) using the cobas 4800 BRAF V600 mutation test\n* Measurable disease per RECIST v1.1\n* Eastern Clinical Oncology Group performance status of 0 or 1\n* Consent to provide archival for biomarker analyses\n* Consent to undergo tumor biopsies for biomarker analyses\n* Life expectancy greater than or equal to (≥) 12 weeks\n* Adequate hematologic and end organ function\n\nExclusion Criteria:\n\n* History of prior rapidly accelerated fibrosarcoma or mitogen-activated protein kinase pathway inhibitor treatment\n* Palliative radiotherapy within 14 days prior to the first dose of study treatment\n* Major surgery or traumatic injury within 14 days prior to first dose of study treatment\n* Active malignancy other than melanoma that could potentially interfere with the interpretation of efficacy measures",
+              "value": "Prior adjuvant immunotherapy (including ipilimumab) is allowed\n* Documentation of BRAF V600 mutation-positive status in melanoma tumor tissue (archival or newly obtained tumor samples) using the cobas 4800 BRAF V600 mutation test\n* Measurable disease per RECIST v1.1\n* Eastern Clinical Oncology Group performance status of 0 or 1\n* Consent to provide archival for biomarker analyses\n* Consent to undergo tumor biopsies for biomarker analyses\n* Life expectancy greater than or equal to (\u2265) 12 weeks\n* Adequate hematologic and end organ function\n\nExclusion Criteria:\n\n* History of prior rapidly accelerated fibrosarcoma or mitogen-activated protein kinase pathway inhibitor treatment\n* Palliative radiotherapy within 14 days prior to the first dose of study treatment\n* Major surgery or traumatic injury within 14 days prior to first dose of study treatment\n* Active malignancy other than melanoma that could potentially interfere with the interpretation of efficacy measures",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -217094,12 +217094,12 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_INCLUSION_CRITERIA": {
-              "value": "Inclusion Criteria:\n\n* Participants with histologically confirmed melanoma, either unresectable stage IIIc or stage IV metastatic melanoma, as defined by the American Joint Committee on Cancer 7th edition Unresectability of stage IIIc disease must have confirmation from a surgical oncologist\n* Participants must be naïve to treatment for locally advanced unresectable or metastatic disease (ie, no prior systemic anti-cancer therapy for advanced disease; stage IIIc and IV)",
+              "value": "Inclusion Criteria:\n\n* Participants with histologically confirmed melanoma, either unresectable stage IIIc or stage IV metastatic melanoma, as defined by the American Joint Committee on Cancer 7th edition Unresectability of stage IIIc disease must have confirmation from a surgical oncologist\n* Participants must be na\u00efve to treatment for locally advanced unresectable or metastatic disease (ie, no prior systemic anti-cancer therapy for advanced disease; stage IIIc and IV)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "Prior adjuvant immunotherapy (including ipilimumab) is allowed\n* Documentation of BRAF V600 mutation-positive status in melanoma tumor tissue (archival or newly obtained tumor samples) using the cobas 4800 BRAF V600 mutation test\n* Measurable disease per RECIST v1.1\n* Eastern Clinical Oncology Group performance status of 0 or 1\n* Consent to provide archival for biomarker analyses\n* Consent to undergo tumor biopsies for biomarker analyses\n* Life expectancy greater than or equal to (≥) 12 weeks\n* Adequate hematologic and end organ function\n\nExclusion Criteria:\n\n* History of prior rapidly accelerated fibrosarcoma or mitogen-activated protein kinase pathway inhibitor treatment\n* Palliative radiotherapy within 14 days prior to the first dose of study treatment\n* Major surgery or traumatic injury within 14 days prior to first dose of study treatment\n* Active malignancy other than melanoma that could potentially interfere with the interpretation of efficacy measures",
+              "value": "Prior adjuvant immunotherapy (including ipilimumab) is allowed\n* Documentation of BRAF V600 mutation-positive status in melanoma tumor tissue (archival or newly obtained tumor samples) using the cobas 4800 BRAF V600 mutation test\n* Measurable disease per RECIST v1.1\n* Eastern Clinical Oncology Group performance status of 0 or 1\n* Consent to provide archival for biomarker analyses\n* Consent to undergo tumor biopsies for biomarker analyses\n* Life expectancy greater than or equal to (\u2265) 12 weeks\n* Adequate hematologic and end organ function\n\nExclusion Criteria:\n\n* History of prior rapidly accelerated fibrosarcoma or mitogen-activated protein kinase pathway inhibitor treatment\n* Palliative radiotherapy within 14 days prior to the first dose of study treatment\n* Major surgery or traumatic injury within 14 days prior to first dose of study treatment\n* Active malignancy other than melanoma that could potentially interfere with the interpretation of efficacy measures",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -218673,7 +218673,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -220235,7 +220235,7 @@
               "confidence": 0.0
             },
             "AttributeType.BIOMARKERS_EXCLUSION_CRITERIA": {
-              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment naïve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
+              "value": "For more information regarding BMS clinical trial participation, please visit www.BMSStudyConnect.com\n\nInclusion Criteria:\n\n* Histologically confirmed stage III (unresectable) or stage IV melanoma\n* Treatment na\u00efve patients\n* Measurable disease by computed tomography (CT) or Magnetic Resonance Imaging (MRI) per RECIST 1.1 criteria\n* Tumor tissue from an unresectable or metastatic site of disease for biomarker analyses\n* Eastern Cooperative Oncology Group (ECOG) performance status (PS) 0 or 1\n\nExclusion Criteria:\n\n* Active brain metastases or leptomeningeal metastases\n* Ocular melanoma\n* Subjects with active, known or suspected autoimmune disease\n* Subjects with a condition requiring systemic treatment with either corticosteroids (\\>10 mg daily prednisone equivalents) or other immunosuppressive medications within 14 days of treatment\n* Prior treatment with an anti-Programmed Death receptor-1 (PD-1), anti-Programmed Death-1 ligand-1 (PD-L1), anti-PD-L2, or anti-cytotoxic T lymphocyte associated antigen-4 (anti-CTLA-4) antibody",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -240586,7 +240586,7 @@
               "confidence": 0.9
             },
             "AttributeType.SECONDARY_ENDPOINT": {
-              "value": "ORR According to Immune-related Response Criteria (irRC) as Assessed by Investigator in Melanoma Participants (Parts B Plus D); ORR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 28 (AUC 0-28) in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Infinity (AUC 0-inf) in Solid Tumor Participants (Parts A and A1); Maximum Concentration (Cmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Time to Maximum Concentration (Tmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Terminal Half-Life (t ½) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 21 (AUC 0-21) in Solid Tumor Participants (Part A2); Area Under the Concentration-Time Curve of Pembrolizumab From Day 21 to Day 42 (AUC21-42) in Solid Tumor Participants (Part A2); Lowest Plasma Concentration (Ctrough) of Pembrolizumab in Solid Tumor Participants (Parts A, A1, and A2); Ctrough of Pembrolizumab in Melanoma Participants (Parts B and D); Ctrough of Pembrolizumab in NSCLC Participants (Parts C and F); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to Programmed Death-Ligand 1 (PD-L1) Immunohistochemical (IHC) Expression Status in Ipilimumab (Ipi)-Exposed and Ipi-Naive Melanoma Participants (Parts B Plus D); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to PD-L1 IHC Expression Status in Prior Treatment (TRT)-Naïve and Previously-Treated NSCLC Participants (Parts C Plus F); Disease Control Rate (DCR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Duration of Response (DOR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Progression Free Survival (PFS) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B Plus D); Overall Survival (OS) in Melanoma Participants (Parts B Plus D); DCR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DOR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); PFS According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DCR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); DOR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); PFS According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); OS in NSCLC Participants (Parts C Plus F); DCR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); DOR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); PFS According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F)",
+              "value": "ORR According to Immune-related Response Criteria (irRC) as Assessed by Investigator in Melanoma Participants (Parts B Plus D); ORR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 28 (AUC 0-28) in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Infinity (AUC 0-inf) in Solid Tumor Participants (Parts A and A1); Maximum Concentration (Cmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Time to Maximum Concentration (Tmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Terminal Half-Life (t \u00bd) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 21 (AUC 0-21) in Solid Tumor Participants (Part A2); Area Under the Concentration-Time Curve of Pembrolizumab From Day 21 to Day 42 (AUC21-42) in Solid Tumor Participants (Part A2); Lowest Plasma Concentration (Ctrough) of Pembrolizumab in Solid Tumor Participants (Parts A, A1, and A2); Ctrough of Pembrolizumab in Melanoma Participants (Parts B and D); Ctrough of Pembrolizumab in NSCLC Participants (Parts C and F); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to Programmed Death-Ligand 1 (PD-L1) Immunohistochemical (IHC) Expression Status in Ipilimumab (Ipi)-Exposed and Ipi-Naive Melanoma Participants (Parts B Plus D); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to PD-L1 IHC Expression Status in Prior Treatment (TRT)-Na\u00efve and Previously-Treated NSCLC Participants (Parts C Plus F); Disease Control Rate (DCR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Duration of Response (DOR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Progression Free Survival (PFS) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B Plus D); Overall Survival (OS) in Melanoma Participants (Parts B Plus D); DCR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DOR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); PFS According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DCR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); DOR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); PFS According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); OS in NSCLC Participants (Parts C Plus F); DCR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); DOR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); PFS According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
@@ -242148,7 +242148,7 @@
               "confidence": 0.9
             },
             "AttributeType.SECONDARY_ENDPOINT": {
-              "value": "ORR According to Immune-related Response Criteria (irRC) as Assessed by Investigator in Melanoma Participants (Parts B Plus D); ORR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 28 (AUC 0-28) in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Infinity (AUC 0-inf) in Solid Tumor Participants (Parts A and A1); Maximum Concentration (Cmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Time to Maximum Concentration (Tmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Terminal Half-Life (t ½) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 21 (AUC 0-21) in Solid Tumor Participants (Part A2); Area Under the Concentration-Time Curve of Pembrolizumab From Day 21 to Day 42 (AUC21-42) in Solid Tumor Participants (Part A2); Lowest Plasma Concentration (Ctrough) of Pembrolizumab in Solid Tumor Participants (Parts A, A1, and A2); Ctrough of Pembrolizumab in Melanoma Participants (Parts B and D); Ctrough of Pembrolizumab in NSCLC Participants (Parts C and F); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to Programmed Death-Ligand 1 (PD-L1) Immunohistochemical (IHC) Expression Status in Ipilimumab (Ipi)-Exposed and Ipi-Naive Melanoma Participants (Parts B Plus D); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to PD-L1 IHC Expression Status in Prior Treatment (TRT)-Naïve and Previously-Treated NSCLC Participants (Parts C Plus F); Disease Control Rate (DCR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Duration of Response (DOR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Progression Free Survival (PFS) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B Plus D); Overall Survival (OS) in Melanoma Participants (Parts B Plus D); DCR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DOR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); PFS According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DCR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); DOR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); PFS According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); OS in NSCLC Participants (Parts C Plus F); DCR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); DOR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); PFS According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F)",
+              "value": "ORR According to Immune-related Response Criteria (irRC) as Assessed by Investigator in Melanoma Participants (Parts B Plus D); ORR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 28 (AUC 0-28) in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Infinity (AUC 0-inf) in Solid Tumor Participants (Parts A and A1); Maximum Concentration (Cmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Time to Maximum Concentration (Tmax) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Terminal Half-Life (t \u00bd) of Pembrolizumab in Solid Tumor Participants (Parts A and A1); Area Under the Concentration-Time Curve of Pembrolizumab From Time 0 to Day 21 (AUC 0-21) in Solid Tumor Participants (Part A2); Area Under the Concentration-Time Curve of Pembrolizumab From Day 21 to Day 42 (AUC21-42) in Solid Tumor Participants (Part A2); Lowest Plasma Concentration (Ctrough) of Pembrolizumab in Solid Tumor Participants (Parts A, A1, and A2); Ctrough of Pembrolizumab in Melanoma Participants (Parts B and D); Ctrough of Pembrolizumab in NSCLC Participants (Parts C and F); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to Programmed Death-Ligand 1 (PD-L1) Immunohistochemical (IHC) Expression Status in Ipilimumab (Ipi)-Exposed and Ipi-Naive Melanoma Participants (Parts B Plus D); Maximum Change From Baseline (CFB) in Tumor Size Assessed by IRC Per RECIST 1.1 According to PD-L1 IHC Expression Status in Prior Treatment (TRT)-Na\u00efve and Previously-Treated NSCLC Participants (Parts C Plus F); Disease Control Rate (DCR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Duration of Response (DOR) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B and D); Progression Free Survival (PFS) According to RECIST 1.1 as Assessed by IRO in Melanoma Participants (Parts B Plus D); Overall Survival (OS) in Melanoma Participants (Parts B Plus D); DCR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DOR According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); PFS According to irRC as Assessed by Investigator in Melanoma Participants (Parts B Plus D); DCR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); DOR According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); PFS According to RECIST 1.1 as Assessed by IRC in NSCLC Participants (Parts C Plus F); OS in NSCLC Participants (Parts C Plus F); DCR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); DOR According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F); PFS According to irRC as Assessed by Investigator in NSCLC Participants (Parts C Plus F)",
               "source": "clinical_trials_api",
               "confidence": 0.9
             },
