@@ -10,22 +10,18 @@ import Link from 'next/link';
 const SKIN_CANCER_CATEGORIES = [
   'Basal Cell Carcinoma',
   'Cutaneous Squamous Cell Carcinoma',
-  'Resected Cutaneous Melanoma',
-  'Unresectable Cutaneous Melanoma',
+  'Cutaneous melanoma',
   'Uveal Melanoma',
   'Merkel Cell Carcinoma',
   'Acral Melanoma',
   'Mucosal Melanoma',
-  'Cutaneous Melanoma with CNS metastasis',
-  'Cutaneous melanoma with Brain metastasis',
+  'Cutaneous melanoma with Brain/CNS metastasis',
 ] as const;
 
 // Mapping of category names to slugs for consistent URL generation
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'Resected Cutaneous Melanoma': 'resected-cutaneous-melanoma',
-  'Unresectable Cutaneous Melanoma': 'unresectable-cutaneous-melanoma',
-  'Cutaneous melanoma with Brain metastasis': 'cutaneous-melanoma-with-brain-metastasis',
-  'Cutaneous Melanoma with CNS metastasis': 'cutaneous-melanoma-with-cns-metastasis',
+  'Cutaneous melanoma': 'cutaneous-melanoma',
+  'Cutaneous melanoma with Brain/CNS metastasis': 'cutaneous-melanoma-with-brain-cns-metastasis',
   'Uveal Melanoma': 'uveal-melanoma',
   'Mucosal Melanoma': 'mucosal-melanoma',
   'Acral Melanoma': 'acral-melanoma',

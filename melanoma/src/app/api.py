@@ -1215,6 +1215,41 @@ def _is_industry_funded(sponsors_value: Any) -> bool | None:
     return None
 
 
+def _normalize_cancer_type(cancer_type: str | None) -> str | None:
+    """Normalize cancer type names to handle merged categories.
+
+    Maps old category names to new unified names:
+    - "Resected Cutaneous Melanoma" and "Unresectable Cutaneous Melanoma" -> "Cutaneous melanoma"
+    - "Cutaneous melanoma with Brain metastasis" and "Cutaneous Melanoma with CNS metastasis" -> "Cutaneous melanoma with Brain/CNS metastasis"
+
+    Args:
+        cancer_type: Cancer type string to normalize
+
+    Returns:
+        Normalized cancer type string or None
+    """
+    if not cancer_type:
+        return None
+
+    normalized = cancer_type.strip()
+
+    # Map old names to new names
+    if (
+        normalized == "Resected Cutaneous Melanoma"
+        or normalized == "Unresectable Cutaneous Melanoma"
+    ):
+        return "Cutaneous melanoma"
+
+    if (
+        normalized == "Cutaneous melanoma with Brain metastasis"
+        or normalized == "Cutaneous Melanoma with CNS metastasis"
+        or normalized == "Cutaneous melanoma with Brain/CNS metastasis"
+    ):
+        return "Cutaneous melanoma with Brain/CNS metastasis"
+
+    return normalized
+
+
 def _filter_analytics_data(
     abstracts: list[dict],
     resource_type: str = "all",
@@ -1237,6 +1272,11 @@ def _filter_analytics_data(
         Filtered list of abstracts with filtered arm_results
     """
     filtered = []
+
+    # Normalize the requested cancer type
+    normalized_cancer_type = (
+        _normalize_cancer_type(cancer_type) if cancer_type else None
+    )
 
     for abstract in abstracts:
         arm_results = abstract.get("arm_results", {})
@@ -1264,8 +1304,8 @@ def _filter_analytics_data(
             if not abstract.get("publication_id") or abstract.get("abstract_id"):
                 continue
 
-        # Filter by cancer type
-        if cancer_type:
+        # Filter by cancer type (using normalized values)
+        if normalized_cancer_type:
             has_matching_cancer_type = False
             for arm in arm_results.values():
                 cancer_type_attr = _extract_attribute_value(
@@ -1275,7 +1315,13 @@ def _filter_analytics_data(
                     cancer_type_attr = _extract_attribute_value(
                         arm.get("attributes", {}), "cancer_type"
                     )
-                if cancer_type_attr and cancer_type_attr.lower() == cancer_type.lower():
+
+                # Normalize the trial's cancer type and compare with normalized requested type
+                normalized_trial_type = _normalize_cancer_type(cancer_type_attr)
+                if (
+                    normalized_trial_type
+                    and normalized_trial_type.lower() == normalized_cancer_type.lower()
+                ):
                     has_matching_cancer_type = True
                     break
             if not has_matching_cancer_type:
