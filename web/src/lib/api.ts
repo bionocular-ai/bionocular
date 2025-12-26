@@ -155,6 +155,7 @@ export interface AnalyticsFilters {
   cancer_type?: string;
   therapy_type?: string;
   funding_type?: 'all' | 'industry' | 'non-industry';
+  line_of_treatment?: string;
   has_metric?: string;
   skip?: number;
   limit?: number;
@@ -183,6 +184,9 @@ export const analyticsApi = {
     }
     if (filters.funding_type && filters.funding_type !== 'all') {
       params.append('funding_type', filters.funding_type);
+    }
+    if (filters.line_of_treatment && filters.line_of_treatment !== 'all') {
+      params.append('line_of_treatment', filters.line_of_treatment);
     }
     if (filters.has_metric) {
       params.append('has_metric', filters.has_metric);
