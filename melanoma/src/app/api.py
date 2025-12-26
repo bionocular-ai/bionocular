@@ -1221,6 +1221,7 @@ def _filter_analytics_data(
     cancer_type: str | None = None,
     therapy_type: str = "all",
     funding_type: str = "all",
+    line_of_treatment: str = "all",
     has_metric: str | None = None,
 ) -> list[dict]:
     """Filter analytics data based on various criteria.
@@ -1231,6 +1232,7 @@ def _filter_analytics_data(
         cancer_type: Optional cancer type to filter by
         therapy_type: Therapy type filter ('all' or specific type)
         funding_type: Funding type filter ('all', 'industry', 'non-industry')
+        line_of_treatment: Line of treatment filter ('all', 'neoadjuvant_resected', 'first_line', 'second_line', 'third_line_plus')
         has_metric: Optional metric name to filter arms that have this metric
 
     Returns:
@@ -1308,6 +1310,34 @@ def _filter_analytics_data(
                 if funding_type == "non-industry" and is_industry is not False:
                     continue
 
+            # Filter by line of treatment
+            if line_of_treatment != "all":
+                line_of_treatment_attr = _extract_attribute_value(
+                    attributes, "AttributeType.LINE_OF_TREATMENT"
+                )
+                # Skip arms without a valid line_of_treatment when filtering
+                if not line_of_treatment_attr:
+                    continue
+
+                line_of_treatment_value = line_of_treatment_attr.strip()
+                # Map frontend values to backend values
+                matches = False
+                if line_of_treatment == "neoadjuvant_resected":
+                    # Match only Neoadjuvant (Adjuvant is now separate)
+                    matches = line_of_treatment_value == "Neoadjuvant"
+                elif line_of_treatment == "adjuvant":
+                    # Match Adjuvant values
+                    matches = line_of_treatment_value == "Adjuvant*"
+                elif line_of_treatment == "first_line":
+                    matches = line_of_treatment_value == "First Line"
+                elif line_of_treatment == "second_line":
+                    matches = line_of_treatment_value == "Second Line"
+                elif line_of_treatment == "third_line_plus":
+                    matches = line_of_treatment_value == "Third Line plus"
+
+                if not matches:
+                    continue
+
             # Filter by has_metric (arm must have this metric with a valid value)
             if has_metric:
                 metric_key = f"AttributeType.{has_metric}"
@@ -1337,6 +1367,7 @@ async def get_analytics_data(
     cancer_type: str | None = None,
     therapy_type: str = "all",
     funding_type: str = "all",
+    line_of_treatment: str = "all",
     has_metric: str | None = None,
     db: Session = Depends(get_db_session),
 ) -> dict:
@@ -1349,6 +1380,7 @@ async def get_analytics_data(
         cancer_type: Optional cancer type to filter by
         therapy_type: Therapy type filter ('all' or specific type)
         funding_type: Funding type filter ('all', 'industry', 'non-industry')
+        line_of_treatment: Line of treatment filter ('all', 'neoadjuvant_resected', 'first_line', 'second_line', 'third_line_plus')
         has_metric: Optional metric name to filter arms that have this metric
 
     Returns:
@@ -1372,6 +1404,7 @@ async def get_analytics_data(
                 cancer_type=cancer_type,
                 therapy_type=therapy_type,
                 funding_type=funding_type,
+                line_of_treatment=line_of_treatment,
                 has_metric=has_metric,
             )
 
@@ -1431,6 +1464,7 @@ async def get_analytics_chart_data(
     cancer_type: str | None = None,
     therapy_type: str = "all",
     funding_type: str = "all",
+    line_of_treatment: str = "all",
     has_metric: str | None = None,
     db: Session = Depends(get_db_session),
 ) -> dict:
@@ -1445,6 +1479,7 @@ async def get_analytics_chart_data(
         cancer_type: Optional cancer type to filter by
         therapy_type: Therapy type filter ('all' or specific type)
         funding_type: Funding type filter ('all', 'industry', 'non-industry')
+        line_of_treatment: Line of treatment filter ('all', 'neoadjuvant_resected', 'first_line', 'second_line', 'third_line_plus')
         has_metric: Optional metric name to filter arms that have this metric
 
     Returns:
@@ -1475,6 +1510,7 @@ async def get_analytics_chart_data(
             cancer_type=cancer_type,
             therapy_type=therapy_type,
             funding_type=funding_type,
+            line_of_treatment=line_of_treatment,
             has_metric=has_metric,
         )
 

@@ -902,6 +902,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -1804,6 +1807,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -2695,6 +2701,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -3609,6 +3618,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         },
@@ -4500,6 +4512,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -7195,6 +7210,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -8086,6 +8104,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -8988,6 +9009,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         },
@@ -9879,6 +9903,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -12574,6 +12601,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -13476,6 +13506,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -14378,6 +14411,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -15269,6 +15305,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -16195,6 +16234,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -20679,6 +20721,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -32342,6 +32387,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -33233,6 +33281,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -34147,6 +34198,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -35038,6 +35092,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -37745,6 +37802,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -38647,6 +38707,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -39538,6 +39601,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -42245,6 +42311,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -43147,6 +43216,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -44038,6 +44110,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -44940,6 +45015,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -51217,6 +51295,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -52119,6 +52200,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -53010,6 +53094,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -53912,6 +53999,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -54803,6 +54893,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -55694,6 +55787,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -56596,6 +56692,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -57487,6 +57586,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -58389,6 +58491,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -61084,6 +61189,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -61986,6 +62094,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -62877,6 +62988,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -63779,6 +63893,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -65583,6 +65700,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -66485,6 +66605,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -67376,6 +67499,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -71864,6 +71990,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -72778,6 +72907,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -73680,6 +73812,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -79081,6 +79216,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -82691,6 +82829,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -94349,6 +94490,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -95251,6 +95395,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Adjuvant*"
             }
           }
         },
@@ -96142,6 +96289,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Adjuvant*"
             }
           }
         }
@@ -97056,6 +97206,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -98860,6 +99013,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -100664,6 +100820,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -105175,6 +105334,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -111456,6 +111618,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -112347,6 +112512,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -113249,6 +113417,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -116835,6 +117006,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -117737,6 +117911,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -118639,6 +118816,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -119541,6 +119721,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         },
@@ -120432,6 +120615,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -124030,6 +124216,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         },
@@ -124921,6 +125110,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -125823,6 +126015,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -126714,6 +126909,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -129409,6 +129607,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -130300,6 +130501,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -131202,6 +131406,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -132104,6 +132311,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -133006,6 +133216,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -133897,6 +134110,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -134811,6 +135027,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -135713,6 +135932,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         },
@@ -136604,6 +136826,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -137506,6 +137731,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -138408,6 +138636,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -139310,6 +139541,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }

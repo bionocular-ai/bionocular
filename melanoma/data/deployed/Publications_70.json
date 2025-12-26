@@ -2108,6 +2108,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -4169,6 +4172,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -6266,6 +6272,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -8415,6 +8424,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -10519,6 +10531,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -12617,6 +12632,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -14681,6 +14699,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -16745,6 +16766,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Neoadjuvant"
             }
           },
           "errors": [],
@@ -18872,6 +18896,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -20983,6 +21010,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -23056,6 +23086,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Neoadjuvant"
             }
           },
           "errors": [],
@@ -25148,6 +25181,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Neoadjuvant"
             }
           },
           "errors": [],
@@ -27240,6 +27276,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -29301,6 +29340,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -31377,6 +31419,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -33441,6 +33486,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -35535,6 +35583,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -37617,6 +37668,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -39704,6 +39758,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -41794,6 +41851,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -43888,6 +43948,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -45970,6 +46033,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -48069,6 +48135,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -50146,6 +50215,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -52211,6 +52283,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -54276,6 +54351,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -56388,6 +56466,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -58489,6 +58570,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -60602,6 +60686,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -62703,6 +62790,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -64796,6 +64886,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -66877,6 +66970,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -68958,6 +69054,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -71083,6 +71182,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -73196,6 +73298,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -75309,6 +75414,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -77464,6 +77572,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -79607,6 +79718,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -81750,6 +81864,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -83824,6 +83941,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -85886,6 +86006,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -87948,6 +88071,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -90041,6 +90167,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -92122,6 +92251,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -94258,6 +94390,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -96382,6 +96517,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -98486,6 +98624,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -100578,6 +100719,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -102725,6 +102869,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -104860,6 +105007,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -106952,6 +107102,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -109032,6 +109185,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -111112,6 +111268,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -113194,6 +113353,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -115264,6 +115426,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -117334,6 +117499,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -119452,6 +119620,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -121558,6 +121729,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -123697,6 +123871,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -125824,6 +126001,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -127951,6 +128131,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -130030,6 +130213,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -132127,6 +132313,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -134220,6 +134409,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -136301,6 +136493,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -138454,6 +138649,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -140595,6 +140793,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "First Line"
             }
           },
           "errors": [],
@@ -142709,6 +142910,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -144804,6 +145008,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -146887,6 +147094,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -148998,6 +149208,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -151097,6 +151310,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "AttributeType.LINE_OF_TREATMENT": {
+              "value": "Second Line"
             }
           },
           "errors": [],
@@ -151242,7 +151458,7 @@
               "extracted_at": "2025-11-19T11:21:36.502625"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -152676,6 +152892,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -152804,7 +153023,7 @@
               "extracted_at": "2025-11-19T11:21:36.502662"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -154238,6 +154457,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -154378,7 +154600,7 @@
               "extracted_at": "2025-11-19T11:25:47.366095"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -155812,6 +156034,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -155940,7 +156165,7 @@
               "extracted_at": "2025-11-19T11:25:47.366136"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -157374,6 +157599,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -157514,7 +157742,7 @@
               "extracted_at": "2025-11-19T11:35:04.936577"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Neoadjuvant",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -158948,6 +159176,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         },
@@ -159076,7 +159307,7 @@
               "extracted_at": "2025-11-19T11:35:04.936615"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Neoadjuvant",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -160510,6 +160741,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -160650,7 +160884,7 @@
               "extracted_at": "2025-11-19T11:37:03.905254"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Neoadjuvant",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -162084,6 +162318,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         },
@@ -162212,7 +162449,7 @@
               "extracted_at": "2025-11-19T11:37:03.905288"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Neoadjuvant",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -163646,6 +163883,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -163786,7 +164026,7 @@
               "extracted_at": "2025-11-19T11:40:13.440152"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Neoadjuvant",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -165220,6 +165460,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         },
@@ -165348,7 +165591,7 @@
               "extracted_at": "2025-11-19T11:40:13.440183"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Neoadjuvant",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -166782,6 +167025,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Neoadjuvant"
             }
           }
         }
@@ -166922,7 +167168,7 @@
               "extracted_at": "2025-11-19T11:44:42.795182"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -168356,6 +168602,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -168484,7 +168733,7 @@
               "extracted_at": "2025-11-19T11:44:42.795196"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -169918,6 +170167,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -170058,7 +170310,7 @@
               "extracted_at": "2025-11-19T11:47:13.272629"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -171492,6 +171744,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -171620,7 +171875,7 @@
               "extracted_at": "2025-11-19T11:47:13.272666"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -173054,6 +173309,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -173194,7 +173452,7 @@
               "extracted_at": "2025-11-19T11:50:01.283840"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -174628,6 +174886,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -174756,7 +175017,7 @@
               "extracted_at": "2025-11-19T11:50:01.283873"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -176190,6 +176451,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -176330,7 +176594,7 @@
               "extracted_at": "2025-11-19T11:52:36.039353"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -177764,6 +178028,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -177892,7 +178159,7 @@
               "extracted_at": "2025-11-19T11:52:36.039389"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -179326,6 +179593,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -179454,7 +179724,7 @@
               "extracted_at": "2025-11-19T11:52:36.039398"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -180888,6 +181158,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -181028,7 +181301,7 @@
               "extracted_at": "2025-11-19T11:54:51.811620"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -182462,6 +182735,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -182590,7 +182866,7 @@
               "extracted_at": "2025-11-19T11:54:51.811657"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -184024,6 +184300,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -184152,7 +184431,7 @@
               "extracted_at": "2025-11-19T11:54:51.811666"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -185586,6 +185865,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -185726,7 +186008,7 @@
               "extracted_at": "2025-11-19T11:59:31.465283"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -187160,6 +187442,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -187288,7 +187573,7 @@
               "extracted_at": "2025-11-19T11:59:31.465314"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -188722,6 +189007,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -188862,7 +189150,7 @@
               "extracted_at": "2025-11-19T12:02:02.032480"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -190296,6 +190584,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -190424,7 +190715,7 @@
               "extracted_at": "2025-11-19T12:02:02.032516"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -191858,6 +192149,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -191998,7 +192292,7 @@
               "extracted_at": "2025-11-19T12:04:19.002290"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -193432,6 +193726,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -193560,7 +193857,7 @@
               "extracted_at": "2025-11-19T12:04:19.002322"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -194994,6 +195291,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -195134,7 +195434,7 @@
               "extracted_at": "2025-11-19T12:06:54.034268"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -196568,6 +196868,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -196696,7 +196999,7 @@
               "extracted_at": "2025-11-19T12:06:54.034299"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -198130,6 +198433,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -198270,7 +198576,7 @@
               "extracted_at": "2025-11-19T12:11:41.652446"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -199704,6 +200010,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -199832,7 +200141,7 @@
               "extracted_at": "2025-11-19T12:11:41.652481"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -201266,6 +201575,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -201394,7 +201706,7 @@
               "extracted_at": "2025-11-19T12:11:41.652490"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -202828,6 +203140,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -202968,7 +203283,7 @@
               "extracted_at": "2025-11-19T12:13:49.778332"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -204402,6 +204717,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -204530,7 +204848,7 @@
               "extracted_at": "2025-11-19T12:13:49.778349"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -205964,6 +206282,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -209240,7 +209561,7 @@
               "extracted_at": "2025-11-19T12:26:41.024144"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -210674,6 +210995,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -210802,7 +211126,7 @@
               "extracted_at": "2025-11-19T12:26:41.024175"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -212236,6 +212560,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -212376,7 +212703,7 @@
               "extracted_at": "2025-11-19T12:29:28.300654"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -213810,6 +214137,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -213938,7 +214268,7 @@
               "extracted_at": "2025-11-19T12:29:28.300688"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -215372,6 +215702,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -215512,7 +215845,7 @@
               "extracted_at": "2025-11-19T12:37:30.424144"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -216946,6 +217279,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -217074,7 +217410,7 @@
               "extracted_at": "2025-11-19T12:37:30.424194"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -218508,6 +218844,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -218648,7 +218987,7 @@
               "extracted_at": "2025-11-19T12:42:48.127427"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -220082,6 +220421,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -220210,7 +220552,7 @@
               "extracted_at": "2025-11-19T12:42:48.127459"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -221644,6 +221986,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -221784,7 +222129,7 @@
               "extracted_at": "2025-11-19T12:45:24.622009"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -223218,6 +223563,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -223346,7 +223694,7 @@
               "extracted_at": "2025-11-19T12:45:24.622043"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -224780,6 +225128,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -224908,7 +225259,7 @@
               "extracted_at": "2025-11-19T12:45:24.622050"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -226342,6 +226693,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -226482,7 +226836,7 @@
               "extracted_at": "2025-11-19T12:48:30.215430"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -227916,6 +228270,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -228044,7 +228401,7 @@
               "extracted_at": "2025-11-19T12:48:30.215463"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -229478,6 +229835,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -229606,7 +229966,7 @@
               "extracted_at": "2025-11-19T12:48:30.215470"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -231040,6 +231400,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }
@@ -231180,7 +231543,7 @@
               "extracted_at": "2025-11-19T12:51:20.105132"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -232614,6 +232977,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -232742,7 +233108,7 @@
               "extracted_at": "2025-11-19T12:51:20.105162"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -234176,6 +234542,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -234304,7 +234673,7 @@
               "extracted_at": "2025-11-19T12:51:20.105169"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -235738,6 +236107,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -235878,7 +236250,7 @@
               "extracted_at": "2025-11-19T12:54:22.534799"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -237312,6 +237684,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -237440,7 +237815,7 @@
               "extracted_at": "2025-11-19T12:54:22.534833"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -238874,6 +239249,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         },
@@ -239002,7 +239380,7 @@
               "extracted_at": "2025-11-19T12:54:22.534840"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "First Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -240436,6 +240814,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "First Line"
             }
           }
         }
@@ -240576,7 +240957,7 @@
               "extracted_at": "2025-11-19T12:57:07.239706"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -242010,6 +242391,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         },
@@ -242138,7 +242522,7 @@
               "extracted_at": "2025-11-19T12:57:07.239740"
             },
             "AttributeType.LINE_OF_TREATMENT": {
-              "value": "Not found",
+              "value": "Second Line",
               "source": "clinical_trials_api",
               "confidence": 0.0
             },
@@ -243572,6 +243956,9 @@
               "value": "Not found",
               "source": "clinical_trials_api",
               "confidence": 0.0
+            },
+            "line_of_treatment": {
+              "value": "Second Line"
             }
           }
         }

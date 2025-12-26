@@ -85,11 +85,11 @@ const THERAPY_TYPE_OPTIONS = [
 
 const LINE_OF_TREATMENT_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: '1L', label: 'First Line' },
-  { value: '2L', label: 'Second Line' },
-  { value: '3L+', label: 'Third Line+' },
+  { value: 'neoadjuvant_resected', label: 'Neoadjuvant / Resected' },
   { value: 'adjuvant', label: 'Adjuvant' },
-  { value: 'neoadjuvant', label: 'Neoadjuvant' },
+  { value: 'first_line', label: 'First Line' },
+  { value: 'second_line', label: 'Second Line' },
+  { value: 'third_line_plus', label: 'Third Line plus' },
 ];
 
 const RESOURCE_TYPE_OPTIONS = [
@@ -485,6 +485,7 @@ export default function CategoryAnalyticsPage() {
       cancer_type: categoryName || undefined,
       therapy_type: therapyType,
       funding_type: fundingType as 'all' | 'industry' | 'non-industry',
+      line_of_treatment: lineOfTreatment,
       limit: 2000, // Request all matching records
     };
     
@@ -494,7 +495,7 @@ export default function CategoryAnalyticsPage() {
     }
     
     return filters;
-  }, [resourceType, categoryName, therapyType, fundingType, safetyParam, efficacyParam]);
+  }, [resourceType, categoryName, therapyType, fundingType, lineOfTreatment, safetyParam, efficacyParam]);
 
   // Fetch analytics data from backend with filters
   const { data: analyticsData, isLoading, error } = useQuery({
