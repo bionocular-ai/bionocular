@@ -43,17 +43,38 @@ import {
 // ============================================================================
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'resected-cutaneous-melanoma': 'Resected Cutaneous Melanoma',
-  'unresectable-cutaneous-melanoma': 'Unresectable Cutaneous Melanoma',
-  'cutaneous-melanoma-with-brain-metastasis': 'Cutaneous melanoma with Brain metastasis',
-  'cutaneous-melanoma-with-cns-metastasis': 'Cutaneous Melanoma with CNS metastasis',
+  'cutaneous-melanoma': 'Cutaneous melanoma',
+  'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
   'uveal-melanoma': 'Uveal Melanoma',
   'mucosal-melanoma': 'Mucosal Melanoma',
   'acral-melanoma': 'Acral Melanoma',
   'basal-cell-carcinoma': 'Basal Cell Carcinoma',
   'merkel-cell-carcinoma': 'Merkel Cell Carcinoma',
   'cutaneous-squamous-cell-carcinoma': 'Cutaneous Squamous Cell Carcinoma',
+  // Legacy slugs for backward compatibility
+  'resected-cutaneous-melanoma': 'Cutaneous melanoma',
+  'unresectable-cutaneous-melanoma': 'Cutaneous melanoma',
+  'cutaneous-melanoma-with-brain-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
+  'cutaneous-melanoma-with-cns-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
 };
+
+// Normalize cancer type names to handle legacy data
+function normalizeCancerType(cancerType: string | null | undefined): string | null {
+  if (!cancerType) return null;
+  const normalized = cancerType.trim();
+  
+  // Map old names to new names
+  if (normalized === 'Resected Cutaneous Melanoma' || normalized === 'Unresectable Cutaneous Melanoma') {
+    return 'Cutaneous melanoma';
+  }
+  if (normalized === 'Cutaneous melanoma with Brain metastasis' || 
+      normalized === 'Cutaneous Melanoma with CNS metastasis' ||
+      normalized === 'Cutaneous melanoma with Brain/CNS metastasis') {
+    return 'Cutaneous melanoma with Brain/CNS metastasis';
+  }
+  
+  return normalized;
+}
 
 function slugToCategory(slug: string): string {
   return CATEGORY_SLUG_MAP[slug] || slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -553,7 +574,12 @@ export default function CategoryAnalyticsPage() {
             ? String(cancerTypeAttr.value || '')
             : String(cancerTypeAttr || '');
           
-          if (cancerType && cancerType.toLowerCase() === categoryName.toLowerCase()) {
+          // Normalize both values for comparison
+          const normalizedTrialType = normalizeCancerType(cancerType);
+          const normalizedCategory = normalizeCancerType(categoryName);
+          
+          if (normalizedTrialType && normalizedCategory && 
+              normalizedTrialType.toLowerCase() === normalizedCategory.toLowerCase()) {
             return true;
           }
         }
