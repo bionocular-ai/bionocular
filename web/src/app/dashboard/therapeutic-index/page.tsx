@@ -12,7 +12,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 
-export default function DashboardPage() {
+export default function TherapeuticIndexPage() {
   const { data: session } = useSession();
 
   const { data, isLoading, error } = useQuery({
@@ -118,3 +118,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

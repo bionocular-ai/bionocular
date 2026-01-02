@@ -16,6 +16,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..domain.models import BatchIngestionResponse, DocumentType, IngestionRequest
+from ..infrastructure.clinical_trials.factory import create_clinical_trials_service
 from ..infrastructure.database import (
     DocumentModel,
     create_storage_directories,
@@ -1931,6 +1932,192 @@ async def get_filesystem_info() -> dict:
 
     except Exception as e:
         logger.error(f"Error getting filesystem info: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+# Landscape API endpoints
+@app.get("/api/landscape/stats")
+async def get_landscape_stats() -> dict:
+    """Get landscape statistics for cancer type bubbles.
+
+    Returns:
+        Dictionary with landscape statistics:
+        {
+            "landscape": [
+                {
+                    "cancer_type": str,
+                    "total_api_count": int,
+                    "extracted_count": int,
+                    "bubble_size": int
+                }
+            ]
+        }
+    """
+    try:
+        service = create_clinical_trials_service()
+        stats = service.repository.get_landscape_stats()
+
+        return {"landscape": stats}
+
+    except Exception as e:
+        logger.error(f"Error fetching landscape stats: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/landscape/therapeutic-index")
+async def get_therapeutic_index(skip: int = 0, limit: int = 100) -> dict:
+    """Get therapeutic index trials (extracted subset).
+
+    Args:
+        skip: Number of records to skip
+        limit: Maximum number of records to return
+
+    Returns:
+        Dictionary with trials and pagination info
+    """
+    try:
+        service = create_clinical_trials_service()
+        trials, total = service.repository.get_therapeutic_index_trials(
+            skip=skip, limit=limit
+        )
+
+        return {
+            "trials": trials,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "has_more": (skip + limit) < total,
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching therapeutic index: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.post("/api/landscape/sync")
+async def trigger_landscape_sync() -> dict:
+    """Trigger manual sync of landscape data (admin endpoint).
+
+    Returns:
+        Dictionary with sync results
+    """
+    try:
+        from ..infrastructure.clinical_trials.cancer_type_mapping import (
+            ACTIVE_STATUSES,
+            SKIN_CANCER_TYPES,
+        )
+
+        service = create_clinical_trials_service()
+        results = []
+
+        for cancer_type in SKIN_CANCER_TYPES:
+            result = service.sync_cancer_type_universe(cancer_type, ACTIVE_STATUSES)
+            results.append(result)
+
+        return {
+            "status": "success",
+            "results": results,
+            "message": f"Synced {len(SKIN_CANCER_TYPES)} cancer types",
+        }
+
+    except Exception as e:
+        logger.error(f"Error syncing landscape: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+def _slug_to_category_name(slug: str) -> str:
+    """Convert URL slug to category name.
+
+    Args:
+        slug: URL slug (e.g., "cutaneous-melanoma")
+
+    Returns:
+        Category name (e.g., "Cutaneous melanoma")
+    """
+    slug_to_category_map = {
+        "cutaneous-melanoma": "Cutaneous melanoma",
+        "cutaneous-melanoma-with-brain-cns-metastasis": "Cutaneous melanoma with Brain/CNS metastasis",
+        "uveal-melanoma": "Uveal Melanoma",
+        "mucosal-melanoma": "Mucosal Melanoma",
+        "acral-melanoma": "Acral Melanoma",
+        "basal-cell-carcinoma": "Basal Cell Carcinoma",
+        "merkel-cell-carcinoma": "Merkel Cell Carcinoma",
+        "cutaneous-squamous-cell-carcinoma": "Cutaneous Squamous Cell Carcinoma",
+    }
+    return slug_to_category_map.get(slug, slug.replace("-", " ").title())
+
+
+@app.get("/api/landscape/disease-stats/{category}")
+async def get_disease_landscape_stats(category: str) -> dict:
+    """Get disease landscape statistics for a specific cancer type.
+
+    Args:
+        category: Category slug (e.g., "cutaneous-melanoma") or category name
+
+    Returns:
+        Dictionary with status, phase, and funder_type counts
+    """
+    try:
+        # Convert slug to category name if needed
+        category_name = _slug_to_category_name(category)
+
+        service = create_clinical_trials_service()
+
+        # Use SQLite when TRIALS_DATA_SOURCE=sqlite (production on Render)
+        # Fall back to JSON for local development
+        data_source = get_trials_data_source()
+        if data_source == "sqlite":
+            # Query SQLite database directly
+            stats = service.repository.get_disease_landscape_stats(category_name)
+        else:
+            # Read from pre-computed JSON file (local development)
+            stats = service.repository.get_disease_landscape_stats_from_json(
+                category_name
+            )
+
+        # Calculate overall status (sum of all statuses)
+        overall_status_count = sum(stats.get("status", {}).values())
+
+        # Format response with user-friendly status names
+        status_display = {
+            "Not yet recruiting": stats.get("status", {}).get("NOT_YET_RECRUITING", 0),
+            "Recruiting": stats.get("status", {}).get("RECRUITING", 0),
+            "Active, not recruiting": stats.get("status", {}).get(
+                "ACTIVE_NOT_RECRUITING", 0
+            ),
+            "Completed": stats.get("status", {}).get("COMPLETED", 0),
+            "Terminated": stats.get("status", {}).get("TERMINATED", 0),
+            "Enrolling by invitation": stats.get("status", {}).get(
+                "ENROLLING_BY_INVITATION", 0
+            ),
+            "Suspended": stats.get("status", {}).get("SUSPENDED", 0),
+            "Withdrawn": stats.get("status", {}).get("WITHDRAWN", 0),
+            "Unknown": stats.get("status", {}).get("UNKNOWN", 0),
+        }
+
+        return {
+            "status": {
+                "Overall Status": overall_status_count,
+                **status_display,
+            },
+            "phase": stats.get("phase", {}),
+            "funder_type": stats.get("funder_type", {"Industry": 0, "Non-Industry": 0}),
+            "extracted_count": stats.get("extracted_count", 0),
+        }
+
+    except Exception as e:
+        logger.error(
+            f"Error fetching disease landscape stats for {category}: {str(e)}",
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
         ) from e

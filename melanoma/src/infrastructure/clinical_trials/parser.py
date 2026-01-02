@@ -221,6 +221,30 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             sub_therapy=first_arm.sub_therapy if first_arm else None,
         )
 
+    def extract_status_from_api_json(self, api_json: dict) -> str:
+        """Extract trial status from API JSON response.
+
+        Args:
+            api_json: Raw JSON response from ClinicalTrials.gov v2 API
+
+        Returns:
+            Trial status string or "UNKNOWN" if not found
+        """
+        try:
+            status_module = api_json.get("protocolSection", {}).get("statusModule", {})
+            overall_status = status_module.get("overallStatus")
+
+            # Handle both string and dict formats
+            if isinstance(overall_status, str):
+                return overall_status
+            elif isinstance(overall_status, dict):
+                return overall_status.get("status", "UNKNOWN")
+            else:
+                return "UNKNOWN"
+        except Exception as e:
+            logger.warning(f"Error extracting status from API JSON: {e}")
+            return "UNKNOWN"
+
     def _check_trial_location(
         self, locations_str: Optional[str], target_country: str
     ) -> Optional[bool]:

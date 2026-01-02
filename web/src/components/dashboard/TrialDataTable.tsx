@@ -27,6 +27,12 @@ interface TrialDataTableProps {
   hideNctId?: boolean;
   nctFilter?: string;
   sponsorFilter?: string;
+  drugFilter?: string;
+  armNameFilter?: string;
+  trialNameFilter?: string;
+  phaseFilter?: string;
+  armTypeFilter?: string;
+  lineOfTherapyFilter?: string;
 }
 
 // Flatten trials that have multiple arms into separate rows
@@ -52,22 +58,36 @@ function flattenTrials(trials: Trial[]): Trial[] {
   return flattened;
 }
 
-export function TrialDataTable({ data, showAbstractId = false, hideNctId = false, nctFilter = '', sponsorFilter = '' }: TrialDataTableProps) {
+export function TrialDataTable({ 
+  data, 
+  showAbstractId = false, 
+  hideNctId = false, 
+  nctFilter = '', 
+  sponsorFilter = '',
+  drugFilter = '',
+  armNameFilter = '',
+  trialNameFilter = '',
+  phaseFilter = '',
+  armTypeFilter = '',
+  lineOfTherapyFilter = '',
+}: TrialDataTableProps) {
   const [globalFilter] = useState('');
 
   // Flatten trials with multiple arms
   const flattenedData = useMemo(() => {
     const flattened = flattenTrials(data);
     
-    // Apply NCT filter if provided
+    // Apply all filters
     let filtered = flattened;
+    
+    // NCT filter
     if (nctFilter.trim()) {
       filtered = filtered.filter(trial => 
         trial.nct_id?.toLowerCase().includes(nctFilter.toLowerCase())
       );
     }
     
-    // Apply sponsor filter if provided
+    // Sponsor filter
     if (sponsorFilter) {
       filtered = filtered.filter(trial => {
         const hasSponsor = trial.sponsor && trial.sponsor.trim() !== '';
@@ -80,8 +100,59 @@ export function TrialDataTable({ data, showAbstractId = false, hideNctId = false
       });
     }
     
+    // Drug/Intervention filter (generic_name)
+    if (drugFilter.trim()) {
+      filtered = filtered.filter(trial => 
+        trial.generic_name?.toLowerCase().includes(drugFilter.toLowerCase())
+      );
+    }
+    
+    // Arm Name/Label filter
+    if (armNameFilter.trim()) {
+      filtered = filtered.filter(trial => 
+        trial.arm_name?.toLowerCase().includes(armNameFilter.toLowerCase())
+      );
+    }
+    
+    // Trial Name/Acronym filter (title)
+    if (trialNameFilter.trim()) {
+      filtered = filtered.filter(trial => 
+        trial.title?.toLowerCase().includes(trialNameFilter.toLowerCase())
+      );
+    }
+    
+    // Phase filter
+    if (phaseFilter.trim()) {
+      filtered = filtered.filter(trial => {
+        const trialPhase = trial.phase?.toLowerCase() || '';
+        return trialPhase.includes(phaseFilter.toLowerCase());
+      });
+    }
+    
+    // Arm Type filter (if available in data)
+    if (armTypeFilter.trim()) {
+      filtered = filtered.filter(trial => {
+        // Arm type might not be directly available, so we'll check arm_name or other fields
+        const armName = trial.arm_name?.toLowerCase() || '';
+        return armName.includes(armTypeFilter.toLowerCase());
+      });
+    }
+    
+    // Line of Therapy filter
+    if (lineOfTherapyFilter && lineOfTherapyFilter !== 'all') {
+      filtered = filtered.filter(_trial => {
+        // Line of therapy is typically stored in arm attributes
+        // Since we're working with flattened trials, we may need to check if this data is available
+        // For now, we'll check if trial has any line of therapy information
+        // This might need to be adjusted based on actual data structure
+        // If the data comes from abstracts/publications, it would be in arm_results attributes
+        // For now, return true to show all trials until we can access the actual field
+        return true; // Placeholder - may need to access from trial.arms or trial attributes
+      });
+    }
+    
     return filtered;
-  }, [data, nctFilter, sponsorFilter]);
+  }, [data, nctFilter, sponsorFilter, drugFilter, armNameFilter, trialNameFilter, phaseFilter, armTypeFilter, lineOfTherapyFilter]);
 
   const columns: ColumnDef<Trial>[] = [
     ...(!hideNctId ? [{

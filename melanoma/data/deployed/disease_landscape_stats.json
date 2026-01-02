@@ -1,0 +1,210 @@
+{
+  "Basal Cell Carcinoma": {
+    "status": {
+      "NOT_YET_RECRUITING": 15,
+      "RECRUITING": 78,
+      "ACTIVE_NOT_RECRUITING": 23,
+      "COMPLETED": 273,
+      "TERMINATED": 32,
+      "ENROLLING_BY_INVITATION": 5,
+      "SUSPENDED": 3,
+      "WITHDRAWN": 13,
+      "UNKNOWN": 61
+    },
+    "phase": {
+      "Early Phase 1": 12,
+      "Phase 1": 87,
+      "Phase 2": 109,
+      "Phase 3": 36,
+      "Phase 4": 9,
+      "Not applicable": 250
+    },
+    "funder_type": {
+      "Industry": 122,
+      "Non-Industry": 381
+    },
+    "extracted_count": 13
+  },
+  "Cutaneous Squamous Cell Carcinoma": {
+    "status": {
+      "NOT_YET_RECRUITING": 31,
+      "RECRUITING": 178,
+      "ACTIVE_NOT_RECRUITING": 97,
+      "COMPLETED": 234,
+      "TERMINATED": 94,
+      "ENROLLING_BY_INVITATION": 3,
+      "SUSPENDED": 5,
+      "WITHDRAWN": 27,
+      "UNKNOWN": 68
+    },
+    "phase": {
+      "Early Phase 1": 21,
+      "Phase 1": 348,
+      "Phase 2": 155,
+      "Phase 3": 29,
+      "Phase 4": 5,
+      "Not applicable": 179
+    },
+    "funder_type": {
+      "Industry": 374,
+      "Non-Industry": 363
+    },
+    "extracted_count": 31
+  },
+  "Cutaneous melanoma": {
+    "status": {
+      "NOT_YET_RECRUITING": 78,
+      "RECRUITING": 507,
+      "ACTIVE_NOT_RECRUITING": 304,
+      "COMPLETED": 1657,
+      "TERMINATED": 520,
+      "ENROLLING_BY_INVITATION": 12,
+      "SUSPENDED": 18,
+      "WITHDRAWN": 134,
+      "UNKNOWN": 373
+    },
+    "phase": {
+      "Early Phase 1": 61,
+      "Phase 1": 1314,
+      "Phase 2": 1024,
+      "Phase 3": 190,
+      "Phase 4": 32,
+      "Not applicable": 982
+    },
+    "funder_type": {
+      "Industry": 1242,
+      "Non-Industry": 2361
+    },
+    "extracted_count": 269
+  },
+  "Uveal Melanoma": {
+    "status": {
+      "NOT_YET_RECRUITING": 3,
+      "RECRUITING": 48,
+      "ACTIVE_NOT_RECRUITING": 35,
+      "COMPLETED": 130,
+      "TERMINATED": 32,
+      "ENROLLING_BY_INVITATION": 1,
+      "SUSPENDED": 0,
+      "WITHDRAWN": 10,
+      "UNKNOWN": 29
+    },
+    "phase": {
+      "Early Phase 1": 3,
+      "Phase 1": 100,
+      "Phase 2": 104,
+      "Phase 3": 18,
+      "Phase 4": 2,
+      "Not applicable": 61
+    },
+    "funder_type": {
+      "Industry": 70,
+      "Non-Industry": 218
+    },
+    "extracted_count": 36
+  },
+  "Merkel Cell Carcinoma": {
+    "status": {
+      "NOT_YET_RECRUITING": 13,
+      "RECRUITING": 118,
+      "ACTIVE_NOT_RECRUITING": 68,
+      "COMPLETED": 242,
+      "TERMINATED": 79,
+      "ENROLLING_BY_INVITATION": 0,
+      "SUSPENDED": 3,
+      "WITHDRAWN": 22,
+      "UNKNOWN": 40
+    },
+    "phase": {
+      "Early Phase 1": 11,
+      "Phase 1": 317,
+      "Phase 2": 104,
+      "Phase 3": 20,
+      "Phase 4": 11,
+      "Not applicable": 122
+    },
+    "funder_type": {
+      "Industry": 307,
+      "Non-Industry": 278
+    },
+    "extracted_count": 29
+  },
+  "Acral Melanoma": {
+    "status": {
+      "NOT_YET_RECRUITING": 1,
+      "RECRUITING": 15,
+      "ACTIVE_NOT_RECRUITING": 4,
+      "COMPLETED": 12,
+      "TERMINATED": 8,
+      "ENROLLING_BY_INVITATION": 0,
+      "SUSPENDED": 0,
+      "WITHDRAWN": 1,
+      "UNKNOWN": 6
+    },
+    "phase": {
+      "Early Phase 1": 0,
+      "Phase 1": 13,
+      "Phase 2": 28,
+      "Phase 3": 3,
+      "Phase 4": 0,
+      "Not applicable": 3
+    },
+    "funder_type": {
+      "Industry": 10,
+      "Non-Industry": 37
+    },
+    "extracted_count": 9
+  },
+  "Mucosal Melanoma": {
+    "status": {
+      "NOT_YET_RECRUITING": 5,
+      "RECRUITING": 17,
+      "ACTIVE_NOT_RECRUITING": 15,
+      "COMPLETED": 38,
+      "TERMINATED": 11,
+      "ENROLLING_BY_INVITATION": 0,
+      "SUSPENDED": 0,
+      "WITHDRAWN": 7,
+      "UNKNOWN": 15
+    },
+    "phase": {
+      "Early Phase 1": 2,
+      "Phase 1": 32,
+      "Phase 2": 57,
+      "Phase 3": 6,
+      "Phase 4": 0,
+      "Not applicable": 11
+    },
+    "funder_type": {
+      "Industry": 24,
+      "Non-Industry": 84
+    },
+    "extracted_count": 20
+  },
+  "Cutaneous melanoma with Brain/CNS metastasis": {
+    "status": {
+      "NOT_YET_RECRUITING": 1,
+      "RECRUITING": 22,
+      "ACTIVE_NOT_RECRUITING": 20,
+      "COMPLETED": 65,
+      "TERMINATED": 36,
+      "ENROLLING_BY_INVITATION": 0,
+      "SUSPENDED": 1,
+      "WITHDRAWN": 9,
+      "UNKNOWN": 7
+    },
+    "phase": {
+      "Early Phase 1": 2,
+      "Phase 1": 52,
+      "Phase 2": 66,
+      "Phase 3": 9,
+      "Phase 4": 3,
+      "Not applicable": 29
+    },
+    "funder_type": {
+      "Industry": 36,
+      "Non-Industry": 125
+    },
+    "extracted_count": 17
+  }
+}

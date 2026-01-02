@@ -11,6 +11,11 @@ CLINICAL_TRIAL_DB_PATH = str(
     DATA_DIR / "clinical_trial_api" / "clinical_trial_api.db"
 )  # Cache for API responses
 
+# Disease landscape stats JSON file
+DISEASE_LANDSCAPE_STATS_PATH = str(
+    DATA_DIR / "deployed" / "disease_landscape_stats.json"
+)  # Pre-computed disease landscape statistics
+
 # Country variants for location checking
 COUNTRY_VARIANTS = {
     "United States": ["United States", "USA", "US"],

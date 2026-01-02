@@ -5,6 +5,7 @@ a clean interface for fetching clinical trial data with caching.
 """
 
 import logging
+import time
 from typing import Optional, Union
 
 from ..domain.clinical_trial_interfaces import (
@@ -284,3 +285,182 @@ class ClinicalTrialsService:
     def get_cache_stats(self) -> dict[str, int]:
         """Get cache statistics."""
         return self.repository.get_cache_stats()
+
+    def sync_cancer_type_universe(
+        self, cancer_type_tag: str, status_list: Optional[list[str]] = None
+    ) -> dict[str, any]:
+        """Sync trials for a cancer type from ClinicalTrials.gov API.
+
+        This method:
+        1. Searches for trials by cancer type (all statuses, or filtered by status_list if provided)
+        2. Updates the api_discovery table with found NCT numbers
+        3. Fetches and caches full trial data for new trials
+
+        Note: If status_list is None, fetches ALL trials for the cancer type.
+        The status_list is primarily used for bubble sizing on the dashboard.
+
+        Args:
+            cancer_type_tag: Normalized cancer type tag
+            status_list: Optional list of trial statuses to filter by.
+                        If None, fetches all trials regardless of status.
+
+        Returns:
+            Dictionary with sync summary:
+            {
+                "cancer_type": str,
+                "new_trials": int,
+                "total_found": int,
+                "cached": int
+            }
+        """
+        from ..infrastructure.clinical_trials.cancer_type_mapping import (
+            get_condition_search_terms,
+        )
+
+        if status_list:
+            logger.info(
+                f"Starting sync for cancer type '{cancer_type_tag}' with status filter: {status_list}"
+            )
+        else:
+            logger.info(
+                f"Starting sync for cancer type '{cancer_type_tag}' (all statuses)"
+            )
+
+        # Get condition search terms for this cancer type
+        condition_terms = get_condition_search_terms(cancer_type_tag)
+
+        # Special handling for Brain/CNS metastasis - search Brain and CNS separately
+        # for better coverage, but store under one category
+        if cancer_type_tag == "Cutaneous melanoma with Brain/CNS metastasis":
+            all_nct_numbers: set[str] = set()
+
+            # Split terms into Brain and CNS groups for separate searches
+            brain_terms = [
+                "Melanoma Brain Metastases",
+                "Melanoma Brain Metastasis",
+                "Cutaneous Melanoma with Brain Metastasis",
+                "Melanoma Metastatic to Brain",
+                "Brain Metastases Melanoma",
+                "Melanoma with Brain Metastases",
+            ]
+            cns_terms = [
+                "Melanoma CNS Metastases",
+                "Melanoma Central Nervous System Metastasis",
+                "Cutaneous Melanoma with CNS Metastasis",
+                "Melanoma Metastatic to Central Nervous System",
+                "CNS Metastases Melanoma",
+                "Melanoma with CNS Metastases",
+            ]
+
+            # Search Brain metastasis terms
+            logger.info(f"Searching Brain metastasis terms for '{cancer_type_tag}'")
+            for term in brain_terms:
+                nct_numbers = self.api_client.search_trials_by_condition(
+                    term, status_list or []
+                )
+                all_nct_numbers.update(nct_numbers)
+                logger.debug(f"Found {len(nct_numbers)} trials for term: {term}")
+
+            # Search CNS metastasis terms
+            logger.info(f"Searching CNS metastasis terms for '{cancer_type_tag}'")
+            for term in cns_terms:
+                nct_numbers = self.api_client.search_trials_by_condition(
+                    term, status_list or []
+                )
+                all_nct_numbers.update(nct_numbers)
+                logger.debug(f"Found {len(nct_numbers)} trials for term: {term}")
+
+            nct_numbers = list(all_nct_numbers)
+        else:
+            # For other types, try each condition term and merge results
+            all_nct_numbers_other: set[str] = set()
+            for term in condition_terms:
+                nct_numbers = self.api_client.search_trials_by_condition(
+                    term, status_list or []
+                )
+                all_nct_numbers_other.update(nct_numbers)
+            nct_numbers = list(all_nct_numbers_other)
+
+        total_found = len(nct_numbers)
+        logger.info(f"Found {total_found} trials for '{cancer_type_tag}'")
+
+        if not nct_numbers:
+            return {
+                "cancer_type": cancer_type_tag,
+                "new_trials": 0,
+                "total_found": 0,
+                "cached": 0,
+            }
+
+        # Get current status for each trial and batch upsert to discovery table
+        discovery_records: list[tuple[str, str, str]] = []
+        new_trials = 0
+        cached_count = 0
+
+        # Check which trials are already in discovery table for this cancer type
+        existing_ncts = self.repository.get_existing_discovery_ncts(
+            nct_numbers, cancer_type_tag
+        )
+
+        # Process each NCT number with progress tracking
+        total_ncts = len(nct_numbers)
+        logger.info(f"Processing {total_ncts} trials for '{cancer_type_tag}'...")
+
+        for idx, nct_number in enumerate(nct_numbers, 1):
+            is_new = nct_number not in existing_ncts
+            if is_new:
+                new_trials += 1
+
+            # Log progress for large batches
+            if total_ncts > 50 and idx % 50 == 0:
+                logger.info(
+                    f"Progress: {idx}/{total_ncts} trials processed for '{cancer_type_tag}'"
+                )
+
+            # Extract status from API response
+            current_status = "UNKNOWN"
+
+            # Try to get raw JSON from cache first (using repository method)
+            api_json = self.repository.get_cached_api_json(nct_number)
+
+            # If not in cache, fetch from API
+            if not api_json:
+                api_json = self.api_client.fetch_trial_data(nct_number)
+                if api_json:
+                    self.repository.save_trial_to_cache(nct_number, api_json)
+                    cached_count += 1
+                else:
+                    # If fetch failed, log but continue with UNKNOWN status
+                    logger.debug(
+                        f"Could not fetch data for {nct_number}, using UNKNOWN status"
+                    )
+
+            # Extract status from API JSON using parser
+            if api_json:
+                try:
+                    current_status = self.parser.extract_status_from_api_json(api_json)
+                except Exception as e:
+                    logger.warning(f"Error extracting status for {nct_number}: {e}")
+                    current_status = "UNKNOWN"
+
+            discovery_records.append((nct_number, cancer_type_tag, current_status))
+
+            # Small delay between requests to be respectful to API
+            if idx < total_ncts:  # Don't delay after last item
+                time.sleep(0.1)
+
+        # Batch upsert discovery records
+        if discovery_records:
+            self.repository.batch_upsert_discovery(discovery_records)
+
+        logger.info(
+            f"Sync complete for '{cancer_type_tag}': {new_trials} new trials, "
+            f"{total_found} total found, {cached_count} cached"
+        )
+
+        return {
+            "cancer_type": cancer_type_tag,
+            "new_trials": new_trials,
+            "total_found": total_found,
+            "cached": cached_count,
+        }
