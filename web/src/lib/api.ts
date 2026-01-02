@@ -93,6 +93,23 @@ export const trialsApi = {
     const response = await apiClient.get<AbstractData>(`/api/trials/abstract/${abstractId}`);
     return response.data;
   },
+
+  getLandscapeStats: async (): Promise<LandscapeStatsResponse> => {
+    const response = await apiClient.get<LandscapeStatsResponse>('/api/landscape/stats');
+    return response.data;
+  },
+
+  getTherapeuticIndex: async (skip = 0, limit = 100): Promise<TherapeuticIndexResponse> => {
+    const response = await apiClient.get<TherapeuticIndexResponse>('/api/landscape/therapeutic-index', {
+      params: { skip, limit },
+    });
+    return response.data;
+  },
+
+  getDiseaseLandscapeStats: async (category: string): Promise<DiseaseLandscapeStats> => {
+    const response = await apiClient.get<DiseaseLandscapeStats>(`/api/landscape/disease-stats/${category}`);
+    return response.data;
+  },
 };
 
 export interface AbstractData {
@@ -159,6 +176,54 @@ export interface AnalyticsFilters {
   has_metric?: string;
   skip?: number;
   limit?: number;
+}
+
+// Landscape statistics types
+export interface LandscapeStat {
+  cancer_type: string;
+  bubble_size: number;
+  total_api_count: number;
+  extracted_count: number;
+}
+
+export interface LandscapeStatsResponse {
+  landscape: LandscapeStat[];
+}
+
+export interface TherapeuticIndexResponse {
+  trials: Trial[];
+  total: number;
+  skip: number;
+  limit: number;
+  has_more?: boolean;
+}
+
+export interface DiseaseLandscapeStats {
+  status: {
+    'Overall Status': number;
+    'Not yet recruiting': number;
+    'Recruiting': number;
+    'Active, not recruiting': number;
+    'Completed': number;
+    'Terminated': number;
+    'Enrolling by invitation': number;
+    'Suspended': number;
+    'Withdrawn': number;
+    'Unknown': number;
+  };
+  phase: {
+    'Early Phase 1': number;
+    'Phase 1': number;
+    'Phase 2': number;
+    'Phase 3': number;
+    'Phase 4': number;
+    'Not applicable': number;
+  };
+  funder_type: {
+    'Industry': number;
+    'Non-Industry': number;
+  };
+  extracted_count?: number;
 }
 
 export const analyticsApi = {
