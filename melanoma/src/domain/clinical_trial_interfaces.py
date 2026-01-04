@@ -216,10 +216,25 @@ class ClinicalTrialRepository(ABC):
         pass
 
     @abstractmethod
+    @abstractmethod
     def get_disease_landscape_stats_from_json(
         self, cancer_type_tag: str
     ) -> dict[str, Any]:
         """Get disease landscape statistics from pre-computed JSON file.
+
+        Args:
+            cancer_type_tag: Normalized cancer type tag
+
+        Returns:
+            Dictionary with status, phase, and funder_type counts (same format as get_disease_landscape_stats)
+        """
+        pass
+
+    @abstractmethod
+    def get_disease_landscape_stats_from_sqlite(
+        self, cancer_type_tag: str
+    ) -> dict[str, Any]:
+        """Get disease landscape statistics from SQLite database table.
 
         Args:
             cancer_type_tag: Normalized cancer type tag

@@ -514,10 +514,13 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             logger.error(f"Error batch upserting extraction provenance: {e}")
 
     def get_landscape_stats(self) -> list[dict[str, Any]]:
-        """Get landscape statistics grouped by cancer type.
+        """Get landscape statistics for cancer type bubbles.
+
+        First tries to get from disease_landscape_stats table (pre-computed),
+        falls back to computing from api_discovery if table is empty.
 
         Returns:
-            List of dictionaries with cancer_type, total_api_count, extracted_count, bubble_size
+            List of dictionaries with cancer_type, bubble_size, total_api_count, extracted_count
         """
         if not self.db_path:
             return []
@@ -527,35 +530,90 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
 
-                # LEFT JOIN to get total API count and extracted count per cancer type
-                # bubble_size is count of DISTINCT active trials (is_active = 1)
-                # Use COUNT(DISTINCT ...) to avoid duplicate counting from LEFT JOIN
+                # Try to get stats from disease_landscape_stats table first
                 cursor.execute(
                     """
-                    SELECT
-                        ad.cancer_type_tag as cancer_type,
-                        COUNT(DISTINCT ad.nct_number) as total_api_count,
-                        COUNT(DISTINCT ep.nct_number) as extracted_count,
-                        COUNT(DISTINCT CASE WHEN ad.is_active = 1 THEN ad.nct_number ELSE NULL END) as bubble_size
-                    FROM api_discovery ad
-                    LEFT JOIN extraction_provenance ep ON ad.nct_number = ep.nct_number
-                    GROUP BY ad.cancer_type_tag
-                    ORDER BY ad.cancer_type_tag
-                    """
+                    SELECT cancer_type, status_json, extracted_count
+                    FROM disease_landscape_stats
+                """
+                )
+                rows = cursor.fetchall()
+
+                if rows:
+                    # Use pre-computed stats from table
+                    from ..clinical_trials.cancer_type_mapping import ACTIVE_STATUSES
+
+                    stats_list = []
+                    for row in rows:
+                        status_counts = json.loads(row["status_json"])
+                        # Calculate bubble_size from active statuses
+                        bubble_size = sum(
+                            status_counts.get(status, 0) for status in ACTIVE_STATUSES
+                        )
+                        # Calculate total_api_count from all statuses
+                        total_api_count = sum(status_counts.values())
+
+                        stats_list.append(
+                            {
+                                "cancer_type": row["cancer_type"],
+                                "bubble_size": bubble_size,
+                                "total_api_count": total_api_count,
+                                "extracted_count": row["extracted_count"],
+                            }
+                        )
+                    return stats_list
+
+                # Fall back to computing from api_discovery if table is empty
+                return self._get_landscape_stats_from_api_discovery(conn)
+
+        except (sqlite3.Error, json.JSONDecodeError, Exception) as e:
+            logger.error(f"Error getting landscape stats: {e}")
+            return []
+
+    def _get_landscape_stats_from_api_discovery(
+        self, conn: sqlite3.Connection
+    ) -> list[dict[str, Any]]:
+        """Get landscape statistics from api_discovery table.
+
+        Args:
+            conn: Existing database connection
+
+        Returns:
+            List of dictionaries with cancer_type, total_api_count, extracted_count, bubble_size
+        """
+        try:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+
+            # LEFT JOIN to get total API count and extracted count per cancer type
+            # bubble_size is count of DISTINCT active trials (is_active = 1)
+            # Use COUNT(DISTINCT ...) to avoid duplicate counting from LEFT JOIN
+            cursor.execute(
+                """
+                SELECT
+                    ad.cancer_type_tag as cancer_type,
+                    COUNT(DISTINCT ad.nct_number) as total_api_count,
+                    COUNT(DISTINCT ep.nct_number) as extracted_count,
+                    COUNT(DISTINCT CASE WHEN ad.is_active = 1 THEN ad.nct_number ELSE NULL END) as bubble_size
+                FROM api_discovery ad
+                LEFT JOIN extraction_provenance ep ON ad.nct_number = ep.nct_number
+                GROUP BY ad.cancer_type_tag
+                ORDER BY ad.cancer_type_tag
+                """
+            )
+
+            results = []
+            for row in cursor.fetchall():
+                results.append(
+                    {
+                        "cancer_type": row["cancer_type"],
+                        "total_api_count": row["total_api_count"],
+                        "extracted_count": row["extracted_count"],
+                        "bubble_size": row["bubble_size"] or 0,
+                    }
                 )
 
-                results = []
-                for row in cursor.fetchall():
-                    results.append(
-                        {
-                            "cancer_type": row["cancer_type"],
-                            "total_api_count": row["total_api_count"],
-                            "extracted_count": row["extracted_count"],
-                            "bubble_size": row["bubble_size"] or 0,
-                        }
-                    )
-
-                return results
+            return results
 
         except sqlite3.Error as e:
             logger.error(f"Error getting landscape stats: {e}")
@@ -865,6 +923,91 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
 
         except (OSError, json.JSONDecodeError, Exception) as e:
             logger.error(f"Error reading disease landscape stats from JSON: {e}")
+            return {
+                "status": {},
+                "phase": {},
+                "funder_type": {"Industry": 0, "Non-Industry": 0},
+                "extracted_count": 0,
+            }
+
+    def get_disease_landscape_stats_from_sqlite(
+        self, cancer_type_tag: str
+    ) -> dict[str, Any]:
+        """Get disease landscape statistics from SQLite database.
+
+        Args:
+            cancer_type_tag: Normalized cancer type tag
+
+        Returns:
+            Dictionary with status, phase, and funder_type counts
+        """
+        if not self.db_path:
+            return {
+                "status": {},
+                "phase": {},
+                "funder_type": {"Industry": 0, "Non-Industry": 0},
+                "extracted_count": 0,
+            }
+
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Query disease_landscape_stats table
+                cursor.execute(
+                    """
+                    SELECT status_json, phase_json, funder_type_json, extracted_count
+                    FROM disease_landscape_stats
+                    WHERE cancer_type = ?
+                    """,
+                    (cancer_type_tag,),
+                )
+
+                row = cursor.fetchone()
+                if not row:
+                    logger.warning(
+                        f"No stats found in SQLite for cancer type: {cancer_type_tag}"
+                    )
+                    return {
+                        "status": {},
+                        "phase": {},
+                        "funder_type": {"Industry": 0, "Non-Industry": 0},
+                        "extracted_count": 0,
+                    }
+
+                # Parse JSON fields
+                status_counts = json.loads(row["status_json"])
+                phase_counts = json.loads(row["phase_json"])
+                funder_type_counts = json.loads(row["funder_type_json"])
+                extracted_count = row["extracted_count"]
+
+                # Format status for frontend (convert keys to user-friendly names)
+                status_display = {
+                    "NOT_YET_RECRUITING": status_counts.get("NOT_YET_RECRUITING", 0),
+                    "RECRUITING": status_counts.get("RECRUITING", 0),
+                    "ACTIVE_NOT_RECRUITING": status_counts.get(
+                        "ACTIVE_NOT_RECRUITING", 0
+                    ),
+                    "COMPLETED": status_counts.get("COMPLETED", 0),
+                    "TERMINATED": status_counts.get("TERMINATED", 0),
+                    "ENROLLING_BY_INVITATION": status_counts.get(
+                        "ENROLLING_BY_INVITATION", 0
+                    ),
+                    "SUSPENDED": status_counts.get("SUSPENDED", 0),
+                    "WITHDRAWN": status_counts.get("WITHDRAWN", 0),
+                    "UNKNOWN": status_counts.get("UNKNOWN", 0),
+                }
+
+                return {
+                    "status": status_display,
+                    "phase": phase_counts,
+                    "funder_type": funder_type_counts,
+                    "extracted_count": extracted_count,
+                }
+
+        except (sqlite3.Error, json.JSONDecodeError, Exception) as e:
+            logger.error(f"Error reading disease landscape stats from SQLite: {e}")
             return {
                 "status": {},
                 "phase": {},
