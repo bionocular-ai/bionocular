@@ -101,6 +101,14 @@ export default function DashboardPage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm text-gray-600">Loading landscape data...</p>
               </div>
+            ) : error ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <p className="text-sm text-red-600 text-center">
+                    Error loading landscape data: {error instanceof Error ? error.message : 'Unknown error'}
+                  </p>
+                </CardContent>
+              </Card>
             ) : data?.landscape ? (
               <CancerTypeBubbles stats={data.landscape} />
             ) : (

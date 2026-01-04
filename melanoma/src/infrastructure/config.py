@@ -1,5 +1,6 @@
 """Configuration constants for Clinical Trials API service and related infra."""
 
+import os
 from pathlib import Path
 
 # Base data directory
@@ -7,9 +8,13 @@ DATA_DIR = Path("data")
 
 # Database configuration
 DB_PATH = str(DATA_DIR / "doctorci.db")  # Legacy database for abstracts fallback
-CLINICAL_TRIAL_DB_PATH = str(
-    DATA_DIR / "clinical_trial_api" / "clinical_trial_api.db"
-)  # Cache for API responses
+
+# Clinical trials database path
+# In production, use trials.db (same as SQLiteTrialsService)
+# Can be overridden with CLINICAL_TRIAL_DB_PATH environment variable
+CLINICAL_TRIAL_DB_PATH = os.getenv(
+    "CLINICAL_TRIAL_DB_PATH", str(DATA_DIR / "trials_db" / "trials.db")
+)  # Default to trials.db for production
 
 # Disease landscape stats JSON file
 DISEASE_LANDSCAPE_STATS_PATH = str(

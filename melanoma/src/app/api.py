@@ -2075,8 +2075,13 @@ async def get_disease_landscape_stats(category: str) -> dict:
         # Fall back to JSON for local development
         data_source = get_trials_data_source()
         if data_source == "sqlite":
-            # Query SQLite database directly
-            stats = service.repository.get_disease_landscape_stats(category_name)
+            # Try SQLite table first (pre-computed stats from build_db.py)
+            stats = service.repository.get_disease_landscape_stats_from_sqlite(
+                category_name
+            )
+            # If no stats in SQLite table, fall back to computing from api_discovery
+            if not stats.get("status") and not stats.get("phase"):
+                stats = service.repository.get_disease_landscape_stats(category_name)
         else:
             # Read from pre-computed JSON file (local development)
             stats = service.repository.get_disease_landscape_stats_from_json(

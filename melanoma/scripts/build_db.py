@@ -67,6 +67,23 @@ def create_database(db_path: Path) -> sqlite3.Connection:
     conn.execute("CREATE INDEX idx_publication_id ON abstracts(publication_id)")
     conn.execute("CREATE INDEX idx_file ON abstracts(file)")
     
+    # Create disease_landscape_stats table for pre-computed statistics
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS disease_landscape_stats (
+            cancer_type TEXT PRIMARY KEY,
+            status_json TEXT NOT NULL,  -- JSON object with status counts
+            phase_json TEXT NOT NULL,   -- JSON object with phase counts
+            funder_type_json TEXT NOT NULL,  -- JSON object with funder type counts
+            extracted_count INTEGER DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # Create clinical trials tables (for dashboard functionality)
+    # These tables are created by the repository, but we ensure they exist here
+    # api_discovery, extraction_provenance, clinical_trials_cache will be created
+    # by the repository when it initializes, but we can pre-create them here
+    
     # Enable JSON1 extension for querying JSON fields
     conn.execute("PRAGMA foreign_keys=ON")
     
@@ -204,6 +221,39 @@ def build_database(db_path: Path, json_file_paths: list[Path] | None = None) -> 
         )
         publication_count = cursor.fetchone()[0]
         logger.info(f"Publications: {publication_count}")
+        
+        # Load disease_landscape_stats.json if it exists
+        stats_file = Path(__file__).parent.parent / "data" / "deployed" / "disease_landscape_stats.json"
+        if stats_file.exists():
+            logger.info(f"Loading disease landscape stats from {stats_file.name}...")
+            try:
+                with open(stats_file, encoding="utf-8") as f:
+                    stats_data = json.load(f)
+                
+                # Clear existing stats
+                conn.execute("DELETE FROM disease_landscape_stats")
+                
+                # Insert stats for each cancer type
+                stats_inserted = 0
+                for cancer_type, stats in stats_data.items():
+                    status_json = json.dumps(stats.get("status", {}))
+                    phase_json = json.dumps(stats.get("phase", {}))
+                    funder_type_json = json.dumps(stats.get("funder_type", {}))
+                    extracted_count = stats.get("extracted_count", 0)
+                    
+                    conn.execute("""
+                        INSERT OR REPLACE INTO disease_landscape_stats
+                        (cancer_type, status_json, phase_json, funder_type_json, extracted_count, updated_at)
+                        VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """, (cancer_type, status_json, phase_json, funder_type_json, extracted_count))
+                    stats_inserted += 1
+                
+                conn.commit()
+                logger.info(f"Loaded {stats_inserted} cancer type stats into database")
+            except Exception as e:
+                logger.error(f"Error loading disease landscape stats: {e}")
+        else:
+            logger.warning(f"Disease landscape stats file not found: {stats_file}")
         
     finally:
         conn.close()
