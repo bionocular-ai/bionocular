@@ -125,6 +125,20 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                     """
                 )
 
+                # Create disease_landscape_stats table for pre-computed statistics
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS disease_landscape_stats (
+                        cancer_type TEXT PRIMARY KEY,
+                        status_json TEXT NOT NULL,
+                        phase_json TEXT NOT NULL,
+                        funder_type_json TEXT NOT NULL,
+                        extracted_count INTEGER DEFAULT 0,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+
                 conn.commit()
                 logger.debug(f"Cache database initialized: {self.db_path}")
 
