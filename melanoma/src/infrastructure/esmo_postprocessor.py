@@ -678,7 +678,44 @@ class ESMOPostprocessor(PostprocessorInterface):
         # e.g., (66e75) -> (66-75), (0.47e0.80) -> (0.47-0.80), [0.37e0.94] -> [0.37-0.94]
         cleaned = re.sub(r"\((\d+(?:\.\d+)?)e(\d+(?:\.\d+)?)\)", r"(\1-\2)", cleaned)
         cleaned = re.sub(r"\[(\d+(?:\.\d+)?)e(\d+(?:\.\d+)?)\]", r"[\1-\2]", cleaned)
-        return cleaned
+
+        # Remove trailing empty cells from table rows (e.g., "|  |  |  |" at end of row)
+        # Trailing empty cells are not needed for markdown table formatting
+        lines = cleaned.split("\n")
+        cleaned_lines = []
+        for line in lines:
+            if line.strip().startswith("|"):
+                original_line = line
+                # Remove trailing empty cells by finding the last cell with content
+                # Strategy: split by |, find last non-empty cell, remove everything after
+                cells = line.split("|")
+                # Find the last cell that has non-whitespace content
+                last_content_idx = -1
+                for i in range(len(cells) - 1, -1, -1):
+                    if cells[i].strip():  # Has non-whitespace content
+                        last_content_idx = i
+                        break
+
+                if last_content_idx >= 0:
+                    # Reconstruct line up to and including the last content cell
+                    line = "|".join(cells[: last_content_idx + 1])
+                    # Ensure it ends with a pipe
+                    if not line.rstrip().endswith("|"):
+                        line = line.rstrip() + "|"
+                else:
+                    # All cells are empty, keep original (might be a separator line)
+                    line = original_line
+
+                # Preserve separator lines (like "|---|---|") even if they look empty
+                if re.match(r"^\|[\s\-:]+\|", original_line.strip()):
+                    cleaned_lines.append(original_line)
+                elif line.strip() and line.strip() != "|":
+                    # Only add non-empty content lines
+                    cleaned_lines.append(line)
+            else:
+                cleaned_lines.append(line)
+
+        return "\n".join(cleaned_lines)
 
     def apply_table_refinements(self, content: str) -> str:
         """Apply table-specific refinements (still useful for OCR artifacts).
@@ -923,7 +960,7 @@ class ESMOPostprocessor(PostprocessorInterface):
             # Also check if line starts with abstract ID pattern (new abstract starting)
             if (
                 re.match(
-                    r"^(?:#+\s*)?(1\d{3,4}[A-Z]*|[78]\d{2}(?:O|MO|P|TiP))(?:\s|$)",
+                    r"^(?:#+\s*)?(1\d{3,4}[A-Za-z]*|[78]\d{2}(?:O|MO|P|eP|eTiP|TiP))(?:\s|$)",
                     line_stripped,
                 )
                 and len(header_lines) > 0
@@ -967,13 +1004,15 @@ class ESMOPostprocessor(PostprocessorInterface):
         # Pattern matches:
         # - 1 followed by 3-4 digits with REQUIRED suffix (1076O, 1077MO, etc.) - ESMO 2020/2021/2024
         # - 1 followed by 3-4 digits ending in 0 (OCR error, e.g., 10810 -> 1081O) - ESMO 2023
+        # - 1 followed by 3-4 digits with eP suffix (1686eP) - ESMO 2025
+        # - 1 followed by 3-4 digits with eTiP suffix (1703eTiP) - ESMO 2025
         # - 7/8 followed by 2 digits with suffix (ESMO 2020/2021)
         # - 4-digit numbers starting with 7 or 8 (ESMO 2022: 7840, 7850, etc.)
         # Note: Require suffix for 1xxx patterns to avoid matching study numbers like "1325", "1901", "1540"
         # But also match 1xxx0 patterns (OCR errors where O is read as 0)
         # Exclude footer patterns like "**$747**" or "**S747**" - these should not match standalone IDs
         id_pattern = (
-            r"\b(1\d{3,4}(?:O|MO|P|TiP|0)|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})\b"
+            r"\b(1\d{3,4}(?:O|MO|P|eP|eTiP|TiP|0)|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})\b"
         )
         full_header_text = "\n".join(header_lines)
 
@@ -984,11 +1023,11 @@ class ESMOPostprocessor(PostprocessorInterface):
             stripped_line = line.strip()
             # Match if line contains only the ID (possibly with markdown formatting)
             if re.match(
-                r"^(?:\*\*)?(1\d{3,4}(?:O|MO|P|TiP|0)|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})(?:\*\*)?\s*$",
+                r"^(?:\*\*)?(1\d{3,4}(?:O|MO|P|eP|eTiP|TiP|0)|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})(?:\*\*)?\s*$",
                 stripped_line,
             ):
                 potential_id = re.search(
-                    r"(1\d{3,4}(?:O|MO|P|TiP|0)|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})",
+                    r"(1\d{3,4}(?:O|MO|P|eP|eTiP|TiP|0)|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})",
                     stripped_line,
                 )
                 if potential_id:
@@ -1335,8 +1374,12 @@ class ESMOPostprocessor(PostprocessorInterface):
         # Check for valid ESMO Abstract ID
         # Expected format: 1076O, 1077MO, 1084P, 1153TiP (ESMO 2020/2021)
         # Or 7840, 7850, etc. (ESMO 2022)
+        # Or 1686eP (ESMO 2025 - lowercase e followed by P)
+        # Or 1703eTiP (ESMO 2025 - lowercase e followed by TiP)
         # Also accept 10760 (will be normalized to 1076O)
-        valid_id_pattern = r"1\d{3,4}(?:[A-Z]+|TiP)?|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3}"
+        valid_id_pattern = (
+            r"1\d{3,4}(?:[A-Za-z]+|TiP)?|[78]\d{2}(?:O|MO|P|eP|eTiP|TiP)?|[78]\d{3}"
+        )
         if (
             not re.match(valid_id_pattern, parsed_abstract.id)
             and parsed_abstract.id != "N/A"

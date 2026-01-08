@@ -149,7 +149,7 @@ async def main():
         TEST_MODE = False  # Set to False for full processing
         MAX_ABSTRACTS_PER_YEAR = None  # Process all abstracts
 
-        esmo_years = [2020, 2021, 2022, 2023, 2024]
+        esmo_years = [2025]  # Process only ESMO 2025
         esmo_abstracts_dir = Path("data/postprocessed/ESMO_Abstracts")
 
         # Collect all abstracts by year

@@ -47,6 +47,7 @@ class JSONTrialsService:
                     "data/deployed/ASCO_2024.json",
                     "data/deployed/ASCO_2025.json",
                     "data/deployed/ESMO_2020-2024.json",
+                    "data/deployed/ESMO_2025.json",
                     "data/deployed/Publications_70.json",
                 ]
 

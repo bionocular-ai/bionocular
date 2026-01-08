@@ -85,13 +85,66 @@ export default function TherapeuticIndexPage() {
     refetchOnWindowFocus: false,
   });
 
+  // State to store line of treatment data for each abstract
+  const [lineOfTreatmentMap, setLineOfTreatmentMap] = React.useState<Map<string, string>>(new Map());
+  const [loadingLineOfTreatment, setLoadingLineOfTreatment] = React.useState(false);
+
+  // Fetch line of treatment data when filter is active
+  React.useEffect(() => {
+    if (lineOfTherapyFilter && lineOfTherapyFilter !== 'all' && data?.trials) {
+      setLoadingLineOfTreatment(true);
+      const fetchLineOfTreatment = async () => {
+        const lotMap = new Map<string, string>();
+        
+        // First, filter trials by category
+        const categoryFilteredTrials = data.trials.filter((trial: Trial) => {
+          if (!trial.nct_id || !trial.nct_id.trim()) return false;
+          const normalizedTrialType = normalizeCancerType(trial.cancer_type);
+          const normalizedCategory = normalizeCancerType(categoryName);
+          return normalizedTrialType === normalizedCategory;
+        });
+
+        // Fetch abstract details for trials that don't have cached data
+        const fetchPromises = categoryFilteredTrials
+          .filter(trial => trial.abstract_id && !lineOfTreatmentMap.has(trial.abstract_id))
+          .slice(0, 100) // Limit to avoid overwhelming the API
+          .map(async (trial) => {
+            try {
+              const abstractData = await trialsApi.getByAbstractId(trial.abstract_id!);
+              // Extract line of treatment from arm_results
+              const armResults = abstractData.arm_results || {};
+              const firstArm = Object.values(armResults)[0] as { attributes?: Record<string, { value?: string }> } | undefined;
+              const attributes = firstArm?.attributes || {};
+              const lineOfTreatment = attributes['LINE_OF_TREATMENT']?.value || 
+                                     attributes['line_of_treatment']?.value || 
+                                     attributes['AttributeType.LINE_OF_TREATMENT']?.value || '';
+              if (trial.abstract_id) {
+                lotMap.set(trial.abstract_id, lineOfTreatment);
+              }
+            } catch (error) {
+              console.error(`Error fetching abstract ${trial.abstract_id}:`, error);
+            }
+          });
+
+        await Promise.all(fetchPromises);
+        setLineOfTreatmentMap(prev => new Map([...prev, ...lotMap]));
+        setLoadingLineOfTreatment(false);
+      };
+
+      fetchLineOfTreatment();
+    } else {
+      setLoadingLineOfTreatment(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineOfTherapyFilter, data?.trials, categoryName]);
+
   // Filter trials by category - only include trials where the selected category is the primary cancer_type
   // This ensures that when filtering for "Cutaneous Squamous Cell Carcinoma", we don't see trials
   // that are primarily "Basal Cell Carcinoma" even if they have both types in their cancer_types array
   // Also filter out trials without NCT numbers
   const trials = React.useMemo(() => {
     const allTrials = data?.trials || [];
-    return allTrials.filter((trial: Trial) => {
+    let filtered = allTrials.filter((trial: Trial) => {
       // Filter out trials without NCT numbers
       if (!trial.nct_id || !trial.nct_id.trim()) {
         return false;
@@ -105,7 +158,131 @@ export default function TherapeuticIndexPage() {
       // This ensures we only see trials that are primarily for the selected cancer type
       return normalizedTrialType === normalizedCategory;
     });
-  }, [data?.trials, categoryName]);
+
+    // Apply phase filter if active
+    if (phaseFilter && phaseFilter.trim() !== '') {
+      filtered = filtered.filter((trial: Trial) => {
+        // Handle phase as string, number, or undefined/null
+        const trialPhase = trial.phase != null ? String(trial.phase) : '';
+        const normalizedPhase = trialPhase.toLowerCase().trim();
+        
+        if (!normalizedPhase) {
+          return false;
+        }
+        
+        // Map UI filter values to database phase values
+        // Database values are cleaned (PHASE1 -> "1", PHASE1, PHASE2 -> "1, 2", etc.)
+        switch (phaseFilter) {
+          case 'Early Phase 1':
+            // Match "EARLY_1" or "EARLY_PHASE1" (before cleaning) or "early_phase1"
+            return normalizedPhase.includes('early') && normalizedPhase.includes('1');
+          
+          case 'Phase 1':
+            // Match "1" or combinations like "1, 2" or "2, 1"
+            // Split by comma and check if "1" is in the list of phases
+            const phases1 = normalizedPhase.split(',').map(p => p.trim()).filter(p => p);
+            return phases1.includes('1');
+          
+          case 'Phase 2':
+            // Match "2" or combinations like "1, 2" or "2, 3"
+            const phases2 = normalizedPhase.split(',').map(p => p.trim()).filter(p => p);
+            return phases2.includes('2');
+          
+          case 'Phase 3':
+            // Match "3" or combinations like "2, 3"
+            const phases3 = normalizedPhase.split(',').map(p => p.trim()).filter(p => p);
+            return phases3.includes('3');
+          
+          case 'Phase 4':
+            // Match "4" or combinations
+            const phases4 = normalizedPhase.split(',').map(p => p.trim()).filter(p => p);
+            return phases4.includes('4');
+          
+          case 'Not applicable':
+            // Match "NA" or "na" or "not applicable"
+            return normalizedPhase === 'na' || 
+                   normalizedPhase.includes('not applicable') ||
+                   normalizedPhase.includes('n/a');
+          
+          default:
+            return false;
+        }
+      });
+    }
+
+    // Apply line of treatment filter if active
+    if (lineOfTherapyFilter && lineOfTherapyFilter !== 'all') {
+      filtered = filtered.filter((trial: Trial) => {
+        if (!trial.abstract_id) return false;
+        const lineOfTreatment = lineOfTreatmentMap.get(trial.abstract_id) || '';
+        const normalizedLot = lineOfTreatment.toLowerCase().trim();
+        
+        // More precise matching to avoid substring issues (e.g., "adjuvant" matching "neoadjuvant")
+        switch (lineOfTherapyFilter) {
+          case 'neoadjuvant_resected':
+            // Match neoadjuvant (but not adjuvant), resected, or combinations
+            return normalizedLot.includes('neoadjuvant') || 
+                   normalizedLot === 'resected' ||
+                   normalizedLot.includes('neoadjuvant/resected') ||
+                   normalizedLot.includes('neoadjuvant / resected');
+          
+          case 'adjuvant':
+            // Match adjuvant but NOT neoadjuvant (use word boundary check)
+            // Check for exact match or word boundary to avoid matching "neoadjuvant"
+            if (normalizedLot.includes('neoadjuvant')) {
+              return false; // Explicitly exclude neoadjuvant
+            }
+            return normalizedLot === 'adjuvant' || 
+                   normalizedLot === 'adjuvant*' ||
+                   normalizedLot.startsWith('adjuvant ') ||
+                   normalizedLot.startsWith('adjuvant* ') ||
+                   normalizedLot.includes(' adjuvant') ||
+                   normalizedLot.includes(' adjuvant*') ||
+                   normalizedLot.includes('/adjuvant') ||
+                   normalizedLot.includes('/adjuvant*') ||
+                   normalizedLot.includes(' / adjuvant') ||
+                   normalizedLot.includes(' / adjuvant*');
+          
+          case 'first_line':
+            return normalizedLot.includes('first line') || 
+                   normalizedLot.includes('first-line') ||
+                   normalizedLot === '1l' ||
+                   normalizedLot.startsWith('1l+') ||
+                   normalizedLot === 'first' ||
+                   normalizedLot.includes('1st line') ||
+                   normalizedLot.includes('1st-line');
+          
+          case 'second_line':
+            return normalizedLot.includes('second line') || 
+                   normalizedLot.includes('second-line') ||
+                   normalizedLot === '2l' ||
+                   normalizedLot.startsWith('2l+') ||
+                   normalizedLot === 'second' ||
+                   normalizedLot.includes('2nd line') ||
+                   normalizedLot.includes('2nd-line');
+          
+          case 'third_line_plus':
+            return normalizedLot.includes('third line') || 
+                   normalizedLot.includes('third-line') ||
+                   normalizedLot === '3l' ||
+                   normalizedLot.startsWith('3l+') ||
+                   normalizedLot === 'third' ||
+                   normalizedLot.includes('fourth') ||
+                   normalizedLot.includes('fifth') ||
+                   normalizedLot.includes('later') ||
+                   normalizedLot.includes('3rd line') ||
+                   normalizedLot.includes('3rd-line') ||
+                   normalizedLot.includes('4th') ||
+                   normalizedLot.includes('5th');
+          
+          default:
+            return false;
+        }
+      });
+    }
+
+    return filtered;
+  }, [data?.trials, categoryName, phaseFilter, lineOfTherapyFilter, lineOfTreatmentMap]);
 
   return (
     <div className="flex flex-col min-h-screen w-full bg-white">
@@ -319,9 +496,9 @@ export default function TherapeuticIndexPage() {
                 </DropdownMenu>
               </div>
 
-              {/* Line of Therapy */}
+              {/* Line of Treatment */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-700">Line of Therapy</label>
+                <label className="text-xs font-medium text-gray-700">Line of Treatment</label>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -529,11 +706,13 @@ export default function TherapeuticIndexPage() {
           {/* Table Content */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 sm:p-6">
-            {isLoading ? (
+            {isLoading || loadingLineOfTreatment ? (
               <div className="flex items-center justify-center py-12">
                 <div className="flex flex-col items-center gap-4">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-gray-600">Loading trials...</p>
+                  <p className="text-sm text-gray-600">
+                    {loadingLineOfTreatment ? 'Loading line of treatment data...' : 'Loading trials...'}
+                  </p>
                 </div>
               </div>
             ) : error ? (
@@ -560,7 +739,6 @@ export default function TherapeuticIndexPage() {
                 drugFilter={drugFilter}
                 armNameFilter={armNameFilter}
                 trialNameFilter={trialNameFilter}
-                phaseFilter={phaseFilter}
                 armTypeFilter={armTypeFilter}
                 lineOfTherapyFilter={lineOfTherapyFilter}
               />
