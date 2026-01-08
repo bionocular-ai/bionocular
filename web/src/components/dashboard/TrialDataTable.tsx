@@ -30,7 +30,6 @@ interface TrialDataTableProps {
   drugFilter?: string;
   armNameFilter?: string;
   trialNameFilter?: string;
-  phaseFilter?: string;
   armTypeFilter?: string;
   lineOfTherapyFilter?: string;
 }
@@ -67,7 +66,6 @@ export function TrialDataTable({
   drugFilter = '',
   armNameFilter = '',
   trialNameFilter = '',
-  phaseFilter = '',
   armTypeFilter = '',
   lineOfTherapyFilter = '',
 }: TrialDataTableProps) {
@@ -121,13 +119,8 @@ export function TrialDataTable({
       );
     }
     
-    // Phase filter
-    if (phaseFilter.trim()) {
-      filtered = filtered.filter(trial => {
-        const trialPhase = trial.phase?.toLowerCase() || '';
-        return trialPhase.includes(phaseFilter.toLowerCase());
-      });
-    }
+    // Phase filter is handled in the parent component (therapeutic-index page)
+    // No need to filter here since trials are already filtered by phase
     
     // Arm Type filter (if available in data)
     if (armTypeFilter.trim()) {
@@ -140,7 +133,7 @@ export function TrialDataTable({
     
     // Line of Therapy filter
     if (lineOfTherapyFilter && lineOfTherapyFilter !== 'all') {
-      filtered = filtered.filter(_trial => {
+      filtered = filtered.filter(() => {
         // Line of therapy is typically stored in arm attributes
         // Since we're working with flattened trials, we may need to check if this data is available
         // For now, we'll check if trial has any line of therapy information
@@ -152,7 +145,7 @@ export function TrialDataTable({
     }
     
     return filtered;
-  }, [data, nctFilter, sponsorFilter, drugFilter, armNameFilter, trialNameFilter, phaseFilter, armTypeFilter, lineOfTherapyFilter]);
+  }, [data, nctFilter, sponsorFilter, drugFilter, armNameFilter, trialNameFilter, armTypeFilter, lineOfTherapyFilter]);
 
   const columns: ColumnDef<Trial>[] = [
     ...(!hideNctId ? [{
@@ -256,6 +249,7 @@ export function TrialDataTable({
     },
   ];
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data: flattenedData,
     columns,

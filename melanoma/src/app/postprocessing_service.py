@@ -248,8 +248,8 @@ class PostprocessingService(PostprocessingServiceInterface):
                 # Use abstract ID splitting for ESMO 2022
                 # Pattern matches: 7840, 7850 (4-digit), 791MO, 792MO, 796P, etc. (3-digit + suffix)
                 # Also match image markers that often precede abstracts: ![](_page_X_Picture_Y.jpeg) or ![](_page_X_Figure_Y.jpeg)
-                # ESMO 2022: 78xx patterns, ESMO 2024: 10xx patterns
-                abstract_id_pattern = r"^([78]\d{3}|[78]\d{2}(?:O|MO|P|TiP)|10[67]\d[0O]|10[67]\d[MO]|10[67]\dP|10[67]\dTiP)$"
+                # ESMO 2022: 78xx patterns, ESMO 2024: 10xx patterns, ESMO 2025: 16xxeP and 17xxeTiP patterns
+                abstract_id_pattern = r"^([78]\d{3}|[78]\d{2}(?:O|MO|P|eP|eTiP|TiP)|10[67]\d[0O]|10[67]\d[MO]|10[67]\dP|10[67]\deP|10[67]\deTiP|10[67]\dTiP|1\d{3,4}eP|1\d{3,4}eTiP)$"
                 image_marker_pattern = (
                     r"^!\[\]\(_page_\d+_(Picture|Figure)_\d+\.jpeg\)$"
                 )
@@ -535,7 +535,7 @@ class PostprocessingService(PostprocessingServiceInterface):
 
             if not doi_matches:
                 # Fallback: try splitting by abstract IDs if no DOIs found
-                abstract_id_pattern = r"^(?:#+\s*)?(1\d{3,4}[A-Z]*|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})(?:\s|$)"
+                abstract_id_pattern = r"^(?:#+\s*)?(1\d{3,4}[A-Za-z]*|[78]\d{2}(?:O|MO|P|eP|eTiP|TiP)?|[78]\d{3})(?:\s|$)"
                 lines = content.split("\n")
                 abstract_texts = []
                 current_abstract = []
@@ -564,7 +564,8 @@ class PostprocessingService(PostprocessingServiceInterface):
             # Strategy: Split content at each DOI, then for each section find where the abstract starts
             abstract_texts = []
             # Updated pattern to include ESMO 2022 format: 7840, 7850, etc. (4-digit numbers starting with 78)
-            abstract_id_pattern = r"^(?:#+\s*)?(1\d{3,4}[A-Z]*|[78]\d{2}(?:O|MO|P|TiP)?|[78]\d{3})(?:\s|$)"
+            # Also includes ESMO 2025 format: 1686eP (lowercase e followed by P) and 1703eTiP (lowercase e followed by TiP)
+            abstract_id_pattern = r"^(?:#+\s*)?(1\d{3,4}[A-Za-z]*|[78]\d{2}(?:O|MO|P|eP|eTiP|TiP)?|[78]\d{3})(?:\s|$)"
 
             # Split content at each DOI position
             split_positions = [0]  # Start with beginning

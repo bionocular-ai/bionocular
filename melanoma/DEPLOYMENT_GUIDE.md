@@ -45,6 +45,7 @@ You've created `data/deployed/` directory with all JSON files. This is the recom
 The JSON files are now in `data/deployed/`:
 - ASCO_2020.json through ASCO_2025.json
 - ESMO_2020-2024.json
+- ESMO_2025.json
 - Publications_70.json
 
 **Important**: Set `TRIALS_JSON_FILES` environment variable to point to `data/deployed/` files.
@@ -155,7 +156,7 @@ TRIALS_DATA_SOURCE=json
 DISABLE_PDF_PROCESSING=true
 ALLOWED_ORIGINS=https://bionocular.ai,https://www.bionocular.ai
 PYTHON_VERSION=3.10.0
-TRIALS_JSON_FILES=data/deployed/ASCO_2020.json,data/deployed/ASCO_2021.json,data/deployed/ASCO_2022.json,data/deployed/ASCO_2023.json,data/deployed/ASCO_2024.json,data/deployed/ASCO_2025.json,data/deployed/ESMO_2020-2024.json,data/deployed/Publications_70.json
+TRIALS_JSON_FILES=data/deployed/ASCO_2020.json,data/deployed/ASCO_2021.json,data/deployed/ASCO_2022.json,data/deployed/ASCO_2023.json,data/deployed/ASCO_2024.json,data/deployed/ASCO_2025.json,data/deployed/ESMO_2020-2024.json,data/deployed/ESMO_2025.json,data/deployed/Publications_70.json
 ```
 
 **Note**: The `TRIALS_JSON_FILES` variable is required since you're using `data/deployed/` instead of the default `data/output/`.
