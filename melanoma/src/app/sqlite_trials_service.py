@@ -173,6 +173,8 @@ class SQLiteTrialsService:
         abstract_id = (
             abstract.get("abstract_id") or abstract.get("publication_id") or ""
         )
+        # Ensure abstract_id is always a string, not None
+        abstract_id = str(abstract_id) if abstract_id else ""
         is_publication = bool(
             abstract.get("publication_id") and not abstract.get("abstract_id")
         )
@@ -461,39 +463,11 @@ class SQLiteTrialsService:
             total = len(matching_abstracts)
             paginated = matching_abstracts[skip : skip + limit]
 
-            # Convert to trial format (similar to get_all_trials)
-            trials = []
-            for abstract in paginated:
-                arm_results = abstract.get("arm_results", {})
-                first_arm: dict[str, Any] = (
-                    next(iter(arm_results.values()), {}) if arm_results else {}
-                )
-                attributes = first_arm.get("attributes", {})
-
-                # Extract basic info
-                trial_info = {
-                    "id": abstract.get("abstract_id")
-                    or abstract.get("publication_id")
-                    or "",
-                    "abstract_id": abstract.get("abstract_id"),
-                    "publication_id": abstract.get("publication_id"),
-                    "file": abstract.get("file"),
-                    "nct_id": nct_id,  # We know this matches
-                }
-
-                # Extract additional info from attributes
-                if attributes:
-                    # Extract other fields similar to get_all_trials
-                    nct_attr = attributes.get(
-                        "AttributeType.NCT_NUMBER"
-                    ) or attributes.get("nct_number")
-                    if nct_attr:
-                        if isinstance(nct_attr, dict):
-                            trial_info["nct_id"] = nct_attr.get("value", nct_id)
-                        else:
-                            trial_info["nct_id"] = str(nct_attr)
-
-                trials.append(trial_info)
+            # Convert to trial format using the same method as get_all_trials
+            # This ensures all required fields are present with proper defaults
+            trials = [
+                self._extract_trial_from_abstract(abstract) for abstract in paginated
+            ]
 
             return trials, total
 
