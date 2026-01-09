@@ -84,7 +84,9 @@ def extract_nct_numbers_from_json_file(
         for abstract in abstracts:
             abstract_id = abstract.get("abstract_id", "")
             if not abstract_id:
-                logger.warning(f"Skipping abstract without abstract_id in {json_file_path.name}")
+                logger.warning(
+                    f"Skipping abstract without abstract_id in {json_file_path.name}"
+                )
                 continue
 
             arm_results = abstract.get("arm_results", {})
@@ -100,7 +102,9 @@ def extract_nct_numbers_from_json_file(
         for publication in publications:
             publication_id = publication.get("publication_id", "")
             if not publication_id:
-                logger.warning(f"Skipping publication without publication_id in {json_file_path.name}")
+                logger.warning(
+                    f"Skipping publication without publication_id in {json_file_path.name}"
+                )
                 continue
 
             arm_results = publication.get("arm_results", {})
@@ -177,13 +181,16 @@ def main():
     print(f"Total unique sources (abstracts/publications): {len(unique_sources)}")
 
     # Count by source type
-    abstract_count = sum(1 for _, src in unique_records if src.startswith("ASCO_") or src.startswith("ESMO_"))
+    abstract_count = sum(
+        1
+        for _, src in unique_records
+        if src.startswith("ASCO_") or src.startswith("ESMO_")
+    )
     publication_count = sum(1 for _, src in unique_records if src.startswith("Batch-"))
-    print(f"\nBy source type:")
+    print("\nBy source type:")
     print(f"  Abstracts: {abstract_count} records")
     print(f"  Publications: {publication_count} records")
 
 
 if __name__ == "__main__":
     main()
-

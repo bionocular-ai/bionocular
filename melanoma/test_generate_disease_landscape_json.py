@@ -14,8 +14,8 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-from src.infrastructure.clinical_trials.factory import create_clinical_trials_service
 from src.infrastructure.clinical_trials.cancer_type_mapping import SKIN_CANCER_TYPES
+from src.infrastructure.clinical_trials.factory import create_clinical_trials_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,13 +39,13 @@ def main():
     # Generate disease landscape stats for each cancer type
     logger.info(f"Computing stats for {len(cancer_types)} cancer types...")
     disease_landscape_stats = {}
-    
+
     for cancer_type in cancer_types:
         logger.info(f"Computing stats for: {cancer_type}")
         try:
             stats = repository.get_disease_landscape_stats(cancer_type)
             disease_landscape_stats[cancer_type] = stats
-            
+
             # Log summary
             total_status = sum(stats.get("status", {}).values())
             extracted = stats.get("extracted_count", 0)
@@ -66,12 +66,12 @@ def main():
     deployed_dir = Path(__file__).parent / "data" / "deployed"
     deployed_dir.mkdir(parents=True, exist_ok=True)
     disease_landscape_file = deployed_dir / "disease_landscape_stats.json"
-    
+
     with open(disease_landscape_file, "w") as f:
         json.dump(disease_landscape_stats, f, indent=2, default=str)
-    
+
     logger.info(f"\n✓ Disease landscape stats saved to: {disease_landscape_file}")
-    
+
     # Print summary
     print("\n" + "=" * 60)
     print("DISEASE LANDSCAPE STATS SUMMARY")
@@ -82,7 +82,7 @@ def main():
         print(f"{cancer_type}:")
         print(f"  Total trials: {total_status}")
         print(f"  Extracted: {extracted}")
-        print(f"  Status breakdown:")
+        print("  Status breakdown:")
         for status, count in stats.get("status", {}).items():
             if count > 0:
                 print(f"    {status}: {count}")
@@ -94,4 +94,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
