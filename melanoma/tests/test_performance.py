@@ -347,14 +347,36 @@ def test_memory_usage_after_requests(client):
     # Get memory after requests
     final_memory = process.memory_info().rss / (1024 * 1024)  # MB
 
-    # Memory increase should be reasonable (< 60 MB for 10 requests)
-    # With singleton pattern, memory should be stable
-    # Note: Some increase is expected due to JSON loading and Python object overhead
+    # Memory increase threshold calculation (data-driven):
+    # This test verifies the singleton pattern prevents creating multiple service instances.
+    # The threshold must account for the actual dataset size being loaded.
+    #
+    # Current dataset (as of Jan 2026):
+    # - ASCO 2020-2025: ~829,018 lines
+    # - ESMO 2020-2024: ~522,098 lines  
+    # - ESMO 2025: ~218,928 lines (added Jan 2026)
+    # - Publications: ~243,967 lines
+    # - Total: ~1,814,011 lines
+    #
+    # Memory characteristics:
+    # - CI environment (SQLite): Lower memory usage, ~60-65 MB for 10 requests
+    # - Local/JSON mode: Higher memory usage, loads all JSON files
+    # - Singleton pattern ensures data loaded once, not per-request
+    #
+    # Threshold set to 70 MB to accommodate:
+    # - CI environment with current dataset
+    # - Small variance between test runs (±5 MB)
+    # - Does NOT accommodate full JSON loading (use SKIP_MEMORY_TESTS=true locally)
+    #
+    # When to update: If adding significant new data files (>50MB), increase proportionally.
+    MEMORY_THRESHOLD_MB = 70
     memory_increase = final_memory - baseline_memory
-    assert memory_increase < 60, (
-        f"Memory increased by {memory_increase:.2f} MB, expected < 60 MB. "
+    assert memory_increase < MEMORY_THRESHOLD_MB, (
+        f"Memory increased by {memory_increase:.2f} MB, expected < {MEMORY_THRESHOLD_MB} MB. "
         f"Baseline: {baseline_memory:.2f} MB, Final: {final_memory:.2f} MB. "
-        f"This test verifies singleton pattern prevents excessive memory growth."
+        f"This test verifies singleton pattern prevents excessive memory growth. "
+        f"If running locally with JSON files, set SKIP_MEMORY_TESTS=true. "
+        f"If this fails in CI after adding new data, the threshold may need adjustment."
     )
 
 
