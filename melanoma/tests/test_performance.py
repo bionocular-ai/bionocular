@@ -353,7 +353,7 @@ def test_memory_usage_after_requests(client):
     #
     # Current dataset (as of Jan 2026):
     # - ASCO 2020-2025: ~829,018 lines
-    # - ESMO 2020-2024: ~522,098 lines  
+    # - ESMO 2020-2024: ~522,098 lines
     # - ESMO 2025: ~218,928 lines (added Jan 2026)
     # - Publications: ~243,967 lines
     # - Total: ~1,814,011 lines

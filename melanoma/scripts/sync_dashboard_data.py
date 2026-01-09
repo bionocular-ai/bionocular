@@ -19,11 +19,11 @@ src_path = project_root / "src"
 sys.path.insert(0, str(project_root))
 
 # Import with proper path structure (using absolute imports from src)
-from src.infrastructure.clinical_trials.factory import create_clinical_trials_service
 from src.infrastructure.clinical_trials.cancer_type_mapping import (
-    SKIN_CANCER_TYPES,
     ACTIVE_STATUSES,
+    SKIN_CANCER_TYPES,
 )
+from src.infrastructure.clinical_trials.factory import create_clinical_trials_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,7 +83,7 @@ def main():
     # Generate disease landscape stats (status, phase, funder_type) for each cancer type
     logger.info("Generating disease landscape statistics...")
     disease_landscape_stats = {}
-    
+
     for cancer_type in cancer_types:
         logger.info(f"Computing stats for: {cancer_type}")
         try:
@@ -102,13 +102,13 @@ def main():
     deployed_dir = Path(__file__).parent.parent / "data" / "deployed"
     deployed_dir.mkdir(parents=True, exist_ok=True)
     disease_landscape_file = deployed_dir / "disease_landscape_stats.json"
-    
+
     with open(disease_landscape_file, "w") as f:
         json.dump(disease_landscape_stats, f, indent=2, default=str)
-    
+
     logger.info(f"\n✓ Disease landscape stats saved to: {disease_landscape_file}")
     logger.info(f"  - Landscape (Bubbles): {len(landscape_stats)} cancer types")
-    
+
     # Note: Dashboard data (bubbles and therapeutic index) is served directly from SQLite
     # via API endpoints, so no JSON file is needed
 
@@ -140,4 +140,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
