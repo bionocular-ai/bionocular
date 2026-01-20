@@ -92,8 +92,8 @@ def test_build_database_script(temp_db_path, temp_json_file):
     """Test that the build_db.py script can create a database."""
     from scripts.build_db import build_database
 
-    # Build database from JSON file
-    build_database(temp_db_path, [temp_json_file])
+    # Build database from JSON file (excluding web-scraped trials for test isolation)
+    build_database(temp_db_path, [temp_json_file], include_web_scrape=False)
 
     # Verify database was created
     assert temp_db_path.exists(), "Database file should be created"
@@ -115,8 +115,8 @@ def test_sqlite_service_load_data(temp_db_path, temp_json_file):
     """Test that SQLiteTrialsService can load data from database."""
     from scripts.build_db import build_database
 
-    # Build database first
-    build_database(temp_db_path, [temp_json_file])
+    # Build database first (excluding web-scraped trials for test isolation)
+    build_database(temp_db_path, [temp_json_file], include_web_scrape=False)
 
     # Create service instance
     service = SQLiteTrialsService(db_path=temp_db_path)
@@ -147,8 +147,8 @@ def test_sqlite_service_get_all_trials(temp_db_path, temp_json_file):
     """Test get_all_trials method."""
     from scripts.build_db import build_database
 
-    # Build database first
-    build_database(temp_db_path, [temp_json_file])
+    # Build database first (excluding web-scraped trials for test isolation)
+    build_database(temp_db_path, [temp_json_file], include_web_scrape=False)
 
     # Create service instance
     service = SQLiteTrialsService(db_path=temp_db_path)
@@ -174,8 +174,8 @@ def test_sqlite_service_get_full_abstract(temp_db_path, temp_json_file):
     """Test get_full_abstract_by_id method."""
     from scripts.build_db import build_database
 
-    # Build database first
-    build_database(temp_db_path, [temp_json_file])
+    # Build database first (excluding web-scraped trials for test isolation)
+    build_database(temp_db_path, [temp_json_file], include_web_scrape=False)
 
     # Create service instance
     service = SQLiteTrialsService(db_path=temp_db_path)
@@ -216,8 +216,8 @@ def test_api_with_sqlite_data_source(temp_db_path, temp_json_file):
 
     from scripts.build_db import build_database
 
-    # Build database first
-    build_database(temp_db_path, [temp_json_file])
+    # Build database first (excluding web-scraped trials for test isolation)
+    build_database(temp_db_path, [temp_json_file], include_web_scrape=False)
 
     # Set environment variable to use SQLite
     original_source = os.environ.get("TRIALS_DATA_SOURCE")
@@ -281,8 +281,8 @@ def test_build_db_filters_no_arms(temp_db_path, tmp_path):
 
     from scripts.build_db import build_database
 
-    # Build database
-    build_database(temp_db_path, [json_file])
+    # Build database (excluding web-scraped trials for test isolation)
+    build_database(temp_db_path, [json_file], include_web_scrape=False)
 
     # Verify only valid abstract is in database
     import sqlite3
@@ -307,8 +307,8 @@ def test_api_endpoint_with_sqlite(temp_db_path, temp_json_file):
 
     from scripts.build_db import build_database
 
-    # Build database first
-    build_database(temp_db_path, [temp_json_file])
+    # Build database first (excluding web-scraped trials for test isolation)
+    build_database(temp_db_path, [temp_json_file], include_web_scrape=False)
 
     # Set environment variable to use SQLite
     original_source = os.environ.get("TRIALS_DATA_SOURCE")

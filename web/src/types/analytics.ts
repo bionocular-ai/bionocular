@@ -39,6 +39,8 @@ export interface ClinicalTrialRaw {
   // For publications
   publication_id?: string;
   file?: string;
+  // For web-scraped trials
+  source_url?: string;
   // Common fields
   total_arms: number;
   total_attributes_extracted: number;
@@ -77,6 +79,7 @@ export interface TrialDataPoint {
   year: string;
   nctNumber: string;
   numberOfPatients: number | null;
+  sourceUrl?: string; // For web-scraped trials
 }
 
 export interface HeadToHeadDataPoint {

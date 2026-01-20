@@ -326,6 +326,7 @@ export function transformHeadToHeadData(
         year: yearStr || 'Unknown',
         nctNumber,
         numberOfPatients: patientCount,
+        sourceUrl: trial.source_url || '',
       });
     }
   }

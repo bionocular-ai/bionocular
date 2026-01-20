@@ -110,16 +110,28 @@ export default function DiseaseLandscapePage() {
               Disease Landscape
             </Link>
             <Link
+              href={`/dashboard/${categorySlug}/analytics?mode=efficacy`}
+              className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+            >
+              Head to Head Efficacy
+            </Link>
+            <Link
+              href={`/dashboard/${categorySlug}/analytics?mode=safety`}
+              className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+            >
+              Head to Head Safety
+            </Link>
+            <Link
               href={`/dashboard/${categorySlug}/therapeutic-index`}
               className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
             >
-              Therapeutic Index
+              Efficacy : Safety Therapeutic Index
             </Link>
             <Link
               href={`/dashboard/${categorySlug}/analytics`}
               className="block px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md ml-6 border-l-2 border-gray-300 hover:border-orange-400 transition-colors"
             >
-              Comparative Analytics
+              Head to Head Efficacy : Safety
             </Link>
             <div className="block px-3 py-2 text-sm font-medium text-gray-500">
               &quot;Live&quot; Ticker

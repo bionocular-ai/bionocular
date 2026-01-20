@@ -388,6 +388,9 @@ export function extractAbstractDetails(abstractData: AbstractDataInput | null) {
   // Clean phase value
   const cleanPhase = phase.replace(/PHASE/gi, '').trim() || phase;
   
+  // Extract source URL for web-scraped trials
+  const sourceUrl = typeof abstractData.source_url === 'string' ? abstractData.source_url : '';
+  
   return {
     abstractId,
     isPublication,
@@ -407,6 +410,7 @@ export function extractAbstractDetails(abstractData: AbstractDataInput | null) {
     modality,
     sessionType,
     numberOfPatients,
+    sourceUrl,
     armResults,
     attributes,
     rawData: abstractData,

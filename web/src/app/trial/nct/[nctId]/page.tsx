@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import { trialsApi } from '@/lib/api';
-import { Loader2, ArrowLeft, LayoutGrid } from 'lucide-react';
+import { Loader2, ArrowLeft, LayoutGrid, ExternalLink } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -18,6 +18,16 @@ export default function NCTTrialsPage() {
   const params = useParams();
   const router = useRouter();
   const nctId = params?.nctId as string;
+  
+  // Get category from URL search params to know where to go back to
+  const [category, setCategory] = React.useState<string | null>(null);
+  
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      setCategory(searchParams.get('category'));
+    }
+  }, []);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['trials', 'nct', nctId],
@@ -80,19 +90,36 @@ export default function NCTTrialsPage() {
       <div className="bg-gray-50 border-b border-gray-200 px-3 sm:px-4 md:px-6 py-4">
         <div className="flex items-center gap-4">
           <Button
-            onClick={() => router.push('/dashboard')}
+            onClick={() => {
+              if (category) {
+                router.push(`/dashboard/${category}/therapeutic-index`);
+              } else {
+                router.push('/dashboard');
+              }
+            }}
             variant="outline"
             size="sm"
             className="group border-gray-300 text-xs sm:text-sm text-gray-700 font-medium transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20"
-            aria-label="Go back to dashboard"
+            aria-label="Go back to therapeutic index"
           >
             <ArrowLeft className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:-translate-x-0.5 group-hover:text-primary" />
             Back
           </Button>
           <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
-              {nctId}
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
+                {nctId}
+              </h1>
+              <a
+                href={`https://clinicaltrials.gov/study/${nctId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                aria-label="View trial on ClinicalTrials.gov"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
             <p className="text-sm text-gray-600 mt-1">
               {trials.length > 0 ? (() => {
                 const abstracts = trials.filter(t => !t.type || t.type === 'abstract').length;
@@ -158,7 +185,7 @@ export default function NCTTrialsPage() {
               </CardContent>
             </Card>
           ) : (
-            <TrialDataTable data={trials} showAbstractId={true} hideNctId={true} />
+            <TrialDataTable data={trials} showAbstractId={true} hideNctId={true} category={category || undefined} />
           )}
         </div>
       </main>

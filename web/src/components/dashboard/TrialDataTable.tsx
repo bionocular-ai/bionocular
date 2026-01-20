@@ -28,6 +28,7 @@ interface TrialDataTableProps {
   nctFilter?: string;
   sponsorFilter?: string;
   drugFilter?: string;
+  category?: string;
   armNameFilter?: string;
   trialNameFilter?: string;
   armTypeFilter?: string;
@@ -68,6 +69,7 @@ export function TrialDataTable({
   trialNameFilter = '',
   armTypeFilter = '',
   lineOfTherapyFilter = '',
+  category = '',
 }: TrialDataTableProps) {
   const [globalFilter] = useState('');
 
@@ -156,9 +158,12 @@ export function TrialDataTable({
         if (!nctId) {
           return <span className="text-muted-foreground text-xs text-left">—</span>;
         }
+        const nctUrl = category 
+          ? `/trial/nct/${nctId}?category=${category}` 
+          : `/trial/nct/${nctId}`;
         return (
           <Link
-            href={`/trial/nct/${nctId}`}
+            href={nctUrl}
             className="inline-flex items-center px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
             style={{ color: '#1A73E8' }}
           >
@@ -175,6 +180,7 @@ export function TrialDataTable({
         const abstractId = trial.abstract_id;
         const publicationName = trial.publication_name;
         const isPublication = trial.type === 'publication';
+        const sourceUrl = trial.source_url;
         
         // For publications, show publication_name if available, otherwise fall back to abstract_id
         // For abstracts, show abstract_id
@@ -184,12 +190,37 @@ export function TrialDataTable({
           return <span className="text-muted-foreground text-xs text-left">—</span>;
         }
         
-        // Use abstract_id for the link (it's the identifier)
+        // Check if this is a web-scraped trial (abstract_id starts with "webscrape_")
+        const isWebScraped = abstractId?.startsWith('webscrape_');
+        
+        // If web-scraped and has source_url, link to external source
+        if (isWebScraped && sourceUrl) {
+          return (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
+              style={{ color: '#1A73E8' }}
+              title={`${abstractId || displayValue} (Click to view source)`}
+            >
+              <span className="max-w-[500px] truncate">{displayValue}</span>
+              <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
+          );
+        }
+        
+        // Otherwise, link to internal page
         const linkId = abstractId || displayValue;
+        const abstractUrl = category 
+          ? `/trial/abstract/${linkId}?category=${category}` 
+          : `/trial/abstract/${linkId}`;
         
         return (
           <Link
-            href={`/trial/abstract/${linkId}`}
+            href={abstractUrl}
             className="inline-flex items-center px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
             style={{ color: '#1A73E8' }}
             title={abstractId || displayValue}
