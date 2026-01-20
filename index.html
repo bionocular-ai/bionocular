@@ -1,137 +1,200 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Bionocular.ai — Human‑Verified Oncology Signal, Not Noise</title>
-    <meta name="description" content="AI signal detection plus expert verification across trials, publications, pipelines, and real‑world data. Faster oncology insights your teams can trust." />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@600;700&display=swap" rel="stylesheet" />
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-      <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <header class="site-header">
-      <div class="container header-inner">
-        <a class="brand" href="#" aria-label="Bionocular Home">
-          <span class="brand-text">bi<span class="brand-o">o</span>nocular</span>
-        </a>
-        <nav class="nav">
-          <a href="#hero">Home</a>
-          <a href="#platform">Solutions</a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
-          <a href="#contact" class="btn btn-primary btn-small">Request Access</a>
-        </nav>
-      </div>
-    </header>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI signal detection plus expert verification across trials, publications, pipelines, and real‑world data. Faster oncology insights your teams can trust.">
+  <meta name="theme-color" content="#1A73E8">
+  <meta name="robots" content="index, follow">
+  <meta property="og:title" content="Bionocular.ai — Human‑Verified Oncology Signal, Not Noise">
+  <meta property="og:description" content="AI signal detection plus expert verification across trials, publications, pipelines, and real‑world data. Faster oncology insights your teams can trust.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="logo.png">
+  <title>Bionocular.ai — Human‑Verified Oncology Signal, Not Noise</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link rel="preload" href="styles.css" as="style">
+  <link rel="preload" href="script.js" as="script">
+  <link rel="preload" href="Bionocular.mp4" as="video" type="video/mp4">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="#" aria-label="Bionocular Home">
+        <img src="logo.png" alt="Bionocular Logo" class="brand-mark" width="37" height="37">
+        <span class="brand-text">
+          bi<span class="brand-o">o</span>nocular
+        </span>
+      </a>
+      <nav class="nav">
+        <a href="#hero" class="nav-link" data-section="hero">Home</a>
+        <a href="#platform" class="nav-link" data-section="platform">Solutions</a>
+        <a href="#about" class="nav-link" data-section="about">About</a>
+        <a href="#contact" class="nav-link" data-section="contact">Contact</a>
+      </nav>
+    </div>
+  </header>
 
-    <section class="hero" id="hero">
-      <video class="hero-media" src="assets/video/Bionocular.mp4" autoplay loop muted playsinline aria-hidden="true"></video>
-      <canvas id="dataCanvas" class="hero-canvas" aria-hidden="true"></canvas>
-      <div class="hero-overlay">
-        <h1 id="heroHeadline" class="hero-title">Next-gen AI and Machine learning providing analytics and insights (with Human verification) in the Oncology landscape</h1>
+  <section class="hero" id="hero">
+    <video
+      class="hero-media"
+      src="Bionocular.mp4"
+      autoplay
+      loop
+      muted
+      playsinline
+      aria-hidden="true"
+    ></video>
+    <canvas id="dataCanvas" class="hero-canvas" aria-hidden="true"></canvas>
+    <div class="hero-overlay">
+      <h1 id="heroHeadline" class="hero-title"></h1>
+    </div>
+  </section>
+
+  <main>
+    <section class="section section-problem" id="platform">
+      <div class="container">
+        <h2 class="section-title center">Comprehensive Research Intelligence</h2>
+        <div class="card-grid">
+          <article class="card feature-card">
+            <i class="fas fa-microscope"></i>
+            <h3>Research Aggregation</h3>
+            <p>
+              Access consolidated oncology research findings from major medical congresses and
+              pharmaceutical companies.
+            </p>
+          </article>
+          <article class="card feature-card">
+            <i class="fas fa-chart-line"></i>
+            <h3>Treatment Insights</h3>
+            <p>
+              Track emerging approaches, drug developments, and clinical trial outcomes across
+              oncology treatment.
+            </p>
+          </article>
+          <article class="card feature-card">
+            <i class="fas fa-brain"></i>
+            <h3>AI‑Powered Analysis</h3>
+            <p>
+              Leverage analytics to identify trends and patterns—surfacing the signals that
+              matter and suppressing noise.
+            </p>
+          </article>
+        </div>
       </div>
     </section>
 
-    <main>
-      <section class="section section-problem" id="platform">
-        <div class="container">
-          <h2 class="section-title center">Comprehensive Research Intelligence</h2>
-          <div class="card-grid">
-            <article class="card feature-card">
-              <i class="fas fa-microscope"></i>
-              <h3>Research Aggregation</h3>
-              <p>Access consolidated oncology research findings from major medical congresses and pharmaceutical companies.</p>
-            </article>
-            <article class="card feature-card">
-              <i class="fas fa-chart-line"></i>
-              <h3>Treatment Insights</h3>
-              <p>Track emerging approaches, drug developments, and clinical trial outcomes across oncology treatment.</p>
-            </article>
-            <article class="card feature-card">
-              <i class="fas fa-brain"></i>
-              <h3>AI‑Powered Analysis</h3>
-              <p>Leverage analytics to identify trends and patterns—surfacing the signals that matter and suppressing noise.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      
-
-      <section class="section section-about" id="about">
-        <div class="container">
-          <h2 class="section-title center">Why Choose Bionocular</h2>
-          <div class="card-grid">
-            <article class="card">
-              <h3>Comprehensive Coverage</h3>
-              <p>Aggregate research from major oncology conferences, pharma pipelines, and advocacy organizations.</p>
-            </article>
-            <article class="card">
-              <h3>Specialized Focus</h3>
-              <p>Oncology‑tuned extraction and verification deliver clinically relevant, low‑noise insights.</p>
-            </article>
-            <article class="card">
-              <h3>Time‑Saving</h3>
-              <p>Eliminate manual sifting with organized, analyst‑verified briefs, alerts, and datasets.</p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      
-
-      <section class="section section-contact" id="contact">
-        <div class="container contact-wrap">
-          <h2 class="section-title center">Get in Touch</h2>
-          <div class="contact-form">
-            <form onsubmit="event.preventDefault(); alert('Thank you for your message! We will get back to you soon.'); this.reset();">
-              <input type="text" name="name" placeholder="Name" required aria-label="Name" />
-              <input type="email" name="email" placeholder="Email" required aria-label="Email" />
-              <select name="role" required aria-label="Role">
-                <option value="">Select Your Role</option>
-                <option value="researcher">Researcher</option>
-                <option value="healthcare">Healthcare Professional</option>
-                <option value="patient">Patient/Advocate</option>
-                <option value="other">Other</option>
-              </select>
-              <textarea name="message" placeholder="Message" required aria-label="Message"></textarea>
-              <button type="submit" class="btn btn-primary">Request Access</button>
-            </form>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="container footer-content">
-        <div class="footer-section">
-          <h4>Bionocular.ai</h4>
-          <p>Human‑verified oncology intelligence for research and medical teams.</p>
-        </div>
-        <div class="footer-section">
-          <h4>Contact</h4>
-          <p><a href="mailto:info@bionocular.ai">info@bionocular.ai</a></p>
-        </div>
-        <div class="footer-section">
-          <h4>Connect</h4>
-          <div class="social-links">
-            <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin"></i></a>
-            <a href="#" aria-label="Twitter/X"><i class="fab fa-x-twitter"></i></a>
-            <a href="mailto:info@bionocular.ai" aria-label="Email"><i class="fas fa-envelope"></i></a>
-          </div>
+    <section class="section section-about" id="about">
+      <div class="container">
+        <h2 class="section-title center">Why Choose Bionocular</h2>
+        <div class="card-grid">
+          <article class="card">
+            <h3>Comprehensive Coverage</h3>
+            <p>
+              Aggregate research from major oncology conferences, pharma pipelines, and advocacy
+              organizations.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Specialized Focus</h3>
+            <p>
+              Oncology‑tuned extraction and verification deliver clinically relevant, low‑noise
+              insights.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Time‑Saving</h3>
+            <p>
+              Eliminate manual sifting with organized, analyst‑verified briefs, alerts, and
+              datasets.
+            </p>
+          </article>
         </div>
       </div>
-      <div class="container footer-bottom">
-        <p>© <span id="year"></span> Bionocular.ai. All rights reserved.</p>
+    </section>
+
+    <section class="section section-contact" id="contact">
+      <div class="container contact-wrap">
+        <h2 class="section-title center">Get in Touch</h2>
+        <div class="contact-form">
+          <form id="contactForm">
+            <input
+              type="text"
+              name="name"
+              placeholder="Name"
+              required
+              aria-label="Name"
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              required
+              aria-label="Email"
+            />
+            <select name="role" required aria-label="Role">
+              <option value="">Select Your Role</option>
+              <option value="researcher">Researcher</option>
+              <option value="healthcare">Healthcare Professional</option>
+              <option value="patient">Patient/Advocate</option>
+              <option value="other">Other</option>
+            </select>
+            <textarea
+              name="message"
+              placeholder="Message"
+              required
+              aria-label="Message"
+            ></textarea>
+            <button type="submit" class="btn btn-primary">
+              Request Access
+            </button>
+          </form>
+        </div>
       </div>
-    </footer>
+    </section>
+  </main>
 
-    <script src="./main.js"></script>
-  </body>
-  </html>
+  <footer class="site-footer">
+    <div class="container footer-content">
+      <div class="footer-section">
+        <h4>Bionocular.ai</h4>
+        <p>Human‑verified oncology intelligence for research and medical teams.</p>
+      </div>
+      <div class="footer-section">
+        <h4>Contact</h4>
+        <p>
+          <a href="mailto:info@bionocular.ai">info@bionocular.ai</a>
+        </p>
+      </div>
+      <div class="footer-section">
+        <h4>Connect</h4>
+        <div class="social-links">
+          <a href="#" aria-label="LinkedIn">
+            <i class="fab fa-linkedin"></i>
+          </a>
+          <a href="#" aria-label="Twitter/X">
+            <i class="fab fa-x-twitter"></i>
+          </a>
+          <a href="mailto:info@bionocular.ai" aria-label="Email">
+            <i class="fas fa-envelope"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p id="copyright"></p>
+    </div>
+  </footer>
 
+  <script src="script.js"></script>
+</body>
+</html>
 
