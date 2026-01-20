@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Bar,
   BarChart,
@@ -94,19 +95,65 @@ function CustomTooltipContent({ tooltipData, metricUnit, isPinned }: CustomToolt
     const sourceValue = isPublication ? trial.publicationName : trial.abstractId;
 
     return (
-      <div className="bg-slate-800 p-4 rounded-xl shadow-2xl border border-slate-700 min-w-[320px] max-w-[420px]">
+      <div className="bg-slate-800 p-4 rounded-xl shadow-2xl border border-slate-700 min-w-[320px] max-w-[420px] animate-in fade-in duration-200">
         {isPinned && (
           <div className="mb-2 pb-2 border-b border-slate-600 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-amber-400 font-medium">📌 Pinned</span>
-            <span className="text-[10px] text-slate-500">Click elsewhere to dismiss</span>
+            <span className="text-[10px] uppercase tracking-wider text-amber-400 font-medium flex items-center gap-1">
+              <span className="text-amber-400">📌</span> Pinned
+            </span>
+            <span className="text-[10px] text-slate-500">Click dot to unpin</span>
           </div>
         )}
         {sourceValue && (
           <div className="mb-3 pb-3 border-b border-slate-700">
             <span className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">{sourceLabel}</span>
-            <span className={`text-sm font-bold leading-tight block ${isPublication ? 'text-emerald-300' : 'text-sky-300'}`}>
-              {sourceValue}
-            </span>
+            {(() => {
+              const isWebScrape = trial.abstractId?.startsWith('webscrape_');
+              const hasSourceUrl = !!trial.sourceUrl;
+              
+              // Web-scraped trials: link to external source
+              if (isWebScrape && hasSourceUrl) {
+                return (
+                  <a
+                    href={trial.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-sm font-bold leading-tight inline-flex items-center gap-1.5 cursor-pointer hover:underline transition-colors ${isPublication ? 'text-emerald-300 hover:text-emerald-200' : 'text-sky-300 hover:text-sky-200'}`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    <span>{sourceValue}</span>
+                    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                );
+              }
+              
+              // Regular abstracts/publications: link to internal detail page
+              if (trial.abstractId) {
+                return (
+                  <Link
+                    href={`/trial/abstract/${trial.abstractId}`}
+                    className={`text-sm font-bold leading-tight inline-flex items-center gap-1.5 cursor-pointer hover:underline transition-colors ${isPublication ? 'text-emerald-300 hover:text-emerald-200' : 'text-sky-300 hover:text-sky-200'}`}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    <span>{sourceValue}</span>
+                    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                );
+              }
+              
+              // Fallback: non-clickable text
+              return (
+                <span className={`text-sm font-bold leading-tight block ${isPublication ? 'text-emerald-300' : 'text-sky-300'}`}>
+                  {sourceValue}
+                </span>
+              );
+            })()}
           </div>
         )}
         
@@ -143,7 +190,17 @@ function CustomTooltipContent({ tooltipData, metricUnit, isPinned }: CustomToolt
           {trial.nctNumber && (
             <div className="flex justify-between text-xs">
               <span className="text-slate-400">NCT</span>
-              <span className="text-sky-400 font-mono">{trial.nctNumber}</span>
+              <Link
+                href={`/trial/nct/${trial.nctNumber}`}
+                className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+                style={{ pointerEvents: 'auto' }}
+              >
+                <span>{trial.nctNumber}</span>
+                <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           )}
           {trial.numberOfPatients && (
@@ -244,6 +301,7 @@ export default function HeadToHeadChart({
   const chartHeight = Math.max(height || 500, 100);
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
   const [isPinned, setIsPinned] = useState(false);
+  const [pinnedDotId, setPinnedDotId] = useState<string | null>(null);
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isHoveringRef = useRef(false);
 
@@ -268,8 +326,6 @@ export default function HeadToHeadChart({
     };
   }, []);
 
-  // Track the pinned dot's ID to allow clicking the same dot to unpin
-  const pinnedDotIdRef = useRef<string | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   const metricConfig = ALL_METRICS[metric];
@@ -303,26 +359,91 @@ export default function HeadToHeadChart({
     ? { top: 20, right: 30, bottom: 80, left: 55 }
     : { top: 20, right: 30, bottom: 100, left: 60 };
 
+  // Consistent tooltip positioning - always follows the same pattern
+  const calculateTooltipPosition = useCallback((clientX: number, clientY: number) => {
+    const TOOLTIP_WIDTH = 420;
+    const TOOLTIP_HEIGHT = 350;
+    const OFFSET_X = 15; // Horizontal offset from cursor
+    const OFFSET_Y = 10; // Vertical offset from cursor
+    const EDGE_PADDING = 16;
+    
+    // Start with cursor offset (right and slightly below)
+    let x = clientX + OFFSET_X;
+    let y = clientY + OFFSET_Y;
+    
+    // Only adjust X if tooltip would go off right edge
+    if (x + TOOLTIP_WIDTH > window.innerWidth - EDGE_PADDING) {
+      // Flip to left side of cursor
+      x = clientX - TOOLTIP_WIDTH - OFFSET_X;
+    }
+    
+    // Ensure doesn't go off left edge
+    if (x < EDGE_PADDING) {
+      x = EDGE_PADDING;
+    }
+    
+    // Only adjust Y if tooltip would go off bottom edge
+    if (y + TOOLTIP_HEIGHT > window.innerHeight - EDGE_PADDING) {
+      // Flip to above cursor
+      y = clientY - TOOLTIP_HEIGHT - OFFSET_Y;
+    }
+    
+    // Ensure doesn't go off top edge
+    if (y < EDGE_PADDING) {
+      y = EDGE_PADDING;
+    }
+    
+    return { x, y };
+  }, []);
+
   // Handle dot hover
   const handleDotMouseEnter = useCallback((point: ScatterPoint, event: React.MouseEvent) => {
-    if (isPinned) return; // Don't change tooltip on hover if pinned
+    const dotId = `${point.treatmentName}-${point.studyId}-${point.value}`;
+    
+    // If hovering over the pinned dot, update tooltip position
+    if (isPinned && pinnedDotId === dotId) {
+      const position = calculateTooltipPosition(event.clientX, event.clientY);
+      setTooltipData({
+        type: 'scatter',
+        data: point,
+        x: position.x,
+        y: position.y,
+      });
+      return;
+    }
+    
+    // Don't change tooltip if another dot is pinned
+    if (isPinned) return;
+    
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
     }
     isHoveringRef.current = true;
+    const position = calculateTooltipPosition(event.clientX, event.clientY);
     setTooltipData({
       type: 'scatter',
       data: point,
-      x: event.clientX,
-      y: event.clientY,
+      x: position.x,
+      y: position.y,
     });
-  }, [isPinned]);
+  }, [isPinned, pinnedDotId, calculateTooltipPosition]);
 
-  const handleDotMouseLeave = useCallback(() => {
-    if (isPinned) return; // Don't hide if pinned
+  const handleDotMouseLeave = useCallback((point?: ScatterPoint) => {
+    // If leaving the pinned dot, hide the tooltip
+    if (isPinned && point) {
+      const dotId = `${point.treatmentName}-${point.studyId}-${point.value}`;
+      if (pinnedDotId === dotId) {
+        // Leaving pinned dot - keep tooltip but don't update position
+        return;
+      }
+    }
+    
+    // Don't hide if something is pinned
+    if (isPinned) return;
+    
     isHoveringRef.current = false;
     scheduleHideTooltip();
-  }, [isPinned, scheduleHideTooltip]);
+  }, [isPinned, pinnedDotId, scheduleHideTooltip]);
 
   // Handle dot click - pin/unpin the tooltip
   const handleDotClick = useCallback((point: ScatterPoint, event: React.MouseEvent) => {
@@ -332,33 +453,24 @@ export default function HeadToHeadChart({
     const dotId = `${point.treatmentName}-${point.studyId}-${point.value}`;
     
     // If clicking the same pinned dot, unpin
-    if (isPinned && pinnedDotIdRef.current === dotId) {
+    if (isPinned && pinnedDotId === dotId) {
       setIsPinned(false);
       setTooltipData(null);
-      pinnedDotIdRef.current = null;
+      setPinnedDotId(null);
       return;
     }
     
     // Pin to this dot
-    pinnedDotIdRef.current = dotId;
+    const position = calculateTooltipPosition(event.clientX, event.clientY);
+    setPinnedDotId(dotId);
     setIsPinned(true);
     setTooltipData({
       type: 'scatter',
       data: point,
-      x: event.clientX,
-      y: event.clientY,
+      x: position.x,
+      y: position.y,
     });
-  }, [isPinned]);
-  
-  // Handle click outside chart to unpin
-  const handleChartContainerClick = useCallback(() => {
-    // Only unpin if clicking outside a dot (dots have their own handler with stopPropagation)
-    if (isPinned) {
-      setIsPinned(false);
-      setTooltipData(null);
-      pinnedDotIdRef.current = null;
-    }
-  }, [isPinned]);
+  }, [isPinned, pinnedDotId, calculateTooltipPosition]);
 
   // Handle bar hover  
   const handleBarMouseEnter = useCallback((entry: HeadToHeadDataPoint, event: React.MouseEvent) => {
@@ -367,13 +479,14 @@ export default function HeadToHeadChart({
       clearTimeout(hideTimeoutRef.current);
     }
     isHoveringRef.current = true;
+    const position = calculateTooltipPosition(event.clientX, event.clientY);
     setTooltipData({
       type: 'bar',
       data: entry,
-      x: event.clientX,
-      y: event.clientY,
+      x: position.x,
+      y: position.y,
     });
-  }, [isPinned]);
+  }, [isPinned, calculateTooltipPosition]);
 
   const handleBarMouseLeave = useCallback(() => {
     if (isPinned) return; // Don't hide if pinned
@@ -423,12 +536,17 @@ export default function HeadToHeadChart({
         xOffset = (index - (trialCount - 1) / 2) * spacing;
       }
       
+      const dotId = `${payload.treatmentName}-${trial.studyId}-${trial.value}`;
+      const isPinnedDot = isPinned && pinnedDotId === dotId;
+      
       return {
         ...trial,
         treatmentName: payload.treatmentName,
         dotX: centerX + xOffset,
         dotY: valueToY(trial.value),
         key: `dot-${index}`,
+        dotId,
+        isPinnedDot,
       };
     });
 
@@ -445,24 +563,84 @@ export default function HeadToHeadChart({
           radius={[4, 4, 0, 0]}
         />
         {/* The dots */}
-        {dots.map((dot) => (
-          <circle
-            key={dot.key}
-            cx={dot.dotX}
-            cy={dot.dotY}
-            r={7}
-            fill={colors.dot.fill}
-            stroke={colors.dot.stroke}
-            strokeWidth={2}
-            style={{ cursor: 'pointer' }}
-            onMouseEnter={(e) => handleDotMouseEnter(dot, e as unknown as React.MouseEvent)}
-            onMouseLeave={handleDotMouseLeave}
-            onClick={(e) => handleDotClick(dot, e as unknown as React.MouseEvent)}
-          />
-        ))}
+        {dots.map((dot) => {
+          const isPinnedDot = dot.isPinnedDot;
+          const dotRadius = isPinnedDot ? 9 : 7;
+          const dotStrokeWidth = isPinnedDot ? 3 : 2;
+          
+          return (
+            <g key={dot.key}>
+              {/* Outer glow for pinned dot */}
+              {isPinnedDot && (
+                <>
+                  <circle
+                    cx={dot.dotX}
+                    cy={dot.dotY}
+                    r={16}
+                    fill="#fbbf24"
+                    opacity={0.2}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                  <circle
+                    cx={dot.dotX}
+                    cy={dot.dotY}
+                    r={12}
+                    fill="#fbbf24"
+                    opacity={0.3}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                </>
+              )}
+              {/* Main dot - visual only */}
+              <circle
+                cx={dot.dotX}
+                cy={dot.dotY}
+                r={dotRadius}
+                fill={isPinnedDot ? '#fbbf24' : colors.dot.fill}
+                stroke={isPinnedDot ? '#f59e0b' : colors.dot.stroke}
+                strokeWidth={dotStrokeWidth}
+                style={{ 
+                  transition: 'all 0.2s ease',
+                  pointerEvents: 'none',
+                }}
+              />
+              {/* Larger invisible clickable area */}
+              <circle
+                data-dot-id={dot.dotId}
+                data-treatment={dot.treatmentName}
+                cx={dot.dotX}
+                cy={dot.dotY}
+                r={15}
+                fill="transparent"
+                stroke="transparent"
+                strokeWidth={20}
+                style={{ 
+                  cursor: 'pointer',
+                  pointerEvents: 'all',
+                }}
+                onMouseEnter={(e) => {
+                  handleDotMouseEnter(dot, e as unknown as React.MouseEvent);
+                }}
+                onMouseLeave={() => {
+                  handleDotMouseLeave(dot);
+                }}
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                onMouseUp={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const nativeEvent = e as unknown as React.MouseEvent;
+                  handleDotClick(dot, nativeEvent);
+                }}
+              />
+            </g>
+          );
+        })}
       </g>
     );
-  }, [yDomain, colors.dot, handleDotMouseEnter, handleDotMouseLeave, handleDotClick]);
+  }, [yDomain, colors.dot, handleDotMouseEnter, handleDotMouseLeave, handleDotClick, isPinned, pinnedDotId]);
 
   if (data.length === 0) {
     return (
@@ -482,7 +660,6 @@ export default function HeadToHeadChart({
       <div 
         ref={chartContainerRef}
         className="w-full h-full bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm flex flex-col outline-none focus:outline-none"
-        onClick={handleChartContainerClick}
         tabIndex={-1}
       >
         {showLegend && (
@@ -502,6 +679,7 @@ export default function HeadToHeadChart({
                   style={{ background: colors.dot.fill, border: `2px solid ${colors.dot.stroke}` }} 
                 />
                 <span className="text-slate-600 font-medium">Individual trials</span>
+                <span className="text-[10px] text-slate-400 ml-1">(click to pin)</span>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -591,10 +769,11 @@ export default function HeadToHeadChart({
           {/* Custom tooltip */}
           {tooltipData && (
             <div 
-              className={`fixed z-[9999] ${isPinned ? 'pointer-events-auto' : 'pointer-events-none'}`}
+              className={`fixed z-[9999]`}
               style={{ 
-                left: Math.min(tooltipData.x + 15, window.innerWidth - 450),
-                top: Math.max(tooltipData.y - 20, 10),
+                left: tooltipData.x,
+                top: tooltipData.y,
+                pointerEvents: 'auto',
               }}
             >
               <CustomTooltipContent 
@@ -615,7 +794,6 @@ export default function HeadToHeadChart({
     <Card 
       ref={chartContainerRef as React.RefObject<HTMLDivElement>}
       className="w-full overflow-hidden bg-slate-900 border-slate-800 outline-none focus:outline-none"
-      onClick={handleChartContainerClick}
       tabIndex={-1}
     >
       <CardHeader className="pb-2">
@@ -648,6 +826,7 @@ export default function HeadToHeadChart({
                 style={{ background: colors.dot.fill, border: `2px solid ${colors.dot.stroke}` }} 
               />
               <span className="text-slate-300">Individual trials</span>
+              <span className="text-[10px] text-slate-500 ml-1">(click to pin)</span>
             </div>
           </div>
         )}
@@ -731,10 +910,11 @@ export default function HeadToHeadChart({
           {/* Custom tooltip */}
           {tooltipData && (
             <div 
-              className={`fixed z-[9999] ${isPinned ? 'pointer-events-auto' : 'pointer-events-none'}`}
+              className={`fixed z-[9999]`}
               style={{ 
-                left: Math.min(tooltipData.x + 15, window.innerWidth - 450),
-                top: Math.max(tooltipData.y - 20, 10),
+                left: tooltipData.x,
+                top: tooltipData.y,
+                pointerEvents: 'auto',
               }}
             >
               <CustomTooltipContent 

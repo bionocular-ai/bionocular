@@ -83,6 +83,16 @@ export default function AbstractDetailPage() {
   const abstractId = params.abstractId as string;
   const [expandedSections, setExpandedSections] = React.useState<string[]>([]);
   const [isAllExpanded, setIsAllExpanded] = React.useState(false);
+  
+  // Get category from URL search params to pass along to NCT page
+  const [category, setCategory] = React.useState<string | null>(null);
+  
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      setCategory(searchParams.get('category'));
+    }
+  }, []);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['abstract', abstractId],
@@ -190,7 +200,10 @@ export default function AbstractDetailPage() {
               onClick={() => {
                 // Navigate to NCT page if we have NCT number, otherwise go back
                 if (details.nctNumber) {
-                  router.push(`/trial/nct/${details.nctNumber}`);
+                  const nctUrl = category 
+                    ? `/trial/nct/${details.nctNumber}?category=${category}`
+                    : `/trial/nct/${details.nctNumber}`;
+                  router.push(nctUrl);
                 } else {
                   router.back();
                 }
@@ -244,7 +257,7 @@ export default function AbstractDetailPage() {
                       {details.nctNumber && (
                         <CardDescription className="flex items-center gap-2 mt-2">
                           <Link
-                            href={`/trial/nct/${details.nctNumber}`}
+                            href={category ? `/trial/nct/${details.nctNumber}?category=${category}` : `/trial/nct/${details.nctNumber}`}
                             className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
                           >
                             {details.nctNumber}
@@ -253,9 +266,22 @@ export default function AbstractDetailPage() {
                           {details.abstractId && (
                             <>
                               <span className="text-gray-400">•</span>
-                              <span className="text-sm text-gray-600 font-mono">
-                                #{details.abstractId}
-                              </span>
+                              {details.abstractId.startsWith('webscrape_') && details.sourceUrl ? (
+                                <a
+                                  href={details.sourceUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                                  title="View source"
+                                >
+                                  <span className="font-mono">#{details.abstractId}</span>
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </a>
+                              ) : (
+                                <span className="text-sm text-gray-600 font-mono">
+                                  #{details.abstractId}
+                                </span>
+                              )}
                             </>
                           )}
                         </CardDescription>

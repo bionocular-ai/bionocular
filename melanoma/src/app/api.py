@@ -1291,17 +1291,23 @@ def _filter_analytics_data(
             # Must have abstract_id (not publication_id)
             if not abstract.get("abstract_id") or abstract.get("publication_id"):
                 continue
-            # Check if conference is ASCO or ESMO
-            has_asco_esmo = False
-            for arm in arm_results.values():
-                conference = _extract_attribute_value(
-                    arm.get("attributes", {}), "AttributeType.CONFERENCE"
-                )
-                if conference.upper() in ("ASCO", "ESMO"):
-                    has_asco_esmo = True
-                    break
-            if not has_asco_esmo:
-                continue
+            # Check if conference is ASCO, ESMO, or web-scraped
+            # Web-scraped trials have abstract_id starting with "webscrape_"
+            abstract_id = abstract.get("abstract_id", "")
+            is_web_scrape = abstract_id.startswith("webscrape_")
+
+            if not is_web_scrape:
+                # For non-web-scraped, check if conference is ASCO or ESMO
+                has_asco_esmo = False
+                for arm in arm_results.values():
+                    conference = _extract_attribute_value(
+                        arm.get("attributes", {}), "AttributeType.CONFERENCE"
+                    )
+                    if conference.upper() in ("ASCO", "ESMO"):
+                        has_asco_esmo = True
+                        break
+                if not has_asco_esmo:
+                    continue
         elif resource_type == "publication":
             # Must have publication_id (not abstract_id)
             if not abstract.get("publication_id") or abstract.get("abstract_id"):
@@ -1404,6 +1410,16 @@ def _filter_analytics_data(
             filtered.append(filtered_abstract)
 
     return filtered
+
+
+@app.get("/api/debug/code-version")
+async def debug_code_version():
+    """Debug endpoint to verify code version."""
+    return {
+        "version": "2026-01-20-v2",
+        "has_web_scrape_fix": True,
+        "message": "Web scrape filtering fix is active",
+    }
 
 
 @app.get("/api/analytics/data")

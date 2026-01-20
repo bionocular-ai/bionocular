@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
@@ -197,7 +197,7 @@ const EFFICACY_OPTIONS = [
 const SAFETY_OPTIONS = [
   { value: 'none', label: 'None' },
   // General AE
-  { value: 'AE', label: 'Any AE (%)' },
+  { value: 'AE', label: 'AE (%)' },
   { value: 'GRADE_3_PLUS_AE', label: 'Grade ≥3 AE (%)' },
   { value: 'AE_LEADING_TO_DISCONTINUATION', label: 'AE Discontinuation (%)' },
   { value: 'SERIOUS_AE', label: 'Serious AE (%)' },
@@ -486,7 +486,17 @@ export default function CategoryAnalyticsPage() {
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
 
-  // Filter states
+  // Check if we're in a specific mode (efficacy or safety only)
+  // Use lazy initialization to read URL params on initial render
+  const [mode] = useState<'all' | 'efficacy' | 'safety'>(() => {
+    if (typeof window === 'undefined') return 'all';
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get('mode');
+    if (modeParam === 'efficacy' || modeParam === 'safety') return modeParam;
+    return 'all';
+  });
+
+  // Filter states - initialized based on mode
   const [company, setCompany] = useState('all');
   const [therapyType, setTherapyType] = useState('all');
   const [lineOfTreatment, setLineOfTreatment] = useState('all');
@@ -494,10 +504,27 @@ export default function CategoryAnalyticsPage() {
   const [fundingType, setFundingType] = useState<'all' | 'industry' | 'non-industry'>('all');
   const [biomarker, setBiomarker] = useState('all');
   const [biomarkerType, setBiomarkerType] = useState('all');
-  const [selectedApproved, setSelectedApproved] = useState<string[]>([]);
-  const [selectedNonApproved, setSelectedNonApproved] = useState<string[]>([]);
-  const [efficacyParam, setEfficacyParam] = useState('OBJECTIVE_RESPONSE_RATE');
-  const [safetyParam, setSafetyParam] = useState('none');
+  // Store raw user selections
+  const [rawSelectedApproved, setRawSelectedApproved] = useState<string[]>([]);
+  const [rawSelectedNonApproved, setRawSelectedNonApproved] = useState<string[]>([]);
+  
+  // Initialize params based on mode from URL
+  const [efficacyParam, setEfficacyParam] = useState(() => {
+    if (typeof window === 'undefined') return 'OBJECTIVE_RESPONSE_RATE';
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get('mode');
+    return modeParam === 'safety' ? 'none' : 'OBJECTIVE_RESPONSE_RATE';
+  });
+  
+  const [safetyParam, setSafetyParam] = useState(() => {
+    if (typeof window === 'undefined') return 'none';
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get('mode');
+    return modeParam === 'safety' ? 'GRADE_3_PLUS_AE' : 'none';
+  });
+  
+  const [efficacySearch, setEfficacySearch] = useState('');
+  const [safetySearch, setSafetySearch] = useState('');
 
   // Build filter parameters for API call
   const apiFilters = useMemo(() => {
@@ -646,34 +673,17 @@ export default function CategoryAnalyticsPage() {
     };
   }, [analyticsData, categoryName]);
 
-  // Track previous availableTherapies to detect changes
-  const prevAvailableTherapiesRef = useRef(availableTherapies);
+  // Derive valid selections by filtering raw selections against available therapies
+  // This automatically handles cleanup when available therapies change (e.g., category switch)
+  const selectedApproved = useMemo(
+    () => rawSelectedApproved.filter(t => availableTherapies.approved.includes(t)),
+    [rawSelectedApproved, availableTherapies.approved]
+  );
   
-  // Clear selected therapies if they're not available in the current category
-  // Only update when availableTherapies actually changes (not on every render)
-  useEffect(() => {
-    const prev = prevAvailableTherapiesRef.current;
-    const current = availableTherapies;
-    
-    // Check if availableTherapies actually changed
-    const approvedChanged = prev.approved.length !== current.approved.length ||
-      prev.approved.some((t, i) => t !== current.approved[i]);
-    const nonApprovedChanged = prev.nonApproved.length !== current.nonApproved.length ||
-      prev.nonApproved.some((t, i) => t !== current.nonApproved[i]);
-    
-    if (approvedChanged || nonApprovedChanged) {
-      // Use setTimeout to defer state updates outside of render cycle
-      const timeoutId = setTimeout(() => {
-        setSelectedApproved(prevSelected => prevSelected.filter(t => current.approved.includes(t)));
-        setSelectedNonApproved(prevSelected => prevSelected.filter(t => current.nonApproved.includes(t)));
-        prevAvailableTherapiesRef.current = current;
-      }, 0);
-      
-      return () => clearTimeout(timeoutId);
-    } else {
-      prevAvailableTherapiesRef.current = current;
-    }
-  }, [availableTherapies]);
+  const selectedNonApproved = useMemo(
+    () => rawSelectedNonApproved.filter(t => availableTherapies.nonApproved.includes(t)),
+    [rawSelectedNonApproved, availableTherapies.nonApproved]
+  );
 
   // Transform data for chart (backend already filtered the data)
   const chartData = useMemo<HeadToHeadDataPoint[]>(() => {
@@ -752,7 +762,9 @@ export default function CategoryAnalyticsPage() {
                 <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
               </Link>
               <div className="h-6 w-px bg-slate-200" />
-              <h1 className="text-lg font-semibold text-slate-800">Clinical Trials Analytics</h1>
+              <h1 className="text-lg font-semibold text-slate-800">
+                {mode === 'efficacy' ? 'Head to Head Efficacy' : mode === 'safety' ? 'Head to Head Safety' : 'Head to Head Efficacy : Safety'}
+              </h1>
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -784,6 +796,232 @@ export default function CategoryAnalyticsPage() {
           </div>
         </div>
       </header>
+
+      {/* Mode Banner with Parameter Selection - Compact, professional design */}
+      {mode === 'all' && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50">
+          <div className="px-4 md:px-6 py-2.5">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-md">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-white font-semibold text-sm">Head to Head Efficacy : Safety</h2>
+                  <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
+                  <p className="text-blue-100 text-xs hidden sm:block">Comparative analysis</p>
+                </div>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+                <div className="w-full sm:w-72">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
+                        <span className="flex items-center gap-2 truncate font-medium">
+                          <span className="text-xs text-white/70">Efficacy:</span>
+                          {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label || 'Select...'}
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
+                      <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
+                        <input
+                          type="text"
+                          value={efficacySearch}
+                          placeholder="Search efficacy metrics..."
+                          className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          onChange={(e) => setEfficacySearch(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      {EFFICACY_OPTIONS.filter(option => 
+                        option.label.toLowerCase().includes(efficacySearch.toLowerCase())
+                      ).map(option => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                          onClick={() => {
+                            setEfficacyParam(option.value);
+                            setEfficacySearch('');
+                          }}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{option.label}</span>
+                            {efficacyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                <div className="w-full sm:w-72">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
+                        <span className="flex items-center gap-2 truncate font-medium">
+                          <span className="text-xs text-white/70">Safety:</span>
+                          {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label || 'Select...'}
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
+                      <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
+                        <input
+                          type="text"
+                          value={safetySearch}
+                          placeholder="Search safety metrics..."
+                          className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          onChange={(e) => setSafetySearch(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      {SAFETY_OPTIONS.filter(option => 
+                        option.label.toLowerCase().includes(safetySearch.toLowerCase())
+                      ).map(option => (
+                        <DropdownMenuItem
+                          key={option.value}
+                          className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                          onClick={() => {
+                            setSafetyParam(option.value);
+                            setSafetySearch('');
+                          }}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{option.label}</span>
+                            {safetyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {mode === 'efficacy' && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50">
+          <div className="px-4 md:px-6 py-2.5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-md">
+                  <TrendingUp className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-white font-semibold text-sm">Efficacy Analysis</h2>
+                  <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
+                  <p className="text-blue-100 text-xs hidden sm:block">Clinical trial efficacy parameters</p>
+                </div>
+              </div>
+              <div className="w-full sm:w-80">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
+                      <span className="flex items-center gap-2 truncate font-medium">
+                        <span className="text-xs text-white/70">Parameter:</span>
+                        {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label || 'Select...'}
+                      </span>
+                      <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
+                    <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
+                      <input
+                        type="text"
+                        value={efficacySearch}
+                        placeholder="Search efficacy metrics..."
+                        className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        onChange={(e) => setEfficacySearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    {EFFICACY_OPTIONS.filter(option => 
+                      option.label.toLowerCase().includes(efficacySearch.toLowerCase())
+                    ).map(option => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                        onClick={() => {
+                          setEfficacyParam(option.value);
+                          setEfficacySearch('');
+                        }}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span>{option.label}</span>
+                          {efficacyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {mode === 'safety' && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50">
+          <div className="px-4 md:px-6 py-2.5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-md">
+                  <AlertCircle className="h-4 w-4 text-white" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-white font-semibold text-sm">Safety Analysis</h2>
+                  <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
+                  <p className="text-blue-100 text-xs hidden sm:block">Clinical trial safety parameters</p>
+                </div>
+              </div>
+              <div className="w-full sm:w-80">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
+                      <span className="flex items-center gap-2 truncate font-medium">
+                        <span className="text-xs text-white/70">Parameter:</span>
+                        {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label || 'Select...'}
+                      </span>
+                      <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
+                    <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
+                      <input
+                        type="text"
+                        value={safetySearch}
+                        placeholder="Search safety metrics..."
+                        className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        onChange={(e) => setSafetySearch(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    {SAFETY_OPTIONS.filter(option => 
+                      option.label.toLowerCase().includes(safetySearch.toLowerCase())
+                    ).map(option => (
+                      <DropdownMenuItem
+                        key={option.value}
+                        className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                        onClick={() => {
+                          setSafetyParam(option.value);
+                          setSafetySearch('');
+                        }}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span>{option.label}</span>
+                          {safetyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
@@ -831,7 +1069,7 @@ export default function CategoryAnalyticsPage() {
               maxLabel="Max 5"
               options={availableTherapies.approved}
               selected={selectedApproved}
-              onChange={setSelectedApproved}
+              onChange={setRawSelectedApproved}
               maxSelect={5}
             />
             <TherapyMultiSelect
@@ -839,7 +1077,7 @@ export default function CategoryAnalyticsPage() {
               maxLabel="Max 5"
               options={availableTherapies.nonApproved}
               selected={selectedNonApproved}
-              onChange={setSelectedNonApproved}
+              onChange={setRawSelectedNonApproved}
               maxSelect={5}
             />
 
@@ -869,28 +1107,8 @@ export default function CategoryAnalyticsPage() {
           {/* Divider */}
           <div className="my-4 border-t border-slate-200" />
 
-          {/* Parameter Selection */}
-          <div className="space-y-3">
-            <FilterSelect
-              label="Efficacy Parameter"
-              value={efficacyParam}
-              options={EFFICACY_OPTIONS}
-              onChange={setEfficacyParam}
-              searchable
-              searchPlaceholder="Search efficacy metrics..."
-            />
-            <FilterSelect
-              label="Safety Parameter"
-              value={safetyParam}
-              options={SAFETY_OPTIONS}
-              onChange={setSafetyParam}
-              searchable
-              searchPlaceholder="Search safety metrics..."
-            />
-          </div>
-
           {/* Action Buttons */}
-          <div className="mt-4 flex gap-2">
+          <div className="flex gap-2">
             <Button
               variant="outline"
               className="flex-1 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
@@ -902,10 +1120,20 @@ export default function CategoryAnalyticsPage() {
                 setFundingType('all');
                 setBiomarker('all');
                 setBiomarkerType('all');
-                setSelectedApproved([]);
-                setSelectedNonApproved([]);
-                setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
-                setSafetyParam('none');
+                setRawSelectedApproved([]);
+                setRawSelectedNonApproved([]);
+                // Reset parameters based on mode
+                if (mode === 'safety') {
+                  setEfficacyParam('none');
+                  setSafetyParam('GRADE_3_PLUS_AE');
+                } else if (mode === 'efficacy') {
+                  setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
+                  setSafetyParam('none');
+                } else {
+                  // mode === 'all' - Comparative Analytics
+                  setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
+                  setSafetyParam('GRADE_3_PLUS_AE');
+                }
               }}
             >
               Reset Filters
@@ -1030,55 +1258,101 @@ export default function CategoryAnalyticsPage() {
       {isFullscreen && (
         <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col">
           {/* Fullscreen Header */}
-          <div className="px-6 py-3 border-b border-slate-200 flex items-center justify-between bg-white shadow-sm flex-shrink-0">
-            <div className="flex items-center gap-4">
+          <div className="border-b border-slate-200 bg-white shadow-sm flex-shrink-0">
+            <div className="px-6 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <Link href="/" className="brand flex-shrink-0">
+                    <div className="relative flex items-center" style={{ height: '28px' }}>
+                      <Image
+                        src="/logo.png"
+                        alt="Bionocular Logo"
+                        width={28}
+                        height={28}
+                        className="object-contain"
+                        priority
+                        unoptimized
+                      />
+                    </div>
+                    <span className="brand-text text-base">bi<span className="brand-o">o</span>nocular</span>
+                  </Link>
+                  <div className="h-5 w-px bg-slate-200" />
+                </div>
+                <h2 className="text-base font-semibold text-slate-700">{metricLabel} by Drug/Intervention</h2>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-blue-100 text-blue-700">
+                    {metricLabel.split(' ')[0]}
+                  </span>
+                  <span className="text-2xl font-bold text-slate-900">{summaryMetric.value.toFixed(1)}</span>
+                  <span className="flex items-center text-sm font-semibold text-emerald-600">
+                    {summaryMetric.change > 0 ? (
+                      <TrendingUp className="h-4 w-4 mr-0.5" />
+                    ) : summaryMetric.change < 0 ? (
+                      <TrendingDown className="h-4 w-4 mr-0.5" />
+                    ) : (
+                      <Minus className="h-4 w-4 mr-0.5" />
+                    )}
+                    {Math.abs(summaryMetric.change)}%
+                  </span>
+                </div>
+              </div>
               <div className="flex items-center gap-3">
-                <Link href="/" className="brand flex-shrink-0">
-                  <div className="relative flex items-center" style={{ height: '28px' }}>
-                    <Image
-                      src="/logo.png"
-                      alt="Bionocular Logo"
-                      width={28}
-                      height={28}
-                      className="object-contain"
-                      priority
-                      unoptimized
-                    />
-                  </div>
-                  <span className="brand-text text-base">bi<span className="brand-o">o</span>nocular</span>
-                </Link>
-                <div className="h-5 w-px bg-slate-200" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 text-slate-600 hover:text-slate-900"
+                  onClick={() => setIsFullscreen(false)}
+                >
+                  <Minimize2 className="h-4 w-4" />
+                  Exit
+                </Button>
               </div>
-              <h2 className="text-base font-semibold text-slate-700">{metricLabel} by Drug/Intervention</h2>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-semibold bg-blue-100 text-blue-700">
-                  {metricLabel.split(' ')[0]}
-                </span>
-                <span className="text-2xl font-bold text-slate-900">{summaryMetric.value.toFixed(1)}</span>
-                <span className="flex items-center text-sm font-semibold text-emerald-600">
-                  {summaryMetric.change > 0 ? (
-                    <TrendingUp className="h-4 w-4 mr-0.5" />
-                  ) : summaryMetric.change < 0 ? (
-                    <TrendingDown className="h-4 w-4 mr-0.5" />
-                  ) : (
-                    <Minus className="h-4 w-4 mr-0.5" />
-                  )}
-                  {Math.abs(summaryMetric.change)}%
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 text-slate-600 hover:text-slate-900"
-                onClick={() => setIsFullscreen(false)}
-              >
-                <Minimize2 className="h-4 w-4" />
-                Exit
-              </Button>
             </div>
           </div>
+          
+          {/* Mode Banner in Fullscreen - Compact design */}
+          {mode === 'all' && (
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
+                  <TrendingUp className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-white text-xs font-medium">Head to Head Efficacy : Safety</span>
+                <span className="w-px h-3 bg-white/30 mx-1"></span>
+                <span className="text-blue-100 text-xs">
+                  Efficacy: {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}
+                </span>
+                <span className="w-px h-3 bg-white/30 mx-1"></span>
+                <span className="text-blue-100 text-xs">
+                  Safety: {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label}
+                </span>
+              </div>
+            </div>
+          )}
+          {mode === 'efficacy' && (
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
+                  <TrendingUp className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-white text-xs font-medium">Efficacy Analysis</span>
+                <span className="w-px h-3 bg-white/30 mx-1"></span>
+                <span className="text-blue-100 text-xs">{EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}</span>
+              </div>
+            </div>
+          )}
+          {mode === 'safety' && (
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
+                  <AlertCircle className="h-3.5 w-3.5 text-white" />
+                </div>
+                <span className="text-white text-xs font-medium">Safety Analysis</span>
+                <span className="w-px h-3 bg-white/30 mx-1"></span>
+                <span className="text-blue-100 text-xs">{SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label}</span>
+              </div>
+            </div>
+          )}
 
           {/* Fullscreen Chart Area */}
           <div className="flex-1 p-4 flex flex-col min-h-0">

@@ -50,6 +50,7 @@ def create_database(db_path: Path) -> sqlite3.Connection:
             abstract_id TEXT,
             publication_id TEXT,
             file TEXT,
+            source_url TEXT,  -- For web-scraped trials
             total_arms INTEGER,
             total_attributes_extracted INTEGER,
             overall_confidence REAL,
@@ -120,15 +121,16 @@ def insert_abstract(conn: sqlite3.Connection, abstract: dict) -> None:
     
     conn.execute("""
         INSERT OR REPLACE INTO abstracts (
-            id, abstract_id, publication_id, file,
+            id, abstract_id, publication_id, file, source_url,
             total_arms, total_attributes_extracted, overall_confidence,
             processing_time_ms, errors, warnings, arm_results, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         record_id,
         abstract_id,
         publication_id,
         abstract.get("file"),
+        abstract.get("source_url"),
         len(abstract.get("arm_results", {})),
         abstract.get("total_attributes_extracted", 0),
         abstract.get("overall_confidence", 0.0),
@@ -140,12 +142,59 @@ def insert_abstract(conn: sqlite3.Connection, abstract: dict) -> None:
     ))
 
 
-def build_database(db_path: Path, json_file_paths: list[Path] | None = None) -> None:
+def transform_web_scrape_to_abstract(trial: dict, source_file: str) -> dict:
+    """Transform web scrape trial format to abstract format.
+    
+    Args:
+        trial: Trial data from web_scrape.json
+        source_file: Source file name
+    
+    Returns:
+        Transformed abstract dictionary
+    """
+    from datetime import datetime
+    
+    trial_id = trial.get("trial_id", "")
+    nct_numbers = trial.get("nct_numbers", []) or trial.get("nct_number", "")
+    
+    # Handle both list and string NCT numbers
+    if isinstance(nct_numbers, list):
+        nct_number = nct_numbers[0] if nct_numbers else trial_id
+    else:
+        nct_number = nct_numbers or trial_id
+    
+    # Get arm results
+    arm_results = trial.get("arm_results", {})
+    
+    # Count total attributes across all arms
+    total_attributes = 0
+    for arm_data in arm_results.values():
+        total_attributes += arm_data.get("total_attributes", 0)
+    
+    # Transform to abstract format
+    abstract = {
+        "abstract_id": f"webscrape_{trial_id}",  # Prefix to distinguish from conference abstracts
+        "file": source_file,
+        "total_arms": trial.get("total_arms", len(arm_results)),
+        "total_attributes_extracted": total_attributes,
+        "overall_confidence": 1.0,  # Web-scraped data has high confidence
+        "processing_time_ms": 0,
+        "errors": [],
+        "warnings": [],
+        "arm_results": arm_results,
+        "created_at": trial.get("web_scrape_timestamp", datetime.now().isoformat()),
+    }
+    
+    return abstract
+
+
+def build_database(db_path: Path, json_file_paths: list[Path] | None = None, include_web_scrape: bool = True) -> None:
     """Build SQLite database from JSON files.
     
     Args:
         db_path: Path where SQLite database should be created
         json_file_paths: Optional list of JSON file paths. If None, uses default paths.
+        include_web_scrape: Whether to include web-scraped trials from web_scrape.json
     """
     logger.info("Starting database build process...")
     
@@ -200,6 +249,44 @@ def build_database(db_path: Path, json_file_paths: list[Path] | None = None) -> 
             except Exception as e:
                 logger.error(f"Error processing {json_file_path}: {e}")
                 continue
+        
+        # Load web_scrape.json if it exists and include_web_scrape is True
+        if include_web_scrape:
+            web_scrape_path = Path(__file__).parent.parent / "data" / "deployed" / "web_scrape.json"
+            if web_scrape_path.exists():
+                logger.info(f"Loading web-scraped trials from {web_scrape_path.name}...")
+                try:
+                    with open(web_scrape_path, encoding="utf-8") as f:
+                        web_scrape_data = json.load(f)
+                    
+                    trials = web_scrape_data.get("trials", [])
+                    logger.info(f"Found {len(trials)} web-scraped trials")
+                    
+                    for trial in trials:
+                        try:
+                            # Transform trial to abstract format
+                            abstract = transform_web_scrape_to_abstract(
+                                trial,
+                                source_file="web_scrape.json"
+                            )
+                            
+                            # Insert into database
+                            insert_abstract(conn, abstract)
+                            total_inserted += 1
+                            
+                        except Exception as e:
+                            trial_id = trial.get("trial_id", "unknown")
+                            logger.error(f"Error processing web-scraped trial {trial_id}: {e}")
+                            continue
+                    
+                    logger.info(f"Inserted {len(trials)} web-scraped trials")
+                    
+                except json.JSONDecodeError as e:
+                    logger.error(f"Invalid JSON in {web_scrape_path}: {e}")
+                except Exception as e:
+                    logger.error(f"Error processing {web_scrape_path}: {e}")
+            else:
+                logger.info("No web_scrape.json found, skipping web-scraped trials")
         
         # Commit all changes
         conn.commit()

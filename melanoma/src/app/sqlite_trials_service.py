@@ -81,6 +81,7 @@ class SQLiteTrialsService:
                     abstract_id,
                     publication_id,
                     file,
+                    source_url,
                     total_arms,
                     total_attributes_extracted,
                     overall_confidence,
@@ -115,6 +116,9 @@ class SQLiteTrialsService:
                     "warnings": warnings,
                     "arm_results": arm_results,
                 }
+
+                if row["source_url"]:
+                    abstract["source_url"] = row["source_url"]
 
                 if row["created_at"]:
                     abstract["created_at"] = row["created_at"]
@@ -375,6 +379,7 @@ class SQLiteTrialsService:
                     abstract_id,
                     publication_id,
                     file,
+                    source_url,
                     total_arms,
                     total_attributes_extracted,
                     overall_confidence,
@@ -411,6 +416,9 @@ class SQLiteTrialsService:
                 "warnings": warnings,
                 "arm_results": arm_results,
             }
+
+            if row["source_url"]:
+                abstract["source_url"] = row["source_url"]
 
             if row["created_at"]:
                 abstract["created_at"] = row["created_at"]

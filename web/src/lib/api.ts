@@ -43,6 +43,7 @@ export interface Trial {
   cancer_type?: string;
   year?: string | number;
   type?: 'abstract' | 'publication';
+  source_url?: string; // For web-scraped trials
   arms?: Array<{
     arm_name: string;
     generic_name: string;
@@ -116,6 +117,7 @@ export interface AbstractData {
   abstract_id?: string;
   publication_id?: string;
   title?: string;
+  source_url?: string; // For web-scraped trials
   arm_results?: Record<string, ArmResult>;
   [key: string]: unknown;
 }

@@ -49,6 +49,7 @@ class JSONTrialsService:
                     "data/deployed/ESMO_2020-2024.json",
                     "data/deployed/ESMO_2025.json",
                     "data/deployed/Publications_70.json",
+                    "data/deployed/web_scrape.json",
                 ]
 
         # Normalize to list
@@ -88,12 +89,21 @@ class JSONTrialsService:
                     with open(json_file_path, encoding="utf-8") as f:
                         data = json.load(f)
 
-                    # Extract abstracts and publications from this file
+                    # Extract abstracts, publications, and trials from this file
                     abstracts = data.get("abstracts", [])
                     publications = data.get("publications", [])
+                    trials = data.get("trials", [])
 
-                    # Combine abstracts and publications (publications will be treated as abstracts for processing)
-                    all_items = abstracts + publications
+                    # Transform trials: add abstract_id if not present (use trial_id with webscrape_ prefix)
+                    for trial in trials:
+                        if "abstract_id" not in trial and "trial_id" in trial:
+                            trial["abstract_id"] = f"webscrape_{trial['trial_id']}"
+                        # Add file field to track source
+                        if "file" not in trial:
+                            trial["file"] = json_file_path.name
+
+                    # Combine all items (publications and trials will be treated as abstracts for processing)
+                    all_items = abstracts + publications + trials
 
                     # Filter out items with "No treatment arms identified"
                     filtered_items = [
@@ -111,7 +121,7 @@ class JSONTrialsService:
                     all_abstracts.extend(filtered_items)
                     total_loaded += len(filtered_items)
                     logger.info(
-                        f"Loaded {len(filtered_items)} items ({len(abstracts)} abstracts, {len(publications)} publications) from {json_file_path.name}"
+                        f"Loaded {len(filtered_items)} items ({len(abstracts)} abstracts, {len(publications)} publications, {len(trials)} trials) from {json_file_path.name}"
                     )
 
                 except json.JSONDecodeError as e:
