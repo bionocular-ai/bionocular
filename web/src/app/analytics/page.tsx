@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import HeadToHeadChart from '@/components/charts/HeadToHeadChart';
+import BarChart from '@/components/charts/BarChart';
 import { transformHeadToHeadData } from '@/lib/chart-transformers';
 import { HeadToHeadDataPoint, EfficacyMetric, EFFICACY_METRICS, TrialDataFile } from '@/types/analytics';
 
@@ -475,7 +475,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Chart */}
-        <HeadToHeadChart
+                    <BarChart
           data={chartData}
           metric={selectedMetric}
           title={`${EFFICACY_METRICS[selectedMetric].description} by Drug/Intervention`}

@@ -310,3 +310,67 @@ export const DEFAULT_CHART_FILTERS: ChartFilters = {
   yearRange: [2015, 2025],
 };
 
+// ============================================================================
+// Efficacy vs Safety Chart Types
+// ============================================================================
+
+export interface EfficacySafetyDataPoint {
+  treatmentName: string;
+  treatmentType?: string; // e.g., "Immunotherapy", "Chemo", "Targeted"
+  efficacy: number; // ORR or other efficacy metric (%)
+  safety: number; // Grade 3+ AE rate (%)
+  approvalStatus?: ApprovalStatus;
+  numberOfPatients?: number;
+  trialCount?: number;
+  // Store all trials for this treatment (for tooltip switching)
+  allTrials?: Array<{
+    abstractId?: string;
+    efficacy: number;
+    safety: number;
+    numberOfPatients?: number;
+    year?: string;
+    nctNumber?: string;
+    publicationName?: string;
+    citation?: string;
+    phase?: string;
+  }>;
+  currentTrialIndex?: number;
+}
+
+// ============================================================================
+// Bubble Chart Types
+// ============================================================================
+
+export interface BubbleChartDataPoint {
+  treatmentName: string;
+  treatmentType?: string;
+  efficacy: number; // ORR or other efficacy metric (%)
+  safety: number; // Grade 3+ TRAE or AE rate (%)
+  numberOfPatients: number; // Determines bubble size
+  approvalStatus?: ApprovalStatus;
+  developmentStatus?: 'Approved' | 'Development stopped' | 'Investigational';
+  nctNumber?: string;
+  abstractId?: string;
+  publicationName?: string;
+  citation?: string;
+  phase?: string;
+  year?: string;
+  sourceUrl?: string;
+  // Additional metadata for tooltips
+  notes?: string;
+  biomarker?: string;
+  // Store all trials for this treatment (for tooltip switching)
+  allTrials?: Array<{
+    abstractId?: string;
+    efficacy: number;
+    safety: number;
+    numberOfPatients: number;
+    year?: string;
+    nctNumber?: string;
+    publicationName?: string;
+    citation?: string;
+    phase?: string;
+  }>;
+  currentTrialIndex?: number; // Index of currently displayed trial in allTrials array
+}
+

@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import Image from 'next/image';
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 
 const headlines = [
   'Next-gen AI and Machine learning providing analytics and insights (with Human verification) in the Oncology landscape',
@@ -195,18 +195,7 @@ export default function Home() {
       <header className="site-header">
         <div className="container header-inner">
           <a className="brand" href="#" aria-label="Bionocular Home">
-            <div className="relative flex items-center" style={{ height: '37px', flexShrink: 0, background: 'transparent' }}>
-              <Image
-                src="/logo.png"
-                alt="Bionocular Logo"
-                width={37}
-                height={37}
-                className="object-contain"
-                priority
-                unoptimized
-                style={{ height: '37px', width: 'auto', background: 'transparent' }}
-              />
-            </div>
+            <Logo height={36} />
             <span className="brand-text" style={{ lineHeight: '1.2' }}>
               bi<span className="brand-o">o</span>nocular
             </span>

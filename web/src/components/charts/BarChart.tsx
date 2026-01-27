@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Bar,
-  BarChart,
+  BarChart as RechartsBarChart,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -266,6 +266,34 @@ function CustomTooltipContent({ tooltipData, metricUnit, isPinned }: CustomToolt
           </p>
         </div>
       </div>
+      <div className="pt-3 border-t border-slate-700 space-y-1.5">
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">Citation</span>
+          <span className="text-slate-200 font-medium">{treatment.trials[0]?.citation || 'N/A'}</span>
+        </div>
+        {treatment.trials[0]?.nctNumber && (
+          <div className="flex justify-between text-xs">
+            <span className="text-slate-400">NCT</span>
+            <Link
+              href={`/trial/nct/${treatment.trials[0].nctNumber}`}
+              className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+              onClick={(e) => e.stopPropagation()}
+              style={{ pointerEvents: 'auto' }}
+            >
+              <span>{treatment.trials[0].nctNumber}</span>
+              <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        )}
+        {treatment.trials[0]?.numberOfPatients && (
+          <div className="flex justify-between text-xs">
+            <span className="text-slate-400">Patients</span>
+            <span className="text-slate-200 font-medium">n={treatment.trials[0].numberOfPatients}</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -274,7 +302,7 @@ function CustomTooltipContent({ tooltipData, metricUnit, isPinned }: CustomToolt
 // Main Component
 // ============================================================================
 
-interface HeadToHeadChartProps {
+interface BarChartProps {
   data: HeadToHeadDataPoint[];
   metric?: ChartMetric;
   title?: string;
@@ -286,7 +314,7 @@ interface HeadToHeadChartProps {
   compact?: boolean;
 }
 
-export default function HeadToHeadChart({
+export default function BarChart({
   data,
   metric = 'MEDIAN_OS',
   title,
@@ -296,7 +324,7 @@ export default function HeadToHeadChart({
   showReferenceLine = false,
   referenceValue,
   compact = false,
-}: HeadToHeadChartProps) {
+}: BarChartProps) {
   // Ensure height is always a valid positive number (fixes SSR warnings)
   const chartHeight = Math.max(height || 500, 100);
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
@@ -334,22 +362,22 @@ export default function HeadToHeadChart({
 
   // Calculate total trials
   const totalTrials = useMemo(() => 
-    data.reduce((sum, d) => sum + d.trials.length, 0), 
+    data.reduce((sum: number, d: HeadToHeadDataPoint) => sum + d.trials.length, 0), 
     [data]
   );
 
   // Calculate overall average for reference line
   const overallAverage = useMemo(() => {
     if (referenceValue !== undefined) return referenceValue;
-    const allValues = data.flatMap(d => d.trials.map(t => t.value));
+    const allValues = data.flatMap((d: HeadToHeadDataPoint) => d.trials.map((t: TrialDataPoint) => t.value));
     return allValues.length > 0 
-      ? allValues.reduce((a, b) => a + b, 0) / allValues.length 
+      ? allValues.reduce((a: number, b: number) => a + b, 0) / allValues.length 
       : 0;
   }, [data, referenceValue]);
 
   // Calculate Y domain to include all individual values
   const yDomain = useMemo((): [number, number] => {
-    const allValues = data.flatMap(d => [...d.trials.map(t => t.value), d.averageValue]);
+    const allValues = data.flatMap((d: HeadToHeadDataPoint) => [...d.trials.map((t: TrialDataPoint) => t.value), d.averageValue]);
     if (allValues.length === 0) return [0, 100];
     const maxValue = Math.max(...allValues);
     return [0, Math.ceil(maxValue * 1.15)];
@@ -511,7 +539,7 @@ export default function HeadToHeadChart({
   const CustomBarShape = useCallback((props: any) => {
     const { x = 0, y = 0, width = 0, height = 0, fill, fillOpacity, payload, background } = props as BarShapeProps;
     
-    if (!payload || !background) return <Rectangle x={x} y={y} width={width} height={height} fill={fill} radius={[4, 4, 0, 0]} />;
+    if (!payload || !background) return <Rectangle x={x} y={y} width={width} height={height} fill={fill} radius={0} />;
     
     const trials = payload.trials || [];
     const trialCount = trials.length;
@@ -523,7 +551,12 @@ export default function HeadToHeadChart({
     const [yMin, yMax] = yDomain;
     
     const valueToY = (value: number) => {
-      const normalizedValue = (value - yMin) / (yMax - yMin);
+      const range = yMax - yMin;
+      if (range === 0) {
+        // If all values are the same, center the dot
+        return chartAreaTop + chartAreaHeight / 2;
+      }
+      const normalizedValue = (value - yMin) / range;
       return chartAreaTop + chartAreaHeight * (1 - normalizedValue);
     };
 
@@ -560,7 +593,7 @@ export default function HeadToHeadChart({
           height={height}
           fill={fill}
           fillOpacity={fillOpacity}
-          radius={[4, 4, 0, 0]}
+          radius={0}
         />
         {/* The dots */}
         {dots.map((dot) => {
@@ -697,7 +730,7 @@ export default function HeadToHeadChart({
           style={{ WebkitTapHighlightColor: 'transparent' }}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={margin}>
+            <RechartsBarChart data={data} margin={margin}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
@@ -750,7 +783,7 @@ export default function HeadToHeadChart({
                 }}
                 onMouseLeave={handleBarMouseLeave}
               >
-                {data.map((entry, index) => (
+                {data.map((entry: HeadToHeadDataPoint, index: number) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={
@@ -763,7 +796,7 @@ export default function HeadToHeadChart({
                   />
                 ))}
               </Bar>
-            </BarChart>
+            </RechartsBarChart>
           </ResponsiveContainer>
           
           {/* Custom tooltip */}
@@ -838,7 +871,7 @@ export default function HeadToHeadChart({
           tabIndex={-1}
         >
           <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-            <BarChart data={data} margin={margin}>
+            <RechartsBarChart data={data} margin={margin}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 vertical={false}
@@ -890,7 +923,7 @@ export default function HeadToHeadChart({
                 }}
                 onMouseLeave={handleBarMouseLeave}
               >
-                {data.map((entry, index) => (
+                {data.map((entry: HeadToHeadDataPoint, index: number) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={
@@ -904,7 +937,7 @@ export default function HeadToHeadChart({
                   />
                 ))}
               </Bar>
-            </BarChart>
+            </RechartsBarChart>
           </ResponsiveContainer>
           
           {/* Custom tooltip */}
@@ -948,7 +981,7 @@ export default function HeadToHeadChart({
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-sky-400 tabular-nums">
-                {data.filter(d => d.approvalStatus === 'Approved').length}
+                {data.filter((d: HeadToHeadDataPoint) => d.approvalStatus === 'Approved').length}
               </p>
               <p className="text-xs text-slate-400 uppercase tracking-wider">
                 Approved
@@ -956,7 +989,7 @@ export default function HeadToHeadChart({
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-violet-400 tabular-nums">
-                {data.filter(d => d.approvalStatus === 'Investigational').length}
+                {data.filter((d: HeadToHeadDataPoint) => d.approvalStatus === 'Investigational').length}
               </p>
               <p className="text-xs text-slate-400 uppercase tracking-wider">
                 Investigational
