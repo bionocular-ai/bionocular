@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { TrialDataTable } from '@/components/dashboard/TrialDataTable';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input';
 import { UserMenu } from '@/components/user-menu';
 import { trialsApi, Trial } from '@/lib/api';
 import { Loader2, ChevronDown, Check, LayoutGrid } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,7 +67,9 @@ export default function TherapeuticIndexPage() {
   const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const categorySlug = params?.category as string;
+  const isTherapeuticIndexPage = pathname?.includes('/therapeutic-index');
   const categoryName = slugToCategory(categorySlug);
   const [sponsorFilter, setSponsorFilter] = React.useState<string>('');
   const [nctFilter, setNctFilter] = React.useState<string>('');
@@ -291,18 +293,7 @@ export default function TherapeuticIndexPage() {
         <div className="w-full px-3 sm:px-4 md:px-6">
           <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
             <Link href="/" className="brand flex-shrink-0">
-              <div className="relative flex items-center" style={{ height: '37px', flexShrink: 0, background: 'transparent' }}>
-                <Image
-                  src="/logo.png"
-                  alt="Bionocular Logo"
-                  width={37}
-                  height={37}
-                  className="object-contain"
-                  priority
-                  unoptimized
-                  style={{ height: '37px', width: 'auto', background: 'transparent' }}
-                />
-              </div>
+              <Logo height={36} />
               <span className="brand-text" style={{ lineHeight: '1.2' }}>
                 bi<span className="brand-o">o</span>nocular
               </span>
@@ -361,18 +352,22 @@ export default function TherapeuticIndexPage() {
             >
               Head to Head Safety
             </Link>
-            <Link
-              href={`/dashboard/${categorySlug}/therapeutic-index`}
-              className="block px-3 py-2 text-sm font-medium text-orange-600 bg-orange-50 rounded-md"
-            >
-              Efficacy : Safety Therapeutic Index
-            </Link>
-            <Link
-              href={`/dashboard/${categorySlug}/analytics`}
-              className="block px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md ml-6 border-l-2 border-gray-300 hover:border-orange-400 transition-colors"
-            >
-              Head to Head Efficacy : Safety
-            </Link>
+            <div>
+              <Link
+                href={`/dashboard/${categorySlug}/therapeutic-index`}
+                className="block px-3 py-2 text-sm font-medium text-orange-600 bg-orange-50 rounded-md"
+              >
+                Head to Head Efficacy : Safety
+              </Link>
+              {isTherapeuticIndexPage && (
+                <Link
+                  href={`/dashboard/${categorySlug}/analytics`}
+                  className="block px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md ml-6 border-l-2 border-gray-300 hover:border-orange-400 transition-colors"
+                >
+                  Efficacy : Safety Therapeutic Index
+                </Link>
+              )}
+            </div>
             <div className="block px-3 py-2 text-sm font-medium text-gray-500">
               &quot;Live&quot; Ticker
               <span className="ml-2 text-xs text-gray-400">Upcoming</span>

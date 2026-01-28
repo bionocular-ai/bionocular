@@ -12,6 +12,8 @@ import {
   ApprovalStatus,
   ArmResult,
   AttributeValue,
+  EfficacySafetyDataPoint,
+  BubbleChartDataPoint,
 } from '@/types/analytics';
 
 // ============================================================================
@@ -87,6 +89,43 @@ function getAttribute(attributes: Record<string, AttributeInput>, metricName: st
 // ============================================================================
 
 type AttributeInput = AttributeValue | string | number | boolean | null | undefined;
+
+/**
+ * Deduplicate trials by treatment name, keeping the most recent year.
+ * If same year, prefer highest efficacy then lowest safety.
+ */
+function deduplicateTrialsByTreatment<T extends { treatmentName: string; year?: string; efficacy?: number; safety?: number }>(
+  trials: T[]
+): T[] {
+  const treatmentMap = new Map<string, T>();
+
+  for (const trial of trials) {
+    const existing = treatmentMap.get(trial.treatmentName);
+    if (!existing) {
+      treatmentMap.set(trial.treatmentName, trial);
+    } else {
+      const existingYear = parseInt(existing.year || '0', 10);
+      const currentYear = parseInt(trial.year || '0', 10);
+      
+      if (currentYear > existingYear) {
+        treatmentMap.set(trial.treatmentName, trial);
+      } else if (currentYear === existingYear) {
+        // Same year - prefer higher efficacy, then lower safety
+        const existingEfficacy = existing.efficacy ?? 0;
+        const currentEfficacy = trial.efficacy ?? 0;
+        const existingSafety = existing.safety ?? 0;
+        const currentSafety = trial.safety ?? 0;
+        
+        if (currentEfficacy > existingEfficacy || 
+            (currentEfficacy === existingEfficacy && currentSafety < existingSafety)) {
+          treatmentMap.set(trial.treatmentName, trial);
+        }
+      }
+    }
+  }
+
+  return Array.from(treatmentMap.values());
+}
 
 /**
  * Safely extract a numeric value from an attribute
@@ -281,25 +320,13 @@ export function transformHeadToHeadData(
         continue;
       }
 
-      // Filter by year if specified
-      const yearStr = extractStringValue(getAttribute(arm.attributes, 'PUBLISHED_YEAR'));
+      // Filter by year if specified - abstracts use PUBLISHED_YEAR, publications use PUBLICATION_YEAR
+      const yearStr = extractStringValue(getAttribute(arm.attributes, 'PUBLISHED_YEAR')) ||
+                     extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_YEAR')) ||
+                     extractStringValue(getAttribute(arm.attributes, 'publication_year'));
       const year = parseInt(yearStr, 10);
       if (!isNaN(year) && (year < yearRange[0] || year > yearRange[1])) {
         continue;
-      }
-
-      // Initialize group if needed (using normalized name)
-      if (!grouped.has(treatmentName)) {
-        grouped.set(treatmentName, { values: [], patients: [], trials: [] });
-      }
-
-      const group = grouped.get(treatmentName)!;
-      group.values.push(metricValue);
-
-      // Extract patient count
-      const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS'));
-      if (patientCount !== null) {
-        group.patients.push(patientCount);
       }
 
       // Build trial data point
@@ -315,6 +342,21 @@ export function transformHeadToHeadData(
       // Get publication name from attributes (for publications)
       const publicationNameAttr = extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_NAME'));
       
+      // Extract patient count
+      const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS'));
+
+      // Initialize group if needed (using normalized name)
+      if (!grouped.has(treatmentName)) {
+        grouped.set(treatmentName, { values: [], patients: [], trials: [] });
+      }
+
+      const group = grouped.get(treatmentName)!;
+      group.values.push(metricValue);
+
+      if (patientCount !== null) {
+        group.patients.push(patientCount);
+      }
+      
       group.trials.push({
         studyId,
         abstractId,
@@ -329,6 +371,37 @@ export function transformHeadToHeadData(
         sourceUrl: trial.source_url || '',
       });
     }
+  }
+
+  // Deduplicate trials before aggregating
+  for (const [treatmentName, group] of grouped.entries()) {
+    // Deduplicate trials by creating a map keyed by abstractId/year
+    const trialMap = new Map<string, TrialDataPoint>();
+    for (const trial of group.trials) {
+      const key = `${trial.abstractId}_${trial.year}`;
+      if (!trialMap.has(key)) {
+        trialMap.set(key, trial);
+      } else {
+        // If same abstract/year, keep the one with better value (higher for efficacy metrics)
+        const existing = trialMap.get(key)!;
+        if (trial.value > existing.value) {
+          trialMap.set(key, trial);
+        }
+      }
+    }
+    group.trials = Array.from(trialMap.values());
+    
+    // Sort trials by year (most recent first), then by value
+    group.trials.sort((a, b) => {
+      const yearA = parseInt(a.year || '0', 10);
+      const yearB = parseInt(b.year || '0', 10);
+      if (yearB !== yearA) return yearB - yearA;
+      return b.value - a.value;
+    });
+    
+    // Recalculate values and patients from deduplicated trials
+    group.values = group.trials.map(t => t.value);
+    group.patients = group.trials.map(t => t.numberOfPatients).filter((p): p is number => p !== null);
   }
 
   // Convert to HeadToHeadDataPoint array
@@ -443,5 +516,333 @@ export function flattenScatterData(data: HeadToHeadDataPoint[]): (TrialDataPoint
       treatmentName: group.treatmentName,
     }))
   );
+}
+
+// ============================================================================
+// Efficacy vs Safety Chart Transformers
+// ============================================================================
+
+export interface EfficacySafetyTransformOptions {
+  efficacyMetric?: ChartMetric;
+  safetyMetric?: ChartMetric;
+  selectedTreatments?: string[];
+  minTrialCount?: number;
+  selectedPhases?: string[];
+  yearRange?: [number, number];
+}
+
+/**
+ * Transform data for Diverging Bar Chart (Efficacy vs Safety)
+ */
+export function transformEfficacySafetyData(
+  data: TrialDataFile | TrialDataFile[],
+  options: EfficacySafetyTransformOptions = {}
+): EfficacySafetyDataPoint[] {
+  const {
+    efficacyMetric = 'OBJECTIVE_RESPONSE_RATE',
+    safetyMetric = 'GRADE_3_PLUS_AE',
+    selectedTreatments = [],
+    minTrialCount = 1,
+    selectedPhases = [],
+    yearRange = [2000, 2030],
+  } = options;
+
+  const dataFiles = Array.isArray(data) ? data : [data];
+  const allTrials: ClinicalTrialRaw[] = [];
+  for (const file of dataFiles) {
+    if (file.abstracts) allTrials.push(...file.abstracts);
+    if (file.publications) allTrials.push(...file.publications);
+  }
+
+  // Group by treatment - collect individual trials first
+  const individualTrials: Array<{
+    treatmentName: string;
+    efficacy: number;
+    safety: number;
+    numberOfPatients?: number;
+    year?: string;
+    abstractId?: string;
+    nctNumber?: string;
+    publicationName?: string;
+    citation?: string;
+    phase?: string;
+  }> = [];
+
+  const grouped = new Map<string, {
+    efficacyValues: number[];
+    safetyValues: number[];
+    patients: number[];
+    trialCount: number;
+  }>();
+
+  for (const trial of allTrials) {
+    for (const [, arm] of Object.entries(trial.arm_results)) {
+      const treatmentName = normalizeTreatmentName(arm.arm_name);
+      
+      if (selectedTreatments.length > 0) {
+        const normalizedSelected = selectedTreatments.map(normalizeTreatmentName);
+        if (!normalizedSelected.includes(treatmentName) && !selectedTreatments.includes(arm.arm_name)) {
+          continue;
+        }
+      }
+
+      // Extract efficacy and safety values
+      const efficacyAttr = getAttribute(arm.attributes, efficacyMetric);
+      const safetyAttr = getAttribute(arm.attributes, safetyMetric);
+      const efficacyValue = extractNumericValue(efficacyAttr);
+      const safetyValue = extractNumericValue(safetyAttr);
+
+      // Both metrics must be present
+      if (efficacyValue === null || safetyValue === null) continue;
+
+      // Filter by phase
+      const phase = extractStringValue(getAttribute(arm.attributes, 'CLINICAL_TRIAL_PHASE'));
+      if (selectedPhases.length > 0 && phase && !selectedPhases.includes(phase)) {
+        continue;
+      }
+
+      // Filter by year - abstracts use PUBLISHED_YEAR, publications use PUBLICATION_YEAR
+      const yearStr = extractStringValue(getAttribute(arm.attributes, 'PUBLISHED_YEAR')) ||
+                     extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_YEAR')) ||
+                     extractStringValue(getAttribute(arm.attributes, 'publication_year'));
+      const year = parseInt(yearStr, 10);
+      if (!isNaN(year) && (year < yearRange[0] || year > yearRange[1])) {
+        continue;
+      }
+
+      // Store individual trial data
+      const abstractId = trial.abstract_id || trial.publication_id || '';
+      const nctNumber = extractStringValue(getAttribute(arm.attributes, 'NCT_NUMBER'));
+      const publicationName = extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_NAME'));
+      const conference = extractStringValue(getAttribute(arm.attributes, 'CONFERENCE'));
+      const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS'));
+
+      individualTrials.push({
+        treatmentName,
+        efficacy: efficacyValue,
+        safety: safetyValue,
+        numberOfPatients: patientCount || undefined,
+        year: yearStr || undefined,
+        abstractId: abstractId || undefined,
+        nctNumber: nctNumber || undefined,
+        publicationName: publicationName || undefined,
+        citation: `${conference} ${yearStr}`,
+        phase: phase || undefined,
+      });
+
+      if (!grouped.has(treatmentName)) {
+        grouped.set(treatmentName, { efficacyValues: [], safetyValues: [], patients: [], trialCount: 0 });
+      }
+
+      const group = grouped.get(treatmentName)!;
+      group.efficacyValues.push(efficacyValue);
+      group.safetyValues.push(safetyValue);
+      
+      if (patientCount !== null) {
+        group.patients.push(patientCount);
+      }
+      group.trialCount++;
+    }
+  }
+
+  // Deduplicate individual trials by treatment before aggregating
+  const deduplicatedTrials = deduplicateTrialsByTreatment(individualTrials);
+
+  // Recalculate grouped data from deduplicated trials
+  const deduplicatedGrouped = new Map<string, {
+    efficacyValues: number[];
+    safetyValues: number[];
+    patients: number[];
+    trialCount: number;
+  }>();
+
+  for (const trial of deduplicatedTrials) {
+    if (!deduplicatedGrouped.has(trial.treatmentName)) {
+      deduplicatedGrouped.set(trial.treatmentName, { efficacyValues: [], safetyValues: [], patients: [], trialCount: 0 });
+    }
+    const group = deduplicatedGrouped.get(trial.treatmentName)!;
+    group.efficacyValues.push(trial.efficacy);
+    group.safetyValues.push(trial.safety);
+    if (trial.numberOfPatients !== undefined) {
+      group.patients.push(trial.numberOfPatients);
+    }
+    group.trialCount++;
+  }
+
+  // Group all trials by treatment for tooltip switching
+  const treatmentTrialsMap = new Map<string, typeof individualTrials>();
+  for (const trial of individualTrials) {
+    if (!treatmentTrialsMap.has(trial.treatmentName)) {
+      treatmentTrialsMap.set(trial.treatmentName, []);
+    }
+    treatmentTrialsMap.get(trial.treatmentName)!.push(trial);
+  }
+
+  const result: EfficacySafetyDataPoint[] = [];
+
+  for (const [treatmentName, group] of deduplicatedGrouped.entries()) {
+    if (group.trialCount < minTrialCount) continue;
+
+    const avgEfficacy = group.efficacyValues.reduce((a, b) => a + b, 0) / group.efficacyValues.length;
+    const avgSafety = group.safetyValues.reduce((a, b) => a + b, 0) / group.safetyValues.length;
+    const totalPatients = group.patients.reduce((a, b) => a + b, 0);
+
+    // Get all trials for this treatment and sort by year
+    const allTrials = treatmentTrialsMap.get(treatmentName) || [];
+    allTrials.sort((a, b) => {
+      const yearA = parseInt(a.year || '0', 10);
+      const yearB = parseInt(b.year || '0', 10);
+      if (yearB !== yearA) return yearB - yearA;
+      if (b.efficacy !== a.efficacy) return b.efficacy - a.efficacy;
+      return a.safety - b.safety;
+    });
+
+    result.push({
+      treatmentName,
+      approvalStatus: getApprovalStatus(treatmentName),
+      efficacy: avgEfficacy,
+      safety: avgSafety,
+      numberOfPatients: totalPatients > 0 ? totalPatients : undefined,
+      trialCount: group.trialCount,
+      allTrials: allTrials,
+      currentTrialIndex: 0,
+    });
+  }
+
+  // Sort by efficacy (highest first)
+  result.sort((a, b) => b.efficacy - a.efficacy);
+
+  return result;
+}
+
+/**
+ * Transform data for Bubble Chart (Safety vs Efficacy)
+ */
+export function transformBubbleChartData(
+  data: TrialDataFile | TrialDataFile[],
+  options: EfficacySafetyTransformOptions = {}
+): BubbleChartDataPoint[] {
+  const {
+    efficacyMetric = 'OBJECTIVE_RESPONSE_RATE',
+    safetyMetric = 'GRADE_3_PLUS_TRAE',
+    selectedTreatments = [],
+    minTrialCount = 1,
+    selectedPhases = [],
+    yearRange = [2000, 2030],
+  } = options;
+
+  const dataFiles = Array.isArray(data) ? data : [data];
+  const allTrials: ClinicalTrialRaw[] = [];
+  for (const file of dataFiles) {
+    if (file.abstracts) allTrials.push(...file.abstracts);
+    if (file.publications) allTrials.push(...file.publications);
+  }
+
+  const result: BubbleChartDataPoint[] = [];
+
+  for (const trial of allTrials) {
+    for (const [, arm] of Object.entries(trial.arm_results)) {
+      const treatmentName = normalizeTreatmentName(arm.arm_name);
+      
+      if (selectedTreatments.length > 0) {
+        const normalizedSelected = selectedTreatments.map(normalizeTreatmentName);
+        if (!normalizedSelected.includes(treatmentName) && !selectedTreatments.includes(arm.arm_name)) {
+          continue;
+        }
+      }
+
+      // Extract metrics
+      const efficacyAttr = getAttribute(arm.attributes, efficacyMetric);
+      const safetyAttr = getAttribute(arm.attributes, safetyMetric);
+      const efficacyValue = extractNumericValue(efficacyAttr);
+      const safetyValue = extractNumericValue(safetyAttr);
+
+      if (efficacyValue === null || safetyValue === null) continue;
+
+      // Filter by phase
+      const phase = extractStringValue(getAttribute(arm.attributes, 'CLINICAL_TRIAL_PHASE'));
+      if (selectedPhases.length > 0 && phase && !selectedPhases.includes(phase)) {
+        continue;
+      }
+
+      // Filter by year - abstracts use PUBLISHED_YEAR, publications use PUBLICATION_YEAR
+      const yearStr = extractStringValue(getAttribute(arm.attributes, 'PUBLISHED_YEAR')) ||
+                     extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_YEAR')) ||
+                     extractStringValue(getAttribute(arm.attributes, 'publication_year'));
+      const year = parseInt(yearStr, 10);
+      if (!isNaN(year) && (year < yearRange[0] || year > yearRange[1])) {
+        continue;
+      }
+
+      const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS')) || 0;
+      const nctNumber = extractStringValue(getAttribute(arm.attributes, 'NCT_NUMBER'));
+      const abstractId = trial.abstract_id || trial.publication_id || '';
+      const publicationName = extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_NAME'));
+      const conference = extractStringValue(getAttribute(arm.attributes, 'CONFERENCE'));
+      const trialName = extractStringValue(getAttribute(arm.attributes, 'TRIAL_NAME'));
+
+      result.push({
+        treatmentName,
+        approvalStatus: getApprovalStatus(treatmentName),
+        developmentStatus: getApprovalStatus(treatmentName) === 'Approved' ? 'Approved' : 'Investigational',
+        efficacy: efficacyValue,
+        safety: safetyValue,
+        numberOfPatients: patientCount,
+        nctNumber: nctNumber || undefined,
+        abstractId: abstractId || undefined,
+        publicationName: publicationName || undefined,
+        citation: `${conference} ${yearStr}`,
+        phase: phase || undefined,
+        year: yearStr || undefined,
+        sourceUrl: trial.source_url || undefined,
+      });
+    }
+  }
+
+  // Group all data points by treatment to collect all trials
+  const treatmentTrialsMap = new Map<string, BubbleChartDataPoint[]>();
+  for (const point of result) {
+    if (!treatmentTrialsMap.has(point.treatmentName)) {
+      treatmentTrialsMap.set(point.treatmentName, []);
+    }
+    treatmentTrialsMap.get(point.treatmentName)!.push(point);
+  }
+
+  // Deduplicate to get the most recent trial for display
+  const deduplicatedResult = deduplicateTrialsByTreatment(result);
+
+  // Attach allTrials array to each deduplicated point
+  for (const point of deduplicatedResult) {
+    const allTrials = treatmentTrialsMap.get(point.treatmentName) || [];
+    // Sort by year (most recent first)
+    allTrials.sort((a, b) => {
+      const yearA = parseInt(a.year || '0', 10);
+      const yearB = parseInt(b.year || '0', 10);
+      if (yearB !== yearA) return yearB - yearA;
+      // Same year - prefer higher efficacy, then lower safety
+      if (b.efficacy !== a.efficacy) return b.efficacy - a.efficacy;
+      return a.safety - b.safety;
+    });
+    point.allTrials = allTrials.map(trial => ({
+      abstractId: trial.abstractId,
+      efficacy: trial.efficacy,
+      safety: trial.safety,
+      numberOfPatients: trial.numberOfPatients,
+      year: trial.year,
+      nctNumber: trial.nctNumber,
+      publicationName: trial.publicationName,
+      citation: trial.citation,
+      phase: trial.phase,
+    }));
+    point.currentTrialIndex = 0; // Most recent trial
+  }
+
+  // Filter by minimum trial count per treatment
+  const treatmentCounts = new Map<string, number>();
+  for (const point of deduplicatedResult) {
+    treatmentCounts.set(point.treatmentName, (treatmentCounts.get(point.treatmentName) || 0) + 1);
+  }
+
+  return deduplicatedResult.filter((point) => (treatmentCounts.get(point.treatmentName) || 0) >= minTrialCount);
 }
 

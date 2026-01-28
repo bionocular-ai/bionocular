@@ -8,8 +8,8 @@ import { UserMenu } from '@/components/user-menu';
 import { CancerTypeBubbles } from '@/components/dashboard/CancerTypeBubbles';
 import { trialsApi } from '@/lib/api';
 import { Loader2 } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 
 
 export default function TherapeuticIndexPage() {
@@ -29,18 +29,7 @@ export default function TherapeuticIndexPage() {
         <div className="w-full px-3 sm:px-4 md:px-6">
           <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
             <Link href="/" className="brand flex-shrink-0">
-              <div className="relative flex items-center" style={{ height: '37px', flexShrink: 0, background: 'transparent' }}>
-                <Image
-                  src="/logo.png"
-                  alt="Bionocular Logo"
-                  width={37}
-                  height={37}
-                  className="object-contain"
-                  priority
-                  unoptimized
-                  style={{ height: '37px', width: 'auto', background: 'transparent' }}
-                />
-              </div>
+              <Logo height={36} />
               <span className="brand-text" style={{ lineHeight: '1.2' }}>
                 bi<span className="brand-o">o</span>nocular
               </span>

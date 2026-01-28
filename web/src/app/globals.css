@@ -55,6 +55,64 @@ body{
   margin:0; font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
   background:var(--bg); color:var(--text); line-height:1.6;
 }
+
+/* Tooltip animations */
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes tooltipFadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+}
+
+@keyframes tooltipContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.tooltip-enter {
+  animation: tooltipFadeIn 0.15s ease-out;
+}
+
+.tooltip-enter > * {
+  animation: tooltipContentFadeIn 0.2s ease-out 0.05s both;
+}
+
+/* Smooth transitions for Recharts tooltip */
+.recharts-tooltip-wrapper {
+  transition: opacity 0.15s ease-out, transform 0.15s ease-out !important;
+  animation: tooltipFadeIn 0.15s ease-out !important;
+}
+
+.recharts-tooltip-wrapper[style*="display: none"] {
+  opacity: 0;
+  transform: translateY(8px) scale(0.95);
+}
+
+/* Smooth hover transitions for tooltip content */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  transition: all 0.2s ease-out;
+}
 .container{width:min(1120px,92%); margin-inline:auto}
 .site-header{position:fixed; inset-block-start:0; inset-inline:0; backdrop-filter:saturate(140%) blur(8px); background:color-mix(in oklab, var(--bg) 92%, transparent); border-block-end:1px solid var(--border); z-index:20}
 .header-inner{display:flex; align-items:center; justify-content:space-between; padding:8px 0}

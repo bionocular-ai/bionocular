@@ -2,14 +2,14 @@
 
 import * as React from 'react';
 import { useSession } from 'next-auth/react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { UserMenu } from '@/components/user-menu';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, LayoutGrid } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 import { trialsApi, DiseaseLandscapeStats } from '@/lib/api';
 
 // Mapping of slugs to category names
@@ -35,8 +35,11 @@ export default function DiseaseLandscapePage() {
   const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
+  const isTherapeuticIndexPage = pathname?.includes('/therapeutic-index');
+  const [showNavigationBars, setShowNavigationBars] = React.useState(false);
 
   const { data: stats, isLoading, error } = useQuery<DiseaseLandscapeStats>({
     queryKey: ['disease-landscape-stats', categorySlug],
@@ -51,18 +54,7 @@ export default function DiseaseLandscapePage() {
         <div className="w-full px-3 sm:px-4 md:px-6">
           <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
             <Link href="/" className="brand flex-shrink-0">
-              <div className="relative flex items-center" style={{ height: '37px', flexShrink: 0, background: 'transparent' }}>
-                <Image
-                  src="/logo.png"
-                  alt="Bionocular Logo"
-                  width={37}
-                  height={37}
-                  className="object-contain"
-                  priority
-                  unoptimized
-                  style={{ height: '37px', width: 'auto', background: 'transparent' }}
-                />
-              </div>
+              <Logo height={36} />
               <span className="brand-text" style={{ lineHeight: '1.2' }}>
                 bi<span className="brand-o">o</span>nocular
               </span>
@@ -121,18 +113,22 @@ export default function DiseaseLandscapePage() {
             >
               Head to Head Safety
             </Link>
-            <Link
-              href={`/dashboard/${categorySlug}/therapeutic-index`}
-              className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
-            >
-              Efficacy : Safety Therapeutic Index
-            </Link>
-            <Link
-              href={`/dashboard/${categorySlug}/analytics`}
-              className="block px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md ml-6 border-l-2 border-gray-300 hover:border-orange-400 transition-colors"
-            >
-              Head to Head Efficacy : Safety
-            </Link>
+            <div>
+              <Link
+                href={`/dashboard/${categorySlug}/therapeutic-index`}
+                className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+              >
+                Head to Head Efficacy : Safety
+              </Link>
+              {isTherapeuticIndexPage && (
+                <Link
+                  href={`/dashboard/${categorySlug}/analytics`}
+                  className="block px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md ml-6 border-l-2 border-gray-300 hover:border-orange-400 transition-colors"
+                >
+                  Efficacy : Safety Therapeutic Index
+                </Link>
+              )}
+            </div>
             <div className="block px-3 py-2 text-sm font-medium text-gray-500">
               &quot;Live&quot; Ticker
               <span className="ml-2 text-xs text-gray-400">Upcoming</span>
@@ -191,19 +187,44 @@ export default function DiseaseLandscapePage() {
                               {key} <span className="font-medium text-gray-900">({value})</span>
                             </span>
                             {isOverallStatus && extractedCount > 0 ? (
-                              <div className="flex-1 relative h-6">
-                                {/* Outer bar (Overall Status) */}
-                                <div
-                                  className="absolute h-6 bg-gray-400 rounded-md transition-all duration-300"
-                                  style={{ width: `${percentage}%` }}
-                                />
-                                {/* Inner bar (Extracted count) - Clickable */}
-                                <Link
-                                  href={`/dashboard/${categorySlug}/therapeutic-index`}
-                                  className="absolute h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer"
-                                  style={{ width: `${extractedPercentage}%` }}
-                                  title={`View ${extractedCount} therapeutic index trials`}
-                                />
+                              <div className="flex-1 relative">
+                                {/* Navigation bars - shown above when clicked, positioned absolutely */}
+                                {showNavigationBars && (
+                                  <div className="absolute bottom-full left-0 mb-2 flex gap-2 z-10" style={{ width: `${extractedPercentage}%` }}>
+                                    <button
+                                      onClick={() => router.push(`/dashboard/${categorySlug}/analytics?mode=efficacy`)}
+                                      className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
+                                    >
+                                      Head to Head Efficacy
+                                    </button>
+                                    <button
+                                      onClick={() => router.push(`/dashboard/${categorySlug}/analytics?mode=safety`)}
+                                      className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
+                                    >
+                                      Head to Head Safety
+                                    </button>
+                                    <button
+                                      onClick={() => router.push(`/dashboard/${categorySlug}/therapeutic-index`)}
+                                      className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
+                                    >
+                                      Head to Head Efficacy : Safety
+                                    </button>
+                                  </div>
+                                )}
+                                <div className="relative h-6">
+                                  {/* Outer bar (Overall Status) */}
+                                  <div
+                                    className="absolute h-6 bg-gray-400 rounded-md transition-all duration-300"
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                  {/* Inner bar (Extracted count) - Clickable */}
+                                  <button
+                                    onClick={() => setShowNavigationBars(!showNavigationBars)}
+                                    className="absolute h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer"
+                                    style={{ width: `${extractedPercentage}%` }}
+                                    title={`View ${extractedCount} therapeutic index trials`}
+                                  />
+                                </div>
                               </div>
                             ) : (
                               <div

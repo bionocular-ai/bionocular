@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
-import Image from 'next/image';
 import Link from 'next/link';
+import { Logo } from '@/components/Logo';
 import {
   ChevronDown,
   Check,
@@ -24,13 +24,18 @@ import {
   Search,
   Loader2,
   AlertCircle,
+  BarChart3,
+  CircleDot,
+  ArrowLeftRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
-import HeadToHeadChart from '@/components/charts/HeadToHeadChart';
-import { transformHeadToHeadData } from '@/lib/chart-transformers';
+import BarChart from '@/components/charts/BarChart';
+import DivergingBarChart from '@/components/charts/DivergingBarChart';
+import BubbleChart from '@/components/charts/BubbleChart';
+import { transformHeadToHeadData, transformEfficacySafetyData, transformBubbleChartData } from '@/lib/chart-transformers';
 import { analyticsApi } from '@/lib/api';
-import { HeadToHeadDataPoint, ChartMetric, TrialDataFile } from '@/types/analytics';
+import { HeadToHeadDataPoint, ChartMetric, TrialDataFile, EfficacySafetyDataPoint, BubbleChartDataPoint } from '@/types/analytics';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -194,6 +199,8 @@ const EFFICACY_OPTIONS = [
   { value: 'TTF', label: 'Time to Treatment Failure' },
 ];
 
+// Patient count options will be generated dynamically from data
+
 const SAFETY_OPTIONS = [
   { value: 'none', label: 'None' },
   // General AE
@@ -299,6 +306,11 @@ const SAFETY_OPTIONS = [
   { value: 'GRADE_3_PLUS_TEAE_PNEUMONITIS', label: 'G3+ TEAE Pneumonitis (%)' },
   { value: 'GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE', label: 'G3+ TEAE ALT (%)' },
   { value: 'GRADE_3_PLUS_TEAE_WBC_DECREASED', label: 'G3+ TEAE WBC↓ (%)' },
+];
+
+const Z_AXIS_OPTIONS = [
+  { value: 'NUMBER_OF_PATIENTS', label: 'Number of Patients' },
+  // Additional Z-axis parameters can be added here in the future
 ];
 
 // Available therapies for selection
@@ -483,18 +495,23 @@ export default function CategoryAnalyticsPage() {
   const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
 
+  // Track if component is mounted to avoid hydration mismatch
+  const [mounted, setMounted] = useState(false);
+  
   // Check if we're in a specific mode (efficacy or safety only)
-  // Use lazy initialization to read URL params on initial render
-  const [mode] = useState<'all' | 'efficacy' | 'safety'>(() => {
-    if (typeof window === 'undefined') return 'all';
-    const params = new URLSearchParams(window.location.search);
-    const modeParam = params.get('mode');
-    if (modeParam === 'efficacy' || modeParam === 'safety') return modeParam;
-    return 'all';
-  });
+  // Read from URL params using Next.js useSearchParams to avoid hydration mismatch
+  const modeParam = searchParams.get('mode');
+  const mode: 'all' | 'efficacy' | 'safety' = 
+    modeParam === 'efficacy' || modeParam === 'safety' ? modeParam : 'all';
+  
+  // Set mounted after hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Filter states - initialized based on mode
   const [company, setCompany] = useState('all');
@@ -508,23 +525,123 @@ export default function CategoryAnalyticsPage() {
   const [rawSelectedApproved, setRawSelectedApproved] = useState<string[]>([]);
   const [rawSelectedNonApproved, setRawSelectedNonApproved] = useState<string[]>([]);
   
-  // Initialize params based on mode from URL
-  const [efficacyParam, setEfficacyParam] = useState(() => {
-    if (typeof window === 'undefined') return 'OBJECTIVE_RESPONSE_RATE';
-    const params = new URLSearchParams(window.location.search);
-    const modeParam = params.get('mode');
-    return modeParam === 'safety' ? 'none' : 'OBJECTIVE_RESPONSE_RATE';
-  });
+  // Initialize params with safe defaults to avoid hydration mismatch
+  // These will be updated by useEffect based on mode
+  const [efficacyParam, setEfficacyParam] = useState('OBJECTIVE_RESPONSE_RATE');
+  const [safetyParam, setSafetyParam] = useState('none');
+  const [zAxisParam, setZAxisParam] = useState('NUMBER_OF_PATIENTS');
   
-  const [safetyParam, setSafetyParam] = useState(() => {
-    if (typeof window === 'undefined') return 'none';
-    const params = new URLSearchParams(window.location.search);
-    const modeParam = params.get('mode');
-    return modeParam === 'safety' ? 'GRADE_3_PLUS_AE' : 'none';
-  });
+  // Direct axis assignments: track which metric is on which axis
+  // Each metric can be assigned to 'x', 'y', or 'z'
+  const [zParamAxis, setZParamAxis] = useState<'x' | 'y' | 'z'>('z');
+  const [efficacyAxis, setEfficacyAxis] = useState<'x' | 'y' | 'z'>('y');
+  const [safetyAxis, setSafetyAxis] = useState<'x' | 'y' | 'z'>('x');
+  
+  // Convert axis assignments to axisConfig (0-5) for backward compatibility with BubbleChart
+  const axisConfig = useMemo(() => {
+    // Build assignments object
+    const assignments: { x: 'efficacy' | 'safety' | 'zParam'; y: 'efficacy' | 'safety' | 'zParam'; z: 'efficacy' | 'safety' | 'zParam' } = {
+      x: safetyAxis === 'x' ? 'safety' : efficacyAxis === 'x' ? 'efficacy' : 'zParam',
+      y: safetyAxis === 'y' ? 'safety' : efficacyAxis === 'y' ? 'efficacy' : 'zParam',
+      z: safetyAxis === 'z' ? 'safety' : efficacyAxis === 'z' ? 'efficacy' : 'zParam',
+    };
+    
+    // Map to axisConfig number
+    const { x, y, z } = assignments;
+    if (x === 'safety' && y === 'efficacy' && z === 'zParam') return 0;
+    if (x === 'efficacy' && y === 'safety' && z === 'zParam') return 1;
+    if (x === 'safety' && y === 'zParam' && z === 'efficacy') return 2;
+    if (x === 'zParam' && y === 'safety' && z === 'efficacy') return 3;
+    if (x === 'efficacy' && y === 'zParam' && z === 'safety') return 4;
+    if (x === 'zParam' && y === 'efficacy' && z === 'safety') return 5;
+    return 0; // Default fallback
+  }, [zParamAxis, efficacyAxis, safetyAxis]);
+
+  // Helper to get current axis for a metric
+  const getCurrentAxis = useCallback((metric: 'zParam' | 'efficacy' | 'safety'): 'x' | 'y' | 'z' => {
+    if (metric === 'zParam') return zParamAxis;
+    if (metric === 'efficacy') return efficacyAxis;
+    return safetyAxis;
+  }, [zParamAxis, efficacyAxis, safetyAxis]);
+
+  // Handle axis selection - ensures no two metrics are on the same axis
+  const handleAxisChange = useCallback((metric: 'zParam' | 'efficacy' | 'safety', newAxis: 'x' | 'y' | 'z') => {
+    // Get current assignments
+    const currentZ = zParamAxis;
+    const currentEfficacy = efficacyAxis;
+    const currentSafety = safetyAxis;
+    
+    // Check if the new axis is already taken
+    const axisTaken = 
+      (metric !== 'zParam' && currentZ === newAxis) ||
+      (metric !== 'efficacy' && currentEfficacy === newAxis) ||
+      (metric !== 'safety' && currentSafety === newAxis);
+    
+    if (axisTaken) {
+      // Swap: move the metric currently on newAxis to the metric's old axis
+      if (metric !== 'zParam' && currentZ === newAxis) {
+        setZParamAxis(getCurrentAxis(metric));
+        if (metric === 'efficacy') setEfficacyAxis(newAxis);
+        else setSafetyAxis(newAxis);
+      } else if (metric !== 'efficacy' && currentEfficacy === newAxis) {
+        setEfficacyAxis(getCurrentAxis(metric));
+        if (metric === 'zParam') setZParamAxis(newAxis);
+        else setSafetyAxis(newAxis);
+      } else if (metric !== 'safety' && currentSafety === newAxis) {
+        setSafetyAxis(getCurrentAxis(metric));
+        if (metric === 'zParam') setZParamAxis(newAxis);
+        else setEfficacyAxis(newAxis);
+      }
+    } else {
+      // Simply assign the new axis
+      if (metric === 'zParam') setZParamAxis(newAxis);
+      else if (metric === 'efficacy') setEfficacyAxis(newAxis);
+      else setSafetyAxis(newAxis);
+    }
+  }, [zParamAxis, efficacyAxis, safetyAxis, getCurrentAxis]);
+  
+  // Update params when mode changes (e.g., when navigating between pages)
+  // This runs after hydration, so it's safe to use mode
+  useEffect(() => {
+    if (mode === 'safety') {
+      setEfficacyParam('none');
+      setSafetyParam('GRADE_3_PLUS_AE');
+    } else if (mode === 'efficacy') {
+      setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
+      setSafetyParam('none');
+    } else {
+      // mode === 'all' - Efficacy : Safety Therapeutic Index mode
+      // By default, only efficacy ORR is active
+      setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
+      setSafetyParam('none');
+    }
+  }, [mode]);
   
   const [efficacySearch, setEfficacySearch] = useState('');
   const [safetySearch, setSafetySearch] = useState('');
+
+  // Wrapper functions that enforce mode restrictions
+  const setEfficacyParamWithMode = (value: string) => {
+    // Only allow setting efficacy param if not in safety mode
+    if (mode !== 'safety') {
+      setEfficacyParam(value);
+      // In bar chart mode, disable safety when efficacy is selected (and not 'none')
+      if (mode === 'all' && chartType === 'bar' && value !== 'none') {
+        setSafetyParam('none');
+      }
+    }
+  };
+
+  const setSafetyParamWithMode = (value: string) => {
+    // Only allow setting safety param if not in efficacy mode
+    if (mode !== 'efficacy') {
+      setSafetyParam(value);
+      // In bar chart mode, disable efficacy when safety is selected (and not 'none')
+      if (mode === 'all' && chartType === 'bar' && value !== 'none') {
+        setEfficacyParam('none');
+      }
+    }
+  };
 
   // Build filter parameters for API call
   const apiFilters = useMemo(() => {
@@ -554,14 +671,59 @@ export default function CategoryAnalyticsPage() {
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowHeight, setWindowHeight] = useState(700);
+  const [chartType, setChartType] = useState<'bar' | 'diverging' | 'bubble'>('bar');
+
+  // Handle chart type changes - ensure proper filter states
+  useEffect(() => {
+    if (mode === 'all') {
+      if (chartType === 'bar') {
+        // Bar chart: ensure only one filter is active
+        if (efficacyParam !== 'none' && safetyParam !== 'none') {
+          // If both are set, keep efficacy and clear safety (prefer efficacy)
+          setSafetyParam('none');
+        } else if (efficacyParam === 'none' && safetyParam === 'none') {
+          // If both are 'none', set default to efficacy ORR
+          setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
+        }
+      } else if (chartType === 'diverging' || chartType === 'bubble') {
+        // Diverging/Bubble charts: ensure both filters are set
+        // Only auto-set defaults when switching TO these chart types, not on initial load
+        if (efficacyParam === 'none' && safetyParam === 'none') {
+          // Both are none - set defaults
+          setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
+          setSafetyParam('GRADE_3_PLUS_AE');
+        } else if (efficacyParam === 'none') {
+          // Efficacy is none but safety is set - set default efficacy
+          setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
+        } else if (safetyParam === 'none') {
+          // Safety is none but efficacy is set - set default safety
+          setSafetyParam('GRADE_3_PLUS_AE');
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartType, mode]); // Only depend on chartType and mode to avoid loops with param changes
 
   // Handle window resize for fullscreen chart
   useEffect(() => {
-    const updateHeight = () => setWindowHeight(window.innerHeight);
-    updateHeight();
+    const updateHeight = () => {
+      if (isFullscreen) {
+        setWindowHeight(window.innerHeight);
+      }
+    };
+    if (isFullscreen) {
+      updateHeight();
+    }
     window.addEventListener('resize', updateHeight);
     return () => window.removeEventListener('resize', updateHeight);
-  }, []);
+  }, [isFullscreen]);
+  
+  // Update height when entering fullscreen
+  useEffect(() => {
+    if (isFullscreen) {
+      setWindowHeight(window.innerHeight);
+    }
+  }, [isFullscreen]);
 
   // Handle Escape key to close fullscreen
   useEffect(() => {
@@ -711,7 +873,7 @@ export default function CategoryAnalyticsPage() {
     // Filter by selected therapies (this is still client-side as it's UI state)
     const allSelected = [...selectedApproved, ...selectedNonApproved];
     if (allSelected.length > 0) {
-      data = data.filter(d => allSelected.includes(d.treatmentName));
+      data = data.filter((d) => allSelected.includes(d.treatmentName));
     }
 
     // Sort by value descending
@@ -719,6 +881,62 @@ export default function CategoryAnalyticsPage() {
 
     return data;
   }, [analyticsData, displayMetric, selectedApproved, selectedNonApproved]);
+
+  // Transform data for diverging bar chart (efficacy vs safety)
+  const divergingChartData = useMemo<EfficacySafetyDataPoint[]>(() => {
+    if (!analyticsData || !analyticsData.abstracts) return [];
+    if (efficacyParam === 'none' || safetyParam === 'none') return [];
+
+    const allTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
+    const trialData: TrialDataFile = {
+      total_abstracts: analyticsData.total_abstracts,
+      total_arms: analyticsData.total_arms,
+      total_attributes_extracted: analyticsData.total_attributes_extracted,
+      average_confidence: analyticsData.average_confidence,
+      abstracts: allTrials,
+    };
+
+    let data = transformEfficacySafetyData(trialData, {
+      efficacyMetric: efficacyParam as ChartMetric,
+      safetyMetric: safetyParam as ChartMetric,
+      minTrialCount: 1,
+    });
+
+    const allSelected = [...selectedApproved, ...selectedNonApproved];
+    if (allSelected.length > 0) {
+      data = data.filter((d: EfficacySafetyDataPoint | BubbleChartDataPoint) => allSelected.includes(d.treatmentName));
+    }
+
+    return data;
+  }, [analyticsData, efficacyParam, safetyParam, selectedApproved, selectedNonApproved]);
+
+  // Transform data for bubble chart (safety vs efficacy)
+  const bubbleChartData = useMemo<BubbleChartDataPoint[]>(() => {
+    if (!analyticsData || !analyticsData.abstracts) return [];
+    if (efficacyParam === 'none' || safetyParam === 'none') return [];
+
+    const allTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
+    const trialData: TrialDataFile = {
+      total_abstracts: analyticsData.total_abstracts,
+      total_arms: analyticsData.total_arms,
+      total_attributes_extracted: analyticsData.total_attributes_extracted,
+      average_confidence: analyticsData.average_confidence,
+      abstracts: allTrials,
+    };
+
+    let data = transformBubbleChartData(trialData, {
+      efficacyMetric: efficacyParam as ChartMetric,
+      safetyMetric: safetyParam as ChartMetric,
+      minTrialCount: 1,
+    });
+
+    const allSelected = [...selectedApproved, ...selectedNonApproved];
+    if (allSelected.length > 0) {
+      data = data.filter((d: EfficacySafetyDataPoint | BubbleChartDataPoint) => allSelected.includes(d.treatmentName));
+    }
+
+    return data;
+  }, [analyticsData, efficacyParam, safetyParam, selectedApproved, selectedNonApproved]);
 
   // Determine the label for the displayed metric
   const metricLabel = useMemo(() => {
@@ -748,22 +966,12 @@ export default function CategoryAnalyticsPage() {
           <div className="flex items-center justify-between h-14 gap-4">
             <div className="flex items-center gap-4">
               <Link href="/" className="brand flex-shrink-0">
-                <div className="relative flex items-center" style={{ height: '32px' }}>
-                  <Image
-                    src="/logo.png"
-                    alt="Bionocular Logo"
-                    width={32}
-                    height={32}
-                    className="object-contain"
-                    priority
-                    unoptimized
-                  />
-                </div>
+                <Logo height={36} />
                 <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
               </Link>
               <div className="h-6 w-px bg-slate-200" />
               <h1 className="text-lg font-semibold text-slate-800">
-                {mode === 'efficacy' ? 'Head to Head Efficacy' : mode === 'safety' ? 'Head to Head Safety' : 'Head to Head Efficacy : Safety'}
+                {!mounted ? 'Efficacy : Safety Therapeutic Index' : mode === 'efficacy' ? 'Head to Head Efficacy' : mode === 'safety' ? 'Head to Head Safety' : 'Efficacy : Safety Therapeutic Index'}
               </h1>
             </div>
             <div className="flex items-center gap-2">
@@ -807,18 +1015,108 @@ export default function CategoryAnalyticsPage() {
                   <TrendingUp className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-white font-semibold text-sm">Head to Head Efficacy : Safety</h2>
+                  <h2 className="text-white font-semibold text-sm">Efficacy : Safety Therapeutic Index</h2>
                   <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
                   <p className="text-blue-100 text-xs hidden sm:block">Comparative analysis</p>
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
-                <div className="w-full sm:w-72">
+                {chartType === 'bubble' && (
+                  <div className="w-full sm:w-72 flex gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button 
+                          className="flex h-9 w-14 items-center justify-center rounded-md border border-white/40 bg-white/15 backdrop-blur-sm px-2 text-xs font-bold text-white transition-all hover:bg-white/25 hover:border-white/60 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/30" 
+                          title={`Assign to ${zParamAxis.toUpperCase()}-axis`}
+                          aria-label={`Select axis for Z-parameter, currently ${zParamAxis.toUpperCase()}`}
+                        >
+                          <span className="font-mono">{zParamAxis.toUpperCase()}</span>
+                          <ChevronDown className="h-3 w-3 text-white/80 flex-shrink-0 ml-1" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-28">
+                        <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 border-b">
+                          Assign to Axis
+                        </div>
+                        {(['x', 'y', 'z'] as const).map((axis) => (
+                          <DropdownMenuItem
+                            key={axis}
+                            className={`text-sm cursor-pointer ${zParamAxis === axis ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                            onClick={() => handleAxisChange('zParam', axis)}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-mono font-medium">{axis.toUpperCase()}-axis</span>
+                              {zParamAxis === axis && <Check className="h-4 w-4 text-blue-600" />}
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="flex h-9 flex-1 items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
+                            <span className="flex items-center gap-2 truncate font-medium">
+                              {Z_AXIS_OPTIONS.find((o) => o.value === zAxisParam)?.label || 'Select...'}
+                            </span>
+                          <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
+                        {Z_AXIS_OPTIONS.map((option) => (
+                          <DropdownMenuItem
+                            key={option.value}
+                            className={`text-sm cursor-pointer ${zAxisParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                            onClick={() => setZAxisParam(option.value)}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{option.label}</span>
+                              {zAxisParam === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                )}
+                <div className={`w-full ${chartType === 'bubble' ? 'sm:w-72' : 'sm:w-72'} flex gap-2`}>
+                  {chartType === 'bubble' && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button 
+                          className="flex h-9 w-14 items-center justify-center rounded-md border border-white/40 bg-white/15 backdrop-blur-sm px-2 text-xs font-bold text-white transition-all hover:bg-white/25 hover:border-white/60 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/30" 
+                          title={`Assign to ${efficacyAxis.toUpperCase()}-axis`}
+                          aria-label={`Select axis for Efficacy, currently ${efficacyAxis.toUpperCase()}`}
+                        >
+                          <span className="font-mono">{efficacyAxis.toUpperCase()}</span>
+                          <ChevronDown className="h-3 w-3 text-white/80 flex-shrink-0 ml-1" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-28">
+                        <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 border-b">
+                          Assign to Axis
+                        </div>
+                        {(['x', 'y', 'z'] as const).map((axis) => (
+                          <DropdownMenuItem
+                            key={axis}
+                            className={`text-sm cursor-pointer ${efficacyAxis === axis ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                            onClick={() => handleAxisChange('efficacy', axis)}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-mono font-medium">{axis.toUpperCase()}-axis</span>
+                              {efficacyAxis === axis && <Check className="h-4 w-4 text-blue-600" />}
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
+                      <button 
+                        disabled={mode === 'all' && chartType === 'bar' && safetyParam !== 'none' && safetyParam !== ''}
+                        className="flex h-9 flex-1 items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/10"
+                      >
                         <span className="flex items-center gap-2 truncate font-medium">
-                          <span className="text-xs text-white/70">Efficacy:</span>
                           {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label || 'Select...'}
                         </span>
                         <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
@@ -842,7 +1140,7 @@ export default function CategoryAnalyticsPage() {
                           key={option.value}
                           className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
                           onClick={() => {
-                            setEfficacyParam(option.value);
+                            setEfficacyParamWithMode(option.value);
                             setEfficacySearch('');
                           }}
                         >
@@ -855,12 +1153,45 @@ export default function CategoryAnalyticsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <div className="w-full sm:w-72">
+                <div className={`w-full ${chartType === 'bubble' ? 'sm:w-72' : 'sm:w-72'} flex gap-2`}>
+                  {chartType === 'bubble' && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button 
+                          className="flex h-9 w-14 items-center justify-center rounded-md border border-white/40 bg-white/15 backdrop-blur-sm px-2 text-xs font-bold text-white transition-all hover:bg-white/25 hover:border-white/60 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/30" 
+                          title={`Assign to ${safetyAxis.toUpperCase()}-axis`}
+                          aria-label={`Select axis for Safety, currently ${safetyAxis.toUpperCase()}`}
+                        >
+                          <span className="font-mono">{safetyAxis.toUpperCase()}</span>
+                          <ChevronDown className="h-3 w-3 text-white/80 flex-shrink-0 ml-1" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="w-28">
+                        <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 border-b">
+                          Assign to Axis
+                        </div>
+                        {(['x', 'y', 'z'] as const).map((axis) => (
+                          <DropdownMenuItem
+                            key={axis}
+                            className={`text-sm cursor-pointer ${safetyAxis === axis ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
+                            onClick={() => handleAxisChange('safety', axis)}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="font-mono font-medium">{axis.toUpperCase()}-axis</span>
+                              {safetyAxis === axis && <Check className="h-4 w-4 text-blue-600" />}
+                            </div>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
+                      <button 
+                        disabled={mode === 'all' && chartType === 'bar' && efficacyParam !== 'none' && efficacyParam !== ''}
+                        className="flex h-9 flex-1 items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/10"
+                      >
                         <span className="flex items-center gap-2 truncate font-medium">
-                          <span className="text-xs text-white/70">Safety:</span>
                           {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label || 'Select...'}
                         </span>
                         <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
@@ -884,7 +1215,7 @@ export default function CategoryAnalyticsPage() {
                           key={option.value}
                           className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
                           onClick={() => {
-                            setSafetyParam(option.value);
+                            setSafetyParamWithMode(option.value);
                             setSafetySearch('');
                           }}
                         >
@@ -945,7 +1276,7 @@ export default function CategoryAnalyticsPage() {
                         key={option.value}
                         className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
                         onClick={() => {
-                          setEfficacyParam(option.value);
+                          setEfficacyParamWithMode(option.value);
                           setEfficacySearch('');
                         }}
                       >
@@ -1005,7 +1336,7 @@ export default function CategoryAnalyticsPage() {
                         key={option.value}
                         className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`}
                         onClick={() => {
-                          setSafetyParam(option.value);
+                          setSafetyParamWithMode(option.value);
                           setSafetySearch('');
                         }}
                       >
@@ -1168,6 +1499,52 @@ export default function CategoryAnalyticsPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Chart Type Selector - Show in Head to Head mode (efficacy vs safety) */}
+              {mode === 'all' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 px-3 gap-1.5 text-slate-600 hover:text-indigo-600 hover:border-indigo-300"
+                    >
+                      {chartType === 'bar' && <BarChart3 className="h-3.5 w-3.5" />}
+                      {chartType === 'diverging' && <TrendingUp className="h-3.5 w-3.5" />}
+                      {chartType === 'bubble' && <CircleDot className="h-3.5 w-3.5" />}
+                      <span className="text-xs font-medium">
+                        {chartType === 'bar' ? 'Bar Chart' : chartType === 'diverging' ? 'Diverging Chart' : 'Bubble Chart'}
+                      </span>
+                      <ChevronDown className="h-3 w-3 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => setChartType('bar')}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Bar Chart</span>
+                      {chartType === 'bar' && <Check className="h-4 w-4 ml-auto" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setChartType('diverging')}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <TrendingUp className="h-4 w-4" />
+                      <span>Diverging Chart</span>
+                      {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setChartType('bubble')}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <CircleDot className="h-4 w-4" />
+                      <span>Bubble Chart</span>
+                      {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               {/* Fullscreen Button */}
               <Button
                 variant="outline"
@@ -1208,30 +1585,75 @@ export default function CategoryAnalyticsPage() {
                       Retry
                     </Button>
                   </div>
-                ) : chartData.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
-                    <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center">
-                      <Search className="h-6 w-6 text-slate-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">No data available</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        No trials with {metricLabel} data found for the selected filters
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <HeadToHeadChart
-                    data={chartData}
-                    metric={displayMetric as ChartMetric}
-                    title=""
-                    description=""
-                    height={450}
-                    showReferenceLine={true}
-                    showLegend={true}
-                    compact={true}
-                  />
-                )}
+                ) : (() => {
+                  // Determine which data to check based on chart type
+                  const hasData = chartType === 'bar' 
+                    ? chartData.length > 0
+                    : chartType === 'diverging'
+                    ? divergingChartData.length > 0
+                    : bubbleChartData.length > 0;
+
+                  if (!hasData) {
+                    return (
+                      <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
+                        <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center">
+                          <Search className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-slate-700">No data available</p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            No trials with {metricLabel} data found for the selected filters
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Render appropriate chart based on type
+                  if (chartType === 'diverging' && divergingChartData.length > 0) {
+                    return (
+                      <DivergingBarChart
+                        efficacyParam={efficacyParam !== 'none' ? efficacyParam : undefined}
+                        safetyParam={safetyParam !== 'none' ? safetyParam : undefined}
+                        data={divergingChartData}
+                        title=""
+                        description=""
+                        height={450}
+                        compact={true}
+                      />
+                    );
+                  }
+
+                  if (chartType === 'bubble' && bubbleChartData.length > 0) {
+                    return (
+                      <BubbleChart
+                        efficacyParam={efficacyParam !== 'none' ? efficacyParam : undefined}
+                        safetyParam={safetyParam !== 'none' ? safetyParam : undefined}
+                        data={bubbleChartData}
+                        title=""
+                        description=""
+                        height={450}
+                        compact={true}
+                        zAxisParam={zAxisParam}
+                        axisConfig={axisConfig}
+                      />
+                    );
+                  }
+
+                  // Default to bar chart
+                  return (
+                    <BarChart
+                      data={chartData}
+                      metric={displayMetric as ChartMetric}
+                      title=""
+                      description=""
+                      height={450}
+                      showReferenceLine={true}
+                      showLegend={true}
+                      compact={true}
+                    />
+                  );
+                })()}
               </div>
             </div>
             
@@ -1263,17 +1685,7 @@ export default function CategoryAnalyticsPage() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">
                   <Link href="/" className="brand flex-shrink-0">
-                    <div className="relative flex items-center" style={{ height: '28px' }}>
-                      <Image
-                        src="/logo.png"
-                        alt="Bionocular Logo"
-                        width={28}
-                        height={28}
-                        className="object-contain"
-                        priority
-                        unoptimized
-                      />
-                    </div>
+                    <Logo height={36} />
                     <span className="brand-text text-base">bi<span className="brand-o">o</span>nocular</span>
                   </Link>
                   <div className="h-5 w-px bg-slate-200" />
@@ -1297,6 +1709,52 @@ export default function CategoryAnalyticsPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
+                {/* Chart Type Selector - Show in Head to Head mode (efficacy vs safety) */}
+                {mode === 'all' && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 px-4 gap-2 text-slate-600 hover:text-indigo-600 hover:border-indigo-300"
+                      >
+                        {chartType === 'bar' && <BarChart3 className="h-4 w-4" />}
+                        {chartType === 'diverging' && <TrendingUp className="h-4 w-4" />}
+                        {chartType === 'bubble' && <CircleDot className="h-4 w-4" />}
+                        <span className="text-sm font-medium">
+                          {chartType === 'bar' ? 'Bar Chart' : chartType === 'diverging' ? 'Diverging Chart' : 'Bubble Chart'}
+                        </span>
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuItem
+                        onClick={() => setChartType('bar')}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                        <span>Bar Chart</span>
+                        {chartType === 'bar' && <Check className="h-4 w-4 ml-auto" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setChartType('diverging')}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                        <span>Diverging Chart</span>
+                        {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setChartType('bubble')}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <CircleDot className="h-4 w-4" />
+                        <span>Bubble Chart</span>
+                        {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto" />}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1317,7 +1775,7 @@ export default function CategoryAnalyticsPage() {
                 <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
                   <TrendingUp className="h-3.5 w-3.5 text-white" />
                 </div>
-                <span className="text-white text-xs font-medium">Head to Head Efficacy : Safety</span>
+                <span className="text-white text-xs font-medium">Efficacy : Safety Therapeutic Index</span>
                 <span className="w-px h-3 bg-white/30 mx-1"></span>
                 <span className="text-blue-100 text-xs">
                   Efficacy: {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}
@@ -1355,43 +1813,97 @@ export default function CategoryAnalyticsPage() {
           )}
 
           {/* Fullscreen Chart Area */}
-          <div className="flex-1 p-4 flex flex-col min-h-0">
-            <div className="flex-1 relative">
-              <div className="absolute inset-0">
-                {isLoading ? (
-                  <div className="flex flex-col items-center justify-center h-full gap-3">
-                    <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
-                    <p className="text-base text-slate-500">Loading analytics data...</p>
-                  </div>
-                ) : chartData.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
-                    <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center">
-                      <Search className="h-8 w-8 text-slate-400" />
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 w-full p-4 overflow-auto">
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+                  <p className="text-base text-slate-500">Loading analytics data...</p>
+                </div>
+              ) : (() => {
+                // Determine which data to check based on chart type
+                const hasData = chartType === 'bar' 
+                  ? chartData.length > 0
+                  : chartType === 'diverging'
+                  ? divergingChartData.length > 0
+                  : bubbleChartData.length > 0;
+
+                if (!hasData) {
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
+                      <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center">
+                        <Search className="h-8 w-8 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-base font-medium text-slate-700">No data available</p>
+                        <p className="text-sm text-slate-500 mt-1">
+                          No trials with {metricLabel} data found for the selected filters
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-base font-medium text-slate-700">No data available</p>
-                      <p className="text-sm text-slate-500 mt-1">
-                        No trials with {metricLabel} data found for the selected filters
-                      </p>
+                  );
+                }
+
+                // Calculate available height for chart
+                // Header: ~60px, Banner: ~40px, Padding: 32px (16px top + 16px bottom), Export buttons: ~80px
+                // Use viewport height minus fixed elements
+                const chartHeight = Math.max(400, windowHeight - 220);
+
+                // Render appropriate chart based on type
+                if (chartType === 'diverging' && divergingChartData.length > 0) {
+                  return (
+                    <div className="w-full" style={{ height: chartHeight }}>
+                      <DivergingBarChart
+                        efficacyParam={efficacyParam !== 'none' ? efficacyParam : undefined}
+                        safetyParam={safetyParam !== 'none' ? safetyParam : undefined}
+                        data={divergingChartData}
+                        title=""
+                        description=""
+                        height={chartHeight}
+                        compact={false}
+                      />
                     </div>
+                  );
+                }
+
+                if (chartType === 'bubble' && bubbleChartData.length > 0) {
+                  return (
+                    <div className="w-full" style={{ height: chartHeight }}>
+                      <BubbleChart
+                        efficacyParam={efficacyParam !== 'none' ? efficacyParam : undefined}
+                        safetyParam={safetyParam !== 'none' ? safetyParam : undefined}
+                        data={bubbleChartData}
+                        title=""
+                        description=""
+                        height={chartHeight}
+                        compact={false}
+                        zAxisParam={zAxisParam}
+                        axisConfig={axisConfig}
+                      />
+                    </div>
+                  );
+                }
+
+                // Default to bar chart
+                return (
+                  <div className="w-full" style={{ height: chartHeight }}>
+                    <BarChart
+                      data={chartData}
+                      metric={displayMetric as ChartMetric}
+                      title=""
+                      description=""
+                      height={chartHeight}
+                      showReferenceLine={true}
+                      showLegend={true}
+                      compact={true}
+                    />
                   </div>
-                ) : (
-                  <HeadToHeadChart
-                    data={chartData}
-                    metric={displayMetric as ChartMetric}
-                    title=""
-                    description=""
-                    height={windowHeight - 140}
-                    showReferenceLine={true}
-                    showLegend={true}
-                    compact={true}
-                  />
-                )}
-              </div>
+                );
+              })()}
             </div>
             
             {/* Export Buttons Below Chart */}
-            <div className="flex items-center justify-center gap-4 pt-4 flex-shrink-0">
+            <div className="flex items-center justify-center gap-4 py-4 px-4 flex-shrink-0 border-t border-slate-200 bg-white">
               <Button variant="outline" size="lg" className="gap-2 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50" disabled={isLoading || chartData.length === 0}>
                 <FileSpreadsheet className="h-5 w-5" />
                 Export as Excel
