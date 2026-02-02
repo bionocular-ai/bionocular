@@ -7,4 +7,6 @@ export { default as BarChart } from './BarChart';
 export { default as HeadToHeadChart } from './BarChart'; // Alias for backward compatibility
 export { default as DivergingBarChart } from './DivergingBarChart';
 export { default as BubbleChart } from './BubbleChart';
+export { default as DumbbellChart } from './DumbbellChart';
+export type { DumbbellDataPoint } from './DumbbellChart';
 

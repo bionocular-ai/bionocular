@@ -49,7 +49,7 @@ export function SegmentedControl({
         }}
       />
       
-      {options.map((option, index) => {
+      {options.map((option) => {
         const isSelected = option.value === value;
         return (
           <button

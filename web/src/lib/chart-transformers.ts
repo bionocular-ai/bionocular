@@ -374,7 +374,7 @@ export function transformHeadToHeadData(
   }
 
   // Deduplicate trials before aggregating
-  for (const [treatmentName, group] of grouped.entries()) {
+  for (const [, group] of grouped.entries()) {
     // Deduplicate trials by creating a map keyed by abstractId/year
     const trialMap = new Map<string, TrialDataPoint>();
     for (const trial of group.trials) {
@@ -525,6 +525,8 @@ export function flattenScatterData(data: HeadToHeadDataPoint[]): (TrialDataPoint
 export interface EfficacySafetyTransformOptions {
   efficacyMetric?: ChartMetric;
   safetyMetric?: ChartMetric;
+  /** Z-axis metric for bubble size (e.g. NUMBER_OF_PATIENTS, HR_PFS). When set and not NUMBER_OF_PATIENTS, extracted into point.zValue */
+  zMetric?: ChartMetric;
   selectedTreatments?: string[];
   minTrialCount?: number;
   selectedPhases?: string[];
@@ -725,6 +727,7 @@ export function transformBubbleChartData(
   const {
     efficacyMetric = 'OBJECTIVE_RESPONSE_RATE',
     safetyMetric = 'GRADE_3_PLUS_TRAE',
+    zMetric,
     selectedTreatments = [],
     minTrialCount = 1,
     selectedPhases = [],
@@ -779,7 +782,9 @@ export function transformBubbleChartData(
       const abstractId = trial.abstract_id || trial.publication_id || '';
       const publicationName = extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_NAME'));
       const conference = extractStringValue(getAttribute(arm.attributes, 'CONFERENCE'));
-      const trialName = extractStringValue(getAttribute(arm.attributes, 'TRIAL_NAME'));
+      const zValue = zMetric && zMetric !== 'NUMBER_OF_PATIENTS'
+        ? (extractNumericValue(getAttribute(arm.attributes, zMetric)) ?? undefined)
+        : undefined;
 
       result.push({
         treatmentName,
@@ -788,6 +793,7 @@ export function transformBubbleChartData(
         efficacy: efficacyValue,
         safety: safetyValue,
         numberOfPatients: patientCount,
+        ...(zValue !== undefined && zValue !== null && !Number.isNaN(zValue) ? { zValue } : {}),
         nctNumber: nctNumber || undefined,
         abstractId: abstractId || undefined,
         publicationName: publicationName || undefined,

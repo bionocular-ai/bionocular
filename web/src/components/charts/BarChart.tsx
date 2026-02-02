@@ -74,9 +74,26 @@ const DARK_COLORS = {
   axis: '#94a3b8',
 };
 
+/** Recharts ReferenceLine label content props; viewBox may be Cartesian or Polar so we accept unknown and narrow when reading */
+interface RechartsLabelContentProps {
+  viewBox?: unknown;
+  value?: React.ReactNode;
+}
+
 // ============================================================================
 // Custom Tooltip Component
 // ============================================================================
+
+function PinnedHeader({ unpinHint }: { unpinHint: string }) {
+  return (
+    <div className="mb-1.5 pb-1.5 border-b border-slate-600 flex items-center justify-between" style={{ animation: 'tooltipContentFadeIn 0.2s ease-out' }}>
+      <span className="text-[9px] uppercase tracking-wider text-amber-400 font-medium flex items-center gap-1">
+        <span className="text-amber-400" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>📌</span> Pinned
+      </span>
+      <span className="text-[9px] text-slate-500">{unpinHint}</span>
+    </div>
+  );
+}
 
 interface CustomTooltipContentProps {
   tooltipData: TooltipData | null;
@@ -85,128 +102,86 @@ interface CustomTooltipContentProps {
   isPinned?: boolean;
 }
 
-function CustomTooltipContent({ tooltipData, metricUnit, isPinned }: CustomTooltipContentProps) {
+function CustomTooltipContent({ tooltipData, metricLabel, metricUnit, isPinned }: CustomTooltipContentProps) {
   if (!tooltipData) return null;
+
+  const tooltipBaseClass = 'bg-slate-800 p-3 rounded-lg shadow-xl border border-slate-700 min-w-[260px] max-w-[340px] tooltip-enter';
 
   if (tooltipData.type === 'scatter') {
     const trial = tooltipData.data as ScatterPoint;
-    const isPublication = !!trial.publicationName;
-    const sourceLabel = isPublication ? 'Publication' : 'Abstract/Publication ID';
-    const sourceValue = isPublication ? trial.publicationName : trial.abstractId;
+    const sourceValue = trial.publicationName || trial.abstractId;
+    const isWebScrape = trial.abstractId?.startsWith('webscrape_');
+    const hasSourceUrl = !!trial.sourceUrl;
 
     return (
-      <div className="bg-slate-800 p-4 rounded-xl shadow-2xl border border-slate-700 min-w-[320px] max-w-[420px] animate-in fade-in duration-200">
-        {isPinned && (
-          <div className="mb-2 pb-2 border-b border-slate-600 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-amber-400 font-medium flex items-center gap-1">
-              <span className="text-amber-400">📌</span> Pinned
-            </span>
-            <span className="text-[10px] text-slate-500">Click dot to unpin</span>
-          </div>
-        )}
-        {sourceValue && (
-          <div className="mb-3 pb-3 border-b border-slate-700">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 block mb-1">{sourceLabel}</span>
-            {(() => {
-              const isWebScrape = trial.abstractId?.startsWith('webscrape_');
-              const hasSourceUrl = !!trial.sourceUrl;
-              
-              // Web-scraped trials: link to external source
-              if (isWebScrape && hasSourceUrl) {
-                return (
-                  <a
-                    href={trial.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`text-sm font-bold leading-tight inline-flex items-center gap-1.5 cursor-pointer hover:underline transition-colors ${isPublication ? 'text-emerald-300 hover:text-emerald-200' : 'text-sky-300 hover:text-sky-200'}`}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ pointerEvents: 'auto' }}
-                  >
-                    <span>{sourceValue}</span>
-                    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                );
-              }
-              
-              // Regular abstracts/publications: link to internal detail page
-              if (trial.abstractId) {
-                return (
-                  <Link
-                    href={`/trial/abstract/${trial.abstractId}`}
-                    className={`text-sm font-bold leading-tight inline-flex items-center gap-1.5 cursor-pointer hover:underline transition-colors ${isPublication ? 'text-emerald-300 hover:text-emerald-200' : 'text-sky-300 hover:text-sky-200'}`}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ pointerEvents: 'auto' }}
-                  >
-                    <span>{sourceValue}</span>
-                    <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                );
-              }
-              
-              // Fallback: non-clickable text
-              return (
-                <span className={`text-sm font-bold leading-tight block ${isPublication ? 'text-emerald-300' : 'text-sky-300'}`}>
-                  {sourceValue}
-                </span>
-              );
-            })()}
-          </div>
-        )}
-        
-        {trial.trialName && (
-          <div className="mb-3">
-            <span className="text-[10px] uppercase tracking-wider text-slate-500 block mb-0.5">Trial Name</span>
-            <span className="text-sm font-semibold text-violet-300">{trial.trialName}</span>
-          </div>
-        )}
-        
-        <div className="flex items-start justify-between gap-3 mb-3 pb-3 border-b border-slate-700">
-          <p className="text-sm text-slate-200 font-medium leading-tight">
-            {trial.treatmentName}
-          </p>
-          <span className="text-xs text-slate-400 font-medium shrink-0">
-            {trial.phase}
-          </span>
+      <div
+        className={tooltipBaseClass}
+        style={{
+          animation: isPinned ? 'tooltipFadeIn 0.2s ease-out' : 'tooltipFadeIn 0.15s ease-out',
+          pointerEvents: 'auto',
+        }}
+      >
+        {isPinned && <PinnedHeader unpinHint="Click dot to unpin" />}
+        <div className="mb-2 pb-2 border-b border-slate-700">
+          <h4 className="font-bold text-white text-xs">{trial.treatmentName}</h4>
         </div>
-        
-        <div className="flex items-baseline gap-2 mb-3">
-          <span className="text-3xl font-bold text-white tabular-nums">
-            {trial.value.toFixed(1)}
-          </span>
-          <span className="text-sm text-slate-400">
-            {metricUnit}
-          </span>
+        <div className="mb-2">
+          <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0">{metricLabel}</p>
+          <p className="text-base font-bold text-white tabular-nums">{trial.value.toFixed(1)}{metricUnit ? ` ${metricUnit}` : ''}</p>
         </div>
-
-        <div className="pt-3 border-t border-slate-700 space-y-1.5">
-          <div className="flex justify-between text-xs">
-            <span className="text-slate-400">Citation</span>
-            <span className="text-slate-200 font-medium">{trial.citation}</span>
-          </div>
+        <div className="pt-2 border-t border-slate-700 space-y-1">
+          {trial.numberOfPatients != null && (
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">Patients</span>
+              <span className="text-slate-200 font-medium">n={trial.numberOfPatients}</span>
+            </div>
+          )}
           {trial.nctNumber && (
-            <div className="flex justify-between text-xs">
+            <div className="flex justify-between text-[11px]">
               <span className="text-slate-400">NCT</span>
               <Link
                 href={`/trial/nct/${trial.nctNumber}`}
-                className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-0.5"
                 onClick={(e) => e.stopPropagation()}
                 style={{ pointerEvents: 'auto' }}
               >
                 <span>{trial.nctNumber}</span>
-                <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
             </div>
           )}
-          {trial.numberOfPatients && (
-            <div className="flex justify-between text-xs">
-              <span className="text-slate-400">Patients</span>
-              <span className="text-slate-200 font-medium">n={trial.numberOfPatients}</span>
+          {sourceValue && (
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">{trial.publicationName ? 'Publication' : 'Abstract ID'}</span>
+              {isWebScrape && hasSourceUrl ? (
+                <a
+                  href={trial.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="text-[11px]">{sourceValue}</span>
+                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              ) : trial.abstractId ? (
+                <Link
+                  href={`/trial/abstract/${trial.abstractId}`}
+                  className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span className="text-[11px]">{sourceValue}</span>
+                  <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              ) : (
+                <span className="text-slate-200 text-[11px]">{sourceValue}</span>
+              )}
             </div>
           )}
         </div>
@@ -214,83 +189,100 @@ function CustomTooltipContent({ tooltipData, metricUnit, isPinned }: CustomToolt
     );
   }
 
-  // Bar tooltip
+  // Bar tooltip – single parameter, same compact style as DivergingBarChart
   const treatment = tooltipData.data as HeadToHeadDataPoint;
+  const firstTrial = treatment.trials[0];
+
   return (
-    <div className="bg-slate-800 p-4 rounded-xl shadow-2xl border border-slate-700 min-w-[260px]">
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <h4 className="font-bold text-white text-sm leading-tight max-w-[180px]">
-          {treatment.treatmentName}
-        </h4>
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-          treatment.approvalStatus === 'Approved' 
-            ? 'bg-emerald-900/50 text-emerald-300'
-            : 'bg-violet-900/50 text-violet-300'
-        }`}>
-          {treatment.approvalStatus}
-        </span>
-      </div>
-
-      <div className="flex items-baseline gap-2 mb-3">
-        <span className="text-3xl font-bold text-white tabular-nums">
-          {treatment.averageValue.toFixed(1)}
-        </span>
-        <span className="text-sm text-slate-400">
-          {metricUnit} avg
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700">
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Range</p>
-          <p className="text-sm font-semibold text-slate-200 tabular-nums">
-            {treatment.minValue.toFixed(1)} – {treatment.maxValue.toFixed(1)}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Median</p>
-          <p className="text-sm font-semibold text-slate-200 tabular-nums">
-            {treatment.medianValue.toFixed(1)}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Trials</p>
-          <p className="text-sm font-semibold text-slate-200">
-            {treatment.trialCount}
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">Patients</p>
-          <p className="text-sm font-semibold text-slate-200">
-            {treatment.totalPatients > 0 ? `n=${treatment.totalPatients}` : '—'}
-          </p>
+    <div
+      className={tooltipBaseClass}
+      style={{
+        animation: isPinned ? 'tooltipFadeIn 0.2s ease-out' : 'tooltipFadeIn 0.15s ease-out',
+        pointerEvents: 'auto',
+      }}
+    >
+      {isPinned && <PinnedHeader unpinHint="Click bar to unpin" />}
+      <div className="mb-2 pb-2 border-b border-slate-700">
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="font-bold text-white text-xs">{treatment.treatmentName}</h4>
+          <span
+            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
+              treatment.approvalStatus === 'Approved'
+                ? 'bg-emerald-900/50 text-emerald-300'
+                : treatment.approvalStatus === 'Investigational'
+                ? 'bg-violet-900/50 text-violet-300'
+                : 'bg-slate-700/50 text-slate-300'
+            }`}
+          >
+            {treatment.approvalStatus === 'Approved' && '★ '}
+            {treatment.approvalStatus}
+          </span>
         </div>
       </div>
-      <div className="pt-3 border-t border-slate-700 space-y-1.5">
-        <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Citation</span>
-          <span className="text-slate-200 font-medium">{treatment.trials[0]?.citation || 'N/A'}</span>
+      <div className="mb-2">
+        <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0">{metricLabel}</p>
+        <p className="text-base font-bold text-white tabular-nums">{treatment.averageValue.toFixed(1)}{metricUnit ? ` ${metricUnit} avg` : ' avg'}</p>
+      </div>
+      <div className="pt-2 border-t border-slate-700 space-y-1">
+        <div className="flex justify-between text-[11px]">
+          <span className="text-slate-400">Patients</span>
+          <span className="text-slate-200 font-medium">{treatment.totalPatients > 0 ? `n=${treatment.totalPatients}` : '—'}</span>
         </div>
-        {treatment.trials[0]?.nctNumber && (
-          <div className="flex justify-between text-xs">
+        {firstTrial?.nctNumber && (
+          <div className="flex justify-between text-[11px]">
             <span className="text-slate-400">NCT</span>
             <Link
-              href={`/trial/nct/${treatment.trials[0].nctNumber}`}
-              className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+              href={`/trial/nct/${firstTrial.nctNumber}`}
+              className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-0.5"
               onClick={(e) => e.stopPropagation()}
               style={{ pointerEvents: 'auto' }}
             >
-              <span>{treatment.trials[0].nctNumber}</span>
-              <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span>{firstTrial.nctNumber}</span>
+              <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
           </div>
         )}
-        {treatment.trials[0]?.numberOfPatients && (
-          <div className="flex justify-between text-xs">
-            <span className="text-slate-400">Patients</span>
-            <span className="text-slate-200 font-medium">n={treatment.trials[0].numberOfPatients}</span>
+        {(firstTrial?.publicationName || firstTrial?.abstractId) && (
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">{firstTrial.publicationName ? 'Publication' : 'Abstract ID'}</span>
+            {(() => {
+              const sourceValue = firstTrial.publicationName || firstTrial.abstractId;
+              const isWebScrape = firstTrial.abstractId?.startsWith('webscrape_');
+              const hasSourceUrl = !!firstTrial.sourceUrl;
+              if (isWebScrape && hasSourceUrl) {
+                return (
+                  <a
+                    href={firstTrial.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-[11px]">{sourceValue}</span>
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                );
+              }
+              if (firstTrial.abstractId) {
+                return (
+                  <Link
+                    href={`/trial/abstract/${firstTrial.abstractId}`}
+                    className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-[11px]">{sourceValue}</span>
+                    <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                );
+              }
+              return <span className="text-slate-200 text-[11px]">{sourceValue}</span>;
+            })()}
           </div>
         )}
       </div>
@@ -366,13 +358,16 @@ export default function BarChart({
     [data]
   );
 
-  // Calculate overall average for reference line
-  const overallAverage = useMemo(() => {
+  // Calculate overall median for reference line
+  const overallMedian = useMemo(() => {
     if (referenceValue !== undefined) return referenceValue;
     const allValues = data.flatMap((d: HeadToHeadDataPoint) => d.trials.map((t: TrialDataPoint) => t.value));
-    return allValues.length > 0 
-      ? allValues.reduce((a: number, b: number) => a + b, 0) / allValues.length 
-      : 0;
+    if (allValues.length === 0) return 0;
+    const sorted = [...allValues].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
   }, [data, referenceValue]);
 
   // Calculate Y domain to include all individual values
@@ -384,8 +379,59 @@ export default function BarChart({
   }, [data]);
 
   const margin = compact
-    ? { top: 20, right: 30, bottom: 80, left: 55 }
-    : { top: 20, right: 30, bottom: 100, left: 60 };
+    ? { top: 20, right: showReferenceLine ? 14 : 30, bottom: 80, left: 55 }
+    : { top: 20, right: showReferenceLine ? 14 : 30, bottom: 100, left: 60 };
+
+  // Median label on the right: white/chart background + subtle border, anchored to end of reference line
+  const medianLabelRight = useMemo(() => {
+    const label = `Median: ${overallMedian.toFixed(1)}`;
+    const PADDING_X = 8;
+    const PADDING_Y = 4;
+    const FONT_SIZE = compact ? 10 : 11;
+    const RIGHT_MARGIN = 4;
+    const BG = compact ? '#ffffff' : '#1e293b';
+    const BORDER = compact ? '#e2e8f0' : '#334155';
+    const TEXT_FILL = compact ? '#64748b' : '#94a3b8';
+    const RX = 4;
+
+    function MedianLabelContent(props: RechartsLabelContentProps) {
+      const vb = (props.viewBox ?? {}) as { x?: number; y?: number; width?: number };
+      const chartRight = (vb.x ?? 0) + (vb.width ?? 0) - RIGHT_MARGIN;
+      const y = vb.y ?? 0;
+      const textWidth = label.length * (FONT_SIZE * 0.6);
+      const boxWidth = textWidth + PADDING_X * 2;
+      const boxHeight = FONT_SIZE + PADDING_Y * 2;
+      const boxX = chartRight - boxWidth;
+      const boxY = y - boxHeight / 2;
+      return (
+        <g style={{ pointerEvents: 'none' }}>
+          <rect
+            x={boxX}
+            y={boxY}
+            width={boxWidth}
+            height={boxHeight}
+            rx={RX}
+            ry={RX}
+            fill={BG}
+            stroke={BORDER}
+            strokeWidth={1}
+          />
+          <text
+            x={chartRight - PADDING_X}
+            y={y}
+            textAnchor="end"
+            dominantBaseline="middle"
+            fill={TEXT_FILL}
+            fontSize={FONT_SIZE}
+            fontWeight={500}
+          >
+            {label}
+          </text>
+        </g>
+      );
+    }
+    return MedianLabelContent;
+  }, [overallMedian, compact]);
 
   // Consistent tooltip positioning - always follows the same pattern
   const calculateTooltipPosition = useCallback((clientX: number, clientY: number) => {
@@ -738,7 +784,7 @@ export default function BarChart({
               />
               <XAxis
                 dataKey="treatmentName"
-                tick={{ fontSize: 10, fill: colors.axis }}
+                tick={{ fontSize: 10, fill: colors.axis, fontWeight: 500 }}
                 tickLine={{ stroke: colors.grid }}
                 axisLine={{ stroke: colors.grid }}
                 interval={0}
@@ -747,7 +793,7 @@ export default function BarChart({
                 height={80}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: colors.axis }}
+                tick={{ fontSize: 12, fill: colors.axis }}
                 tickLine={{ stroke: colors.grid }}
                 axisLine={{ stroke: colors.grid }}
                 domain={yDomain}
@@ -756,22 +802,20 @@ export default function BarChart({
                   value: `${metricLabel} (${metricUnit})`,
                   angle: -90,
                   position: 'insideLeft',
-                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 11, fontWeight: 500 },
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
                 }}
               />
               {showReferenceLine && (
                 <ReferenceLine
-                  y={overallAverage}
+                  y={overallMedian}
                   stroke="#94a3b8"
                   strokeDasharray="6 4"
                   strokeWidth={1.5}
-                  label={{
-                    value: `Avg: ${overallAverage.toFixed(1)}`,
-                    position: 'right',
-                    fill: '#64748b',
-                    fontSize: 10,
-                    fontWeight: 500,
-                  }}
+                  segment={[
+                    { x: 0, y: overallMedian },
+                    { x: Math.max(0, data.length - 0.85), y: overallMedian },
+                  ]}
+                  label={{ content: medianLabelRight }}
                 />
               )}
               <Bar 
@@ -880,7 +924,7 @@ export default function BarChart({
               />
               <XAxis
                 dataKey="treatmentName"
-                tick={{ fontSize: 10, fill: colors.axis }}
+                tick={{ fontSize: 10, fill: colors.axis, fontWeight: 500 }}
                 tickLine={{ stroke: colors.grid }}
                 axisLine={{ stroke: colors.grid }}
                 interval={0}
@@ -889,7 +933,7 @@ export default function BarChart({
                 height={100}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: colors.axis }}
+                tick={{ fontSize: 12, fill: colors.axis }}
                 tickLine={{ stroke: colors.grid }}
                 axisLine={{ stroke: colors.grid }}
                 domain={yDomain}
@@ -897,21 +941,20 @@ export default function BarChart({
                   value: `${metricLabel} (${metricUnit})`,
                   angle: -90,
                   position: 'insideLeft',
-                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 12 },
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
                 }}
               />
               {showReferenceLine && (
                 <ReferenceLine
-                  y={overallAverage}
+                  y={overallMedian}
                   stroke="#94a3b8"
                   strokeDasharray="5 5"
                   strokeWidth={1.5}
-                  label={{
-                    value: `Avg: ${overallAverage.toFixed(1)}`,
-                    position: 'right',
-                    fill: '#94a3b8',
-                    fontSize: 11,
-                  }}
+                  segment={[
+                    { x: 0, y: overallMedian },
+                    { x: Math.max(0, data.length - 0.85), y: overallMedian },
+                  ]}
+                  label={{ content: medianLabelRight }}
                 />
               )}
               <Bar 
