@@ -9,6 +9,7 @@ interface LogoProps {
 
 export function Logo({ height = 36, className = '' }: LogoProps) {
   return (
+    // eslint-disable-next-line @next/next/no-img-element -- Intentional: unoptimized, fixed aspect via height
     <img
       src="/logo.png"
       alt="Bionocular Logo"

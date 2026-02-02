@@ -4,8 +4,7 @@ This directory contains the SQLite database for clinical trials data.
 
 ## Database Location
 - **Path**: `data/trials_db/trials.db`
-- **Size**: ~43MB
-- **Records**: 978 total (909 abstracts + 69 publications)
+- **Records**: 1071 total (1002 abstracts + 69 publications); rebuild to refresh after JSON updates
 
 ## Building the Database
 

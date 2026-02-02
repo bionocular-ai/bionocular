@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Bar,
   ComposedChart,
@@ -14,7 +15,7 @@ import {
   Rectangle,
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { EfficacySafetyDataPoint } from '@/types/analytics';
+import { EfficacySafetyDataPoint, EFFICACY_METRICS, SAFETY_METRICS } from '@/types/analytics';
 
 // ============================================================================
 // Types
@@ -28,8 +29,12 @@ interface DivergingBarChartProps {
   efficacyLabel?: string;
   safetyLabel?: string;
   compact?: boolean;
+  /** When true (e.g. fullscreen), chart fills container vertically like compact mode */
+  fillHeight?: boolean;
   efficacyParam?: string;
   safetyParam?: string;
+  /** When set, both axes use the same metric type for labels (efficacy-efficacy or safety-safety) */
+  axisMode?: 'efficacy-safety' | 'efficacy-efficacy' | 'safety-safety';
 }
 
 // ============================================================================
@@ -43,11 +48,15 @@ const COLORS = {
   axis: '#475569',
 };
 
-const DARK_COLORS = {
-  efficacy: '#3b82f6', // Bright blue for dark mode
-  safety: '#ef4444', // Bright red for dark mode
-  grid: '#334155', // More visible grid color for dark mode
-  axis: '#cbd5e1',
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+// Get compact label from metrics config
+const getCompactLabel = (param: string | undefined, metrics: typeof EFFICACY_METRICS | typeof SAFETY_METRICS, defaultLabel: string): string => {
+  if (!param) return defaultLabel;
+  const metric = metrics[param];
+  return metric?.label || defaultLabel;
 };
 
 // ============================================================================
@@ -69,7 +78,18 @@ interface CustomTooltipProps {
   onTrialIndexChange?: (treatmentName: string, newIndex: number) => void;
   efficacyParam?: string;
   safetyParam?: string;
+  axisMode?: 'efficacy-safety' | 'efficacy-efficacy' | 'safety-safety';
 }
+
+/** Payload shape for tooltip; may include optional fields from chart data */
+type TooltipPayloadData = EfficacySafetyDataPoint & {
+  safety?: number;
+  safetyAbs?: number;
+  sourceUrl?: string;
+  biomarker?: string;
+  notes?: string;
+  developmentStatus?: string;
+};
 
 const CustomTooltip = ({ 
   active, 
@@ -80,16 +100,47 @@ const CustomTooltip = ({
   onTrialIndexChange,
   efficacyParam,
   safetyParam,
+  axisMode,
 }: CustomTooltipProps) => {
+  const data = payload?.[0]?.payload as TooltipPayloadData | undefined;
+  const allTrials = useMemo(() => data?.allTrials ?? [], [data?.allTrials]);
+
+  const nctTrials = useMemo(() => {
+    const grouped: Array<{ nctNumber: string; trialIndices: number[]; displayLabel: string }> = [];
+    const idMap = new Map<string, number[]>();
+
+    allTrials.forEach((trial, index) => {
+      const id = trial.nctNumber || trial.abstractId || trial.publicationName || `Trial ${index + 1}`;
+      if (!idMap.has(id)) {
+        idMap.set(id, []);
+      }
+      idMap.get(id)!.push(index);
+    });
+
+    idMap.forEach((trialIndices, sourceId) => {
+      trialIndices.forEach((trialIndex, idx) => {
+        const displayLabel = trialIndices.length === 1
+          ? sourceId
+          : `${sourceId} data ${idx + 1}`;
+        grouped.push({
+          nctNumber: sourceId,
+          trialIndices: [trialIndex],
+          displayLabel,
+        });
+      });
+    });
+
+    return grouped;
+  }, [allTrials]);
+
   if ((!active && !isPinned) || !payload || !payload.length) return null;
 
-  const data = payload[0].payload as EfficacySafetyDataPoint & { safety: number; safetyAbs: number };
-  const allTrials = data.allTrials || [];
+  const dataNonNull = data as TooltipPayloadData;
   const hasMultipleTrials = allTrials.length > 1;
   const currentTrial = allTrials[currentTrialIndex] || {
-    efficacy: data.efficacy,
-    safety: data.safety || 0,
-    numberOfPatients: data.numberOfPatients,
+    efficacy: dataNonNull.efficacy,
+    safety: dataNonNull.safety || 0,
+    numberOfPatients: dataNonNull.numberOfPatients,
     year: undefined,
     nctNumber: undefined,
     abstractId: undefined,
@@ -97,147 +148,169 @@ const CustomTooltip = ({
     citation: undefined,
     phase: undefined,
   };
-  
-  // Get values directly from the current trial
-  const efficacy = currentTrial.efficacy || 0;
-  const safety = Math.abs(currentTrial.safety || 0);
 
-  const handlePrevTrial = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentTrialIndex > 0 && onTrialIndexChange) {
-      onTrialIndexChange(data.treatmentName, currentTrialIndex - 1);
+  const efficacyMetrics = axisMode === 'safety-safety' ? SAFETY_METRICS : EFFICACY_METRICS;
+  const safetyMetrics = axisMode === 'efficacy-efficacy' ? EFFICACY_METRICS : SAFETY_METRICS;
+  const efficacyLabel = getCompactLabel(efficacyParam, efficacyMetrics, 'ORR');
+  const safetyLabel = getCompactLabel(safetyParam, safetyMetrics, 'Grade 3+ TRAE');
+
+  const handleNCTClick = (trialIndex: number) => {
+    if (onTrialIndexChange) {
+      onTrialIndexChange(dataNonNull.treatmentName, trialIndex);
     }
   };
-
-  const handleNextTrial = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentTrialIndex < allTrials.length - 1 && onTrialIndexChange) {
-      onTrialIndexChange(data.treatmentName, currentTrialIndex + 1);
-    }
-  };
-
-  // Get metric labels
-  const efficacyLabel = efficacyParam ? efficacyParam.replace(/_/g, ' ') : 'Efficacy (ORR)';
-  const safetyLabel = safetyParam ? safetyParam.replace(/_/g, ' ') : 'Safety (Grade 3+ AE)';
 
   return (
-    <div className="bg-slate-800 p-4 rounded-xl shadow-2xl border border-slate-700 min-w-[260px]">
+    <div 
+      className="bg-slate-800 p-3 rounded-lg shadow-xl border border-slate-700 min-w-[260px] max-w-[340px] tooltip-enter"
+      style={{
+        animation: isPinned ? 'tooltipFadeIn 0.2s ease-out' : 'tooltipFadeIn 0.15s ease-out',
+        pointerEvents: 'auto',
+      }}
+    >
       {isPinned && (
-        <div className="mb-2 pb-2 border-b border-slate-600 flex items-center justify-between">
-          <span className="text-[10px] uppercase tracking-wider text-amber-400 font-medium flex items-center gap-1">
-            <span className="text-amber-400">📌</span> Pinned
+        <div 
+          className="mb-1.5 pb-1.5 border-b border-slate-600 flex items-center justify-between"
+          style={{ animation: 'tooltipContentFadeIn 0.2s ease-out' }}
+        >
+          <span className="text-[9px] uppercase tracking-wider text-amber-400 font-medium flex items-center gap-1">
+            <span className="text-amber-400" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>📌</span> Pinned
           </span>
-          <span className="text-[10px] text-slate-500">Click bar to unpin</span>
+          <span className="text-[9px] text-slate-500">Click bar to unpin</span>
         </div>
       )}
-      <h4 className="font-bold text-white text-sm mb-3">{label || data.treatmentName}</h4>
-      {data.treatmentType && (
-        <p className="text-xs text-slate-400 mb-3">{data.treatmentType}</p>
-      )}
-      <div className="space-y-2">
-        {efficacy > 0 && (
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{ background: COLORS.efficacy }} />
-              <span className="text-sm text-slate-300">{efficacyLabel}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePrevTrial}
-                disabled={!hasMultipleTrials || currentTrialIndex === 0}
-                className="text-slate-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-1 rounded hover:bg-slate-700"
-                style={{ pointerEvents: 'auto' }}
-                title={hasMultipleTrials ? 'Previous trial' : 'Only one trial available'}
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <span className="text-sm font-bold text-white tabular-nums min-w-[50px] text-center">
-                {efficacy.toFixed(1)}%
-              </span>
-              <button
-                onClick={handleNextTrial}
-                disabled={!hasMultipleTrials || currentTrialIndex === allTrials.length - 1}
-                className="text-slate-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-1 rounded hover:bg-slate-700"
-                style={{ pointerEvents: 'auto' }}
-                title={hasMultipleTrials ? 'Next trial' : 'Only one trial available'}
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-        {safety > 0 && (
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{ background: COLORS.safety }} />
-              <span className="text-sm text-slate-300">{safetyLabel}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePrevTrial}
-                disabled={!hasMultipleTrials || currentTrialIndex === 0}
-                className="text-slate-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-1 rounded hover:bg-slate-700"
-                style={{ pointerEvents: 'auto' }}
-                title={hasMultipleTrials ? 'Previous trial' : 'Only one trial available'}
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <span className="text-sm font-bold text-white tabular-nums min-w-[50px] text-center">
-                {safety.toFixed(1)}%
-              </span>
-              <button
-                onClick={handleNextTrial}
-                disabled={!hasMultipleTrials || currentTrialIndex === allTrials.length - 1}
-                className="text-slate-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-1 rounded hover:bg-slate-700"
-                style={{ pointerEvents: 'auto' }}
-                title={hasMultipleTrials ? 'Next trial' : 'Only one trial available'}
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
+      <div className="mb-2 pb-2 border-b border-slate-700">
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="font-bold text-white text-xs">{label || dataNonNull.treatmentName}</h4>
+          {(dataNonNull.approvalStatus || dataNonNull.developmentStatus) && (
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
+                (dataNonNull.approvalStatus === 'Approved' || dataNonNull.developmentStatus === 'Approved')
+                  ? 'bg-emerald-900/50 text-emerald-300'
+                  : (dataNonNull.developmentStatus === 'Development stopped')
+                  ? 'bg-red-900/50 text-red-300'
+                  : 'bg-violet-900/50 text-violet-300'
+              }`}
+            >
+              {((dataNonNull.approvalStatus === 'Approved' || dataNonNull.developmentStatus === 'Approved') && '★ ')}
+              {(dataNonNull.developmentStatus === 'Development stopped' && 'Ø ')}
+              {(dataNonNull.approvalStatus || dataNonNull.developmentStatus)}
+            </span>
+          )}
+        </div>
+        {dataNonNull.treatmentType && (
+          <p className="text-[11px] text-slate-400 mt-0.5">{dataNonNull.treatmentType}</p>
         )}
       </div>
+
+      <div className="grid grid-cols-2 gap-2 mb-2">
+        <div>
+          <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0">{efficacyLabel}</p>
+          <p className="text-base font-bold text-white tabular-nums">{currentTrial.efficacy.toFixed(1)}%</p>
+        </div>
+        <div>
+          <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0">{safetyLabel}</p>
+          <p className="text-base font-bold text-white tabular-nums">{Math.abs(currentTrial.safety || 0).toFixed(1)}%</p>
+        </div>
+      </div>
+      
       {hasMultipleTrials && (
-        <div className="mt-2 text-center">
-          <span className="text-[10px] text-slate-500">
-            Trial {currentTrialIndex + 1} of {allTrials.length}
-          </span>
+        <div className="mb-2 pb-2 border-b border-slate-700">
+          <label className="block text-[9px] uppercase tracking-wider text-slate-500 mb-1 font-medium">
+            Trial
+          </label>
+          <select
+            value={currentTrialIndex}
+            onChange={(e) => {
+              e.stopPropagation();
+              const idx = Number(e.target.value);
+              if (!Number.isNaN(idx)) handleNCTClick(idx);
+            }}
+            title={nctTrials.find((t) => t.trialIndices[0] === currentTrialIndex)?.displayLabel}
+            className="w-full px-2 py-1.5 rounded text-xs font-mono bg-slate-700/80 text-slate-100 border border-slate-600 hover:border-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500/60 focus:border-sky-500/70 cursor-pointer transition-colors"
+            style={{ pointerEvents: 'auto' }}
+          >
+            {nctTrials.map((nctTrial, idx) => (
+              <option key={idx} value={nctTrial.trialIndices[0]}>
+                {nctTrial.displayLabel}
+              </option>
+            ))}
+          </select>
         </div>
       )}
-      <div className="mt-3 pt-3 border-t border-slate-700 space-y-1.5">
-        {currentTrial.numberOfPatients && (
-          <div className="flex justify-between text-xs">
-            <span className="text-slate-400">Patients</span>
-            <span className="text-slate-200 font-medium">n={currentTrial.numberOfPatients}</span>
+
+      <div className="pt-2 border-t border-slate-700 space-y-1">
+        <div className="flex justify-between text-[11px]">
+          <span className="text-slate-400">Patients</span>
+          <span className="text-slate-200 font-medium">n={currentTrial.numberOfPatients || 0}</span>
+        </div>
+        {currentTrial.nctNumber && (
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">NCT</span>
+            <Link
+              href={`/trial/nct/${currentTrial.nctNumber}`}
+              className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-0.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span>{currentTrial.nctNumber}</span>
+              <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           </div>
         )}
-        {data.trialCount && (
-          <div className="flex justify-between text-xs">
-            <span className="text-slate-400">Trials</span>
-            <span className="text-slate-200 font-medium">{data.trialCount}</span>
-          </div>
-        )}
-        {data.approvalStatus && (
-          <div className="flex justify-between text-xs">
-            <span className="text-slate-400">Status</span>
-            <span className={`font-medium ${
-              data.approvalStatus === 'Approved' 
-                ? 'text-emerald-300' 
-                : data.approvalStatus === 'Investigational'
-                ? 'text-violet-300'
-                : 'text-slate-300'
-            }`}>
-              {data.approvalStatus}
+        {(currentTrial.abstractId || currentTrial.publicationName) && (
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">
+              {currentTrial.publicationName ? 'Publication' : 'Abstract ID'}
             </span>
+            {(() => {
+              const sourceValue = currentTrial.publicationName || currentTrial.abstractId;
+              const isWebScrape = currentTrial.abstractId?.startsWith('webscrape_');
+              const hasSourceUrl = !!dataNonNull.sourceUrl;
+              if (isWebScrape && hasSourceUrl) {
+                return (
+                  <a
+                    href={dataNonNull.sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-xs">{sourceValue}</span>
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                );
+              }
+              if (currentTrial.abstractId) {
+                return (
+                  <Link
+                    href={`/trial/abstract/${currentTrial.abstractId}`}
+                    className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="text-[11px]">{sourceValue}</span>
+                    <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                );
+              }
+              return <span className="text-slate-200 text-[11px]">{sourceValue}</span>;
+            })()}
+          </div>
+        )}
+        {dataNonNull.biomarker && (
+          <div className="flex justify-between text-[11px]">
+            <span className="text-slate-400">Biomarker</span>
+            <span className="text-slate-200 font-medium">{dataNonNull.biomarker}</span>
+          </div>
+        )}
+        {dataNonNull.notes && (
+          <div className="pt-1.5 border-t border-slate-700">
+            <p className="text-[9px] text-slate-500 italic">{dataNonNull.notes}</p>
           </div>
         )}
       </div>
@@ -257,13 +330,15 @@ export default function DivergingBarChart({
   efficacyLabel = 'ORR (%)',
   safetyLabel = 'Grade 3+ AE rate (%)',
   compact = false,
+  fillHeight = false,
   efficacyParam,
   safetyParam,
+  axisMode,
 }: DivergingBarChartProps) {
   const chartHeight = Math.max(height || 400, 100);
+  const LABEL_PLOT_GAP = 12; // gap between Y-axis labels and plot
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [chartAreaWidth, setChartAreaWidth] = useState(0);
-  const [chartAreaLeft, setChartAreaLeft] = useState(0);
   const [isPinned, setIsPinned] = useState(false);
   const [pinnedBarId, setPinnedBarId] = useState<string | null>(null);
   // Track current trial index per treatment for tooltip switching
@@ -320,23 +395,22 @@ export default function DivergingBarChart({
     return { x, y };
   }, []);
 
-  // Update chart area dimensions when container size changes
+  // Update chart area dimensions when container size changes (must match ComposedChart: margin.left + yAxisWidth)
+  const effectiveLeftMargin = LABEL_PLOT_GAP + 4 + 248 + LABEL_PLOT_GAP; // 248 = labelWidth (same for compact/fullscreen)
   useEffect(() => {
     const updateDimensions = () => {
       if (chartContainerRef.current) {
         const rect = chartContainerRef.current.getBoundingClientRect();
-        // Account for margins
-        const leftMargin = compact ? 130 : 160;
-        const rightMargin = 35;
+        const leftMargin = effectiveLeftMargin;
+        const rightMargin = compact ? 12 : 35;
         setChartAreaWidth(rect.width - leftMargin - rightMargin);
-        setChartAreaLeft(leftMargin);
       }
     };
 
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
-  }, [compact]);
+  }, [compact, effectiveLeftMargin]);
 
   // Transform data for diverging chart
   // Safety values need to be negative to extend left, efficacy positive to extend right
@@ -362,39 +436,25 @@ export default function DivergingBarChart({
     });
   }, [data, trialIndices]);
 
-  // Calculate domain for X axis - ensure 0 is always in the center with evenly spaced ticks
-  // The range will be divisible by the number of intervals to get whole number ticks
+  // Calculate domain for X axis - dynamic to bar size, 0 centered, with nice tick intervals
   // Note: safety is already negative in chartData, efficacy is positive
   const xDomain = useMemo(() => {
     const allValues = chartData.flatMap((d) => [d.efficacy, d.safety]);
     if (allValues.length === 0) return [-60, 60];
-    const min = Math.min(...allValues);
-    const max = Math.max(...allValues);
-    const absMax = Math.max(Math.abs(min), Math.abs(max));
-    const padding = absMax * 0.1;
-    
-    // We want 7 ticks (6 intervals), so the range should be divisible by 6
-    // Round up to the nearest number that's divisible by 6 and gives nice intervals
-    const tickCount = 7;
-    const intervalCount = tickCount - 1; // 6 intervals
-    
-    // Start with a base rounded value
-    const baseMax = Math.ceil((absMax + padding) / 10) * 10;
-    
-    // Find the smallest multiple of intervalCount that's >= baseMax
-    // This ensures the range is divisible by intervalCount for whole number intervals
-    const roundedMax = Math.ceil(baseMax / intervalCount) * intervalCount;
-    
-    // Cap at 100 since efficacy and safety are percentages and can't exceed 100%
-    const cappedMax = Math.min(roundedMax, 100);
-    
-    // Ensure symmetric domain around 0, capped at 100
+    const absMax = Math.max(...allValues.map((v) => Math.abs(v)));
+    // Small padding so bars don’t sit on the axis end (5%)
+    const target = Math.max(absMax * 1.05, 2);
+    // Nice step: 10 for small range, 20 for larger (matches reference -60 to 60)
+    const step = target <= 30 ? 10 : 20;
+    // Smallest nice value >= target so plot size fits the bars
+    const roundedMax = Math.ceil(target / step) * step;
+    const cappedMax = Math.min(Math.max(roundedMax, 20), 100);
     return [-cappedMax, cappedMax];
   }, [chartData]);
   
   // Calculate evenly spaced ticks with nice whole number intervals (10, 20, 30, etc.)
   const xAxisTicks = useMemo(() => {
-    const [min, max] = xDomain;
+    const [, max] = xDomain;
     const absMax = Math.abs(max);
     
     // Determine a nice interval based on the max value
@@ -425,29 +485,65 @@ export default function DivergingBarChart({
     return ticks;
   }, [xDomain]);
 
+  // Average values for reference lines (left = safety avg, right = efficacy avg)
+  const median = (arr: number[]) => {
+    if (arr.length === 0) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+  };
+
+  const { medianSafety, medianEfficacy } = useMemo(() => {
+    if (chartData.length === 0) return { medianSafety: 0, medianEfficacy: 0 };
+    return {
+      medianSafety: median(chartData.map((d) => d.safety)),
+      medianEfficacy: median(chartData.map((d) => d.efficacy)),
+    };
+  }, [chartData]);
+
   // Use light mode colors for both compact and fullscreen modes
   const colors = COLORS;
+  // Same axis layout as compact: fixed label width + gap so full screen matches compact spacing.
+  const labelWidth = 248; // same for compact and full screen so labels don't touch the plot
+  const yAxisWidth = 4 + labelWidth + LABEL_PLOT_GAP; // axis band: labels in [4, 4+labelWidth], then gap
   const margin = compact
-    ? { top: 25, right: 35, bottom: 65, left: 130 }
-    : { top: 25, right: 35, bottom: 85, left: 160 };
-
-  if (data.length === 0) {
-    return (
-      <Card className={`w-full bg-slate-900 border-slate-800 ${compact ? 'border-0 shadow-none' : ''}`}>
-        <CardContent className={`flex items-center justify-center ${compact ? 'h-[200px]' : 'h-[400px]'}`}>
-          <p className="text-slate-400">No data available</p>
-        </CardContent>
-      </Card>
-    );
-  }
+    ? { top: 16, right: 12, bottom: 50, left: LABEL_PLOT_GAP }
+    : fillHeight
+    ? { top: 20, right: 12, bottom: 40, left: LABEL_PLOT_GAP } // top room for median line labels
+    : { top: 40, right: 35, bottom: 85, left: LABEL_PLOT_GAP };
 
   // Custom X-axis tick formatter to show absolute values
   const formatXAxisTick = (value: number) => {
     return `${Math.abs(value)}`;
   };
 
-  // Custom X-axis label
-  const xAxisLabel = `${safetyLabel} | ${efficacyLabel}`;
+  const efficacyMetricsForAxis = axisMode === 'safety-safety' ? SAFETY_METRICS : EFFICACY_METRICS;
+  const safetyMetricsForAxis = axisMode === 'efficacy-efficacy' ? EFFICACY_METRICS : SAFETY_METRICS;
+  const dynamicEfficacyLabel = getCompactLabel(efficacyParam, efficacyMetricsForAxis, efficacyLabel || 'ORR');
+  const dynamicSafetyLabel = getCompactLabel(safetyParam, safetyMetricsForAxis, safetyLabel || 'Grade 3+ AE');
+
+  const getUnit = (param: string | undefined, metrics: typeof EFFICACY_METRICS | typeof SAFETY_METRICS): string => {
+    if (!param) return '';
+    const metric = metrics[param];
+    return metric?.unit || '';
+  };
+
+  const efficacyUnit = getUnit(efficacyParam, efficacyMetricsForAxis);
+  const safetyUnit = getUnit(safetyParam, safetyMetricsForAxis);
+
+  const formatAxisLabel = (label: string, unit: string): string => {
+    if (!unit) return label;
+    return `${label} (${unit})`;
+  };
+
+  // Legend text: efficacy-efficacy => "Efficacy (metric)" for both; safety-safety => "Safety (metric)" for both
+  const leftLegendText = axisMode === 'efficacy-efficacy' ? `Efficacy (${dynamicSafetyLabel})` : axisMode === 'safety-safety' ? `Safety (${dynamicEfficacyLabel})` : `Safety (${dynamicSafetyLabel})`;
+  const rightLegendText = axisMode === 'efficacy-efficacy' ? `Efficacy (${dynamicEfficacyLabel})` : axisMode === 'safety-safety' ? `Safety (${dynamicSafetyLabel})` : `Efficacy (${dynamicEfficacyLabel})`;
+
+  // Below-axis label: parameters only (e.g. "DCR (%) | ORR (%)"), no "Efficacy (...)" or "Safety (...)" wrapper
+  const leftAxisPart = axisMode === 'efficacy-efficacy' ? formatAxisLabel(dynamicSafetyLabel, safetyUnit) : axisMode === 'safety-safety' ? formatAxisLabel(dynamicEfficacyLabel, efficacyUnit) : formatAxisLabel(dynamicSafetyLabel, safetyUnit);
+  const rightAxisPart = axisMode === 'efficacy-efficacy' ? formatAxisLabel(dynamicEfficacyLabel, efficacyUnit) : axisMode === 'safety-safety' ? formatAxisLabel(dynamicSafetyLabel, safetyUnit) : formatAxisLabel(dynamicEfficacyLabel, efficacyUnit);
+  const xAxisLabel = `${leftAxisPart} | ${rightAxisPart}`;
 
   // Handle bar hover - we'll use Recharts tooltip for hover, only handle clicks for pinning
 
@@ -492,16 +588,18 @@ export default function DivergingBarChart({
     });
   }, [isPinned, pinnedBarId, colors, calculateTooltipPosition, tooltipData]);
 
-  // Custom shape for diverging bars - both bars start from center (0) and extend in opposite directions
-  // For horizontal bar charts (layout="vertical"), Recharts provides:
-  // - x: X position (horizontal, where the bar starts for positive values)
-  // - y: Y position (vertical, category position)
-  // - width: bar width (horizontal, for the data value)
-  // - height: bar height (vertical)
-  // - background: chart area dimensions (if available)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const DivergingBarShape = useCallback((props: any) => {
-    const { payload, x, y, width, height, background } = props;
+  /** Recharts Bar shape props for custom diverging bar */
+  interface DivergingBarShapeProps {
+    payload?: EfficacySafetyDataPoint;
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    background?: { x?: number; width?: number };
+  }
+
+  const DivergingBarShape = useCallback((props: unknown) => {
+    const { payload, y = 0, height = 0, background } = props as DivergingBarShapeProps;
     if (!payload) return <g />;
 
     const safety = payload.safety || 0; // Negative value
@@ -509,18 +607,11 @@ export default function DivergingBarChart({
     const barId = payload.treatmentName;
     const isPinnedBar = isPinned && pinnedBarId === barId;
     
-    // Try to get chart area dimensions from background prop first
-    let areaWidth = background?.width;
-    let areaLeft = background?.x;
+    // Recharts draws the shape in content coordinates (0 = left edge of plot). Use content width; left is always 0.
+    const areaLeft = background?.x ?? 0;
+    const areaWidth = background?.width ?? chartAreaWidth;
     
-    // If background not available, use state values
     if (!areaWidth || areaWidth === 0) {
-      areaWidth = chartAreaWidth;
-      areaLeft = chartAreaLeft;
-    }
-    
-    // If still no dimensions, we can't render properly
-    if (!areaWidth || areaWidth === 0 || areaLeft === undefined) {
       return <g />;
     }
     
@@ -552,15 +643,14 @@ export default function DivergingBarChart({
             fill={isPinnedBar ? '#fbbf24' : colors.safety}
             radius={0}
             style={{ cursor: 'pointer', pointerEvents: 'all' }}
-            onMouseDown={(e: any) => {
+            onMouseDown={(e: React.MouseEvent) => {
               e.stopPropagation();
               e.preventDefault();
             }}
-            onMouseUp={(e: any) => {
+            onMouseUp={(e: React.MouseEvent) => {
               e.stopPropagation();
               e.preventDefault();
-              const nativeEvent = e as unknown as React.MouseEvent;
-              handleBarClick(data, nativeEvent);
+              handleBarClick(data, e);
             }}
           />
         )}
@@ -568,129 +658,177 @@ export default function DivergingBarChart({
         {efficacy > 0 && efficacyWidth > 0 && (
           <Rectangle
             x={efficacyX}
-            y={y} // y is the vertical (category) position
+            y={y}
             width={efficacyWidth}
             height={height}
             fill={isPinnedBar ? '#fbbf24' : colors.efficacy}
             radius={0}
             style={{ cursor: 'pointer', pointerEvents: 'all' }}
-            onMouseDown={(e: any) => {
+            onMouseDown={(e: React.MouseEvent) => {
               e.stopPropagation();
               e.preventDefault();
             }}
-            onMouseUp={(e: any) => {
+            onMouseUp={(e: React.MouseEvent) => {
               e.stopPropagation();
               e.preventDefault();
-              const nativeEvent = e as unknown as React.MouseEvent;
-              handleBarClick(data, nativeEvent);
+              handleBarClick(data, e);
             }}
           />
         )}
       </g>
     );
-  }, [xDomain, colors, chartAreaWidth, chartAreaLeft, isPinned, pinnedBarId, handleBarClick]);
+  }, [xDomain, colors, chartAreaWidth, isPinned, pinnedBarId, handleBarClick]);
+
+  // Custom Y-axis tick: position labels in axis band 0..yAxisWidth so no gap before plot (compact + fullscreen)
+  const renderYAxisTick = useCallback(
+    (props: { x: number; y: number; payload?: { value?: string }; width?: number }) => {
+      const { y, payload } = props;
+      const width = props.width ?? labelWidth;
+      const text = payload?.value ?? '';
+      return (
+        <g transform={`translate(0,${y})`}>
+          <foreignObject x={4} y={-14} width={width} height={44} style={{ overflow: 'hidden' }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 500,
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
+                lineHeight: 1.3,
+                color: colors.axis,
+                width: '100%',
+                textAlign: 'right',
+                paddingRight: 4,
+              }}
+            >
+              {text}
+            </div>
+          </foreignObject>
+        </g>
+      );
+    },
+    [colors.axis, labelWidth]
+  );
+
+  // Early return: no data (after all hooks so hooks are never conditional)
+  if (data.length === 0) {
+    return (
+      <Card className={`w-full bg-slate-900 border-slate-800 ${compact ? 'border-0 shadow-none' : ''}`}>
+        <CardContent className={`flex items-center justify-center ${compact ? 'h-[200px]' : 'h-[400px]'}`}>
+          <p className="text-slate-400">No data available</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (compact) {
     return (
-      <div ref={chartContainerRef} className="w-full h-full bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart
-            data={chartData}
-            layout="vertical"
-            margin={margin}
-            barCategoryGap="25%"
-          >
-            <CartesianGrid 
-              strokeDasharray="0" 
-              stroke={colors.grid} 
-              strokeWidth={1}
-              strokeOpacity={0.5}
-              vertical={true}
-              horizontal={true}
-            />
-            <XAxis
-              type="number"
-              domain={xDomain}
-              ticks={xAxisTicks}
-              tick={{ fontSize: 11, fill: colors.axis, fontWeight: 500 }}
-              tickLine={{ stroke: colors.grid, strokeWidth: 1 }}
-              axisLine={false}
-              tickFormatter={formatXAxisTick}
-              label={{
-                value: xAxisLabel,
-                position: 'insideBottom',
-                offset: -5,
-                style: { textAnchor: 'middle', fill: colors.axis, fontSize: 11, fontWeight: 600 },
-              }}
-            />
-            <YAxis
-              type="category"
-              dataKey="name"
-              tick={{ fontSize: 11, fill: colors.axis, fontWeight: 500 }}
-              tickLine={{ stroke: colors.grid, strokeWidth: 1 }}
-              axisLine={false}
-              width={130}
-            />
-            <ReferenceLine x={0} stroke={colors.axis} strokeWidth={2.5} strokeOpacity={0.8} />
-            <Tooltip 
-              content={(props) => {
-                if (isPinned) return null; // Don't show Recharts tooltip when pinned
-                if (props.active && props.payload && props.payload.length > 0) {
-                  const payloadData = props.payload?.[0]?.payload as EfficacySafetyDataPoint | undefined;
-                  const treatmentName = payloadData?.treatmentName || '';
-                  const currentIndex = trialIndices.get(treatmentName) || 0;
-                  return <CustomTooltip 
-                    active={props.active}
-                    payload={props.payload as CustomTooltipProps['payload']}
-                    label={props.label?.toString()}
-                    isPinned={false}
-                    currentTrialIndex={currentIndex}
-                    onTrialIndexChange={handleTrialIndexChange}
-                    efficacyParam={efficacyParam}
-                    safetyParam={safetyParam}
-                  />;
-                }
-                return null;
-              }}
-            />
-            <Legend
-              verticalAlign="top"
-              wrapperStyle={{ paddingBottom: '12px' }}
-              iconType="square"
-              iconSize={12}
-              content={({ payload }) => (
-                <div className="flex items-center justify-center gap-6">
-                  {payload && payload.length > 0 && (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3" 
-                          style={{ backgroundColor: colors.safety }}
-                        />
-                        <span className="text-xs" style={{ color: colors.axis }}>
-                          Safety (Grade 3+ AE)
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-3 h-3" 
-                          style={{ backgroundColor: colors.efficacy }}
-                        />
-                        <span className="text-xs" style={{ color: colors.axis }}>
-                          Efficacy (ORR)
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            />
-            <Bar 
-              dataKey="efficacy" 
-              shape={DivergingBarShape}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
+      <div
+        className="absolute inset-0 flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm"
+        style={{ width: '100%', height: '100%', minHeight: 0, minWidth: 0 }}
+      >
+        {/* Legend outside chart (like BarChart) so plot can fill the rest of the container */}
+        <div className="flex-shrink-0 flex items-center justify-center gap-6 px-2 py-1.5 bg-slate-50 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3" style={{ backgroundColor: colors.safety }} />
+            <span className="text-xs" style={{ color: colors.axis }}>{leftLegendText}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3" style={{ backgroundColor: colors.efficacy }} />
+            <span className="text-xs" style={{ color: colors.axis }}>{rightLegendText}</span>
+          </div>
+        </div>
+        <div
+          ref={chartContainerRef}
+          className="flex-1 min-h-0 min-w-0"
+          style={{ width: '100%', height: '100%' }}
+        >
+          <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+            <ComposedChart
+              data={chartData}
+              layout="vertical"
+              margin={margin}
+              barCategoryGap="30%"
+            >
+              <CartesianGrid 
+                strokeDasharray="0" 
+                stroke={colors.grid} 
+                strokeWidth={1}
+                strokeOpacity={0.5}
+                vertical={true}
+                horizontal={true}
+              />
+              <XAxis
+                type="number"
+                domain={xDomain}
+                ticks={xAxisTicks}
+                tick={{ fontSize: 12, fill: colors.axis, fontWeight: 500 }}
+                tickLine={{ stroke: colors.grid, strokeWidth: 1 }}
+                axisLine={false}
+                tickFormatter={formatXAxisTick}
+                label={{
+                  value: xAxisLabel,
+                  position: 'insideBottom',
+                  offset: -5,
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
+                }}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                interval={0}
+                tick={renderYAxisTick}
+                tickLine={{ stroke: colors.grid, strokeWidth: 1 }}
+                axisLine={false}
+                width={yAxisWidth}
+              />
+              <ReferenceLine x={0} stroke={colors.axis} strokeWidth={2.5} strokeOpacity={0.8} />
+              <ReferenceLine
+                x={medianSafety}
+                stroke={colors.safety}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                strokeOpacity={0.9}
+                label={{ value: `Median ${medianSafety.toFixed(1)}`, position: 'top', fill: colors.safety, fontSize: 10, fontWeight: 600 }}
+              />
+              <ReferenceLine
+                x={medianEfficacy}
+                stroke={colors.efficacy}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                strokeOpacity={0.9}
+                label={{ value: `Median ${medianEfficacy.toFixed(1)}`, position: 'top', fill: colors.efficacy, fontSize: 10, fontWeight: 600 }}
+              />
+              <Tooltip 
+                wrapperStyle={{ pointerEvents: 'auto' }}
+                content={(props) => {
+                  if (isPinned) return null; // Don't show Recharts tooltip when pinned
+                  if (props.active && props.payload && props.payload.length > 0) {
+                    const payloadData = props.payload?.[0]?.payload as EfficacySafetyDataPoint | undefined;
+                    const treatmentName = payloadData?.treatmentName || '';
+                    const currentIndex = trialIndices.get(treatmentName) || 0;
+                    return <CustomTooltip 
+                      active={props.active}
+                      payload={props.payload as CustomTooltipProps['payload']}
+                      label={props.label?.toString()}
+                      isPinned={false}
+                      currentTrialIndex={currentIndex}
+                      onTrialIndexChange={handleTrialIndexChange}
+                      efficacyParam={efficacyParam}
+                      safetyParam={safetyParam}
+                      axisMode={axisMode}
+                    />;
+                  }
+                  return null;
+                }}
+              />
+              <Bar 
+                dataKey="efficacy" 
+                shape={DivergingBarShape}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
         
         {/* Custom pinned tooltip */}
         {isPinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
@@ -722,21 +860,31 @@ export default function DivergingBarChart({
     );
   }
 
-  return (
-    <Card className="w-full overflow-hidden bg-white border-slate-200">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xl font-bold text-slate-900">{title}</CardTitle>
-        <CardDescription className="mt-1 text-slate-600">{description}</CardDescription>
-      </CardHeader>
-
-      <CardContent className="pt-4">
-        <div ref={chartContainerRef} style={{ width: '100%', height: chartHeight, minHeight: 100 }}>
-          <ResponsiveContainer width="100%" height="100%">
+  // Full-screen fill layout: no header, chart fills container (like compact mode)
+  if (fillHeight) {
+    return (
+      <div className="w-full h-full flex flex-col min-h-0 min-w-0 bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        <div className="flex-shrink-0 flex items-center justify-center gap-6 px-2 py-1.5 bg-slate-50 border-b border-slate-200">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3" style={{ backgroundColor: colors.safety }} />
+            <span className="text-xs" style={{ color: colors.axis }}>{leftLegendText}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3" style={{ backgroundColor: colors.efficacy }} />
+            <span className="text-xs" style={{ color: colors.axis }}>{rightLegendText}</span>
+          </div>
+        </div>
+        <div
+          ref={chartContainerRef}
+          className="flex-1 min-h-0 min-w-0"
+          style={{ width: '100%', height: '100%' }}
+        >
+          <ResponsiveContainer width="100%" height="100%" minHeight={0}>
             <ComposedChart
               data={chartData}
               layout="vertical"
               margin={margin}
-              barCategoryGap="25%"
+              barCategoryGap="20%"
             >
               <CartesianGrid 
                 strokeDasharray="0" 
@@ -758,27 +906,175 @@ export default function DivergingBarChart({
                   value: xAxisLabel,
                   position: 'insideBottom',
                   offset: -5,
-                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 12, fontWeight: 600 },
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
                 }}
               />
               <YAxis
                 type="category"
                 dataKey="name"
-                tick={{ fontSize: 12, fill: colors.axis, fontWeight: 500 }}
+                interval={0}
+                tick={renderYAxisTick}
                 tickLine={{ stroke: colors.grid, strokeWidth: 1 }}
                 axisLine={false}
-                width={160}
+                width={yAxisWidth}
               />
               <ReferenceLine x={0} stroke={colors.axis} strokeWidth={2.5} strokeOpacity={0.8} />
+              <ReferenceLine
+                x={medianSafety}
+                stroke={colors.safety}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                strokeOpacity={0.9}
+                label={{ value: `Median ${medianSafety.toFixed(1)}`, position: 'top', fill: colors.safety, fontSize: 10, fontWeight: 600 }}
+              />
+              <ReferenceLine
+                x={medianEfficacy}
+                stroke={colors.efficacy}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                strokeOpacity={0.9}
+                label={{ value: `Median ${medianEfficacy.toFixed(1)}`, position: 'top', fill: colors.efficacy, fontSize: 10, fontWeight: 600 }}
+              />
               <Tooltip 
+                wrapperStyle={{ pointerEvents: 'auto' }}
                 content={(props) => {
-                  if (isPinned) return null; // Don't show Recharts tooltip when pinned
+                  if (isPinned) return null;
                   if (props.active && props.payload && props.payload.length > 0) {
+                    const payloadData = props.payload?.[0]?.payload as EfficacySafetyDataPoint | undefined;
+                    const treatmentName = payloadData?.treatmentName || '';
+                    const currentIndex = trialIndices.get(treatmentName) || 0;
                     return <CustomTooltip 
                       active={props.active}
                       payload={props.payload as CustomTooltipProps['payload']}
                       label={props.label?.toString()}
-                      isPinned={false} 
+                      isPinned={false}
+                      currentTrialIndex={currentIndex}
+                      onTrialIndexChange={handleTrialIndexChange}
+                      efficacyParam={efficacyParam}
+                      safetyParam={safetyParam}
+                      axisMode={axisMode}
+                    />;
+                  }
+                  return null;
+                }}
+              />
+              <Bar 
+                dataKey="efficacy" 
+                shape={DivergingBarShape}
+                background={{ fill: 'transparent' }}
+              />
+            </ComposedChart>
+          </ResponsiveContainer>
+          {isPinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
+            <div 
+              className="fixed z-[9999]"
+              style={{ left: tooltipData.x, top: tooltipData.y, pointerEvents: 'auto' }}
+            >
+              <CustomTooltip 
+                active={tooltipData.active}
+                payload={tooltipData.payload}
+                label={tooltipData.label}
+                isPinned={isPinned}
+                currentTrialIndex={(() => {
+                  const payloadData = tooltipData.payload?.[0]?.payload as EfficacySafetyDataPoint | undefined;
+                  const treatmentName = payloadData?.treatmentName || '';
+                  return trialIndices.get(treatmentName) || 0;
+                })()}
+                onTrialIndexChange={handleTrialIndexChange}
+                efficacyParam={efficacyParam}
+                safetyParam={safetyParam}
+                axisMode={axisMode}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="w-full overflow-hidden bg-white border-slate-200">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xl font-bold text-slate-900">{title}</CardTitle>
+        <CardDescription className="mt-1 text-slate-600">{description}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="pt-4">
+        <div ref={chartContainerRef} style={{ width: '100%', height: chartHeight, minHeight: 100 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
+              data={chartData}
+              layout="vertical"
+              margin={margin}
+              barCategoryGap="30%"
+            >
+              <CartesianGrid 
+                strokeDasharray="0" 
+                stroke={colors.grid} 
+                strokeWidth={1}
+                strokeOpacity={0.5}
+                vertical={true}
+                horizontal={true}
+              />
+              <XAxis
+                type="number"
+                domain={xDomain}
+                ticks={xAxisTicks}
+                tick={{ fontSize: 13, fill: colors.axis, fontWeight: 500 }}
+                tickLine={{ stroke: colors.grid, strokeWidth: 1 }}
+                axisLine={false}
+                tickFormatter={formatXAxisTick}
+                label={{
+                  value: xAxisLabel,
+                  position: 'insideBottom',
+                  offset: -5,
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
+                }}
+              />
+              <YAxis
+                type="category"
+                dataKey="name"
+                interval={0}
+                tick={renderYAxisTick}
+                tickLine={{ stroke: colors.grid, strokeWidth: 1 }}
+                axisLine={false}
+                width={yAxisWidth}
+              />
+              <ReferenceLine x={0} stroke={colors.axis} strokeWidth={2.5} strokeOpacity={0.8} />
+              <ReferenceLine
+                x={medianSafety}
+                stroke={colors.safety}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                strokeOpacity={0.9}
+                label={{ value: `Median ${medianSafety.toFixed(1)}`, position: 'top', fill: colors.safety, fontSize: 10, fontWeight: 600 }}
+              />
+              <ReferenceLine
+                x={medianEfficacy}
+                stroke={colors.efficacy}
+                strokeWidth={1.5}
+                strokeDasharray="4 4"
+                strokeOpacity={0.9}
+                label={{ value: `Median ${medianEfficacy.toFixed(1)}`, position: 'top', fill: colors.efficacy, fontSize: 10, fontWeight: 600 }}
+              />
+              <Tooltip 
+                wrapperStyle={{ pointerEvents: 'auto' }}
+                content={(props) => {
+                  if (isPinned) return null; // Don't show Recharts tooltip when pinned
+                  if (props.active && props.payload && props.payload.length > 0) {
+                    const payloadData = props.payload?.[0]?.payload as EfficacySafetyDataPoint | undefined;
+                    const treatmentName = payloadData?.treatmentName || '';
+                    const currentIndex = trialIndices.get(treatmentName) || 0;
+                    return <CustomTooltip 
+                      active={props.active}
+                      payload={props.payload as CustomTooltipProps['payload']}
+                      label={props.label?.toString()}
+                      isPinned={false}
+                      currentTrialIndex={currentIndex}
+                      onTrialIndexChange={handleTrialIndexChange}
+                      efficacyParam={efficacyParam}
+                      safetyParam={safetyParam}
+                      axisMode={axisMode}
                     />;
                   }
                   return null;
@@ -796,19 +1092,19 @@ export default function DivergingBarChart({
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3" 
-                            style={{ backgroundColor: colors.efficacy }}
+                            style={{ backgroundColor: colors.safety }}
                           />
                           <span className="text-xs" style={{ color: colors.axis }}>
-                            Efficacy (ORR)
+                            {leftLegendText}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div 
                             className="w-3 h-3" 
-                            style={{ backgroundColor: colors.safety }}
+                            style={{ backgroundColor: colors.efficacy }}
                           />
                           <span className="text-xs" style={{ color: colors.axis }}>
-                            Safety (Grade 3+ AE)
+                            {rightLegendText}
                           </span>
                         </div>
                       </>
@@ -839,6 +1135,15 @@ export default function DivergingBarChart({
                 payload={tooltipData.payload}
                 label={tooltipData.label}
                 isPinned={isPinned}
+                currentTrialIndex={(() => {
+                  const payloadData = tooltipData.payload?.[0]?.payload as EfficacySafetyDataPoint | undefined;
+                  const treatmentName = payloadData?.treatmentName || '';
+                  return trialIndices.get(treatmentName) || 0;
+                })()}
+                onTrialIndexChange={handleTrialIndexChange}
+                efficacyParam={efficacyParam}
+                safetyParam={safetyParam}
+                axisMode={axisMode}
               />
             </div>
           )}

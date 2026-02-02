@@ -11,13 +11,12 @@ import {
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
-  Legend,
   Cell,
   ReferenceLine,
   LabelList,
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { BubbleChartDataPoint } from '@/types/analytics';
+import { BubbleChartDataPoint, EFFICACY_METRICS, SAFETY_METRICS } from '@/types/analytics';
 
 // ============================================================================
 // Types
@@ -43,9 +42,12 @@ interface BubbleChartProps {
   // 4: X=Efficacy, Y=ZParam, Z=Safety
   // 5: X=ZParam, Y=Efficacy, Z=Safety
   axisConfig?: number;
-  // Current metric parameters for tooltip display
   efficacyParam?: string;
   safetyParam?: string;
+  /** When set, both axes use the same metric type for labels (efficacy-efficacy or safety-safety) */
+  axisMode?: 'efficacy-safety' | 'efficacy-efficacy' | 'safety-safety';
+  /** When true (non-compact), chart fills parent height like DivergingBarChart */
+  fillHeight?: boolean;
 }
 
 // ============================================================================
@@ -85,14 +87,46 @@ const COLORS = {
   axis: '#64748b',
 };
 
-const DARK_COLORS = {
-  approved: '#34d399', // Lighter green
-  investigational: '#a78bfa', // Lighter purple
-  developmentStopped: '#f87171', // Lighter red
-  unknown: '#94a3b8', // Lighter gray
-  grid: '#334155',
-  axis: '#94a3b8',
-};
+// Tooltip positioning: offset from anchor, flip when overflowing, clamp to safe viewport (with top inset for fixed header)
+const TOOLTIP_WIDTH = 420;
+const TOOLTIP_HEIGHT = 400;
+const TOOLTIP_OFFSET_X = 15;
+const TOOLTIP_OFFSET_Y = 10;
+const TOOLTIP_EDGE_PADDING = 16;
+const TOOLTIP_EDGE_PADDING_TOP = 72; // Reserve space for fixed app header so tooltip is never clipped
+
+function getTooltipViewportBounds(): { top: number; left: number; right: number; bottom: number } {
+  return {
+    top: TOOLTIP_EDGE_PADDING_TOP,
+    left: TOOLTIP_EDGE_PADDING,
+    right: typeof window !== 'undefined' ? window.innerWidth - TOOLTIP_EDGE_PADDING : 800,
+    bottom: typeof window !== 'undefined' ? window.innerHeight - TOOLTIP_EDGE_PADDING : 600,
+  };
+}
+
+// Bubble radius range (px) – area proportional to value (Recharts maps domain [min,max] to area range)
+const MIN_RADIUS = 5;
+const MAX_RADIUS = 60;
+
+const Z_AXIS_MIN_AREA = Math.PI * Math.pow(MIN_RADIUS, 2);
+const Z_AXIS_MAX_AREA = Math.PI * Math.pow(MAX_RADIUS, 2);
+
+/**
+ * Radius in px from linear area scale (matches Recharts: domain [min,max] -> area range, radius = sqrt(area/π)).
+ * Ensures highest value maps to MAX_RADIUS.
+ */
+function radiusFromLinearArea(
+  value: number,
+  dataMin: number,
+  dataMax: number
+): number {
+  if (value <= 0 || dataMax <= 0) return MIN_RADIUS;
+  if (dataMax <= dataMin) return value >= dataMin ? MAX_RADIUS : MIN_RADIUS;
+  const t = (value - dataMin) / (dataMax - dataMin);
+  const area = Z_AXIS_MIN_AREA + t * (Z_AXIS_MAX_AREA - Z_AXIS_MIN_AREA);
+  const radius = Math.sqrt(Math.max(0, area) / Math.PI);
+  return Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, radius));
+}
 
 // ============================================================================
 // Custom Label Component
@@ -105,47 +139,16 @@ interface CustomLabelProps {
   value?: string;
 }
 
-// CustomLabel component needs access to scaling function
-// We'll pass it as a prop or use a context, but for now we'll calculate it inline
-// Note: This is a simplified version - the actual scaling will be done by Recharts ZAxis
+// CustomLabel uses radiusPx from payload (set by chartData) for positioning
 const CustomLabel = ({ x, y, payload, value }: CustomLabelProps) => {
-  // Use value if provided, otherwise fall back to payload.treatmentName
   const labelText = value || payload?.treatmentName;
-  
+
   if (!x || !y || !labelText) return null;
-  
-  // Calculate bubble radius based on z value (bubble size) if available
-  // The z value is added during chartData transformation, so we need to access it from the extended payload
-  // Recharts scales the bubble size automatically based on ZAxis range
-  const extendedPayload = payload as (BubbleChartDataPoint & { z?: number; rawZ?: number }) | undefined;
-  // Use rawZ if available (original value before log scaling), otherwise use z (transformed value)
-  const rawZValue = extendedPayload?.rawZ ?? extendedPayload?.z;
-  const transformedZ = extendedPayload?.z;
-  
-  // Estimate bubble radius based on the transformed z value
-  // Recharts maps z values to bubble sizes in the range [20, 120] pixels (radius)
-  // The relationship is approximately linear in the transformed space
-  // For log-scaled values, the visual size will be proportional to the transformed value
-  // We estimate: radius ≈ 20 + (z - zMin) / (zMax - zMin) * (120 - 20)
-  // Since we don't have zMin/zMax here, we use a reasonable approximation
-  let bubbleRadius = 10; // default
-  if (transformedZ !== undefined && transformedZ > 0) {
-    // Rough estimate: assume transformed z is in range [0, ~10] for log scale or [0, max] for linear
-    // This is approximate but should work reasonably well for label positioning
-    const estimatedRadius = Math.max(10, Math.min(60, transformedZ * 6 + 10));
-    bubbleRadius = estimatedRadius;
-  } else if (rawZValue !== undefined && rawZValue > 0) {
-    // Fallback: estimate from raw value (less accurate but better than nothing)
-    bubbleRadius = Math.max(10, Math.min(60, Math.sqrt(rawZValue) * 0.8));
-  }
-  
-  // Position label below bubble by default, with spacing
-  // Offset based on bubble radius plus some padding
+
+  const extendedPayload = payload as (BubbleChartDataPoint & { z?: number; rawZ?: number; radiusPx?: number }) | undefined;
+  const bubbleRadius = extendedPayload?.radiusPx ?? MIN_RADIUS;
+
   const verticalOffset = bubbleRadius + 12;
-  const horizontalOffset = bubbleRadius + 8;
-  
-  // Determine label position - prefer below, but can be to the right if needed
-  // For now, we'll position below the bubble
   const labelX = x;
   const labelY = y + verticalOffset;
   
@@ -184,6 +187,30 @@ const CustomLabel = ({ x, y, payload, value }: CustomLabelProps) => {
 };
 
 // ============================================================================
+// Helper Functions
+// ============================================================================
+
+// Get compact label from metrics config
+const getCompactLabel = (param: string | undefined, metrics: typeof EFFICACY_METRICS | typeof SAFETY_METRICS, defaultLabel: string): string => {
+  if (!param) return defaultLabel;
+  const metric = metrics[param];
+  return metric?.label || defaultLabel;
+};
+
+// Get unit from metrics config
+const getUnit = (param: string | undefined, metrics: typeof EFFICACY_METRICS | typeof SAFETY_METRICS): string => {
+  if (!param) return '';
+  const metric = metrics[param];
+  return metric?.unit || '';
+};
+
+// Format axis label with unit
+const formatAxisLabelWithUnit = (label: string, unit: string): string => {
+  if (!unit) return label;
+  return `${label} (${unit})`;
+};
+
+// ============================================================================
 // Custom Tooltip
 // ============================================================================
 
@@ -198,6 +225,7 @@ interface CustomTooltipProps {
   onTrialIndexChange?: (treatmentName: string, newIndex: number) => void;
   efficacyParam?: string;
   safetyParam?: string;
+  axisMode?: 'efficacy-safety' | 'efficacy-efficacy' | 'safety-safety';
 }
 
 const CustomTooltip = ({ 
@@ -208,192 +236,179 @@ const CustomTooltip = ({
   onTrialIndexChange,
   efficacyParam,
   safetyParam,
+  axisMode,
 }: CustomTooltipProps) => {
+  const data = payload?.[0]?.payload as BubbleChartDataPoint | undefined;
+  const allTrials = useMemo(() => data?.allTrials ?? [], [data?.allTrials]);
+
+  // Group trials by NCT (or abstract id / pub id when no NCT) and create selectable list – must run unconditionally (hooks rule)
+  const nctTrials = useMemo(() => {
+    const grouped: Array<{ nctNumber: string; trialIndices: number[]; displayLabel: string }> = [];
+    const idMap = new Map<string, number[]>();
+
+    allTrials.forEach((trial, index) => {
+      const id = trial.nctNumber || trial.abstractId || trial.publicationName || `Trial ${index + 1}`;
+      if (!idMap.has(id)) {
+        idMap.set(id, []);
+      }
+      idMap.get(id)!.push(index);
+    });
+
+    idMap.forEach((trialIndices, sourceId) => {
+      trialIndices.forEach((trialIndex, idx) => {
+        const displayLabel = trialIndices.length === 1
+          ? sourceId
+          : `${sourceId} data ${idx + 1}`;
+        grouped.push({
+          nctNumber: sourceId,
+          trialIndices: [trialIndex],
+          displayLabel,
+        });
+      });
+    });
+
+    return grouped;
+  }, [allTrials]);
+
   if ((!active && !isPinned) || !payload || !payload.length) return null;
 
-  const data = payload[0].payload as BubbleChartDataPoint;
-  const allTrials = data.allTrials || [];
+  const dataNonNull = data!;
   const hasMultipleTrials = allTrials.length > 1;
   const currentTrial = allTrials[currentTrialIndex] || {
-    efficacy: data.efficacy,
-    safety: data.safety,
-    numberOfPatients: data.numberOfPatients,
-    year: data.year,
-    nctNumber: data.nctNumber,
-    abstractId: data.abstractId,
-    publicationName: data.publicationName,
-    citation: data.citation,
-    phase: data.phase,
+    efficacy: dataNonNull.efficacy,
+    safety: dataNonNull.safety,
+    numberOfPatients: dataNonNull.numberOfPatients,
+    year: dataNonNull.year,
+    nctNumber: dataNonNull.nctNumber,
+    abstractId: dataNonNull.abstractId,
+    publicationName: dataNonNull.publicationName,
+    citation: dataNonNull.citation,
+    phase: dataNonNull.phase,
   };
 
-  const handlePrevTrial = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentTrialIndex > 0 && onTrialIndexChange) {
-      onTrialIndexChange(data.treatmentName, currentTrialIndex - 1);
+  const efficacyMetrics = axisMode === 'safety-safety' ? SAFETY_METRICS : EFFICACY_METRICS;
+  const safetyMetrics = axisMode === 'efficacy-efficacy' ? EFFICACY_METRICS : SAFETY_METRICS;
+  const efficacyLabel = getCompactLabel(efficacyParam, efficacyMetrics, 'ORR');
+  const safetyLabel = getCompactLabel(safetyParam, safetyMetrics, 'Grade 3+ TRAE');
+
+  const handleNCTClick = (trialIndex: number) => {
+    if (onTrialIndexChange) {
+      onTrialIndexChange(dataNonNull.treatmentName, trialIndex);
     }
   };
-
-  const handleNextTrial = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentTrialIndex < allTrials.length - 1 && onTrialIndexChange) {
-      onTrialIndexChange(data.treatmentName, currentTrialIndex + 1);
-    }
-  };
-
-  // Get metric labels
-  const efficacyLabel = efficacyParam ? efficacyParam.replace(/_/g, ' ') : 'Efficacy (ORR)';
-  const safetyLabel = safetyParam ? safetyParam.replace(/_/g, ' ') : 'Safety (Grade 3+ TRAE)';
-  const isWebScrape = data.abstractId?.startsWith('webscrape_');
-  const hasSourceUrl = !!data.sourceUrl;
 
   return (
     <div 
-      className="bg-slate-800 p-4 rounded-xl shadow-2xl border border-slate-700 min-w-[320px] max-w-[420px] tooltip-enter"
+      className="bg-slate-800 p-3 rounded-lg shadow-xl border border-slate-700 min-w-[260px] max-w-[340px] tooltip-enter"
       style={{
         animation: isPinned ? 'tooltipFadeIn 0.2s ease-out' : 'tooltipFadeIn 0.15s ease-out',
+        pointerEvents: 'auto',
       }}
     >
       {isPinned && (
         <div 
-          className="mb-2 pb-2 border-b border-slate-600 flex items-center justify-between"
+          className="mb-1.5 pb-1.5 border-b border-slate-600 flex items-center justify-between"
           style={{ animation: 'tooltipContentFadeIn 0.2s ease-out' }}
         >
-          <span className="text-[10px] uppercase tracking-wider text-amber-400 font-medium flex items-center gap-1">
+          <span className="text-[9px] uppercase tracking-wider text-amber-400 font-medium flex items-center gap-1">
             <span className="text-amber-400" style={{ animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' }}>📌</span> Pinned
           </span>
-          <span className="text-[10px] text-slate-500">Click bubble to unpin</span>
+          <span className="text-[9px] text-slate-500">Click bubble to unpin</span>
         </div>
       )}
-      <div className="mb-3 pb-3 border-b border-slate-700">
-        <h4 className="font-bold text-white text-sm mb-1">{data.treatmentName}</h4>
-        {data.treatmentType && (
-          <p className="text-xs text-slate-400">{data.treatmentType}</p>
+      <div className="mb-2 pb-2 border-b border-slate-700">
+        <div className="flex items-center justify-between gap-2">
+          <h4 className="font-bold text-white text-xs">{dataNonNull.treatmentName}</h4>
+          {dataNonNull.developmentStatus && (
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
+                dataNonNull.developmentStatus === 'Approved'
+                  ? 'bg-emerald-900/50 text-emerald-300'
+                  : dataNonNull.developmentStatus === 'Development stopped'
+                  ? 'bg-red-900/50 text-red-300'
+                  : 'bg-violet-900/50 text-violet-300'
+              }`}
+            >
+              {dataNonNull.developmentStatus === 'Approved' && '★ '}
+              {dataNonNull.developmentStatus === 'Development stopped' && 'Ø '}
+              {dataNonNull.developmentStatus}
+            </span>
+          )}
+        </div>
+        {dataNonNull.treatmentType && (
+          <p className="text-[11px] text-slate-400 mt-0.5">{dataNonNull.treatmentType}</p>
         )}
       </div>
 
-      {data.developmentStatus && (
-        <div className="mb-3">
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-              data.developmentStatus === 'Approved'
-                ? 'bg-emerald-900/50 text-emerald-300'
-                : data.developmentStatus === 'Development stopped'
-                ? 'bg-red-900/50 text-red-300'
-                : 'bg-violet-900/50 text-violet-300'
-            }`}
-          >
-            {data.developmentStatus === 'Approved' && '★ '}
-            {data.developmentStatus === 'Development stopped' && 'Ø '}
-            {data.developmentStatus}
-          </span>
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-2 gap-2 mb-2">
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">{efficacyLabel}</p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrevTrial}
-              disabled={!hasMultipleTrials || currentTrialIndex === 0}
-              className="text-slate-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-1 rounded hover:bg-slate-700"
-              style={{ pointerEvents: 'auto' }}
-              title={hasMultipleTrials ? 'Previous trial' : 'Only one trial available'}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <p className="text-lg font-bold text-white tabular-nums flex-1 text-center">{currentTrial.efficacy.toFixed(1)}%</p>
-            <button
-              onClick={handleNextTrial}
-              disabled={!hasMultipleTrials || currentTrialIndex === allTrials.length - 1}
-              className="text-slate-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-1 rounded hover:bg-slate-700"
-              style={{ pointerEvents: 'auto' }}
-              title={hasMultipleTrials ? 'Next trial' : 'Only one trial available'}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+          <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0">{efficacyLabel}</p>
+          <p className="text-base font-bold text-white tabular-nums">{currentTrial.efficacy.toFixed(1)}%</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-0.5">{safetyLabel}</p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handlePrevTrial}
-              disabled={!hasMultipleTrials || currentTrialIndex === 0}
-              className="text-slate-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-1 rounded hover:bg-slate-700"
-              style={{ pointerEvents: 'auto' }}
-              title={hasMultipleTrials ? 'Previous trial' : 'Only one trial available'}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <p className="text-lg font-bold text-white tabular-nums flex-1 text-center">{currentTrial.safety.toFixed(1)}%</p>
-            <button
-              onClick={handleNextTrial}
-              disabled={!hasMultipleTrials || currentTrialIndex === allTrials.length - 1}
-              className="text-slate-400 hover:text-white disabled:opacity-20 disabled:cursor-not-allowed transition-colors p-1 rounded hover:bg-slate-700"
-              style={{ pointerEvents: 'auto' }}
-              title={hasMultipleTrials ? 'Next trial' : 'Only one trial available'}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
+          <p className="text-[9px] uppercase tracking-wider text-slate-500 mb-0">{safetyLabel}</p>
+          <p className="text-base font-bold text-white tabular-nums">{Math.abs(currentTrial.safety || 0).toFixed(1)}%</p>
         </div>
       </div>
+      
       {hasMultipleTrials && (
-        <div className="mb-3 text-center">
-          <span className="text-[10px] text-slate-500">
-            Trial {currentTrialIndex + 1} of {allTrials.length}
-          </span>
+        <div className="mb-2 pb-2 border-b border-slate-700">
+          <label className="block text-[9px] uppercase tracking-wider text-slate-500 mb-1 font-medium">
+            Trial
+          </label>
+          <select
+            value={currentTrialIndex}
+            onChange={(e) => {
+              e.stopPropagation();
+              const idx = Number(e.target.value);
+              if (!Number.isNaN(idx)) handleNCTClick(idx);
+            }}
+            title={nctTrials.find((t) => t.trialIndices[0] === currentTrialIndex)?.displayLabel}
+            className="w-full px-2 py-1.5 rounded text-xs font-mono bg-slate-700/80 text-slate-100 border border-slate-600 hover:border-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-500/60 focus:border-sky-500/70 cursor-pointer transition-colors"
+            style={{ pointerEvents: 'auto' }}
+          >
+            {nctTrials.map((nctTrial, idx) => (
+              <option key={idx} value={nctTrial.trialIndices[0]}>
+                {nctTrial.displayLabel}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 
-      <div className="pt-3 border-t border-slate-700 space-y-1.5">
-        <div className="flex justify-between text-xs">
+      <div className="pt-2 border-t border-slate-700 space-y-1">
+        <div className="flex justify-between text-[11px]">
           <span className="text-slate-400">Patients</span>
           <span className="text-slate-200 font-medium">n={currentTrial.numberOfPatients}</span>
         </div>
-        {currentTrial.phase && (
-          <div className="flex justify-between text-xs">
-            <span className="text-slate-400">Phase</span>
-            <span className="text-slate-200 font-medium">{currentTrial.phase}</span>
-          </div>
-        )}
         {currentTrial.nctNumber && (
-          <div className="flex justify-between text-xs">
+          <div className="flex justify-between text-[11px]">
             <span className="text-slate-400">NCT</span>
             <Link
               href={`/trial/nct/${currentTrial.nctNumber}`}
-              className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+              className="text-sky-400 font-mono hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-0.5"
               onClick={(e) => e.stopPropagation()}
             >
               <span>{currentTrial.nctNumber}</span>
-              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
           </div>
         )}
         {(currentTrial.abstractId || currentTrial.publicationName) && (
-          <div className="flex justify-between text-xs">
+          <div className="flex justify-between text-[11px]">
             <span className="text-slate-400">
               {currentTrial.publicationName ? 'Publication' : 'Abstract ID'}
             </span>
             {(() => {
               const sourceValue = currentTrial.publicationName || currentTrial.abstractId;
               const isWebScrape = currentTrial.abstractId?.startsWith('webscrape_');
-              const hasSourceUrl = !!data.sourceUrl;
+              const hasSourceUrl = !!dataNonNull.sourceUrl;
               if (isWebScrape && hasSourceUrl) {
                 return (
                   <a
-                    href={data.sourceUrl}
+                    href={dataNonNull.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
@@ -413,26 +428,26 @@ const CustomTooltip = ({
                     className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <span className="text-xs">{sourceValue}</span>
-                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <span className="text-[11px]">{sourceValue}</span>
+                    <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
                 );
               }
-              return <span className="text-slate-200 text-xs">{sourceValue}</span>;
+              return <span className="text-slate-200 text-[11px]">{sourceValue}</span>;
             })()}
           </div>
         )}
-        {data.biomarker && (
-          <div className="flex justify-between text-xs">
+        {dataNonNull.biomarker && (
+          <div className="flex justify-between text-[11px]">
             <span className="text-slate-400">Biomarker</span>
-            <span className="text-slate-200 font-medium">{data.biomarker}</span>
+            <span className="text-slate-200 font-medium">{dataNonNull.biomarker}</span>
           </div>
         )}
-        {data.notes && (
-          <div className="pt-2 border-t border-slate-700">
-            <p className="text-[10px] text-slate-500 italic">{data.notes}</p>
+        {dataNonNull.notes && (
+          <div className="pt-1.5 border-t border-slate-700">
+            <p className="text-[9px] text-slate-500 italic">{dataNonNull.notes}</p>
           </div>
         )}
       </div>
@@ -457,32 +472,14 @@ export default function BubbleChart({
   axisConfig = 0, // Default: X=Safety, Y=Efficacy, Z=ZParam
   efficacyParam,
   safetyParam,
+  axisMode,
+  fillHeight = false,
 }: BubbleChartProps) {
   const chartHeight = Math.max(height || 600, 100);
   const [isPinned, setIsPinned] = useState(false);
   const [pinnedBubbleId, setPinnedBubbleId] = useState<string | null>(null);
-  // Track current trial index per treatment for tooltip switching
+  const [pinnedAxisConfig, setPinnedAxisConfig] = useState<number | null>(null);
   const [trialIndices, setTrialIndices] = useState<Map<string, number>>(new Map());
-
-  const handleTrialIndexChange = useCallback((treatmentName: string, newIndex: number) => {
-    setTrialIndices(prev => {
-      const next = new Map(prev);
-      next.set(treatmentName, newIndex);
-      return next;
-    });
-  }, []);
-  
-  // Normalize axisConfig to valid range (0-5)
-  const normalizedAxisConfig = Math.max(0, Math.min(5, Math.floor(axisConfig || 0)));
-  
-  // Unpin tooltip when axis configuration changes
-  useEffect(() => {
-    if (isPinned) {
-      setIsPinned(false);
-      setTooltipData(null);
-      setPinnedBubbleId(null);
-    }
-  }, [normalizedAxisConfig]); // eslint-disable-line react-hooks/exhaustive-deps
   const [tooltipData, setTooltipData] = useState<{
     active: boolean;
     payload?: Array<{
@@ -493,6 +490,18 @@ export default function BubbleChart({
     y?: number;
   } | null>(null);
   const hoverTooltipPositionRef = useRef<{ x: number; y: number } | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleTrialIndexChange = useCallback((treatmentName: string, newIndex: number) => {
+    setTrialIndices(prev => {
+      const next = new Map(prev);
+      next.set(treatmentName, newIndex);
+      return next;
+    });
+  }, []);
+
+  const normalizedAxisConfig = Math.max(0, Math.min(5, Math.floor(axisConfig || 0)));
+  const effectivePinned = isPinned && pinnedAxisConfig === normalizedAxisConfig;
 
   // Track tooltip position from DOM when hovering
   useEffect(() => {
@@ -519,46 +528,52 @@ export default function BubbleChart({
     };
   }, [isPinned]);
 
-  // Calculate tooltip position
-  const calculateTooltipPosition = useCallback((clientX: number, clientY: number) => {
-    const TOOLTIP_WIDTH = 420;
-    const TOOLTIP_HEIGHT = 400;
-    const OFFSET_X = 15;
-    const OFFSET_Y = 10;
-    const EDGE_PADDING = 16;
-    
-    let x = clientX + OFFSET_X;
-    let y = clientY + OFFSET_Y;
-    
-    if (x + TOOLTIP_WIDTH > window.innerWidth - EDGE_PADDING) {
-      x = clientX - TOOLTIP_WIDTH - OFFSET_X;
-    }
-    
-    if (x < EDGE_PADDING) {
-      x = EDGE_PADDING;
-    }
-    
-    if (y + TOOLTIP_HEIGHT > window.innerHeight - EDGE_PADDING) {
-      y = clientY - TOOLTIP_HEIGHT - OFFSET_Y;
-    }
-    
-    if (y < EDGE_PADDING) {
-      y = EDGE_PADDING;
-    }
-    
+  // Anchor in viewport coords → tooltip x,y. Flip when overflowing, clamp to safe bounds (top inset for fixed header).
+  const calculateTooltipPosition = useCallback((anchorX: number, anchorY: number) => {
+    const v = getTooltipViewportBounds();
+    const W = TOOLTIP_WIDTH;
+    const H = TOOLTIP_HEIGHT;
+    const OX = TOOLTIP_OFFSET_X;
+    const OY = TOOLTIP_OFFSET_Y;
+
+    let x = anchorX + OX;
+    let y = anchorY + OY;
+
+    if (x + W > v.right) x = anchorX - W - OX;
+    x = Math.max(v.left, Math.min(x, v.right - W));
+
+    if (y + H > v.bottom) y = anchorY - H - OY;
+    y = Math.max(v.top, Math.min(y, v.bottom - H));
+
     return { x, y };
   }, []);
+
+  // Anchor tooltip to bubble center. Recharts coordinate is in chart (viewBox) space;
+  // use the Recharts wrapper as origin so coord matches the same element Recharts uses for tooltip positioning.
+  const getHoverTooltipViewportPosition = useCallback((
+    coordX: number | undefined,
+    coordY: number | undefined
+  ): { x: number; y: number } => {
+    if (coordX != null && coordY != null && chartContainerRef.current) {
+      const wrapper = chartContainerRef.current.querySelector('.recharts-wrapper');
+      const rect = wrapper
+        ? (wrapper as HTMLElement).getBoundingClientRect()
+        : chartContainerRef.current.getBoundingClientRect();
+      const anchorX = rect.left + coordX;
+      const anchorY = rect.top + coordY;
+      return calculateTooltipPosition(anchorX, anchorY);
+    }
+    return calculateTooltipPosition(0, TOOLTIP_EDGE_PADDING_TOP);
+  }, [calculateTooltipPosition]);
 
   // Helper function to get Z-axis value based on zAxisParam
   const getZAxisValue = useCallback((item: BubbleChartDataPoint): number => {
     if (zAxisParam === 'NUMBER_OF_PATIENTS') {
       return item.numberOfPatients || 0;
     }
-    // Additional Z-axis parameters can be added here in the future
-    // Example:
-    // else if (zAxisParam === 'SOME_OTHER_PARAM') {
-    //   return item.someOtherParam || 0;
-    // }
+    if (item.zValue !== undefined && item.zValue !== null && !Number.isNaN(item.zValue)) {
+      return item.zValue;
+    }
     return 0;
   }, [zAxisParam]);
 
@@ -576,221 +591,107 @@ export default function BubbleChart({
     }
   }, [normalizedAxisConfig]);
 
-  // Calculate bubble size range (Z-axis) - ensure it starts from 0 for proper scaling
-  // Bubble size depends on which metric is on the Z-axis based on axis configuration
-  const zDomain = useMemo(() => {
-    const { zMetric } = getAxisMetrics();
-    
-    // Get values for the metric that's on the Z-axis (bubble size)
-    let zAxisValues: number[] = [];
-    
-    if (zMetric === 'zParam') {
-      // Z-axis is Z-parameter (e.g., number of patients)
-      zAxisValues = data.map((item) => getZAxisValue(item)).filter((z): z is number => z !== null && z !== undefined && z > 0 && isFinite(z));
-      if (zAxisValues.length === 0) return [0, 1000];
-      const min = Math.min(...zAxisValues);
-      const max = Math.max(...zAxisValues);
-      // Add padding: 5% below min (but not below 0) and 10% above max
-      const paddingMin = Math.max(0, min * 0.95);
-      const paddingMax = max * 1.1;
-      return [paddingMin, Math.ceil(paddingMax)];
-    } else if (zMetric === 'efficacy') {
-      // Z-axis is Efficacy
-      zAxisValues = data.map((item) => item.efficacy ?? 0).filter((z): z is number => z !== null && z !== undefined && !isNaN(z) && isFinite(z) && z >= 0);
-      if (zAxisValues.length === 0) return [0, 60];
-      const min = Math.min(...zAxisValues);
-      const max = Math.max(...zAxisValues);
-      const paddingMin = Math.max(0, min * 0.95);
-      const paddingMax = max * 1.1;
-      return [paddingMin, Math.ceil(paddingMax)];
-    } else if (zMetric === 'safety') {
-      // Z-axis is Safety
-      zAxisValues = data.map((item) => {
-        const safety = item.safety ?? 0;
-        return invertSafetyAxis ? 100 - safety : safety;
-      }).filter((z): z is number => z !== null && z !== undefined && !isNaN(z) && isFinite(z) && z >= 0);
-      if (zAxisValues.length === 0) return [0, 100];
-      const min = Math.min(...zAxisValues);
-      const max = Math.max(...zAxisValues);
-      const paddingMin = Math.max(0, min * 0.95);
-      const paddingMax = max * 1.1;
-      return [paddingMin, Math.ceil(paddingMax)];
-    }
-    
-    // Fallback
-    return [0, 1000];
-  }, [data, getAxisMetrics, getZAxisValue, invertSafetyAxis]);
+  // Fixed bubble radius range (px) for scaleSqrt and CustomLabel
+  // Z-axis range as area so Recharts radius = sqrt(area/π). Highest value maps to MAX_RADIUS.
+  const zAxisRange: [number, number] = useMemo(
+    () => [Math.PI * Math.pow(MIN_RADIUS, 2), Math.PI * Math.pow(MAX_RADIUS, 2)],
+    []
+  );
 
-  // Determine if we should use logarithmic scaling based on data range
-  const useLogScale = useMemo(() => {
-    const [min, max] = zDomain;
-    const range = max - min;
-    
-    // Use logarithmic scaling if:
-    // 1. Range is significant (more than 10% of max)
-    // 2. Max is at least 2x min (or min is 0 and max > 0)
-    // 3. Range spans at least 2 orders of magnitude (max/min > 10) or max > 100
-    if (range <= 0 || min === max) return false;
-    if (min === 0 && max > 0) return max > 10; // Handle zero minimum
-    return (max / min > 2) && (range > max * 0.1 || max / min > 10 || max > 100);
-  }, [zDomain]);
+  // Transform data: z = raw value (patient count etc.). Domain [min, max] so max maps to MAX_RADIUS.
+  const { chartData, transformedZDomain } = useMemo(() => {
+    if (!data || data.length === 0) {
+      return { chartData: [] as Array<BubbleChartDataPoint & { x: number; y: number; z: number; rawZ: number; radiusPx?: number }>, transformedZDomain: [0, 1] as [number, number] };
+    }
 
-  // Calculate dynamic bubble size range based on zDomain values
-  // Bubble sizes should scale proportionally with the actual data values
-  // The range represents pixel radius, and Recharts maps z values (from domain) to this range
-  const bubbleSizeRange = useMemo(() => {
-    const [min, max] = zDomain;
-    const range = max - min;
-    
-    // Base sizes - minimum and maximum bubble radii in pixels
-    // These will be mapped proportionally to the z values in the domain
-    const BASE_MIN_SIZE = 60;  // Minimum radius for smallest value
-    const BASE_MAX_SIZE = 280; // Maximum radius for largest value
-    
-    // Scale the range based on the data spread
-    // For wider ranges, use a larger pixel range to make differences more visible
-    if (range <= 0 || min === max) {
-      return {
-        min: BASE_MIN_SIZE,
-        max: BASE_MAX_SIZE,
-      };
-    }
-    
-    // Calculate scale factor based on data range
-    // For patient counts: if range is large (e.g., 10-1000), use larger sizes
-    // For percentages: if range is smaller (e.g., 20-80), use moderate sizes
-    let scaleFactor = 1;
-    if (max > 100) {
-      // Large numbers (like patient counts) - use larger scale
-      scaleFactor = Math.min(1.8, 1 + (range / max) * 0.8);
-    } else {
-      // Smaller numbers (like percentages) - use standard scale
-      scaleFactor = 1.2;
-    }
-    
-    return {
-      min: BASE_MIN_SIZE,
-      max: Math.round(BASE_MAX_SIZE * scaleFactor),
+    type PointRow = {
+      item: BubbleChartDataPoint;
+      efficacy: number;
+      safety: number;
+      numberOfPatients: number;
+      safetyValue: number;
+      zValue: number;
+      x: number;
+      y: number;
+      rawZValue: number;
     };
-  }, [zDomain]);
 
-  // Helper function to transform z value for logarithmic scaling
-  // Adds 1 to handle zero values (log(0) is undefined)
-  const transformZValue = useCallback((zValue: number): number => {
-    if (useLogScale) {
-      // For logarithmic scaling, transform: log(z + 1)
-      // This handles zero values and provides smooth scaling
-      return Math.log(zValue + 1);
-    }
-    // For linear scaling, return as-is
-    return zValue;
-  }, [useLogScale]);
-
-  // Calculate transformed zDomain for bubble sizing
-  const transformedZDomain = useMemo(() => {
-    const [min, max] = zDomain;
-    if (useLogScale) {
-      // Transform domain to log scale
-      return [transformZValue(min), transformZValue(max)];
-    }
-    return [min, max];
-  }, [zDomain, useLogScale, transformZValue]);
-
-  // Transform data for scatter chart based on axis configuration
-  // Transform data to use current trial values based on trialIndices
-  // Safety axis is inverted: 0% (best) on right, 100% (worst) on left
-  const chartData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    
-    return data.map((item) => {
-      // Get the current trial index for this treatment (default to 0)
+    const rows: PointRow[] = data.map((item) => {
       const currentIndex = trialIndices.get(item.treatmentName) ?? 0;
       const allTrials = item.allTrials || [];
-      
-      // Use values from the current trial if available, otherwise use the original item values
       const currentTrial = allTrials[currentIndex];
       const efficacy = currentTrial?.efficacy ?? item.efficacy ?? 0;
       const safety = currentTrial?.safety ?? item.safety ?? 0;
       const numberOfPatients = currentTrial?.numberOfPatients ?? item.numberOfPatients ?? 0;
-      
-      // Create a modified item with current trial values for z-axis calculation
-      const itemWithCurrentTrial = {
-        ...item,
-        efficacy,
-        safety,
-        numberOfPatients,
-      };
+      const itemWithCurrentTrial = { ...item, efficacy, safety, numberOfPatients };
       const safetyValue = invertSafetyAxis ? 100 - safety : safety;
       const zValue = getZAxisValue(itemWithCurrentTrial);
-      
-      // Map metrics to x, y, z based on axisConfig
-      // Note: In Recharts, Z-axis is always bubble size
-      // When zParam is on X or Y, we use a different metric for bubble size (z)
-      // 0: X=Safety, Y=Efficacy, Z(bubble size)=ZParam
-      // 1: X=Efficacy, Y=Safety, Z(bubble size)=ZParam
-      // 2: X=Safety, Y=ZParam, Z(bubble size)=Efficacy (ZParam on Y, use Efficacy for size)
-      // 3: X=ZParam, Y=Safety, Z(bubble size)=Efficacy (ZParam on X, use Efficacy for size)
-      // 4: X=Efficacy, Y=ZParam, Z(bubble size)=Safety (ZParam on Y, use Safety for size)
-      // 5: X=ZParam, Y=Efficacy, Z(bubble size)=Safety (ZParam on X, use Safety for size)
-      
-      let x: number, y: number;
-      
-      // Determine raw z value for bubble size
-      let rawZValue: number;
+
+      let x: number, y: number, rawZValue: number;
       switch (normalizedAxisConfig) {
-        case 0: // X=Safety, Y=Efficacy, Z(bubble size)=ZParam
+        case 0:
           x = safetyValue;
           y = efficacy;
           rawZValue = Math.max(0, zValue);
           break;
-        case 1: // X=Efficacy, Y=Safety, Z(bubble size)=ZParam
+        case 1:
           x = efficacy;
           y = safetyValue;
           rawZValue = Math.max(0, zValue);
           break;
-        case 2: // X=Safety, Y=ZParam, Z(bubble size)=Efficacy
+        case 2:
           x = safetyValue;
           y = Math.max(0, zValue);
-          rawZValue = efficacy; // Use efficacy for bubble size
+          rawZValue = efficacy;
           break;
-        case 3: // X=ZParam, Y=Safety, Z(bubble size)=Efficacy
+        case 3:
           x = Math.max(0, zValue);
           y = safetyValue;
-          rawZValue = efficacy; // Use efficacy for bubble size
+          rawZValue = efficacy;
           break;
-        case 4: // X=Efficacy, Y=ZParam, Z(bubble size)=Safety
+        case 4:
           x = efficacy;
           y = Math.max(0, zValue);
-          rawZValue = safetyValue; // Use safety for bubble size
+          rawZValue = safetyValue;
           break;
-        case 5: // X=ZParam, Y=Efficacy, Z(bubble size)=Safety
+        case 5:
           x = Math.max(0, zValue);
           y = efficacy;
-          rawZValue = safetyValue; // Use safety for bubble size
+          rawZValue = safetyValue;
           break;
         default:
-          // Fallback to default configuration
           x = safetyValue;
           y = efficacy;
           rawZValue = Math.max(0, zValue);
       }
-      
-      // Apply logarithmic scaling to z value if needed
-      // Store both raw and transformed values for tooltip/label display
-      const z = useLogScale ? transformZValue(rawZValue) : rawZValue;
-      
+      return { item, efficacy, safety, numberOfPatients, safetyValue, zValue, x, y, rawZValue };
+    });
+
+    const rawZValues = rows.map((r) => r.rawZValue).filter((v) => v != null && !Number.isNaN(v) && isFinite(v));
+    const dataMin = rawZValues.length === 0 ? 0 : Math.min(...rawZValues);
+    let dataMax = rawZValues.length === 0 ? 1 : Math.max(...rawZValues);
+    if (dataMax <= dataMin) dataMax = dataMin + 1;
+    const domain: [number, number] = [dataMin, dataMax];
+
+    const chartDataOut = rows.map((row) => {
+      const { item, efficacy, safety, numberOfPatients, x, y, rawZValue } = row;
+      const z = rawZValue;
+      const radiusPx = radiusFromLinearArea(rawZValue, dataMin, dataMax);
       return {
         ...item,
-        efficacy, // Update with current trial values
+        efficacy,
         safety,
         numberOfPatients,
         x,
         y,
         z,
-        rawZ: rawZValue, // Store original z value for display in tooltips/labels
+        rawZ: rawZValue,
+        radiusPx,
       };
     });
-  }, [data, trialIndices, invertSafetyAxis, normalizedAxisConfig, getZAxisValue, useLogScale, transformZValue]);
+
+    return { chartData: chartDataOut, transformedZDomain: domain };
+  }, [data, trialIndices, invertSafetyAxis, normalizedAxisConfig, getZAxisValue]);
 
   // Helper function to calculate domain for a given metric type
   const calculateDomainForMetric = useCallback((metricType: 'efficacy' | 'safety' | 'zParam', values: number[]): [number, number] => {
@@ -822,7 +723,7 @@ export default function BubbleChart({
     }
     
     const padding = Math.max((max - min) * 0.1, 1); // At least 1 unit padding
-    let rawMin = Math.max(0, min - padding);
+    const rawMin = Math.max(0, min - padding);
     let rawMax = max + padding;
     
     // For zParam, don't cap at 100
@@ -927,10 +828,6 @@ export default function BubbleChart({
 
 
   // Determine what metric is currently on the Z-axis (bubble size)
-  const getZAxisMetric = useCallback(() => {
-    const { zMetric } = getAxisMetrics();
-    return zMetric;
-  }, [getAxisMetrics]);
 
   // Calculate quadrant line positions
   // These are always at the midpoint of their respective domains
@@ -948,15 +845,28 @@ export default function BubbleChart({
 
   // Use light mode colors for both compact and non-compact modes
   const colors = COLORS;
+  // Padding so MAX_RADIUS (60px) bubbles are not clipped at chart edges
+  const axisPadding = MAX_RADIUS + 15;
   const margin = compact
-    ? { top: 20, right: 30, bottom: 60, left: 60 }
-    : { top: 20, right: 30, bottom: 80, left: 80 };
+    ? { top: axisPadding, right: axisPadding, bottom: 60 + axisPadding, left: 60 + axisPadding }
+    : { top: axisPadding, right: axisPadding, bottom: 80 + axisPadding, left: 80 + axisPadding };
+  // Tighter margins when fillHeight so the plot occupies all area (like DivergingBarChart)
+  const marginFillHeight = {
+    top: MAX_RADIUS + 8,
+    right: MAX_RADIUS + 8,
+    bottom: 50,
+    left: 70,
+  };
 
   // Get readable label for Z-axis parameter - defined early so it can be used in other callbacks
   const getZAxisLabel = useCallback((param: string): string => {
     const labelMap: Record<string, string> = {
       'NUMBER_OF_PATIENTS': 'Number of patients',
-      // Additional mappings can be added here
+      'HR_PFS': 'HR (PFS)',
+      'HR_OS': 'HR (OS)',
+      'HR_EFS': 'HR (EFS)',
+      'HR_RFS': 'HR (RFS)',
+      'HR_MFS': 'HR (MFS)',
     };
     return labelMap[param] || param;
   }, []);
@@ -970,6 +880,7 @@ export default function BubbleChart({
       setIsPinned(false);
       setTooltipData(null);
       setPinnedBubbleId(null);
+      setPinnedAxisConfig(null);
       hoverTooltipPositionRef.current = null;
       return;
     }
@@ -991,6 +902,7 @@ export default function BubbleChart({
     }
     
     setPinnedBubbleId(bubbleId);
+    setPinnedAxisConfig(normalizedAxisConfig);
     setIsPinned(true);
     setTooltipData({
       active: true,
@@ -1001,7 +913,7 @@ export default function BubbleChart({
       x: position.x,
       y: position.y,
     });
-  }, [isPinned, pinnedBubbleId, calculateTooltipPosition, tooltipData]);
+  }, [isPinned, pinnedBubbleId, normalizedAxisConfig, calculateTooltipPosition]);
 
   // Get unique treatments and assign colors
   const treatmentColorMap = useMemo(() => {
@@ -1059,21 +971,24 @@ export default function BubbleChart({
     return `${value}`;
   };
 
-  // Axis labels - based on axis configuration
+  const efficacyMetricsForAxis = axisMode === 'safety-safety' ? SAFETY_METRICS : EFFICACY_METRICS;
+  const safetyMetricsForAxis = axisMode === 'efficacy-efficacy' ? EFFICACY_METRICS : SAFETY_METRICS;
   const getAxisLabel = useCallback((metric: 'efficacy' | 'safety' | 'zParam'): string => {
     if (metric === 'efficacy') {
-      return efficacyLabel;
+      const unit = getUnit(efficacyParam, efficacyMetricsForAxis);
+      const label = getCompactLabel(efficacyParam, efficacyMetricsForAxis, efficacyLabel || 'ORR');
+      return formatAxisLabelWithUnit(label, unit);
     }
     if (metric === 'safety') {
-      return invertSafetyAxis
-        ? `${safetyLabel} (0% = best safety, 100% = worst safety)`
-        : safetyLabel;
+      const unit = getUnit(safetyParam, safetyMetricsForAxis);
+      const label = getCompactLabel(safetyParam, safetyMetricsForAxis, safetyLabel || 'Grade 3+ TRAE');
+      return formatAxisLabelWithUnit(label, unit);
     }
     if (metric === 'zParam') {
       return getZAxisLabel(zAxisParam);
     }
     return '';
-  }, [efficacyLabel, safetyLabel, invertSafetyAxis, zAxisParam, getZAxisLabel]);
+  }, [efficacyParam, safetyParam, efficacyLabel, safetyLabel, zAxisParam, getZAxisLabel, efficacyMetricsForAxis, safetyMetricsForAxis]);
 
   const xAxisLabel = useMemo(() => {
     const { xMetric } = getAxisMetrics();
@@ -1101,12 +1016,16 @@ export default function BubbleChart({
         className="w-full h-full bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm outline-none focus:outline-none [&_svg]:outline-none [&_svg]:focus:outline-none [&_.recharts-wrapper]:outline-none [&_.recharts-wrapper]:focus:outline-none flex flex-col" 
         tabIndex={-1}
         onMouseDown={(e) => {
-          e.preventDefault();
-          (e.currentTarget as HTMLElement).blur();
+          const target = e.target as HTMLElement;
+          const isInteractive = target.closest('select, button, input, a[href], [role="button"]');
+          if (!isInteractive) {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement).blur();
+          }
         }}
         style={{ outline: 'none' }}
       >
-        <div className="flex-1 min-h-0 relative">
+        <div className="flex-1 min-h-0 relative" ref={chartContainerRef}>
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={margin}>
             <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
@@ -1115,7 +1034,7 @@ export default function BubbleChart({
               dataKey="x"
               domain={xDomain}
               ticks={xAxisTicks}
-              tick={{ fontSize: 10, fill: colors.axis }}
+              tick={{ fontSize: 12, fill: colors.axis }}
               tickLine={{ stroke: colors.grid }}
               axisLine={{ stroke: colors.grid }}
               tickFormatter={formatXAxisTick}
@@ -1123,7 +1042,7 @@ export default function BubbleChart({
                 value: xAxisLabel,
                 position: 'insideBottom',
                 offset: -5,
-                style: { textAnchor: 'middle', fill: colors.axis, fontSize: 10 },
+                style: { textAnchor: 'middle', fill: colors.axis, fontSize: 12, fontWeight: 600 },
               }}
             />
             <YAxis
@@ -1131,7 +1050,7 @@ export default function BubbleChart({
               dataKey="y"
               domain={yDomain}
               ticks={yAxisTicks}
-              tick={{ fontSize: 10, fill: colors.axis }}
+              tick={{ fontSize: 12, fill: colors.axis }}
               tickLine={{ stroke: colors.grid }}
               axisLine={{ stroke: colors.grid }}
               tickFormatter={formatYAxisTick}
@@ -1139,14 +1058,15 @@ export default function BubbleChart({
                 value: yAxisLabel,
                 angle: -90,
                 position: 'insideLeft',
-                style: { textAnchor: 'middle', fill: colors.axis, fontSize: 10 },
+                style: { textAnchor: 'middle', fill: colors.axis, fontSize: 12, fontWeight: 600 },
               }}
             />
             <ZAxis 
               type="number" 
               dataKey="z" 
-              range={[bubbleSizeRange.min, bubbleSizeRange.max]} 
+              range={zAxisRange} 
               domain={transformedZDomain}
+              scale="auto"
             />
             <ReferenceLine 
               x={xMidpoint} 
@@ -1163,21 +1083,29 @@ export default function BubbleChart({
               strokeDasharray="3 3"
             />
             <Tooltip 
+              wrapperStyle={{ position: 'fixed', pointerEvents: 'none', left: 0, top: 0 }}
               content={(props) => {
-                if (isPinned) return null; // Don't show Recharts tooltip when pinned
+                if (effectivePinned) return null;
                 if (props.active && props.payload && props.payload.length > 0) {
+                  const coord = props.coordinate as { x?: number; y?: number } | undefined;
+                  const viewportPos = getHoverTooltipViewportPosition(coord?.x, coord?.y);
                   const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
                   const treatmentName = payloadData?.treatmentName || '';
                   const currentIndex = trialIndices.get(treatmentName) || 0;
-                  return <CustomTooltip 
-                    active={props.active}
-                    payload={props.payload as CustomTooltipProps['payload']}
-                    isPinned={false}
-                    currentTrialIndex={currentIndex}
-                    onTrialIndexChange={handleTrialIndexChange}
-                    efficacyParam={efficacyParam}
-                    safetyParam={safetyParam}
-                  />;
+                  return (
+                    <div style={{ position: 'fixed', left: viewportPos.x, top: viewportPos.y, zIndex: 9999, pointerEvents: 'auto' }}>
+                      <CustomTooltip
+                        active={props.active}
+                        payload={props.payload as CustomTooltipProps['payload']}
+                        isPinned={false}
+                        currentTrialIndex={currentIndex}
+                        onTrialIndexChange={handleTrialIndexChange}
+                        efficacyParam={efficacyParam}
+                        safetyParam={safetyParam}
+                        axisMode={axisMode}
+                      />
+                    </div>
+                  );
                 }
                 return null;
               }}
@@ -1187,19 +1115,22 @@ export default function BubbleChart({
               name="Treatments" 
               data={chartData} 
               fill="#8884d8"
-              onClick={(data: any, index: number, e: any) => {
-                const payload = data.payload as BubbleChartDataPoint;
-                const event = e as React.MouseEvent;
-                handleBubbleClick(payload, event);
+              fillOpacity={0.7}
+              isAnimationActive={false}
+              onClick={(entry: { payload?: BubbleChartDataPoint }, _index: number, event: React.MouseEvent) => {
+                const payload = entry.payload;
+                if (payload) handleBubbleClick(payload, event);
               }}
             >
               {chartData.map((entry, index) => {
                 const bubbleId = `${entry.treatmentName}-${entry.efficacy}-${entry.safety}`;
-                const isPinnedBubble = isPinned && pinnedBubbleId === bubbleId;
+                const isPinnedBubble = effectivePinned && pinnedBubbleId === bubbleId;
+                const fillColor = isPinnedBubble ? '#fbbf24' : getColor(entry);
                 return (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={isPinnedBubble ? '#fbbf24' : getColor(entry)} 
+                    fill={fillColor}
+                    fillOpacity={0.7}
                   />
                 );
               })}
@@ -1212,7 +1143,7 @@ export default function BubbleChart({
         </ResponsiveContainer>
         
         {/* Custom pinned tooltip */}
-        {isPinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
+        {effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
           <div 
             className="fixed z-[9999] tooltip-enter"
             style={{ 
@@ -1225,7 +1156,7 @@ export default function BubbleChart({
             <CustomTooltip 
               active={tooltipData.active}
               payload={tooltipData.payload}
-              isPinned={isPinned}
+              isPinned={effectivePinned}
               currentTrialIndex={(() => {
                 const payloadData = tooltipData.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
                 const treatmentName = payloadData?.treatmentName || '';
@@ -1234,10 +1165,161 @@ export default function BubbleChart({
               onTrialIndexChange={handleTrialIndexChange}
               efficacyParam={efficacyParam}
               safetyParam={safetyParam}
+              axisMode={axisMode}
             />
           </div>
         )}
         </div>
+      </div>
+    );
+  }
+
+  if (fillHeight) {
+    return (
+      <div className="w-full h-full flex flex-col min-h-0 min-w-0 bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+        {title ? (
+          <div className="flex-shrink-0 px-4 pt-3 pb-1">
+            <h3 className="text-xl font-bold text-slate-900">{title}</h3>
+            {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}
+          </div>
+        ) : null}
+        <div
+          ref={chartContainerRef}
+          className="flex-1 min-h-0 min-w-0 outline-none focus:outline-none"
+          style={{ width: '100%', height: '100%', outline: 'none' }}
+          tabIndex={-1}
+          onMouseDown={(e) => {
+            const target = e.target as HTMLElement;
+            const isInteractive = target.closest('select, button, input, a[href], [role="button"]');
+            if (!isInteractive) {
+              e.preventDefault();
+              (e.currentTarget as HTMLElement).blur();
+            }
+          }}
+        >
+          <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+            <ScatterChart margin={fillHeight ? marginFillHeight : margin}>
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} strokeOpacity={0.3} />
+              <XAxis
+                type="number"
+                dataKey="x"
+                domain={xDomain}
+                ticks={xAxisTicks}
+                tick={{ fontSize: 12, fill: colors.axis }}
+                tickLine={{ stroke: colors.grid }}
+                axisLine={{ stroke: colors.grid }}
+                tickFormatter={formatXAxisTick}
+                label={{
+                  value: xAxisLabel,
+                  position: 'insideBottom',
+                  offset: -5,
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
+                }}
+              />
+              <YAxis
+                type="number"
+                dataKey="y"
+                domain={yDomain}
+                ticks={yAxisTicks}
+                tick={{ fontSize: 12, fill: colors.axis }}
+                tickLine={{ stroke: colors.grid }}
+                axisLine={{ stroke: colors.grid }}
+                tickFormatter={formatYAxisTick}
+                label={{
+                  value: yAxisLabel,
+                  angle: -90,
+                  position: 'insideLeft',
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
+                }}
+              />
+              <ZAxis
+                type="number"
+                dataKey="z"
+                range={zAxisRange}
+                domain={transformedZDomain}
+                scale="auto"
+              />
+              <ReferenceLine x={xMidpoint} stroke={colors.axis} strokeWidth={1.5} strokeOpacity={0.5} strokeDasharray="3 3" />
+              <ReferenceLine y={yMidpoint} stroke={colors.axis} strokeWidth={1.5} strokeOpacity={0.5} strokeDasharray="3 3" />
+              <Tooltip
+                wrapperStyle={{ position: 'fixed', pointerEvents: 'none', left: 0, top: 0 }}
+                content={(props) => {
+                  if (effectivePinned) return null;
+                  if (props.active && props.payload && props.payload.length > 0) {
+                    const coord = props.coordinate as { x?: number; y?: number } | undefined;
+                    const viewportPos = getHoverTooltipViewportPosition(coord?.x, coord?.y);
+                    const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
+                    const treatmentName = payloadData?.treatmentName || '';
+                    const currentIndex = trialIndices.get(treatmentName) || 0;
+                    return (
+                      <div style={{ position: 'fixed', left: viewportPos.x, top: viewportPos.y, zIndex: 9999, pointerEvents: 'auto' }}>
+                        <CustomTooltip
+                          active={props.active}
+                          payload={props.payload as CustomTooltipProps['payload']}
+                          isPinned={false}
+                          currentTrialIndex={currentIndex}
+                          onTrialIndexChange={handleTrialIndexChange}
+                          efficacyParam={efficacyParam}
+                          safetyParam={safetyParam}
+                          axisMode={axisMode}
+                        />
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+                cursor={{ strokeDasharray: '3 3' }}
+              />
+              <Scatter
+                name="Treatments"
+                data={chartData}
+                fill="#8884d8"
+                fillOpacity={0.7}
+                isAnimationActive={false}
+                onClick={(point: { payload?: BubbleChartDataPoint }, _index: number, e: React.MouseEvent) => {
+                  const payload = point.payload;
+                  if (payload) handleBubbleClick(payload, e);
+                }}
+              >
+                {chartData.map((entry, index) => {
+                  const bubbleId = `${entry.treatmentName}-${entry.efficacy}-${entry.safety}`;
+                  const isPinnedBubble = effectivePinned && pinnedBubbleId === bubbleId;
+                  const fillColor = isPinnedBubble ? '#fbbf24' : getColor(entry);
+                  return (
+                    <Cell key={`cell-${index}`} fill={fillColor} fillOpacity={0.7} />
+                  );
+                })}
+                <LabelList dataKey="treatmentName" content={<CustomLabel />} />
+              </Scatter>
+            </ScatterChart>
+          </ResponsiveContainer>
+        </div>
+        {effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
+          <div
+            className="fixed z-[9999] tooltip-enter"
+            style={{
+              left: tooltipData.x,
+              top: tooltipData.y,
+              pointerEvents: 'auto',
+              animation: 'tooltipFadeIn 0.2s ease-out',
+            }}
+          >
+            <CustomTooltip
+              active={tooltipData.active}
+              payload={tooltipData.payload}
+              isPinned={effectivePinned}
+              currentTrialIndex={(() => {
+                const payloadData = tooltipData.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
+                const treatmentName = payloadData?.treatmentName || '';
+                return trialIndices.get(treatmentName) || 0;
+              })()}
+              onTrialIndexChange={handleTrialIndexChange}
+              efficacyParam={efficacyParam}
+              safetyParam={safetyParam}
+              axisMode={axisMode}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -1247,8 +1329,12 @@ export default function BubbleChart({
       className="w-full overflow-hidden bg-white border-slate-200 outline-none focus:outline-none [&_svg]:outline-none [&_svg]:focus:outline-none [&_.recharts-wrapper]:outline-none [&_.recharts-wrapper]:focus:outline-none" 
       tabIndex={-1}
       onMouseDown={(e) => {
-        e.preventDefault();
-        (e.currentTarget as HTMLElement).blur();
+        const target = e.target as HTMLElement;
+        const isInteractive = target.closest('select, button, input, a[href], [role="button"]');
+        if (!isInteractive) {
+          e.preventDefault();
+          (e.currentTarget as HTMLElement).blur();
+        }
       }}
       style={{ outline: 'none' }}
     >
@@ -1265,19 +1351,28 @@ export default function BubbleChart({
         className={title ? "pt-4 outline-none focus:outline-none" : "p-0 outline-none focus:outline-none"} 
         tabIndex={-1}
         onMouseDown={(e) => {
-          e.preventDefault();
-          (e.currentTarget as HTMLElement).blur();
+          const target = e.target as HTMLElement;
+          const isInteractive = target.closest('select, button, input, a[href], [role="button"]');
+          if (!isInteractive) {
+            e.preventDefault();
+            (e.currentTarget as HTMLElement).blur();
+          }
         }}
         style={{ outline: 'none' }}
       >
 
         <div 
+          ref={chartContainerRef}
           style={{ width: '100%', height: chartHeight, minHeight: 100, outline: 'none' }} 
           className="outline-none focus:outline-none"
           tabIndex={-1}
           onMouseDown={(e) => {
-            e.preventDefault();
-            (e.currentTarget as HTMLElement).blur();
+            const target = e.target as HTMLElement;
+            const isInteractive = target.closest('select, button, input, a[href], [role="button"]');
+            if (!isInteractive) {
+              e.preventDefault();
+              (e.currentTarget as HTMLElement).blur();
+            }
           }}
         >
           <ResponsiveContainer width="100%" height="100%">
@@ -1288,7 +1383,7 @@ export default function BubbleChart({
                 dataKey="x"
                 domain={xDomain}
                 ticks={xAxisTicks}
-                tick={{ fontSize: 11, fill: colors.axis }}
+                tick={{ fontSize: 12, fill: colors.axis }}
                 tickLine={{ stroke: colors.grid }}
                 axisLine={{ stroke: colors.grid }}
                 tickFormatter={formatXAxisTick}
@@ -1296,7 +1391,7 @@ export default function BubbleChart({
                   value: xAxisLabel,
                   position: 'insideBottom',
                   offset: -5,
-                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 11 },
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
                 }}
               />
               <YAxis
@@ -1304,7 +1399,7 @@ export default function BubbleChart({
                 dataKey="y"
                 domain={yDomain}
                 ticks={yAxisTicks}
-                tick={{ fontSize: 11, fill: colors.axis }}
+                tick={{ fontSize: 12, fill: colors.axis }}
                 tickLine={{ stroke: colors.grid }}
                 axisLine={{ stroke: colors.grid }}
                 tickFormatter={formatYAxisTick}
@@ -1312,15 +1407,16 @@ export default function BubbleChart({
                   value: yAxisLabel,
                   angle: -90,
                   position: 'insideLeft',
-                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 12 },
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
                 }}
               />
               <ZAxis 
-              type="number" 
-              dataKey="z" 
-              range={[bubbleSizeRange.min, bubbleSizeRange.max]} 
-              domain={transformedZDomain}
-            />
+                type="number" 
+                dataKey="z" 
+                range={zAxisRange} 
+                domain={transformedZDomain}
+                scale="auto"
+              />
               <ReferenceLine 
                 x={xMidpoint} 
                 stroke={colors.axis} 
@@ -1336,36 +1432,54 @@ export default function BubbleChart({
                 strokeDasharray="3 3"
               />
               <Tooltip 
+                wrapperStyle={{ position: 'fixed', pointerEvents: 'none', left: 0, top: 0 }}
                 content={(props) => {
-                  if (isPinned) return null; // Don't show Recharts tooltip when pinned
+                  if (effectivePinned) return null;
                   if (props.active && props.payload && props.payload.length > 0) {
-                    return <CustomTooltip 
-                      active={props.active}
-                      payload={props.payload as CustomTooltipProps['payload']}
-                      isPinned={false} 
-                    />;
+                    const coord = props.coordinate as { x?: number; y?: number } | undefined;
+                    const viewportPos = getHoverTooltipViewportPosition(coord?.x, coord?.y);
+                    const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
+                    const treatmentName = payloadData?.treatmentName || '';
+                    const currentIndex = trialIndices.get(treatmentName) || 0;
+                    return (
+                      <div style={{ position: 'fixed', left: viewportPos.x, top: viewportPos.y, zIndex: 9999, pointerEvents: 'auto' }}>
+                        <CustomTooltip
+                          active={props.active}
+                          payload={props.payload as CustomTooltipProps['payload']}
+                          isPinned={false}
+                          currentTrialIndex={currentIndex}
+                          onTrialIndexChange={handleTrialIndexChange}
+                          efficacyParam={efficacyParam}
+                          safetyParam={safetyParam}
+                          axisMode={axisMode}
+                        />
+                      </div>
+                    );
                   }
                   return null;
                 }}
-                cursor={{ strokeDasharray: '3 3' }} 
+                cursor={{ strokeDasharray: '3 3' }}
               />
-              <Scatter 
+              <Scatter
                 name="Treatments" 
                 data={chartData} 
                 fill="#8884d8"
-                onClick={(data: any, index: number, e: any) => {
-                  const payload = data.payload as BubbleChartDataPoint;
-                  const event = e as React.MouseEvent;
-                  handleBubbleClick(payload, event);
+                fillOpacity={0.7}
+                isAnimationActive={false}
+                onClick={(point: { payload?: BubbleChartDataPoint }, _index: number, e: React.MouseEvent) => {
+                  const payload = point.payload;
+                  if (payload) handleBubbleClick(payload, e);
                 }}
               >
                 {chartData.map((entry, index) => {
                   const bubbleId = `${entry.treatmentName}-${entry.efficacy}-${entry.safety}`;
-                  const isPinnedBubble = isPinned && pinnedBubbleId === bubbleId;
+                  const isPinnedBubble = effectivePinned && pinnedBubbleId === bubbleId;
+                  const fillColor = isPinnedBubble ? '#fbbf24' : getColor(entry);
                   return (
                     <Cell 
                       key={`cell-${index}`} 
-                      fill={isPinnedBubble ? '#fbbf24' : getColor(entry)} 
+                      fill={fillColor}
+                      fillOpacity={0.7}
                     />
                   );
                 })}
@@ -1378,7 +1492,7 @@ export default function BubbleChart({
           </ResponsiveContainer>
           
           {/* Custom pinned tooltip */}
-          {isPinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
+          {effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
             <div 
               className="fixed z-[9999] tooltip-enter"
               style={{ 
@@ -1391,7 +1505,16 @@ export default function BubbleChart({
               <CustomTooltip 
                 active={tooltipData.active}
                 payload={tooltipData.payload}
-                isPinned={isPinned}
+                isPinned={effectivePinned}
+                currentTrialIndex={(() => {
+                  const payloadData = tooltipData.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
+                  const treatmentName = payloadData?.treatmentName || '';
+                  return trialIndices.get(treatmentName) || 0;
+                })()}
+                onTrialIndexChange={handleTrialIndexChange}
+                efficacyParam={efficacyParam}
+                safetyParam={safetyParam}
+                axisMode={axisMode}
               />
             </div>
           )}

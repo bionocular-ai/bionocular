@@ -319,7 +319,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 50,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -327,7 +327,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T16:54:36.046681"
@@ -2431,7 +2431,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 87,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -2439,7 +2439,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T16:56:55.581319"
@@ -4498,7 +4498,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 39,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -4506,7 +4506,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T16:59:05.012637"
@@ -6596,8 +6596,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 88,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -6605,7 +6605,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:01:28.980552"
@@ -8749,7 +8749,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 88,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -8757,7 +8757,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:04:29.179988"
@@ -10857,7 +10857,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 39,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -10865,7 +10865,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:06:38.380494"
@@ -12657,7 +12657,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "IPI/NIVO",
+          "arm_name": "Ipilimumab + Nivolumab",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -12958,7 +12958,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 5,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -12966,7 +12966,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:08:54.009430"
@@ -14724,7 +14724,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant Cemiplimab",
+          "arm_name": "Cemiplimab",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -15023,8 +15023,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 79,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -15032,7 +15032,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:11:07.797531"
@@ -17088,7 +17088,7 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
+              "value": 105,
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -19235,7 +19235,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 78,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -19243,7 +19243,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:15:42.238688"
@@ -21336,7 +21336,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 30,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -21344,7 +21344,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:18:12.724212"
@@ -23410,8 +23410,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 60,
-              "confidence": 0.8,
+              "value": 35,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -23419,7 +23419,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:20:24.556993"
@@ -25506,7 +25506,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 132,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -25514,7 +25514,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:22:58.668770"
@@ -27600,8 +27600,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 295,
-              "confidence": 0.8,
+              "value": 28,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -27609,7 +27609,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:25:37.574654"
@@ -29662,8 +29662,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 40,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -29671,7 +29671,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:27:44.311780"
@@ -31729,8 +31729,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 17,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -31738,7 +31738,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:27:44.311815"
@@ -33812,8 +33812,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 350,
-              "confidence": 0.8,
+              "value": 352,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -33821,7 +33821,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:30:18.368075"
@@ -35897,8 +35897,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 349,
-              "confidence": 0.8,
+              "value": 352,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -35906,7 +35906,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:30:18.368893"
@@ -37992,7 +37992,7 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 22,
+              "value": 76,
               "confidence": 0.8,
               "source_chunks": [
                 "chunk_0",
@@ -39783,7 +39783,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "D + T 150/2",
+          "arm_name": "Dabrafenib + Trametinib  150/2",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -42174,7 +42174,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 247,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -42182,7 +42182,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:38:49.404042"
@@ -44259,7 +44259,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 248,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -44267,7 +44267,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:38:49.404943"
@@ -46357,7 +46357,7 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
+              "value": 66,
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -48457,8 +48457,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 135,
-              "confidence": 0.8,
+              "value": 52,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -48466,7 +48466,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:44:40.544974"
@@ -50525,8 +50525,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 135,
-              "confidence": 0.8,
+              "value": 45,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -50534,7 +50534,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:44:40.545728"
@@ -52593,8 +52593,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 135,
-              "confidence": 0.8,
+              "value": 38,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -52602,7 +52602,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:44:40.546341"
@@ -54673,8 +54673,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 655,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -54682,7 +54682,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:47:05.209413"
@@ -56790,8 +56790,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 23,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -56799,7 +56799,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:49:22.837927"
@@ -58892,8 +58892,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 98,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -58901,7 +58901,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:52:35.882791"
@@ -60996,8 +60996,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 100,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -61005,7 +61005,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:52:35.882825"
@@ -63112,8 +63112,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 316,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -63121,7 +63121,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:55:41.167354"
@@ -65196,8 +65196,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 314,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -65205,7 +65205,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:55:41.167392"
@@ -67280,8 +67280,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 315,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -67289,7 +67289,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:55:41.167403"
@@ -69376,8 +69376,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 314,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -69385,7 +69385,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:58:08.646650"
@@ -71492,8 +71492,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 316,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -71501,7 +71501,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:58:08.646682"
@@ -73608,8 +73608,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 315,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -73617,7 +73617,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T17:58:08.646692"
@@ -75736,8 +75736,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 314,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -75745,7 +75745,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:01:10.647406"
@@ -77882,8 +77882,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 316,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -77891,7 +77891,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:01:10.647438"
@@ -80028,8 +80028,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 315,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -80037,7 +80037,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:01:10.647447"
@@ -82187,7 +82187,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 314,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -82195,7 +82195,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:04:11.047503"
@@ -84252,7 +84252,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 316,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -84260,7 +84260,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:04:11.048441"
@@ -86317,7 +86317,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 315,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -86325,7 +86325,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:04:11.049051"
@@ -88096,7 +88096,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Nivolumab plus Ipilimumab",
+          "arm_name": "Nivolumab + Ipilimumab",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -88395,8 +88395,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 95,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -88404,7 +88404,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:06:34.926540"
@@ -90479,8 +90479,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 47,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -90488,7 +90488,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:06:34.926574"
@@ -92573,8 +92573,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 95,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -92582,7 +92582,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:09:08.174709"
@@ -94700,8 +94700,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 47,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -94709,7 +94709,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:09:08.174741"
@@ -96839,7 +96839,7 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
+              "value": 35,
               "confidence": 0.0,
               "source_chunks": [
                 "chunk_0",
@@ -100744,7 +100744,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Asymptomatic Treatment",
+          "arm_name": "Nivolumab + Ipilimumab",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -101041,8 +101041,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 101,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -101050,7 +101050,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:15:05.647296"
@@ -102882,7 +102882,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Symptomatic Treatment",
+          "arm_name": "Nivolumab + Ipilimumab",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -103179,8 +103179,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 18,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -103188,7 +103188,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:15:05.647332"
@@ -105330,7 +105330,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 403,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -105338,7 +105338,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:19:02.272121"
@@ -107413,7 +107413,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 137,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -107421,7 +107421,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:19:02.272937"
@@ -109496,7 +109496,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 136,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -109504,7 +109504,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:19:02.273628"
@@ -111591,7 +111591,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 314,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -111599,7 +111599,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:21:44.565899"
@@ -113664,7 +113664,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 316,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -113672,7 +113672,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:21:44.567450"
@@ -115737,7 +115737,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 315,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -115745,7 +115745,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:21:44.568266"
@@ -117823,8 +117823,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 355,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -117832,7 +117832,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:24:13.811432"
@@ -119932,8 +119932,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 359,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -119941,7 +119941,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:24:13.811467"
@@ -128456,7 +128456,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 153,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -128464,7 +128464,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:31:44.696671"
@@ -130538,7 +130538,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 70,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -130546,7 +130546,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:34:14.577999"
@@ -132338,7 +132338,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Ipilimumab plus Dacarbazine",
+          "arm_name": "Ipilimumab + Dacarbazine",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -132638,8 +132638,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 250,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -132647,7 +132647,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:36:52.603120"
@@ -134422,7 +134422,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Placebo plus Dacarbazine",
+          "arm_name": "Placebo + Dacarbazine",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -134722,8 +134722,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": null,
-              "confidence": 0.0,
+              "value": 252,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -134731,7 +134731,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:36:52.603176"
@@ -136819,8 +136819,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 364,
-              "confidence": 0.8,
+              "value": 365,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -136828,7 +136828,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:39:58.481538"
@@ -138964,7 +138964,7 @@
             "number_of_patients": {
               "attribute_type": "number_of_patients",
               "value": 362,
-              "confidence": 0.8,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -138972,7 +138972,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:39:58.482251"
@@ -140818,7 +140818,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Lifileucel TIL cell therapy",
+          "arm_name": "Lifileucel",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -143232,8 +143232,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 120,
-              "confidence": 0.8,
+              "value": 272,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -143241,7 +143241,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:47:19.744682"
@@ -145021,7 +145021,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Investigator's Choice of Chemotherapy",
+          "arm_name": "Investigator's Choice Chemotherapy (ICC)",
           "attributes": {
             "published_year": {
               "value": "Not found",
@@ -145318,8 +145318,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 60,
-              "confidence": 0.8,
+              "value": 133,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -145327,7 +145327,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:47:19.745518"
@@ -147416,8 +147416,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 268,
-              "confidence": 0.8,
+              "value": 272,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -147425,7 +147425,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:49:59.498944"
@@ -149518,8 +149518,8 @@
             },
             "number_of_patients": {
               "attribute_type": "number_of_patients",
-              "value": 102,
-              "confidence": 0.8,
+              "value": 133,
+              "confidence": 0.9,
               "source_chunks": [
                 "chunk_0",
                 "chunk_1",
@@ -149527,7 +149527,7 @@
                 "chunk_3",
                 "chunk_4"
               ],
-              "source": "abstract_llm_extraction",
+              "source": "manual_entry",
               "validation_status": "pending",
               "validation_errors": [],
               "extracted_at": "2025-11-19T18:49:59.500039"
@@ -151335,7 +151335,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Combined Nivolumab and Ipilimumab",
+          "arm_name": "Nivolumab + Ipilimumab",
           "total_attributes": 30,
           "api_attributes": 15,
           "abstract_attributes": 15,
@@ -151583,8 +151583,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 25,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -152900,7 +152900,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Combined Nivolumab and Ipilimumab plus SBRT",
+          "arm_name": "Nivolumab + Ipilimumab + SBRT",
           "total_attributes": 29,
           "api_attributes": 15,
           "abstract_attributes": 14,
@@ -153148,8 +153148,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 25,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -154724,9 +154724,9 @@
               "extracted_at": "2025-11-19T11:25:56.271125"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 56,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -156289,9 +156289,9 @@
               "extracted_at": "2025-11-19T11:25:56.271160"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 59,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -157619,7 +157619,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant Ipilimumab + Nivolumab",
+          "arm_name": "Ipilimumab + Nivolumab",
           "total_attributes": 27,
           "api_attributes": 14,
           "abstract_attributes": 13,
@@ -157867,8 +157867,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 212,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -159184,7 +159184,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Adjuvant Nivolumab",
+          "arm_name": "Nivolumab",
           "total_attributes": 23,
           "api_attributes": 13,
           "abstract_attributes": 10,
@@ -159432,8 +159432,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 211,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -160761,7 +160761,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant-Adjuvant Pembrolizumab",
+          "arm_name": "Pembrolizumab",
           "total_attributes": 52,
           "api_attributes": 15,
           "abstract_attributes": 37,
@@ -161008,9 +161008,9 @@
               "extracted_at": "2025-11-19T11:37:12.091117"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": 20,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "value": 154,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -162326,7 +162326,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Adjuvant-Only Pembrolizumab",
+          "arm_name": "Pembrolizumab",
           "total_attributes": 38,
           "api_attributes": 15,
           "abstract_attributes": 23,
@@ -162573,9 +162573,9 @@
               "extracted_at": "2025-11-19T11:37:12.091828"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": 20,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "value": 159,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -164150,9 +164150,9 @@
               "extracted_at": "2025-11-19T11:40:19.634021"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 7,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -165468,7 +165468,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Neoadjuvant plus Adjuvant Dabrafenib and Trametinib",
+          "arm_name": "Dabrafenib + Trametinib",
           "total_attributes": 35,
           "api_attributes": 15,
           "abstract_attributes": 20,
@@ -165715,9 +165715,9 @@
               "extracted_at": "2025-11-19T11:40:19.634024"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 14,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -167292,9 +167292,9 @@
               "extracted_at": "2025-11-19T11:44:49.298238"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 211,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -168857,9 +168857,9 @@
               "extracted_at": "2025-11-19T11:44:49.298241"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 212,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -170435,8 +170435,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 256,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -172000,8 +172000,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 258,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -173576,9 +173576,9 @@
               "extracted_at": "2025-11-19T11:50:09.339022"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 256,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -175141,9 +175141,9 @@
               "extracted_at": "2025-11-19T11:50:09.339025"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 258,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -176718,9 +176718,9 @@
               "extracted_at": "2025-11-19T11:52:44.349141"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 192,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -178283,9 +178283,9 @@
               "extracted_at": "2025-11-19T11:52:44.349936"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 194,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -179848,9 +179848,9 @@
               "extracted_at": "2025-11-19T11:52:44.350629"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 191,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -181426,8 +181426,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 192,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -182991,8 +182991,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 194,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -184556,8 +184556,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 191,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -186133,8 +186133,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 337,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -187698,8 +187698,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 338,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -189274,9 +189274,9 @@
               "extracted_at": "2025-11-19T12:02:09.395615"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 337,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -190839,9 +190839,9 @@
               "extracted_at": "2025-11-19T12:02:09.395618"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 338,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -192169,7 +192169,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Cohort A",
+          "arm_name": "Dabrafenib",
           "total_attributes": 26,
           "api_attributes": 16,
           "abstract_attributes": 10,
@@ -192417,8 +192417,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 89,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -193734,7 +193734,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Cohort B",
+          "arm_name": "Dabrafenib",
           "total_attributes": 25,
           "api_attributes": 16,
           "abstract_attributes": 9,
@@ -193982,8 +193982,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 83,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -195558,9 +195558,9 @@
               "extracted_at": "2025-11-19T12:07:00.737935"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 187,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -197123,9 +197123,9 @@
               "extracted_at": "2025-11-19T12:07:00.737938"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 63,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -203407,9 +203407,9 @@
               "extracted_at": "2025-11-19T12:13:56.372748"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 269,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -204972,9 +204972,9 @@
               "extracted_at": "2025-11-19T12:13:56.372751"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 133,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -206550,8 +206550,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 156,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -207864,7 +207864,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "DTIC",
+          "arm_name": "Dacarbazine",
           "total_attributes": 28,
           "api_attributes": 0,
           "abstract_attributes": 28,
@@ -208112,8 +208112,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 149,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -209438,7 +209438,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "CP",
+          "arm_name": "Carboplatin + Paclitaxel (CP)",
           "total_attributes": 30,
           "api_attributes": 12,
           "abstract_attributes": 18,
@@ -209686,8 +209686,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 413,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -211003,7 +211003,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "CPS",
+          "arm_name": "Carboplatin + Paclitaxel + Sorafenib (CPS)",
           "total_attributes": 32,
           "api_attributes": 12,
           "abstract_attributes": 20,
@@ -211251,8 +211251,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 410,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -212827,9 +212827,9 @@
               "extracted_at": "2025-11-19T12:29:40.345922"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 24,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -214392,9 +214392,9 @@
               "extracted_at": "2025-11-19T12:29:40.345959"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 54,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -215970,8 +215970,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 247,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -217535,8 +217535,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 248,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -219112,8 +219112,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 210,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -220677,8 +220677,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 208,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -222254,8 +222254,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 180,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -223819,8 +223819,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 181,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -225384,8 +225384,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 179,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -226961,8 +226961,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 180,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -228526,8 +228526,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 181,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -230091,8 +230091,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 179,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -231668,8 +231668,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 279,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -233233,8 +233233,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 277,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -234798,8 +234798,8 @@
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
               "value": 278,
-              "confidence": 0.8,
-              "source": "abstract_llm_extraction",
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -236374,9 +236374,9 @@
               "extracted_at": "2025-11-19T12:54:32.780469"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 279,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -237939,9 +237939,9 @@
               "extracted_at": "2025-11-19T12:54:32.781159"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 277,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -239504,9 +239504,9 @@
               "extracted_at": "2025-11-19T12:54:32.781764"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 278,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -241081,9 +241081,9 @@
               "extracted_at": "2025-11-19T12:57:16.878628"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 89,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,
@@ -242646,9 +242646,9 @@
               "extracted_at": "2025-11-19T12:57:16.878633"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
-              "confidence": 0.0,
-              "source": "abstract_llm_extraction",
+              "value": 84,
+              "confidence": 0.9,
+              "source": "manual_entry",
               "validation_status": "ValidationStatus.PENDING",
               "validation_errors": [],
               "context_chunks": 5,

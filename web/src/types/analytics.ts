@@ -114,15 +114,15 @@ export interface MetricConfig {
 // Efficacy metrics configuration - keys match backend AttributeType names
 export const EFFICACY_METRICS: Record<string, MetricConfig> = {
   // Survival Metrics - PFS
-  MEDIAN_PFS: { key: 'MEDIAN_PFS', label: 'Median PFS', unit: 'months', description: 'Median Progression-Free Survival' },
-  MEDIAN_FOLLOWUP_PFS: { key: 'MEDIAN_FOLLOWUP_PFS', label: 'Median PFS Follow-up', unit: 'months', description: 'Median follow-up for measuring PFS' },
-  P_VALUE_PFS: { key: 'P_VALUE_PFS', label: 'p-value (PFS)', unit: '', description: 'p-value of median PFS', lowerIsBetter: true },
+  MEDIAN_PFS: { key: 'MEDIAN_PFS', label: 'mPFS', unit: 'months', description: 'Median Progression-Free Survival' },
+  MEDIAN_FOLLOWUP_PFS: { key: 'MEDIAN_FOLLOWUP_PFS', label: 'PFS FU', unit: 'months', description: 'Median follow-up for measuring PFS' },
+  P_VALUE_PFS: { key: 'P_VALUE_PFS', label: 'p (PFS)', unit: '', description: 'p-value of median PFS', lowerIsBetter: true },
   HR_PFS: { key: 'HR_PFS', label: 'HR (PFS)', unit: '', description: 'Hazard Ratio for PFS', lowerIsBetter: true },
   
   // Survival Metrics - OS
-  MEDIAN_OS: { key: 'MEDIAN_OS', label: 'Median OS', unit: 'months', description: 'Median Overall Survival' },
-  MEDIAN_FOLLOWUP_OS: { key: 'MEDIAN_FOLLOWUP_OS', label: 'Median OS Follow-up', unit: 'months', description: 'Median follow-up for measuring OS' },
-  P_VALUE_OS: { key: 'P_VALUE_OS', label: 'p-value (OS)', unit: '', description: 'p-value of OS', lowerIsBetter: true },
+  MEDIAN_OS: { key: 'MEDIAN_OS', label: 'mOS', unit: 'months', description: 'Median Overall Survival' },
+  MEDIAN_FOLLOWUP_OS: { key: 'MEDIAN_FOLLOWUP_OS', label: 'OS FU', unit: 'months', description: 'Median follow-up for measuring OS' },
+  P_VALUE_OS: { key: 'P_VALUE_OS', label: 'p (OS)', unit: '', description: 'p-value of OS', lowerIsBetter: true },
   HR_OS: { key: 'HR_OS', label: 'HR (OS)', unit: '', description: 'Hazard Ratio for OS', lowerIsBetter: true },
   
   // Response Metrics
@@ -132,37 +132,37 @@ export const EFFICACY_METRICS: Record<string, MetricConfig> = {
   COMPLETE_METABOLIC_RESPONSE: { key: 'COMPLETE_METABOLIC_RESPONSE', label: 'CMR', unit: '%', description: 'Complete Metabolic Response' },
   DISEASE_CONTROL_RATE: { key: 'DISEASE_CONTROL_RATE', label: 'DCR', unit: '%', description: 'Disease Control Rate' },
   CLINICAL_BENEFIT_RATE: { key: 'CLINICAL_BENEFIT_RATE', label: 'CBR', unit: '%', description: 'Clinical Benefit Rate' },
-  MEDIAN_DOR: { key: 'MEDIAN_DOR', label: 'Median DOR', unit: 'months', description: 'Median Duration of Response' },
-  DOR_RATE: { key: 'DOR_RATE', label: 'DOR Rate', unit: '%', description: 'Duration of Response Rate' },
+  MEDIAN_DOR: { key: 'MEDIAN_DOR', label: 'mDOR', unit: 'months', description: 'Median Duration of Response' },
+  DOR_RATE: { key: 'DOR_RATE', label: 'DOR', unit: '%', description: 'Duration of Response Rate' },
   
   // PFS Rate at various timepoints
-  PFS_RATE_6M: { key: 'PFS_RATE_6M', label: 'PFS Rate 6mo', unit: '%', description: 'PFS rate at 6 months' },
-  PFS_RATE_9M: { key: 'PFS_RATE_9M', label: 'PFS Rate 9mo', unit: '%', description: 'PFS rate at 9 months' },
-  PFS_RATE_12M: { key: 'PFS_RATE_12M', label: 'PFS Rate 12mo', unit: '%', description: 'PFS rate at 12 months' },
-  PFS_RATE_18M: { key: 'PFS_RATE_18M', label: 'PFS Rate 18mo', unit: '%', description: 'PFS rate at 18 months' },
-  PFS_RATE_24M: { key: 'PFS_RATE_24M', label: 'PFS Rate 24mo', unit: '%', description: 'PFS rate at 24 months' },
-  PFS_RATE_36M: { key: 'PFS_RATE_36M', label: 'PFS Rate 36mo', unit: '%', description: 'PFS rate at 36 months' },
-  PFS_RATE_48M: { key: 'PFS_RATE_48M', label: 'PFS Rate 48mo', unit: '%', description: 'PFS rate at 48 months' },
+  PFS_RATE_6M: { key: 'PFS_RATE_6M', label: 'PFS 6M', unit: '%', description: 'PFS rate at 6 months' },
+  PFS_RATE_9M: { key: 'PFS_RATE_9M', label: 'PFS 9M', unit: '%', description: 'PFS rate at 9 months' },
+  PFS_RATE_12M: { key: 'PFS_RATE_12M', label: 'PFS 12M', unit: '%', description: 'PFS rate at 12 months' },
+  PFS_RATE_18M: { key: 'PFS_RATE_18M', label: 'PFS 18M', unit: '%', description: 'PFS rate at 18 months' },
+  PFS_RATE_24M: { key: 'PFS_RATE_24M', label: 'PFS 24M', unit: '%', description: 'PFS rate at 24 months' },
+  PFS_RATE_36M: { key: 'PFS_RATE_36M', label: 'PFS 36M', unit: '%', description: 'PFS rate at 36 months' },
+  PFS_RATE_48M: { key: 'PFS_RATE_48M', label: 'PFS 48M', unit: '%', description: 'PFS rate at 48 months' },
   
   // OS Rate at various timepoints
-  OS_RATE_6M: { key: 'OS_RATE_6M', label: 'OS Rate 6mo', unit: '%', description: 'OS rate at 6 months' },
-  OS_RATE_9M: { key: 'OS_RATE_9M', label: 'OS Rate 9mo', unit: '%', description: 'OS rate at 9 months' },
-  OS_RATE_12M: { key: 'OS_RATE_12M', label: 'OS Rate 12mo', unit: '%', description: 'OS rate at 12 months' },
-  OS_RATE_18M: { key: 'OS_RATE_18M', label: 'OS Rate 18mo', unit: '%', description: 'OS rate at 18 months' },
-  OS_RATE_24M: { key: 'OS_RATE_24M', label: 'OS Rate 24mo', unit: '%', description: 'OS rate at 24 months' },
-  OS_RATE_36M: { key: 'OS_RATE_36M', label: 'OS Rate 36mo', unit: '%', description: 'OS rate at 36 months' },
-  OS_RATE_48M: { key: 'OS_RATE_48M', label: 'OS Rate 48mo', unit: '%', description: 'OS rate at 48 months' },
+  OS_RATE_6M: { key: 'OS_RATE_6M', label: 'OS 6M', unit: '%', description: 'OS rate at 6 months' },
+  OS_RATE_9M: { key: 'OS_RATE_9M', label: 'OS 9M', unit: '%', description: 'OS rate at 9 months' },
+  OS_RATE_12M: { key: 'OS_RATE_12M', label: 'OS 12M', unit: '%', description: 'OS rate at 12 months' },
+  OS_RATE_18M: { key: 'OS_RATE_18M', label: 'OS 18M', unit: '%', description: 'OS rate at 18 months' },
+  OS_RATE_24M: { key: 'OS_RATE_24M', label: 'OS 24M', unit: '%', description: 'OS rate at 24 months' },
+  OS_RATE_36M: { key: 'OS_RATE_36M', label: 'OS 36M', unit: '%', description: 'OS rate at 36 months' },
+  OS_RATE_48M: { key: 'OS_RATE_48M', label: 'OS 48M', unit: '%', description: 'OS rate at 48 months' },
   
   // Other Survival Metrics
   EFS: { key: 'EFS', label: 'EFS', unit: 'months', description: 'Event-Free Survival' },
-  P_VALUE_EFS: { key: 'P_VALUE_EFS', label: 'p-value (EFS)', unit: '', description: 'p-value of EFS', lowerIsBetter: true },
+  P_VALUE_EFS: { key: 'P_VALUE_EFS', label: 'p (EFS)', unit: '', description: 'p-value of EFS', lowerIsBetter: true },
   HR_EFS: { key: 'HR_EFS', label: 'HR (EFS)', unit: '', description: 'Hazard Ratio for EFS', lowerIsBetter: true },
   RFS: { key: 'RFS', label: 'RFS', unit: 'months', description: 'Recurrence-Free Survival' },
-  P_VALUE_RFS: { key: 'P_VALUE_RFS', label: 'p-value (RFS)', unit: '', description: 'p-value of RFS', lowerIsBetter: true },
-  LENGTH_RFS: { key: 'LENGTH_RFS', label: 'RFS Follow-up', unit: 'months', description: 'Length of measuring RFS' },
+  P_VALUE_RFS: { key: 'P_VALUE_RFS', label: 'p (RFS)', unit: '', description: 'p-value of RFS', lowerIsBetter: true },
+  LENGTH_RFS: { key: 'LENGTH_RFS', label: 'RFS FU', unit: 'months', description: 'Length of measuring RFS' },
   HR_RFS: { key: 'HR_RFS', label: 'HR (RFS)', unit: '', description: 'Hazard Ratio for RFS', lowerIsBetter: true },
   MFS: { key: 'MFS', label: 'MFS', unit: 'months', description: 'Metastasis-Free Survival' },
-  LENGTH_MFS: { key: 'LENGTH_MFS', label: 'MFS Follow-up', unit: 'months', description: 'Length of measuring MFS' },
+  LENGTH_MFS: { key: 'LENGTH_MFS', label: 'MFS FU', unit: 'months', description: 'Length of measuring MFS' },
   HR_MFS: { key: 'HR_MFS', label: 'HR (MFS)', unit: '', description: 'Hazard Ratio for MFS', lowerIsBetter: true },
   
   // Time Metrics
@@ -175,39 +175,39 @@ export const EFFICACY_METRICS: Record<string, MetricConfig> = {
 // Safety metrics configuration - keys match backend AttributeType names
 export const SAFETY_METRICS: Record<string, MetricConfig> = {
   // General AE
-  AE: { key: 'AE', label: 'Any AE', unit: '%', description: 'Adverse Events', lowerIsBetter: true },
-  GRADE_3_PLUS_AE: { key: 'GRADE_3_PLUS_AE', label: 'Grade ≥3 AE', unit: '%', description: 'Grade 3+ Adverse Events', lowerIsBetter: true },
-  AE_LEADING_TO_DISCONTINUATION: { key: 'AE_LEADING_TO_DISCONTINUATION', label: 'AE Discontinuation', unit: '%', description: 'AE leading to discontinuation', lowerIsBetter: true },
-  SERIOUS_AE: { key: 'SERIOUS_AE', label: 'Serious AE', unit: '%', description: 'Serious Adverse Events', lowerIsBetter: true },
+  AE: { key: 'AE', label: 'AE', unit: '%', description: 'Adverse Events', lowerIsBetter: true },
+  GRADE_3_PLUS_AE: { key: 'GRADE_3_PLUS_AE', label: 'G3+ AE', unit: '%', description: 'Grade 3+ Adverse Events', lowerIsBetter: true },
+  AE_LEADING_TO_DISCONTINUATION: { key: 'AE_LEADING_TO_DISCONTINUATION', label: 'AE Disc', unit: '%', description: 'AE leading to discontinuation', lowerIsBetter: true },
+  SERIOUS_AE: { key: 'SERIOUS_AE', label: 'SAE', unit: '%', description: 'Serious Adverse Events', lowerIsBetter: true },
   IMMUNE_RELATED_AE: { key: 'IMMUNE_RELATED_AE', label: 'irAE', unit: '%', description: 'Immune-related AE', lowerIsBetter: true },
   SERIOUS_IMMUNE_RELATED_AE: { key: 'SERIOUS_IMMUNE_RELATED_AE', label: 'Serious irAE', unit: '%', description: 'Serious Immune-related AE', lowerIsBetter: true },
   AE_LEADING_TO_DEATH: { key: 'AE_LEADING_TO_DEATH', label: 'AE Death', unit: '%', description: 'AE leading to death', lowerIsBetter: true },
   
   // TEAE (Treatment-Emergent AE)
   TEAE: { key: 'TEAE', label: 'TEAE', unit: '%', description: 'Treatment-Emergent AE', lowerIsBetter: true },
-  GRADE_3_PLUS_TEAE: { key: 'GRADE_3_PLUS_TEAE', label: 'Grade ≥3 TEAE', unit: '%', description: 'Grade 3+ TEAE', lowerIsBetter: true },
-  GRADE_3_TEAE: { key: 'GRADE_3_TEAE', label: 'Grade 3 TEAE', unit: '%', description: 'Grade 3 TEAE', lowerIsBetter: true },
-  GRADE_4_TEAE: { key: 'GRADE_4_TEAE', label: 'Grade 4 TEAE', unit: '%', description: 'Grade 4 TEAE', lowerIsBetter: true },
-  GRADE_5_TEAE: { key: 'GRADE_5_TEAE', label: 'Grade 5 TEAE', unit: '%', description: 'Grade 5 TEAE', lowerIsBetter: true },
-  TEAE_LEADING_TO_DISCONTINUATION: { key: 'TEAE_LEADING_TO_DISCONTINUATION', label: 'TEAE Discontinuation', unit: '%', description: 'TEAE leading to discontinuation', lowerIsBetter: true },
+  GRADE_3_PLUS_TEAE: { key: 'GRADE_3_PLUS_TEAE', label: 'G3+ TEAE', unit: '%', description: 'Grade 3+ TEAE', lowerIsBetter: true },
+  GRADE_3_TEAE: { key: 'GRADE_3_TEAE', label: 'G3 TEAE', unit: '%', description: 'Grade 3 TEAE', lowerIsBetter: true },
+  GRADE_4_TEAE: { key: 'GRADE_4_TEAE', label: 'G4 TEAE', unit: '%', description: 'Grade 4 TEAE', lowerIsBetter: true },
+  GRADE_5_TEAE: { key: 'GRADE_5_TEAE', label: 'G5 TEAE', unit: '%', description: 'Grade 5 TEAE', lowerIsBetter: true },
+  TEAE_LEADING_TO_DISCONTINUATION: { key: 'TEAE_LEADING_TO_DISCONTINUATION', label: 'TEAE Disc', unit: '%', description: 'TEAE leading to discontinuation', lowerIsBetter: true },
   TEAE_LEADING_TO_DEATH: { key: 'TEAE_LEADING_TO_DEATH', label: 'TEAE Death', unit: '%', description: 'TEAE leading to death', lowerIsBetter: true },
-  SERIOUS_TEAE: { key: 'SERIOUS_TEAE', label: 'Serious TEAE', unit: '%', description: 'Serious TEAE', lowerIsBetter: true },
+  SERIOUS_TEAE: { key: 'SERIOUS_TEAE', label: 'STEAE', unit: '%', description: 'Serious TEAE', lowerIsBetter: true },
   TEAE_IMMUNE_RELATED: { key: 'TEAE_IMMUNE_RELATED', label: 'TEAE irAE', unit: '%', description: 'TEAE Immune-related AE', lowerIsBetter: true },
   
   // TRAE (Treatment-Related AE)
   TRAE: { key: 'TRAE', label: 'TRAE', unit: '%', description: 'Treatment-Related AE', lowerIsBetter: true },
-  GRADE_3_PLUS_TRAE: { key: 'GRADE_3_PLUS_TRAE', label: 'Grade ≥3 TRAE', unit: '%', description: 'Grade 3+ TRAE', lowerIsBetter: true },
-  GRADE_3_TRAE: { key: 'GRADE_3_TRAE', label: 'Grade 3 TRAE', unit: '%', description: 'Grade 3 TRAE', lowerIsBetter: true },
-  GRADE_4_TRAE: { key: 'GRADE_4_TRAE', label: 'Grade 4 TRAE', unit: '%', description: 'Grade 4 TRAE', lowerIsBetter: true },
-  GRADE_5_TRAE: { key: 'GRADE_5_TRAE', label: 'Grade 5 TRAE', unit: '%', description: 'Grade 5 TRAE', lowerIsBetter: true },
-  TRAE_LEADING_TO_DISCONTINUATION: { key: 'TRAE_LEADING_TO_DISCONTINUATION', label: 'TRAE Discontinuation', unit: '%', description: 'TRAE leading to discontinuation', lowerIsBetter: true },
+  GRADE_3_PLUS_TRAE: { key: 'GRADE_3_PLUS_TRAE', label: 'G3+ TRAE', unit: '%', description: 'Grade 3+ TRAE', lowerIsBetter: true },
+  GRADE_3_TRAE: { key: 'GRADE_3_TRAE', label: 'G3 TRAE', unit: '%', description: 'Grade 3 TRAE', lowerIsBetter: true },
+  GRADE_4_TRAE: { key: 'GRADE_4_TRAE', label: 'G4 TRAE', unit: '%', description: 'Grade 4 TRAE', lowerIsBetter: true },
+  GRADE_5_TRAE: { key: 'GRADE_5_TRAE', label: 'G5 TRAE', unit: '%', description: 'Grade 5 TRAE', lowerIsBetter: true },
+  TRAE_LEADING_TO_DISCONTINUATION: { key: 'TRAE_LEADING_TO_DISCONTINUATION', label: 'TRAE Disc', unit: '%', description: 'TRAE leading to discontinuation', lowerIsBetter: true },
   TRAE_LEADING_TO_DEATH: { key: 'TRAE_LEADING_TO_DEATH', label: 'TRAE Death', unit: '%', description: 'TRAE leading to death', lowerIsBetter: true },
   TRAE_IMMUNE_RELATED: { key: 'TRAE_IMMUNE_RELATED', label: 'TRAE irAE', unit: '%', description: 'TRAE Immune-related AE', lowerIsBetter: true },
-  SERIOUS_TRAE: { key: 'SERIOUS_TRAE', label: 'Serious TRAE', unit: '%', description: 'Serious TRAE', lowerIsBetter: true },
+  SERIOUS_TRAE: { key: 'SERIOUS_TRAE', label: 'STRAE', unit: '%', description: 'Serious TRAE', lowerIsBetter: true },
   
   // Specific AE Types
   CRS: { key: 'CRS', label: 'CRS', unit: '%', description: 'Cytokine Release Syndrome', lowerIsBetter: true },
-  WBC_DECREASED: { key: 'WBC_DECREASED', label: 'WBC Decreased', unit: '%', description: 'White Blood Cell Decreased', lowerIsBetter: true },
+  WBC_DECREASED: { key: 'WBC_DECREASED', label: 'WBC↓', unit: '%', description: 'White Blood Cell Decreased', lowerIsBetter: true },
   
   // Grade 3+ Specific AEs
   GRADE_3_PLUS_AE_CRS: { key: 'GRADE_3_PLUS_AE_CRS', label: 'G3+ CRS', unit: '%', description: 'Grade 3+ Cytokine Release Syndrome', lowerIsBetter: true },
@@ -347,6 +347,8 @@ export interface BubbleChartDataPoint {
   efficacy: number; // ORR or other efficacy metric (%)
   safety: number; // Grade 3+ TRAE or AE rate (%)
   numberOfPatients: number; // Determines bubble size
+  /** Z-axis value when Z is not NUMBER_OF_PATIENTS (e.g. HR_PFS, HR_OS) */
+  zValue?: number;
   approvalStatus?: ApprovalStatus;
   developmentStatus?: 'Approved' | 'Development stopped' | 'Investigational';
   nctNumber?: string;

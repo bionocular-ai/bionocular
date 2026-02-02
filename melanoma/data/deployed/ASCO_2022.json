@@ -91876,7 +91876,7 @@
               "extracted_at": "2025-11-11T18:13:19.369272"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
+              "value": "11",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
@@ -92770,7 +92770,7 @@
               "extracted_at": "2025-11-11T18:13:19.369312"
             },
             "AttributeType.NUMBER_OF_PATIENTS": {
-              "value": "Not found",
+              "value": "5",
               "confidence": 0.0,
               "source": "abstract_llm_extraction",
               "validation_status": "ValidationStatus.PENDING",
