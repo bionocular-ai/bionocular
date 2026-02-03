@@ -1591,7 +1591,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant-Adjuvant Pembrolizumab",
+          "arm_name": "Pembrolizumab",
           "total_attributes": 31,
           "api_attributes": 16,
           "abstract_attributes": 15,
@@ -3176,7 +3176,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Adjuvant Pembrolizumab",
+          "arm_name": "Pembrolizumab",
           "total_attributes": 30,
           "api_attributes": 16,
           "abstract_attributes": 14,
@@ -9458,7 +9458,7 @@
       "arm_results": {
         "arm_A": {
           "arm_id": "arm_A",
-          "arm_name": "Adjuvant Nivolumab",
+          "arm_name": "Nivolumab",
           "total_attributes": 33,
           "api_attributes": 15,
           "abstract_attributes": 18,
@@ -10990,7 +10990,7 @@
         },
         "arm_B": {
           "arm_id": "arm_B",
-          "arm_name": "Adjuvant Nivolumab",
+          "arm_name": "Nivolumab",
           "total_attributes": 30,
           "api_attributes": 13,
           "abstract_attributes": 17,
@@ -12522,7 +12522,7 @@
         },
         "arm_C": {
           "arm_id": "arm_C",
-          "arm_name": "Adjuvant Ipilimumab + Nivolumab",
+          "arm_name": "Ipilimumab + Nivolumab",
           "total_attributes": 33,
           "api_attributes": 15,
           "abstract_attributes": 18,
@@ -18810,7 +18810,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Adjuvant anti-PD-1 immunotherapy",
+          "arm_name": "anti-PD-1 immunotherapy",
           "total_attributes": 12,
           "api_attributes": 0,
           "abstract_attributes": 12,
@@ -37693,7 +37693,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "2x NIVO mono q3w",
+          "arm_name": "Nivolumab",
           "total_attributes": 27,
           "api_attributes": 15,
           "abstract_attributes": 12,
@@ -37943,7 +37943,7 @@
               "source": "abstract_llm_extraction"
             },
             "number_of_patients": {
-              "value": "Not found",
+              "value": "10",
               "confidence": 0.0,
               "validation_status": "pending",
               "source_chunks": [
@@ -39246,7 +39246,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "2x NIVO q3w + 6 weeks of DOM twice daily",
+          "arm_name": "Nivolumab + Domatinostat BID",
           "total_attributes": 27,
           "api_attributes": 15,
           "abstract_attributes": 12,
@@ -39496,7 +39496,7 @@
               "source": "abstract_llm_extraction"
             },
             "number_of_patients": {
-              "value": "Not found",
+              "value": "10",
               "confidence": 0.0,
               "validation_status": "pending",
               "source_chunks": [
@@ -40799,7 +40799,7 @@
         },
         "arm_3": {
           "arm_id": "arm_3",
-          "arm_name": "2x NIVO + IPI q3w + 6 weeks of DOM once daily",
+          "arm_name": "Nivolumab + Ipilimumab + Domatinostat QD",
           "total_attributes": 27,
           "api_attributes": 15,
           "abstract_attributes": 12,
@@ -41049,7 +41049,7 @@
               "source": "abstract_llm_extraction"
             },
             "number_of_patients": {
-              "value": "Not found",
+              "value": "10",
               "confidence": 0.0,
               "validation_status": "pending",
               "source_chunks": [
@@ -42363,7 +42363,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant Ipilimumab + Nivolumab",
+          "arm_name": "Ipilimumab + Nivolumab",
           "total_attributes": 28,
           "api_attributes": 14,
           "abstract_attributes": 14,
@@ -43915,7 +43915,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Adjuvant Nivolumab",
+          "arm_name": "Nivolumab",
           "total_attributes": 28,
           "api_attributes": 14,
           "abstract_attributes": 14,
@@ -45478,7 +45478,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant Pembrolizumab",
+          "arm_name": "Pembrolizumab",
           "total_attributes": 14,
           "api_attributes": 0,
           "abstract_attributes": 14,
@@ -48613,7 +48613,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant Ipilimumab + Nivolumab",
+          "arm_name": "Ipilimumab + Nivolumab",
           "total_attributes": 11,
           "api_attributes": 0,
           "abstract_attributes": 11,
@@ -50120,7 +50120,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Adjuvant Nivolumab",
+          "arm_name": "Nivolumab",
           "total_attributes": 11,
           "api_attributes": 0,
           "abstract_attributes": 11,
@@ -54795,7 +54795,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "NIVO3+IPI1",
+          "arm_name": "Nivolumab 3 mg/kg + Ipilimumab 1 mg/kg",
           "total_attributes": 21,
           "api_attributes": 0,
           "abstract_attributes": 21,
@@ -56377,7 +56377,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "NIVO1+IPI3",
+          "arm_name": "Nivolumab 1 mg/kg + Ipilimumab 3 mg/kg",
           "total_attributes": 16,
           "api_attributes": 0,
           "abstract_attributes": 16,
@@ -61118,7 +61118,7 @@
         },
         "arm_3": {
           "arm_id": "arm_3",
-          "arm_name": "Quavonlimab/Pembrolizumab",
+          "arm_name": "Quavonlimab + Pembrolizumab",
           "total_attributes": 33,
           "api_attributes": 15,
           "abstract_attributes": 18,
@@ -71746,7 +71746,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Weight-Adjusted Dose Pembrolizumab",
+          "arm_name": "Pembrolizumab (Weight-Adjusted Dose)",
           "total_attributes": 29,
           "api_attributes": 14,
           "abstract_attributes": 15,
@@ -73262,7 +73262,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Flat Dose Pembrolizumab",
+          "arm_name": "Pembrolizumab (Flat Dose)",
           "total_attributes": 27,
           "api_attributes": 14,
           "abstract_attributes": 13,
@@ -87366,7 +87366,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "ICI Monotherapy",
+          "arm_name": "ICI",
           "total_attributes": 8,
           "api_attributes": 0,
           "abstract_attributes": 8,
@@ -99902,7 +99902,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Anti-PD-1 Monotherapy",
+          "arm_name": "Anti-PD-1",
           "total_attributes": 12,
           "api_attributes": 0,
           "abstract_attributes": 12,
@@ -122996,7 +122996,7 @@
               "source": "abstract_extraction"
             },
             "nct_number": {
-              "value": "Not found",
+              "value": "HS-IT101ST01-I 2024-03-19",
               "confidence": 0.0,
               "validation_status": "pending",
               "source_chunks": [
@@ -130654,7 +130654,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant + Adjuvant Cemiplimab",
+          "arm_name": "Cemiplimab",
           "total_attributes": 29,
           "api_attributes": 15,
           "abstract_attributes": 14,
@@ -132232,7 +132232,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Neoadjuvant Cemiplimab",
+          "arm_name": "Cemiplimab",
           "total_attributes": 30,
           "api_attributes": 15,
           "abstract_attributes": 15,
@@ -157297,7 +157297,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "BNCT using CICS-1 and SPM-011",
+          "arm_name": "BNCT (CICS-1 + SPM-011)",
           "total_attributes": 26,
           "api_attributes": 15,
           "abstract_attributes": 11,
@@ -158767,7 +158767,7 @@
               "source": "abstract_extraction"
             },
             "nct_number": {
-              "value": "Not found",
+              "value": "jRCT2031210436",
               "confidence": 0.0,
               "validation_status": "pending",
               "source_chunks": [
@@ -161766,7 +161766,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "PD-1 antibody monotherapy",
+          "arm_name": "PD-1 antibody",
           "total_attributes": 14,
           "api_attributes": 0,
           "abstract_attributes": 14,
@@ -166427,7 +166427,7 @@
               "source": "abstract_extraction"
             },
             "nct_number": {
-              "value": "Not found",
+              "value": "ChiCTR2200055931",
               "confidence": 0.0,
               "validation_status": "pending",
               "source_chunks": [
@@ -167923,7 +167923,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "PD-1 inhibitor monotherapy",
+          "arm_name": "PD-1 inhibitor",
           "total_attributes": 13,
           "api_attributes": 0,
           "abstract_attributes": 13,
@@ -190110,7 +190110,7 @@
               "source": "abstract_extraction"
             },
             "nct_number": {
-              "value": "Not found",
+              "value": "NL20542",
               "confidence": 0.0,
               "validation_status": "pending",
               "source_chunks": [
@@ -212408,7 +212408,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "Neoadjuvant cemiplimab with response-adapted treatment",
+          "arm_name": "Cemiplimab (Response-Adapted)",
           "total_attributes": 30,
           "api_attributes": 17,
           "abstract_attributes": 13,
@@ -213713,7 +213713,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "Adjuvant Quisinostat",
+          "arm_name": "Quisinostat",
           "total_attributes": 25,
           "api_attributes": 15,
           "abstract_attributes": 10,
@@ -216323,7 +216323,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "IMA203",
+          "arm_name": "IMA203 TCR T-cells",
           "total_attributes": 29,
           "api_attributes": 17,
           "abstract_attributes": 12,

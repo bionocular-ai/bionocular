@@ -17,7 +17,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "PH-762 (cSCC)",
+          "arm_name": "PH-762",
           "cancer_type_specific": "Cutaneous Squamous Cell Carcinoma",
           "total_attributes": 20,
           "attributes": {
@@ -104,18 +104,6 @@
               "confidence": 1.0,
               "notes": "2 patients with >50% clearance"
             },
-            "AttributeType.AE": {
-              "value": "0",
-              "source": "web_scrape",
-              "confidence": 1.0,
-              "notes": "No clinically relevant treatment-emergent adverse effects"
-            },
-            "AttributeType.GRADE_3_PLUS_AE": {
-              "value": "0",
-              "source": "web_scrape",
-              "confidence": 1.0,
-              "notes": "No dose-limiting toxicities"
-            },
             "administration_route": {
               "value": "Intratumoral injection",
               "source": "web_scrape",
@@ -130,7 +118,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "PH-762 (Merkel Cell Carcinoma)",
+          "arm_name": "PH-762",
           "cancer_type_specific": "Merkel Cell Carcinoma",
           "total_attributes": 18,
           "attributes": {
@@ -205,18 +193,6 @@
               "confidence": 1.0,
               "notes": "1 patient with >50% clearance"
             },
-            "AttributeType.AE": {
-              "value": "0",
-              "source": "web_scrape",
-              "confidence": 1.0,
-              "notes": "No clinically relevant treatment-emergent adverse effects"
-            },
-            "AttributeType.GRADE_3_PLUS_AE": {
-              "value": "0",
-              "source": "web_scrape",
-              "confidence": 1.0,
-              "notes": "No dose-limiting toxicities"
-            },
             "administration_route": {
               "value": "Intratumoral injection",
               "source": "web_scrape",
@@ -231,8 +207,8 @@
         },
         "arm_3": {
           "arm_id": "arm_3",
-          "arm_name": "PH-762 (Melanoma Stage 4)",
-          "cancer_type_specific": "Cutaneous melanoma with Brain/CNS metastasis",
+          "arm_name": "PH-762",
+          "cancer_type_specific": "Cutaneous melanoma",
           "total_attributes": 17,
           "attributes": {
             "AttributeType.NCT_NUMBER": {
@@ -307,18 +283,6 @@
               "confidence": 1.0,
               "notes": "<50% clearance"
             },
-            "AttributeType.AE": {
-              "value": "0",
-              "source": "web_scrape",
-              "confidence": 1.0,
-              "notes": "No clinically relevant treatment-emergent adverse effects"
-            },
-            "AttributeType.GRADE_3_PLUS_AE": {
-              "value": "0",
-              "source": "web_scrape",
-              "confidence": 1.0,
-              "notes": "No dose-limiting toxicities"
-            },
             "administration_route": {
               "value": "Intratumoral injection",
               "source": "web_scrape",
@@ -362,7 +326,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "WTX-124 Monotherapy (Melanoma Post-ICI)",
+          "arm_name": "WTX-124",
           "cancer_type_specific": "Cutaneous melanoma",
           "total_attributes": 19,
           "attributes": {
@@ -439,7 +403,7 @@
               "confidence": 1.0,
               "notes": "ORR in non-primary resistant patients (prior response to any immunotherapy)"
             },
-            "AttributeType.GRADE_3_PLUS_TEAE": {
+            "AttributeType.GRADE_3_TEAE": {
               "value": "25.5",
               "source": "web_scrape",
               "confidence": 1.0,
@@ -450,6 +414,12 @@
               "source": "web_scrape",
               "confidence": 1.0,
               "notes": "Grade 4 related TEAEs: 2/106 patients"
+            },
+            "AttributeType.GRADE_3_PLUS_TEAE": {
+              "value": "27.4",
+              "source": "web_scrape",
+              "confidence": 1.0,
+              "notes": "Grade 3 TEAEs (25.5%) and Grade 4 TEAEs (1.9%)"
             },
             "administration_route": {
               "value": "Intravenous (IV)",
@@ -472,7 +442,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "WTX-124 + Pembrolizumab (Melanoma)",
+          "arm_name": "WTX-124 + Pembrolizumab",
           "cancer_type_specific": "Cutaneous melanoma",
           "total_attributes": 18,
           "attributes": {
@@ -532,7 +502,7 @@
               "confidence": 1.0,
               "notes": "Objective, durable responses observed"
             },
-            "AttributeType.GRADE_3_PLUS_TEAE": {
+            "AttributeType.GRADE_3_TEAE": {
               "value": "25.5",
               "source": "web_scrape",
               "confidence": 0.8,
@@ -543,6 +513,12 @@
               "source": "web_scrape",
               "confidence": 0.8,
               "notes": "Overall trial Grade 4 related TEAEs (across all arms)"
+            },
+            "AttributeType.GRADE_3_PLUS_TEAE": {
+              "value": "27.4",
+              "source": "web_scrape",
+              "confidence": 1.0,
+              "notes": "Grade 3 TEAEs (25.5%) and Grade 4 TEAEs (1.9%)"
             },
             "administration_route": {
               "value": "Intravenous (IV)",
@@ -569,7 +545,7 @@
         },
         "arm_3": {
           "arm_id": "arm_3",
-          "arm_name": "WTX-124 Monotherapy (cSCC Post-ICI)",
+          "arm_name": "WTX-124",
           "cancer_type_specific": "Cutaneous Squamous Cell Carcinoma",
           "total_attributes": 17,
           "attributes": {
@@ -634,11 +610,17 @@
               "confidence": 1.0,
               "notes": "Objective, durable responses observed"
             },
-            "AttributeType.GRADE_3_PLUS_TEAE": {
+            "AttributeType.GRADE_3_TEAE": {
               "value": "25.5",
               "source": "web_scrape",
               "confidence": 0.8,
               "notes": "Overall trial Grade 3 related TEAEs"
+            },
+            "AttributeType.GRADE_3_PLUS_TEAE": {
+              "value": "27.4",
+              "source": "web_scrape",
+              "confidence": 1.0,
+              "notes": "Grade 3 TEAEs (25.5%) and Grade 4 TEAEs (1.9%)"
             },
             "administration_route": {
               "value": "Intravenous (IV)",
@@ -699,7 +681,10 @@
     },
     {
       "trial_id": "AMT-253",
-      "nct_numbers": ["NCT05906862", "NCT06209580"],
+      "nct_numbers": [
+        "NCT05906862",
+        "NCT06209580"
+      ],
       "source_url": "https://en.multitudetherapeutics.com/12/17/news-20251217/",
       "web_scrape_timestamp": "2026-01-19T00:00:00Z",
       "total_arms": 1,
@@ -711,7 +696,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "AMT-253 Monotherapy (First-Line Melanoma)",
+          "arm_name": "AMT-253",
           "cancer_type_specific": "Cutaneous melanoma",
           "total_attributes": 27,
           "attributes": {
@@ -950,7 +935,7 @@
       "arm_results": {
         "arm_1": {
           "arm_id": "arm_1",
-          "arm_name": "MDNA11 Monotherapy (Melanoma - Secondary Checkpoint-Resistant)",
+          "arm_name": "MDNA11",
           "cancer_type_specific": "Cutaneous melanoma",
           "total_attributes": 24,
           "attributes": {
@@ -1052,7 +1037,7 @@
               "notes": "6/8 patients (1 CR, 2 PR, 3 SD)"
             },
             "AttributeType.MEDIAN_OS": {
-              "value": "120.2",
+              "value": "28",
               "source": "web_scrape",
               "confidence": 0.8,
               "notes": "120.2 weeks (~28 months) for monotherapy patients with disease control"
@@ -1090,7 +1075,7 @@
         },
         "arm_2": {
           "arm_id": "arm_2",
-          "arm_name": "MDNA11 + Pembrolizumab (Melanoma - Primary ICI Resistance)",
+          "arm_name": "MDNA11 + Pembrolizumab",
           "cancer_type_specific": "Cutaneous melanoma",
           "total_attributes": 23,
           "attributes": {
@@ -1328,4 +1313,3 @@
     }
   ]
 }
-
