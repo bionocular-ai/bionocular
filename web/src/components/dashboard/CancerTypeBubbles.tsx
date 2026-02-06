@@ -41,10 +41,14 @@ function calculateBubbleSize(
   let minSize: number;
   let maxSize: number;
   
-  if (screenWidth < 640) {
+  if (screenWidth < 375) {
+    // Extra small mobile (very small phones)
+    minSize = 60;
+    maxSize = 120;
+  } else if (screenWidth < 640) {
     // Small mobile (phones)
     minSize = 70;
-    maxSize = 140;
+    maxSize = 135;
   } else if (screenWidth < 768) {
     // Large mobile
     minSize = 80;
@@ -221,8 +225,19 @@ export function CancerTypeBubbles({ stats }: CancerTypeBubblesProps) {
     };
     
     updateScreenSize();
-    window.addEventListener('resize', updateScreenSize);
-    return () => window.removeEventListener('resize', updateScreenSize);
+    
+    // Use ResizeObserver for better performance
+    let timeoutId: NodeJS.Timeout;
+    const debouncedResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateScreenSize, 150);
+    };
+    
+    window.addEventListener('resize', debouncedResize);
+    return () => {
+      window.removeEventListener('resize', debouncedResize);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   // Handle empty stats
@@ -240,54 +255,62 @@ export function CancerTypeBubbles({ stats }: CancerTypeBubblesProps) {
   const maxBubbleSize = Math.max(...stats.map(s => s.bubble_size), 1);
   const uniformGradient = getUniformGradient();
 
-  // Mobile layout: vertical stack (for screens < 768px)
+  // Mobile layout: grid layout for better space usage (for screens < 768px)
   if (isMobile) {
     return (
-      <div className="w-full flex flex-col items-center gap-3 py-4 px-2 overflow-y-auto">
-        {sortedStats.map((stat) => {
-          const size = calculateBubbleSize(stat.bubble_size, maxBubbleSize, screenWidth);
-          return (
-            <Link
-              key={stat.cancer_type}
-              href={`/dashboard/${categoryToSlug(stat.cancer_type)}/disease-landscape`}
-              className="group cursor-pointer transition-all duration-300 hover:scale-105"
-            >
-              <div
-                className={`rounded-full bg-gradient-to-br ${uniformGradient} shadow-2xl transition-all duration-300 group-hover:shadow-3xl flex items-center justify-center border-2 border-white/40 backdrop-blur-sm`}
-                style={{
-                  width: `${size}px`,
-                  height: `${size}px`,
-                }}
+      <div className="w-full h-full overflow-y-auto overflow-x-hidden py-2 px-1 sm:px-2 -webkit-overflow-scrolling-touch">
+        <div className="grid grid-cols-2 gap-2 min-[400px]:gap-3 sm:gap-4 place-items-center max-w-md mx-auto pb-4">
+          {sortedStats.map((stat) => {
+            const size = calculateBubbleSize(stat.bubble_size, maxBubbleSize, screenWidth);
+            const maxTextLength = screenWidth < 375 ? 14 : screenWidth < 400 ? 15 : 18;
+            return (
+              <Link
+                key={stat.cancer_type}
+                href={`/dashboard/${categoryToSlug(stat.cancer_type)}/disease-landscape`}
+                className="group cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
               >
-                <div className="text-white font-bold text-center px-3">
-                  <div className="text-sm leading-tight drop-shadow-lg">
-                    {formatCancerTypeName(stat.cancer_type, 18)}
+                <div
+                  className={`rounded-full bg-gradient-to-br ${uniformGradient} shadow-lg transition-all duration-300 group-hover:shadow-xl active:shadow-md flex items-center justify-center border-2 border-white/40 backdrop-blur-sm`}
+                  style={{
+                    width: `${size}px`,
+                    height: `${size}px`,
+                  }}
+                >
+                  <div className="text-white font-bold text-center px-1.5 sm:px-2">
+                    <div className="text-[10px] min-[400px]:text-xs sm:text-sm leading-tight drop-shadow-lg" style={{ lineHeight: '1.2' }}>
+                      {formatCancerTypeName(stat.cancer_type, maxTextLength)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Link>
-          );
-        })}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
   // Desktop/Tablet layout: tightly packed bubble arrangement
   // Calculate container dimensions to fit all bubbles within viewport
-  // Account for header + title section + padding
-  const headerSpace = 64;
-  const titleSpace = screenWidth < 1024 ? 100 : 130;
-  const bottomPadding = 40;
-  const sidePadding = screenWidth < 1024 ? 40 : 80;
+  // Account for header + title section + padding with responsive values
+  const headerSpace = screenWidth < 1024 ? 56 : 64;
+  const titleSpace = screenWidth < 768 ? 80 : screenWidth < 1024 ? 100 : 130;
+  const bottomPadding = screenWidth < 1024 ? 20 : 40;
+  const sidePadding = screenWidth < 1024 ? 24 : 80;
   
-  // Calculate available space with proper bounds
+  // Calculate available space with proper bounds and responsive sizing
+  const minHeight = screenWidth < 1024 ? 350 : 400;
+  const maxHeight = screenWidth < 1024 ? 700 : 900;
   const availableHeight = Math.max(
-    400, 
-    Math.min(900, screenHeight - headerSpace - titleSpace - bottomPadding)
+    minHeight, 
+    Math.min(maxHeight, screenHeight - headerSpace - titleSpace - bottomPadding)
   );
+  
+  const minWidth = screenWidth < 1024 ? 500 : 600;
+  const maxWidth = screenWidth < 1024 ? 900 : 1200;
   const availableWidth = Math.max(
-    600, 
-    Math.min(1200, screenWidth - sidePadding)
+    minWidth, 
+    Math.min(maxWidth, screenWidth - sidePadding)
   );
   
   // Calculate sizes for all bubbles
@@ -339,7 +362,7 @@ export function CancerTypeBubbles({ stats }: CancerTypeBubblesProps) {
   }));
   
   return (
-    <div className="w-full flex items-center justify-center py-2 px-2 overflow-hidden">
+    <div className="w-full h-full flex items-center justify-center py-1 sm:py-2 px-2 overflow-hidden">
       <div 
         className="relative mx-auto" 
         style={{ 
@@ -351,14 +374,18 @@ export function CancerTypeBubbles({ stats }: CancerTypeBubblesProps) {
       >
         {scaledBubbles.map((bubble, index) => {
           const position = centeredPositions[index];
-          // Calculate font size based on bubble size
-          const fontSize = Math.max(10, Math.min(16, bubble.size / 10));
+          // Calculate font size based on bubble size and screen width
+          const baseFontSize = bubble.size / 10;
+          const fontSize = Math.max(
+            screenWidth < 1024 ? 9 : 10, 
+            Math.min(screenWidth < 1024 ? 14 : 16, baseFontSize)
+          );
           
           return (
             <Link
               key={bubble.stat.cancer_type}
               href={`/dashboard/${categoryToSlug(bubble.stat.cancer_type)}/disease-landscape`}
-              className="absolute group cursor-pointer transition-all duration-300 hover:scale-110 hover:z-20"
+              className="absolute group cursor-pointer transition-all duration-300 hover:scale-110 hover:z-20 active:scale-105"
               style={{
                 left: `${position.x}px`,
                 top: `${position.y}px`,
@@ -366,13 +393,16 @@ export function CancerTypeBubbles({ stats }: CancerTypeBubblesProps) {
               }}
             >
               <div
-                className={`rounded-full bg-gradient-to-br ${uniformGradient} shadow-xl transition-all duration-300 group-hover:shadow-3xl flex items-center justify-center border-2 border-white/40 backdrop-blur-sm`}
+                className={`rounded-full bg-gradient-to-br ${uniformGradient} shadow-lg sm:shadow-xl transition-all duration-300 group-hover:shadow-2xl flex items-center justify-center border-2 border-white/40 backdrop-blur-sm`}
                 style={{
                   width: `${bubble.size}px`,
                   height: `${bubble.size}px`,
                 }}
               >
-                <div className="text-white font-semibold text-center px-2" style={{ fontSize: `${fontSize}px` }}>
+                <div 
+                  className="text-white font-semibold text-center px-1 sm:px-2" 
+                  style={{ fontSize: `${fontSize}px`, lineHeight: '1.2' }}
+                >
                   <div className="leading-tight drop-shadow-md">
                     {formatCancerTypeName(bubble.stat.cancer_type, screenWidth < 1024 ? 18 : 22)}
                   </div>

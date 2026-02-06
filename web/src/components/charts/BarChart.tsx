@@ -322,8 +322,26 @@ export default function BarChart({
   const [tooltipData, setTooltipData] = useState<TooltipData | null>(null);
   const [isPinned, setIsPinned] = useState(false);
   const [pinnedDotId, setPinnedDotId] = useState<string | null>(null);
+  const [containerDims, setContainerDims] = useState<{width: number; height: number}>({ width: 400, height: 300 });
   const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isHoveringRef = useRef(false);
+
+  // Use ResizeObserver to track actual dimensions
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setContainerDims({ width, height });
+        }
+      }
+    });
+
+    observer.observe(chartContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Clear tooltip after a delay if not hovering and not pinned
   const scheduleHideTooltip = useCallback(() => {
@@ -775,7 +793,7 @@ export default function BarChart({
           tabIndex={-1}
           style={{ WebkitTapHighlightColor: 'transparent' }}
         >
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <RechartsBarChart data={data} margin={margin}>
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -914,7 +932,7 @@ export default function BarChart({
           onMouseLeave={handleChartMouseLeave} 
           tabIndex={-1}
         >
-          <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <RechartsBarChart data={data} margin={margin}>
               <CartesianGrid
                 strokeDasharray="3 3"

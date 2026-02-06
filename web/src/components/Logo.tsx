@@ -7,14 +7,18 @@ interface LogoProps {
   className?: string;
 }
 
-export function Logo({ height = 36, className = '' }: LogoProps) {
+export function Logo({ height = 32, className = '' }: LogoProps) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- Intentional: unoptimized, fixed aspect via height
     <img
       src="/logo.png"
       alt="Bionocular Logo"
-      className={`object-contain flex-shrink-0 ${className}`}
-      style={{ height: `${height}px`, width: 'auto' }}
+      className={`object-contain flex-shrink-0 responsive-logo ${className}`}
+      style={{ 
+        '--logo-height': `${height}px`,
+        height: `var(--logo-height)`,
+        width: 'auto' 
+      } as React.CSSProperties}
     />
   );
 }

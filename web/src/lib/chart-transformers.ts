@@ -17,8 +17,13 @@ import {
 } from '@/types/analytics';
 
 // ============================================================================
-// Approved Treatments Lookup (for approval status classification)
+// Approved Treatments Lookup (DEPRECATED - now handled by backend)
 // ============================================================================
+// NOTE: Approval status is now determined by the backend using indication-specific
+// classification. The backend adds an "approvalStatus" field to each arm.
+// This hardcoded list is kept only for backward compatibility with old data.
+// 
+// See: melanoma/src/app/approval_status_service.py
 
 const APPROVED_TREATMENTS = new Set([
   'pembrolizumab',
@@ -201,8 +206,22 @@ function normalizeTreatmentName(name: string): string {
 
 /**
  * Determine approval status based on treatment name
+ * DEPRECATED: Prefer using approval_status from backend when available
+ * 
+ * @param treatmentName - Name of the treatment
+ * @param backendStatus - Approval status from backend (if available)
+ * @returns Approval status
  */
-function getApprovalStatus(treatmentName: string): ApprovalStatus {
+function getApprovalStatus(treatmentName: string, backendStatus?: string): ApprovalStatus {
+  // Prefer backend status if available (indication-specific, more accurate)
+  if (backendStatus) {
+    // Normalize backend status values
+    const normalized = backendStatus.toLowerCase();
+    if (normalized === 'approved') return 'Approved';
+    if (normalized === 'investigational' || normalized === 'control') return 'Investigational';
+  }
+  
+  // Fallback to old logic for backward compatibility
   const normalized = treatmentName.toLowerCase();
   
   // Check if any approved treatment is in the name
@@ -357,6 +376,10 @@ export function transformHeadToHeadData(
         group.patients.push(patientCount);
       }
       
+      // Get approval status from arm data if available (backend)
+      // Backend returns "Approved", "Investigational", "Control", or "Unknown"
+      const armApprovalStatus = arm.approval_status as ApprovalStatus | undefined;
+      
       group.trials.push({
         studyId,
         abstractId,
@@ -369,6 +392,7 @@ export function transformHeadToHeadData(
         nctNumber,
         numberOfPatients: patientCount,
         sourceUrl: trial.source_url || '',
+        approvalStatus: armApprovalStatus, // Backend approval status if available
       });
     }
   }
@@ -415,9 +439,12 @@ export function transformHeadToHeadData(
     const sum = values.reduce((a, b) => a + b, 0);
     const totalPatients = group.patients.reduce((a, b) => a + b, 0);
 
+    // Get approval status from first trial (backend) or fall back to name-based logic
+    const backendApprovalStatus = group.trials[0]?.approvalStatus;
+    
     result.push({
       treatmentName,
-      approvalStatus: getApprovalStatus(treatmentName),
+      approvalStatus: getApprovalStatus(treatmentName, backendApprovalStatus),
       averageValue: sum / values.length,
       medianValue: calculateMedian(values),
       minValue: Math.min(...values),
@@ -568,6 +595,7 @@ export function transformEfficacySafetyData(
     publicationName?: string;
     citation?: string;
     phase?: string;
+    approvalStatus?: string;
   }> = [];
 
   const grouped = new Map<string, {
@@ -619,6 +647,9 @@ export function transformEfficacySafetyData(
       const conference = extractStringValue(getAttribute(arm.attributes, 'CONFERENCE'));
       const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS'));
 
+      // Get approval status from arm data if available (backend)
+      const armApprovalStatus = arm.approval_status;
+      
       individualTrials.push({
         treatmentName,
         efficacy: efficacyValue,
@@ -630,6 +661,7 @@ export function transformEfficacySafetyData(
         publicationName: publicationName || undefined,
         citation: `${conference} ${yearStr}`,
         phase: phase || undefined,
+        approvalStatus: armApprovalStatus, // Backend approval status if available
       });
 
       if (!grouped.has(treatmentName)) {
@@ -699,9 +731,12 @@ export function transformEfficacySafetyData(
       return a.safety - b.safety;
     });
 
+    // Get approval status from first trial (backend) or fall back to name-based logic
+    const backendApprovalStatus = allTrials[0]?.approvalStatus;
+    
     result.push({
       treatmentName,
-      approvalStatus: getApprovalStatus(treatmentName),
+      approvalStatus: getApprovalStatus(treatmentName, backendApprovalStatus),
       efficacy: avgEfficacy,
       safety: avgSafety,
       numberOfPatients: totalPatients > 0 ? totalPatients : undefined,
@@ -786,10 +821,14 @@ export function transformBubbleChartData(
         ? (extractNumericValue(getAttribute(arm.attributes, zMetric)) ?? undefined)
         : undefined;
 
+      // Get approval status from backend if available
+      const armApprovalStatus = arm.approval_status;
+      const finalApprovalStatus = getApprovalStatus(treatmentName, armApprovalStatus);
+
       result.push({
         treatmentName,
-        approvalStatus: getApprovalStatus(treatmentName),
-        developmentStatus: getApprovalStatus(treatmentName) === 'Approved' ? 'Approved' : 'Investigational',
+        approvalStatus: finalApprovalStatus,
+        developmentStatus: finalApprovalStatus === 'Approved' ? 'Approved' : 'Investigational',
         efficacy: efficacyValue,
         safety: safetyValue,
         numberOfPatients: patientCount,

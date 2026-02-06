@@ -1020,7 +1020,7 @@ export default function CategoryAnalyticsPage() {
           <div className="flex items-center justify-between h-14 gap-4">
             <div className="flex items-center gap-4">
               <Link href="/" className="brand flex-shrink-0">
-                <Logo height={36} />
+                <Logo height={32} />
                 <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
               </Link>
             </div>
@@ -1837,7 +1837,7 @@ export default function CategoryAnalyticsPage() {
           <div className="border-b border-slate-200 bg-white shadow-sm flex-shrink-0">
             <div className="px-6 py-3 flex items-center justify-between">
               <Link href="/" className="brand flex-shrink-0">
-                <Logo height={36} />
+                <Logo height={32} />
                 <span className="brand-text text-base">bi<span className="brand-o">o</span>nocular</span>
               </Link>
               <div className="flex items-center gap-3">

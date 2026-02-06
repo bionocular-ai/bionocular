@@ -1,217 +1,193 @@
-"""Cancer type normalization utility.
+"""Cancer type normalization for pipeline.
 
-This module provides functions to normalize various cancer type variations
-to the 10 main skin cancer categories used for filtering and categorization.
+This module normalizes various cancer type names to the standard 8 categories
+used in the bionocular pipeline.
 """
 
+from typing import Optional
 
-# The 10 main skin cancer categories
-MAIN_CANCER_TYPES = [
-    "Resected Cutaneous Melanoma",
-    "Unresectable Cutaneous Melanoma",
-    "Cutaneous melanoma with Brain metastasis",
-    "Cutaneous Melanoma with CNS metastasis",
-    "Uveal Melanoma",
-    "Mucosal Melanoma",
-    "Acral Melanoma",
+# Standard cancer types in the pipeline
+STANDARD_CANCER_TYPES = [
     "Basal Cell Carcinoma",
-    "Merkel Cell Carcinoma",
     "Cutaneous Squamous Cell Carcinoma",
+    "Cutaneous melanoma",
+    "Uveal Melanoma",
+    "Merkel Cell Carcinoma",
+    "Acral Melanoma",
+    "Mucosal Melanoma",
+    "Cutaneous melanoma with Brain/CNS metastasis",
 ]
 
+# Mapping from various names to standard names
+CANCER_TYPE_MAPPING = {
+    # Basal Cell Carcinoma
+    "basal cell carcinoma": "Basal Cell Carcinoma",
+    "bcc": "Basal Cell Carcinoma",
+    # Cutaneous Squamous Cell Carcinoma
+    "cutaneous squamous cell carcinoma": "Cutaneous Squamous Cell Carcinoma",
+    "cscc": "Cutaneous Squamous Cell Carcinoma",
+    "squamous cell carcinoma": "Cutaneous Squamous Cell Carcinoma",
+    # Cutaneous melanoma - ALL variants map to the same category
+    "cutaneous melanoma": "Cutaneous melanoma",
+    "resected cutaneous melanoma": "Cutaneous melanoma",
+    "unresectable cutaneous melanoma": "Cutaneous melanoma",
+    "unresectable or metastatic cutaneous melanoma": "Cutaneous melanoma",
+    "unresectable or metastatic melanoma": "Cutaneous melanoma",
+    "advanced cutaneous melanoma": "Cutaneous melanoma",
+    "metastatic melanoma": "Cutaneous melanoma",
+    "metastatic cutaneous melanoma": "Cutaneous melanoma",
+    "advanced melanoma": "Cutaneous melanoma",
+    "melanoma": "Cutaneous melanoma",
+    "cutaneous malignant melanoma": "Cutaneous melanoma",
+    # Uveal Melanoma
+    "uveal melanoma": "Uveal Melanoma",
+    "uveal / mucosal / acral melanoma": "Uveal Melanoma",  # Mixed, defaulting to first
+    # Merkel Cell Carcinoma
+    "merkel cell carcinoma": "Merkel Cell Carcinoma",
+    "mcc": "Merkel Cell Carcinoma",
+    # Acral Melanoma
+    "acral melanoma": "Acral Melanoma",
+    "acral melanoma, mucosal melanoma, unresectable cutaneous melanoma": "Acral Melanoma",  # Mixed
+    # Mucosal Melanoma
+    "mucosal melanoma": "Mucosal Melanoma",
+    # Cutaneous melanoma with Brain/CNS metastasis (parent category)
+    "cutaneous melanoma with brain metastasis": "Cutaneous melanoma with Brain/CNS metastasis",
+    "cutaneous melanoma with cns metastasis": "Cutaneous melanoma with Brain/CNS metastasis",
+    "cutaneous melanoma with brain/cns metastasis": "Cutaneous melanoma with Brain/CNS metastasis",
+    "melanoma with brain metastases": "Cutaneous melanoma with Brain/CNS metastasis",
+    "melanoma of unknown primary": "Cutaneous melanoma",  # Default to cutaneous
+    # Other/generic terms
+    "cutaneous head and neck melanomas": "Cutaneous melanoma",
+    "(unspecified)": None,  # No specific cancer type
+    "[n/a]": None,
+    "": None,
+}
 
-def normalize_cancer_type(cancer_type: str | None) -> str:
-    """Normalize a cancer type string to one of the 10 main categories.
 
-    This function handles:
-    - Various melanoma type variations
-    - Combinations (takes first type from comma-separated values)
-    - Case-insensitive matching
-    - Whitespace normalization
+def normalize_cancer_type(cancer_type: str) -> Optional[str]:
+    """Normalize a cancer type to one of the 8 standard categories.
 
     Args:
-        cancer_type: The cancer type string to normalize (can be None or empty)
+        cancer_type: Raw cancer type string from data
 
     Returns:
-        Normalized cancer type string from MAIN_CANCER_TYPES, or "Review Required"
-        if the type cannot be mapped to a known category.
-
-    Examples:
-        >>> normalize_cancer_type("Melanoma")
-        'Unresectable Cutaneous Melanoma'
-        >>> normalize_cancer_type("Acral Melanoma, Mucosal Melanoma")
-        'Acral Melanoma'  # Returns first type
-        >>> normalize_cancer_type("High-risk stage II melanoma")
-        'Resected Cutaneous Melanoma'
+        Normalized cancer type from STANDARD_CANCER_TYPES, or None if no match
     """
-    if not cancer_type:
-        return "Review Required"
+    if not cancer_type or not cancer_type.strip():
+        return None
 
-    # Normalize input: strip whitespace and convert to lowercase for matching
-    clean_input = cancer_type.strip().lower()
+    # Normalize input
+    normalized_input = cancer_type.strip().lower()
 
-    if not clean_input:
-        return "Review Required"
+    # Direct lookup
+    if normalized_input in CANCER_TYPE_MAPPING:
+        return CANCER_TYPE_MAPPING[normalized_input]
 
-    # Check if it's already one of the main types (case-insensitive)
-    for main_type in MAIN_CANCER_TYPES:
-        if clean_input == main_type.lower():
-            return main_type
+    # Fuzzy matching for common patterns
 
-    # Mapping dictionary: lowercase input -> normalized output
-    # This handles all the variations mentioned in the mapping strategy
-    mapping = {
-        # --- Mucosal Mappings ---
-        "advanced mucosal melanoma": "Mucosal Melanoma",
-        "resectable mucosal melanoma": "Mucosal Melanoma",
-        "resected mucosal melanoma": "Mucosal Melanoma",
-        "mucosal melanoma": "Mucosal Melanoma",
-        # --- Resected Cutaneous Mappings ---
-        "fully resectable, locally advanced melanoma": "Resected Cutaneous Melanoma",
-        "high-risk stage ii melanoma": "Resected Cutaneous Melanoma",
-        "high-risk stage 2 melanoma": "Resected Cutaneous Melanoma",
-        "stage ii melanoma": "Resected Cutaneous Melanoma",
-        "stage 2 melanoma": "Resected Cutaneous Melanoma",
-        "resectable cutaneous melanoma": "Resected Cutaneous Melanoma",
-        "resected cutaneous melanoma": "Resected Cutaneous Melanoma",
-        # --- Unresectable/Advanced Mappings ---
-        "advanced cutaneous melanoma": "Unresectable Cutaneous Melanoma",
-        "advanced non-uveal melanoma": "Unresectable Cutaneous Melanoma",
-        "advanced, metastatic melanoma": "Unresectable Cutaneous Melanoma",
-        "advanced metastatic melanoma": "Unresectable Cutaneous Melanoma",
-        "advanced melanoma": "Unresectable Cutaneous Melanoma",
-        "cutaneous malignant melanoma": "Unresectable Cutaneous Melanoma",
-        "cutaneous melanoma": "Unresectable Cutaneous Melanoma",
-        "melanoma": "Unresectable Cutaneous Melanoma",
-        "melanoma of unknown primary": "Unresectable Cutaneous Melanoma",
-        "metastatic cutaneous melanoma": "Unresectable Cutaneous Melanoma",
-        "metastatic melanoma": "Unresectable Cutaneous Melanoma",
-        "unresectable or metastatic melanoma": "Unresectable Cutaneous Melanoma",
-        "unresectable or metastatic cutaneous melanoma": "Unresectable Cutaneous Melanoma",
-        "unresectable cutaneous melanoma": "Unresectable Cutaneous Melanoma",
-        "malignant melanoma": "Unresectable Cutaneous Melanoma",
-        "melanoma stage iii": "Unresectable Cutaneous Melanoma",
-        "melanoma stage iv": "Unresectable Cutaneous Melanoma",
-        "melanoma stage 3": "Unresectable Cutaneous Melanoma",
-        "melanoma stage 4": "Unresectable Cutaneous Melanoma",
-        # --- Brain/CNS Metastasis Mappings ---
-        "cutaneous melanoma with brain metastasis": "Cutaneous melanoma with Brain metastasis",
-        "cutaneous melanoma with cns metastasis": "Cutaneous Melanoma with CNS metastasis",
-        "melanoma with brain metastasis": "Cutaneous melanoma with Brain metastasis",
-        "melanoma with cns metastasis": "Cutaneous Melanoma with CNS metastasis",
-        "brain metastasis melanoma": "Cutaneous melanoma with Brain metastasis",
-        "cns metastasis melanoma": "Cutaneous Melanoma with CNS metastasis",
-        # --- Exact Matches (Self-Mapping) ---
-        "acral melanoma": "Acral Melanoma",
-        "basal cell carcinoma": "Basal Cell Carcinoma",
-        "cutaneous squamous cell carcinoma": "Cutaneous Squamous Cell Carcinoma",
-        "uveal melanoma": "Uveal Melanoma",
-        "merkel cell carcinoma": "Merkel Cell Carcinoma",
-        # --- Additional variations ---
-        "squamous cell carcinoma": "Cutaneous Squamous Cell Carcinoma",  # Assume cutaneous if not specified
-        "carcinoma, basal cell": "Basal Cell Carcinoma",
-    }
+    # Brain/CNS metastasis takes priority (more specific)
+    if (
+        "brain" in normalized_input or "cns" in normalized_input
+    ) and "melanoma" in normalized_input:
+        return "Cutaneous melanoma with Brain/CNS metastasis"
 
-    # Direct mapping lookup (exact match)
-    if clean_input in mapping:
-        return mapping[clean_input]
+    # Resected/Unresectable melanoma → all map to Cutaneous melanoma
+    if (
+        "resected" in normalized_input or "unresectable" in normalized_input
+    ) and "melanoma" in normalized_input:
+        return "Cutaneous melanoma"
 
-    # If input contains commas, check if it's a comma-separated list of types
-    # by trying to match the first part first
-    # This handles cases like "Acral Melanoma, Mucosal Melanoma" where
-    # we want to match the first type, not a partial match from later in the string
-    if "," in clean_input:
-        first_part = clean_input.split(",")[0].strip()
-        if first_part:
-            # Try to normalize the first part first
-            first_part_result = normalize_cancer_type(first_part)
-            if first_part_result != "Review Required":
-                return first_part_result
-            # If first part doesn't match, continue with full string matching
+    # Melanoma types
+    if "uveal" in normalized_input:
+        return "Uveal Melanoma"
+    if "mucosal" in normalized_input:
+        return "Mucosal Melanoma"
+    if "acral" in normalized_input:
+        return "Acral Melanoma"
+    if "melanoma" in normalized_input:
+        return "Cutaneous melanoma"
 
-    # Handle partial matches for more flexible matching
-    # Check if any key in the mapping is contained in the input
-    # We iterate in order to prioritize more specific matches
-    # (e.g., "advanced mucosal melanoma" should match before just "mucosal melanoma")
-    matched_key = None
-    matched_length = 0
+    # Skin cancer types
+    if "merkel" in normalized_input:
+        return "Merkel Cell Carcinoma"
+    if "basal cell" in normalized_input:
+        return "Basal Cell Carcinoma"
+    if "squamous cell" in normalized_input:
+        return "Cutaneous Squamous Cell Carcinoma"
 
-    for key, _value in mapping.items():
-        # Check if the key is contained in the input
-        if key in clean_input:
-            # Prefer longer/more specific matches
-            if len(key) > matched_length:
-                matched_key = key
-                matched_length = len(key)
-
-    if matched_key:
-        return mapping[matched_key]
-
-    # If no match found, return "Review Required" for manual review
-    return "Review Required"
+    # Unknown - return None
+    return None
 
 
-def normalize_cancer_type_with_splitting(cancer_type: str | None) -> list[str]:
-    """Normalize cancer type and handle combinations by splitting.
+def is_subcategory_match(specific: str, general: str) -> bool:
+    """Check if a specific cancer type matches a general category.
 
-    This function handles cases where multiple cancer types are combined
-    with commas (e.g., "Acral Melanoma, Mucosal Melanoma"). It splits
-    them into separate normalized types.
+    For example:
+    - "Resected Cutaneous Melanoma" matches "Cutaneous melanoma"
+    - "Cutaneous melanoma with Brain metastasis" matches "Cutaneous melanoma with Brain/CNS metastasis"
 
     Args:
-        cancer_type: The cancer type string to normalize (can contain commas)
+        specific: Specific cancer type (e.g., from trial data)
+        general: General category (one of STANDARD_CANCER_TYPES)
 
     Returns:
-        List of normalized cancer type strings. If the input contains
-        multiple types separated by commas, returns a list with each
-        type normalized separately. Empty list if input is None/empty.
+        True if specific is a subcategory of general
+    """
+    if not specific or not general:
+        return False
+
+    normalized_specific = normalize_cancer_type(specific)
+    normalized_general = normalize_cancer_type(general)
+
+    return normalized_specific == normalized_general
+
+
+def normalize_cancer_type_with_splitting(cancer_type: str) -> list[str]:
+    """
+    Normalize cancer types with splitting for combinations.
 
     Examples:
-        >>> normalize_cancer_type_with_splitting("Acral Melanoma, Mucosal Melanoma")
-        ['Acral Melanoma', 'Mucosal Melanoma']
-        >>> normalize_cancer_type_with_splitting("Melanoma")
-        ['Unresectable Cutaneous Melanoma']
-        >>> normalize_cancer_type_with_splitting("Unknown Type")
-        ['Review Required']
+        "Melanoma" -> ["Cutaneous melanoma"]
+        "Melanoma, Basal Cell Carcinoma" -> ["Cutaneous melanoma", "Basal Cell Carcinoma"]
+        "Advanced Melanoma" -> ["Cutaneous melanoma"]
+
+    Args:
+        cancer_type: Raw cancer type string (may contain comma-separated types)
+
+    Returns:
+        List of normalized cancer type strings (may be empty if none found)
     """
     if not cancer_type:
         return []
 
     # Split by comma and normalize each part
     parts = [part.strip() for part in cancer_type.split(",")]
-
-    # Normalize each part and collect unique results
-    normalized_types = []
-    seen = set()
+    normalized = []
 
     for part in parts:
-        if part:  # Skip empty parts
-            normalized = normalize_cancer_type(part)
-            # Only add if not already seen (avoid duplicates)
-            if normalized not in seen:
-                normalized_types.append(normalized)
-                seen.add(normalized)
+        if part:
+            normalized_type = normalize_cancer_type(part)
+            if normalized_type and normalized_type not in normalized:
+                normalized.append(normalized_type)
 
-    return normalized_types if normalized_types else ["Review Required"]
+    return normalized
 
 
-def get_primary_cancer_type(cancer_type: str | None) -> str:
-    """Get the primary (first) normalized cancer type from a potentially combined string.
-
-    This is useful when you need a single category for filtering, and you want
-    to use the first type if multiple are present.
-
-    Args:
-        cancer_type: The cancer type string (can contain commas)
-
-    Returns:
-        The first normalized cancer type, or "Review Required" if empty/invalid.
+def get_primary_cancer_type(cancer_type: str) -> str:
+    """
+    Get the primary (first) normalized cancer type from a string.
 
     Examples:
-        >>> get_primary_cancer_type("Acral Melanoma, Mucosal Melanoma")
-        'Acral Melanoma'
-        >>> get_primary_cancer_type("Melanoma")
-        'Unresectable Cutaneous Melanoma'
+        "Melanoma" -> "Cutaneous melanoma"
+        "Melanoma, Basal Cell Carcinoma" -> "Cutaneous melanoma"
+        "Advanced Melanoma" -> "Cutaneous melanoma"
+        "Unknown Type" -> ""
+
+    Args:
+        cancer_type: Raw cancer type string (may contain comma-separated types)
+
+    Returns:
+        String with the primary normalized cancer type, or empty string if none found
     """
-    normalized_list = normalize_cancer_type_with_splitting(cancer_type)
-    return normalized_list[0] if normalized_list else "Review Required"
+    normalized_types = normalize_cancer_type_with_splitting(cancer_type)
+    return normalized_types[0] if normalized_types else ""

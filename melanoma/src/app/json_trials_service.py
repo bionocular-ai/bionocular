@@ -16,6 +16,7 @@ from ..domain.cancer_type_normalizer import (
     get_primary_cancer_type,
     normalize_cancer_type_with_splitting,
 )
+from .approval_status_service import ApprovalStatusService
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,11 @@ logger = logging.getLogger(__name__)
 class JSONTrialsService:
     """Service for reading trial data from JSON files."""
 
-    def __init__(self, json_file_paths: str | list[str] | None = None):
+    def __init__(
+        self,
+        json_file_paths: str | list[str] | None = None,
+        enable_approval_status: bool = True,
+    ):
         """Initialize the JSON trials service.
 
         Args:
@@ -31,6 +36,7 @@ class JSONTrialsService:
                            - Single file path (str)
                            - List of file paths (list[str])
                            - None: uses environment variable or default paths
+            enable_approval_status: If True, enrich arms with approval status
         """
         if json_file_paths is None:
             # Check for environment variable (can be comma-separated list)
@@ -59,6 +65,12 @@ class JSONTrialsService:
         self.json_file_paths = [Path(p) for p in json_file_paths]
         self._cache: list[dict[str, Any]] | None = None
         self._cache_timestamps: dict[str, float] | None = None
+
+        # Initialize approval status service if enabled
+        self.enable_approval_status = enable_approval_status
+        self.approval_service = (
+            ApprovalStatusService() if enable_approval_status else None
+        )
 
     def _load_json_files(self) -> list[dict[str, Any]]:
         """Load and cache all JSON files, merging abstracts.
@@ -297,12 +309,21 @@ class JSONTrialsService:
                     generic_name = arm_data.get("generic_name", "")
 
                 if arm_name or generic_name:
-                    arms.append(
-                        {
-                            "arm_name": arm_name or "",
-                            "generic_name": generic_name or "",
-                        }
-                    )
+                    arm_entry = {
+                        "arm_name": arm_name or "",
+                        "generic_name": generic_name or "",
+                    }
+
+                    # Add approval status if enabled
+                    if self.enable_approval_status and self.approval_service:
+                        approval_status = self.approval_service.get_approval_status(
+                            arm_name=arm_name,
+                            cancer_type=cancer_type,
+                            attributes=arm_attributes,
+                        )
+                        arm_entry["approval_status"] = approval_status
+
+                    arms.append(arm_entry)
 
         # If no arms found, create a single arm entry with available data
         if not arms:
@@ -435,6 +456,7 @@ class JSONTrialsService:
         Returns:
             Full abstract dictionary with all attributes and arm_results, or None if not found.
             Cancer type attributes are normalized to the 10 main categories.
+            Approval status is added to each arm if enabled.
         """
         try:
             abstracts = self._load_json_files()
@@ -449,6 +471,15 @@ class JSONTrialsService:
                     normalized_abstract = self._normalize_cancer_types_in_abstract(
                         abstract.copy()
                     )
+
+                    # Add approval status if enabled
+                    if self.enable_approval_status and self.approval_service:
+                        normalized_abstract = (
+                            self.approval_service.enrich_abstract_with_approval_status(
+                                normalized_abstract
+                            )
+                        )
+
                     return normalized_abstract
 
             return None

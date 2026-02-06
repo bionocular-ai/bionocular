@@ -25,6 +25,7 @@ export interface ArmAttributes {
 export interface ArmResult {
   arm_id: string;
   arm_name: string;
+  approval_status?: string; // Added by backend: "Approved", "Investigational", "Control", or "Unknown"
   total_attributes?: number;
   api_attributes?: number;
   abstract_attributes?: number;
@@ -80,6 +81,7 @@ export interface TrialDataPoint {
   nctNumber: string;
   numberOfPatients: number | null;
   sourceUrl?: string; // For web-scraped trials
+  approvalStatus?: ApprovalStatus; // Added by backend or derived from arm approval_status
 }
 
 export interface HeadToHeadDataPoint {

@@ -1,0 +1,5403 @@
+{
+  "_comment": "Auto-generated from melanoma/data/deployed/approval_status.txt",
+  "_note": "Approval status is indication-specific. The same therapy can be approved for some indications and non-approved for others.",
+  "approved_therapies": [
+    {
+      "arm_name": "1L BRAF + MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "1L PD-1 + CTLA-4 inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Adjuvant Radiotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Adjuvant aPD-1 therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti PD-1 Therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-CTLA-4",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD(L)1",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-(L)1 + Anti-CTLA-4 Combination",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1 + Anti-CTLA-4",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1 Antibodies",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1 Therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1-based immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1 + CTLA4",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1 Immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1/CTLA4",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1/PDL1 ICI",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Atezolizumab + Cobimetinib + Vemurafenib",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Atezolizumab + Vemurafenib + Cobimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Avelumab",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF + Immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF + MEK inhibitor",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF + MEKi",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF + Targeted Therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF and MEK inhibitor TT",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF and MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF(/MEK) inhibition",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF+MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEK",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEK Inhibition",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEK-inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "BRAFi + MEKi",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAFi/MEKi",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab",
+      "cancer_types": [
+        "Basal Cell Carcinoma",
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab (Extended-dose)",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab 3 mg/kg Q2W",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab 350 mg Q3W",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab 350 mg Q3W/700 mg Q6W switch",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab 350mg Q3W",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab 350mg q3w",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab 3mg/kg q2w",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Checkpoint Inhibitor",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Checkpoint Inhibitor Combination Therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Checkpoint Inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Chemotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Cobimetinib and Vemurafenib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Combined anti-PD1/anti-CTLA4",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Continuous Schedule",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Conventional Chemotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Cosibelimab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cosibelimab 1200 mg Q3W",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cosibelimab 800 mg Q2W",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "D+T or N+I (Standard Switch)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "DTIC chemo and limb perfusion",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib (Continuous)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib (continuous)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib 150/2",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib 2 mg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib plus Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dacarbazine",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dual anti-PD-1/anti-CTLA-4",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dual anti-PD-1/anti-LAG-3",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib 450 mg + Binimetinib 45 mg (COMBO450)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib 450 mg QD + Binimetinib 45 mg BID",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "First-line BRAF/MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Fotemustine",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "High Dose IL-2 following PD-1/PD-L1 inhibition",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "High Dose IL-2 without prior ICB",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "High-dose Interferon (HDI)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ICI combo",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ICI mono",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibition",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitor",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis",
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immune checkpoint inhibition",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immune-checkpoint blockade",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Immune-checkpoint inhibitor",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immune-checkpoint inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Immunotherapy Combination",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Interferon alfa-2b",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Intratumoral Therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Intravenous Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab or Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + PD1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab 10 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab 3 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Isolated Hepatic Perfusion with Melphalan",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Lifileucel",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Melphalan/HDS",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Melphalan/Hepatic Delivery System",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab (Flat Dose)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab (IV)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab (Weight-Adjusted Dose)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab (2 doses)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab (4 doses)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab (EU-authorized)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab (US-licensed)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab 480/160",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab 480/160 mg FDC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab FDC IV",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab 1 mg/kg + Ipilimumab 3 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab regimen",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Observation",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD(L)1",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 / PD-L1 Immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 Antibody Therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 antibody",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 inhibitor",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1-based CPI",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1-based immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1",
+      "cancer_types": [
+        "Acral Melanoma",
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1 + CTLA4",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1 Therapy",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis",
+        "Merkel Cell Carcinoma",
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab (+/- Cetuximab)",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab (Flat Dose)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab (Weight-Adjusted Dose)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Placebo",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab 2 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab 400 mg Q6W",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab every 3 weeks",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab or Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab q3w",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab q6w",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Percutaneous Hepatic Perfusion (PHP)",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo + Dabrafenib + Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo + Vemurafenib + Cobimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Postoperative Radiotherapy",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Radiotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Radiotherapy-based treatment",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Reduced dose Flu/Cy LD + TIL therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Relatlimab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Relatlimab + Nivolumab (FDC)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Relatlimab + Nivolumab FDC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Retifanlimab",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Second-line BRAF/MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Single agent anti-PD1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Sonidegib",
+      "cancer_types": [
+        "Basal Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Standard-of-care",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Subcutaneous Nivolumab + rHuPH20",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Surgery",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Surgery + Adjuvant Radiation Therapy",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Surgery-based treatment",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "T-VEC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TCR-T cells, avelumab or pembrolizumab",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "TT (Targeted Therapy)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TT alone",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Talimogene Laherparepvec",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Talimogene laherparepvec",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Targeted Therapies",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Targeted Therapy",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Tebentafusp",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Toripalimab",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Unselected Autologous TILs",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vemurafenib",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Vemurafenib (VEM)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vemurafenib + Cobimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vemurafenib + Cobimetinib + Atezolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vemurafenib 960 mg BID",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vismodegib",
+      "cancer_types": [
+        "Basal Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "aPD-1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "anti-PD-1",
+      "cancer_types": [
+        "Acral Melanoma",
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "anti-PD-1 immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "anti-PD-1 therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "anti-PD1",
+      "cancer_types": [
+        "Acral Melanoma",
+        "Cutaneous melanoma",
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Entrectinib (ALKA-372-001 Schedule A)",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Entrectinib (ALKA-372-001 Schedule B)",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Entrectinib (STARTRK-1)",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "BRAF/MEK inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune checkpoint inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI Combination Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Combined anti-CTLA4 and anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 alone",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1 + Anti-CTLA-4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Surgery + Radiotherapy + Chemotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Chemotherapy + Radiotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Targeted therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI-based regimens",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1 Inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Vemurafenib + Cobimetinib + Atezolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Interferon-alfa",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1/PD-L1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1 + anti-CTLA-4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 Combination Therapy",
+      "cancer_types": []
+    }
+  ],
+  "non_approved_therapies": [
+    {
+      "arm_name": "225-Actinium MTI-201",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "225Ac-MTI-201",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "2x Ipilimumab 1 mg/kg + Nivolumab 3 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "2x Ipilimumab 1 mg/kg + Nivolumab 3 mg/kg Sequential",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "2x Ipilimumab 3 mg/kg + Nivolumab 1 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "AMT-253",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ANV419",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ANV419 + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ANV419 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "AU-011",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Adjuvant anti-PD-1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Alrizomadlin + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1 +/- Investigational Agent",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1 antibodies",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1 antibody",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1 plus anti-CTLA-4 combination therapy",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD-1/PD-L1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA-4",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Mucosal Melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Anti-PD1 +/- investigational agent",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Apatinib + Camrelizumab",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Atezolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Atezolizumab + Bevacizumab",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Atezolizumab + Bevacizumab + Cobimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Atezolizumab + Cobimetinib + Vemurafenib",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Atezolizumab + Tiragolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Avelumab + Cetuximab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Axitinib",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "BCD-145",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BCD-201",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BCD-217",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BNCT (CICS-1 + SPM-011)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BNT111",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BNT111 + cemiplimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BO-112 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF + MEK Inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF - Immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF and MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF+MEK",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF-MEK-targeted therapy",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "BRAF-targeted therapy",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEK Inhibitor Rechallenge",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEK Inhibitor Retreatment",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEK induction then Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "BRAF/MEKi",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Best Alternative Care (BAC)",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Binimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Binimetinib + Imatinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Bocodepsin + Binimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "CDK4/6 and MEK inhibitors + ICB",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "CLND (Completion Lymph Node Dissection)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "CLND + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "CP-GEP high-risk",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "CP-GEP low-risk",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "CRISPR-TILs",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "CTLA4",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "CX-4945",
+      "cancer_types": [
+        "Basal Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Camrelizumab + Anlotinib + Nab-paclitaxel",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Camrelizumab + Apatinib",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Camrelizumab + Apatinib + Temozolomide",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Camrelizumab + Famitinib",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Carboplatin + Paclitaxel (CP)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Carboplatin + Paclitaxel + Sorafenib (CPS)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab (Response-Adapted)",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab + Sonidegib",
+      "cancer_types": [
+        "Basal Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab + mTOR inhibition + Prednisone",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab 3 mg/kg Q2W",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cemiplimab 3mg/kg Q2W",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Ceralasertib + Durvalumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Cetuximab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Checkpoint Inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Chemotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cisplatin",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Cobimetinib + Atezolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Combination therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Combined Immunotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Continue ICI",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Continuous Intrathecal Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Control",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Control Group",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Crizotinib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Cryoablation + ICI",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "D+T or N+I (Experimental Switch)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "DNV3 + Toripalimab + Chemotherapy",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "DTIC + Interferon",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "DTIC + Interferon + Endostar",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "DYP688",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Placebo",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib (Intermittent)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib (Seq to Pembro)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib (intermittent)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib + Navitoclax",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib then Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dacarbazine + ICI",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Daromun",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Darovasertib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Darovasertib + Crizotinib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Darovasertib Neoadjuvant",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dendritic Cell (DC) Vaccination",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Domatinostat + Avelumab",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Domatinostat + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dostarlimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dostarlimab + Cobolimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Dual ICI",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Duvelisib + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "E+B (8 weeks) then I+N then E+B",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ETC targeting SLC45A2",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "ETC therapy",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "ETC therapy + Ipilimumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "EVX-01 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Early Adjuvant Radiotherapy",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib + BKM120",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib + INC280",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib + LEE011",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib + Nivolumab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib + Palbociclib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib then Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib + Nivolumab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib 300 + Binimetinib + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib 300 mg (ENCO300)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib 300 mg QD",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Encorafenib 450 + Binimetinib + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Experimental Group",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "FH-MCVA2TCR + anti-PD-(L)1 + MHC-I upregulation agent",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "FHD-286 (Daily Dosing)",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "FHD-286 (Intermittent Dosing)",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Fecal Microbiota Transplantation (FMT) + Anti-PD-1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Fianlimab + Cemiplimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Fianlimab + Cemiplimab FDC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Fotemustine",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "GSK2636771 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Gotistobart 3 mg/kg + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Gotistobart 6 mg/kg + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "HBI-8000 + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "High Dose Fianlimab + Cemiplimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "High-Dose IFN-a2b (HDI)",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "High-Dose Interferon (HDI)",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "High-dose BCNU Chemoembolization",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Historical Systemic Therapies",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "IBI310",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IBI310 + Sintilimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IBI363",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "ICI + TT",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ICI followed by Tebentafusp",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "ICT01 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IDE196 + Crizotinib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "IFx-Hu2.0",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "IFx-Hu2.0 + Pembrolizumab",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "IHP followed by Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "IHP then Ipilimumab3/Nivolumab1",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "IMA203",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "IMA203 TCR T-cells",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IMC-F106C",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IMC-F106C (160 mcg) + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IMC-F106C (40 mcg) + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IMC-F106C + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IMM-101 + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IMM-101 + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IO102-IO103 + Nivolumab-Relatlimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IO102-IO103 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IOA-244 80mg daily",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "IOV-4001",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "IT PH-762",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "IT-TT",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ITIL-168",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Imatinib Mesylate",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Imatinib Mesylate + Toripalimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Imgatuzumab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Imiquimod",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immunoembolization",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immunotherapy <2 years",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Immunotherapy \u22652 years",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Intermittent Schedule",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Intismeran autogene + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Intradermal Ipilimumab + Nivolumab (Various doses)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Intralesional Daromun",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Intralesional T-VEC",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Intrathecal Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Intrathecal Nivolumab + Intravenous Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Intratumoral myDC + Nivo + Ipi",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Investigational Agent(s) + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Investigator's Choice",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Investigator's Choice Chemotherapy (ICC)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Investigator's choice of therapy",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Investigator-choice chemotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Investigator-selected chemotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": [
+        "Mucosal Melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Dacarbazine",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Fotemustine",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Merkel Cell Carcinoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab (1 cycle) before IHP",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab + Certolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab + Denosumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab + Infliximab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab + PHP",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab + Tocilizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab then Encorafenib + Binimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab then Relatlimab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab + gp100",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab 10 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab 1mg/kg + Nivolumab 3mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab 3 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab 3mg/kg + Nivolumab 1mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab 3mg/kg + Nivolumab 3mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab/HDI",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ipilimumab3/Nivolumab1 then IHP",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Isolated Hepatic Perfusion",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Isolated Limb Infusion/Perfusion",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Isolated Limb Perfusion",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Itraconazole",
+      "cancer_types": [
+        "Basal Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "JPB898 + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "KD6001 + Toripalimab",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "KRT-232 180mg 5/28d",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "KRT-232 240mg 5/28d",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "L19IL2 + L19TNF",
+      "cancer_types": [
+        "Basal Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "LBL-007 + Toripalimab",
+      "cancer_types": [
+        "Acral Melanoma",
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "LBL-007 + Toripalimab + Axitinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "LNS8801",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "LNS8801 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Lambrolizumab 10 mg/kg every 2 weeks",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Lambrolizumab 10 mg/kg every 3 weeks",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Lambrolizumab 2 mg/kg every 3 weeks",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Lenvatinib + Anti-PD-1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Lenvatinib + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Merkel Cell Carcinoma",
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Lifileucel",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Lifileucel + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Liver Resection/Ablation",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Long Duration Anti-PD-1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Low Dose Fianlimab + Cemiplimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Low Dose Ipilimumab + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Low-dose Nivolumab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Low-dose intralesional cemiplimab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "M-PHP + Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "MC2 TCR T cells + [Adjuvants]",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "MDNA11",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "MDNA11 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Melanoma Specific Anti-Tumor Vaccine",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Mocetinostat + Nivolumab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "NT-I7 + Atezolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Narrower Margin Group",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Navtemadlin (180 mg 5/23 days)",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Navtemadlin (240 mg 5/23 days)",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Navtemadlin (240 mg 7/14 days)",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Nemvaleukin IV",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nemvaleukin SC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nemvaleukin alfa IV",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nemvaleukin alfa SC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Niraparib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": [
+        "Basal Cell Carcinoma",
+        "Cutaneous Squamous Cell Carcinoma",
+        "Merkel Cell Carcinoma",
+        "Mucosal Melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Axitinib",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Dabrafenib + Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Denosumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Domatinostat",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Domatinostat BID",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma",
+        "Merkel Cell Carcinoma",
+        "Mucosal Melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab (Adaptive Dosing)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab + Cabozantinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab + Domatinostat",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab + Domatinostat QD",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab + SBRT",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Pepinemab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Personalized Neoantigen Vaccine (EVX-01)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Radiotherapy",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab",
+      "cancer_types": [
+        "Basal Cell Carcinoma",
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma",
+        "Cutaneous melanoma with Brain/CNS metastasis",
+        "Merkel Cell Carcinoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab + Ipilimumab + Sarilumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab + rHuPH20 FDC SC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab 240/80 mg SAV",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab 480/160 mg SAV",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab 480/480",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab(Concurrent IT/IV)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + T-VEC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Tacrolimus + Prednisone",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab + Talazoparib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Nivolumab 3 mg/kg + Ipilimumab 1 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "No Adjuvant Radiotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "No Postoperative Radiotherapy",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "No Preoperative Antibiotics",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "No Radiation Therapy",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "No Treatment",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "No adjuvant therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Non-Avelumab",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Nonavelumab IO",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "OBS",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "OBX-115",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "OBX-115 + ACZ",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "OBX-115 + Acetazolamide",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ON-01910 Intravenous",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "ON-01910 Oral",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "ONCOS-102 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "ONCOS-102 followed by Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Observation",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "OrienXO10 + Toripalimab",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Other systemic treatments",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 antibody",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 antibody + CTLA-4 antibody",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 inhibitor",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD-1 inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1",
+      "cancer_types": [
+        "Acral Melanoma",
+        "Cutaneous melanoma",
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1 + CTLA4",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1 + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1 + Lenvatinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1+IPI followed by Tebentafusp",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "PD1-based NeoIT",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PH-762",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma",
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "PRAME TCR/IL-15 NK cells",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "PV-10 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Partial Skin Exam",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + ATRA",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Cetuximab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Dabrafenib + Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Encorafenib + Binimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Gebasaxturev",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Lenvatinib",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Mucosal Melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Lenvatinib + R-FMT",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Low-dose Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Personalized Neoantigen Vaccine (EVX-01)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Quavonlimab + Lenvatinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Quavonlimab + Vibostolimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Reduced-dose Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Temozolomide",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + V940",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Vibostolimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab + Vidutolimod",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab 10 mg/kg",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab every 2 weeks",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Phenformin + Dabrafenib + Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Physical Examination",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Physical Examination + Imaging",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Physician's Choice",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma",
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo + Cobimetinib + Vemurafenib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo + Dabrafenib + Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo + Dacarbazine",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma",
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo + Vemurafenib + Cobimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Placebo and Vemurafenib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Post-operative Radiation Therapy",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Precision Oncology",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Preoperative Cefazolin",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Primary surgery",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Prophylactic LVA + CLND",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pucotenlimab + Intrahepatic OH2 + Radiotherapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Quavonlimab + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Quavonlimab/Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Quisinostat",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "RNA-nanoparticle vaccine",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "RO7247669",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "RP1",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "RP1 + Cemiplimab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "RP1 + Nivolumab",
+      "cancer_types": [
+        "Acral Melanoma",
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "RP2",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "RP2 + Nivolumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "RPH-075",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Regorafenib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Regorafenib + BRAF/MEK inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Regorafenib + BRAF/MEK-inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Regorafenib + MEK-inhibitors",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Relatlimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Relatlimab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Relatlimab + Nivolumab then Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Retifanlimab + INCAGN02385 + INCAGN02390",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Retifanlimab + Tuparstobart + Verzistobart",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Ripretinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Roginolisib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "SCIB1 + Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "SCIB1 + Nivolumab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "SGN-BB228",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "SHR-1701 + Temozolomide",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "SHR6390",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "SRS + Encorafenib + Binimetinib + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "STX-001",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "SX-682 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Sandwich Strategy",
+      "cancer_types": [
+        "Cutaneous melanoma with Brain/CNS metastasis"
+      ]
+    },
+    {
+      "arm_name": "Selective Internal Radiation Therapy",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Selective Internal Radiation Therapy (SIRT)",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Selinexor + Pembrolizumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Seviprotimut-L",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Short Duration Anti-PD-1",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Single-agent NAT",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Single-agent anti-PD1",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Sitravatinib + Tislelizumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Sonidegib + Cemiplimab",
+      "cancer_types": [
+        "Basal Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Sonidegib Tailored Schedule",
+      "cancer_types": [
+        "Basal Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Sorafenib + Trametinib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Spartalizumab + Canakinumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Spartalizumab + Capmatinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Spartalizumab + Dabrafenib + Trametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Spartalizumab + Ieramilimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Standard Margin Group",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Standard Palliative Care",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Standard of Care",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Steroids",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Steroids + Immunosuppressants",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Stop ICI",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Sunitinib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Surgery",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Surgery + Adjuvant RT",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Surgery Alone",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Surgery plus Radiotherapy",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Surgical resection only",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "T-VEC + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "T-VEC + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "T3011",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "T3011 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TAI of PD-1 + CTLA-4 inhibitors",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "TAI of PD-1 inhibitors",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "TAVO-EP + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TIL",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TIL + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TIL + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TILT-123",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TILT-123 + ACT-TIL",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TILT-123 + ACT-TILs",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TLPLDC",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TLPLDC + G",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TT",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TT-IT",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "TWP-101",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Talimogene Laherparepvec + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Talimogene laherparepvec + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Targeted Therapy",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tebentafusp",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tebentafusp + Durvalumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tebentafusp + Pembrolizumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tebentafusp followed by ICI",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tebentafusp followed by PD1+IPI",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Temozolomide",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Temozolomide + Cisplatin",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Therapeutic Lymph Node Dissection",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tilsotolimod + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tinostamustine + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tislelizumab",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Tocilizumab + Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tocilizumab + Ipilimumab + Nivolumab (Dose Dense)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tocilizumab + Ipilimumab + Nivolumab (Regular Dosing)",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tolododekin alfa + Cemiplimab",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Topical 5-Fluorouracil",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Toripalimab",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Toripalimab + Anlotinib",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Toripalimab + Axitinib",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Toripalimab + OrienX010",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Toripalimab + OrienXO1O",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Total Body Skin Exam",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Trametinib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Trametinib + Low-dose Dabrafenib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Transarterial Chemoembolization",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tunlametinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Tuvusertib",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Tuvusertib + Avelumab",
+      "cancer_types": [
+        "Merkel Cell Carcinoma"
+      ]
+    },
+    {
+      "arm_name": "Ulixertinib",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Ulixertinib + Palbociclib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "VV1 + Cemiplimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "VV1 + Cemiplimab + Ipilimumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Valproic Acid",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vemurafenib + Cobimetinib",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vemurafenib + Placebo",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vibostolimab + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vidutolimod + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vorinostat + BRAFi/MEKi",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vorolanib 150mg + Toripalimab",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vorolanib 200mg + Toripalimab",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vusolimogene oderparepvec",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Vusolimogene oderparepvec + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "WNT974 + Spartalizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "WTX-124",
+      "cancer_types": [
+        "Cutaneous Squamous Cell Carcinoma",
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "WTX-124 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "XmAb23104 + XmAb22841",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Yttrium90 + Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Uveal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "[212Pb]VMT01",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "aPD1",
+      "cancer_types": [
+        "Acral Melanoma"
+      ]
+    },
+    {
+      "arm_name": "anti-CTLA4",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "anti-CTLA4 + anti-PD1",
+      "cancer_types": [
+        "Mucosal Melanoma"
+      ]
+    },
+    {
+      "arm_name": "anti-PD1 then Relatlimab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "cMET-directed CAR T cells",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "cemiplimab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "gp100",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "iSCIB1+ + Ipilimumab + Nivolumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "mRNA-4157 (V940) + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "mRNA-4157 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "mRNA-4157/V940 + Pembrolizumab",
+      "cancer_types": [
+        "Cutaneous melanoma"
+      ]
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Local therapy + ICI continuation",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI restart + Local therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "antiPD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + antiPD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immuno-oncology therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Targeted therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Vemurafenib + Anti-PD-1 Antibody",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Dabrafenib",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Dabrafenib + Trametinib",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "IPI + PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Target Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1 Inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Combination therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab 3 mg/kg",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab 10 mg/kg",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab 3 mg/kg + Ipilimumab 1 mg/kg",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Control",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Toripalimab + Bevacizumab + Nab-paclitaxel + Chemoradiotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab + Vibostolimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ADU-1604",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "TM001 + IL-2",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "FAST-TIL (HS-IT101) with low-dose IL-2",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Balstilimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Trastuzumab emtansine",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "H101 + Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Placebo",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Targeted Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Placebo",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI + Chemotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI + Molecular Targeting Drugs",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Restart of ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Continuation of ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Disorder model",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "CNN model",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Targeted Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Placebo",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Combination ICI Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "H101 + Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI + Local Procedure",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1 + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Target Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "2L IO",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "2L TT",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Blockade",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "L19IL2 + L19TNF",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "1 year anti-PD1-based immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Minimum 2 years anti-PD1-based immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Healthy Control Diet",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "BRAF+MEK inhibitors then ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI then BRAF+MEK inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "8-week induction BRAF/MEK then ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "LM103 (TILs) + IL-2",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "IFN",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Observation",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Untested",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab (8:00-11:00)",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab (11:00-14:00)",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab (14:00-17:00)",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "EIK1001 + Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Placebo + Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Control",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Encorafenib + Binimetinib then Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Tilsotolimod + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab + UV1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Targeted Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ADU-1604",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "IBI363",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1 + novel IT agents",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab +/- Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 Antibody",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1 + CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1 +/- trial drug",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune checkpoint inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Target therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Targeted Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1 + Anti-CTLA-4 Combination Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI Combination Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Single Agent ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "HL-085",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-1 Inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Dabrafenib + Lenvatinib",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1-based therapies",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Neoadjuvant Targeted Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Neoadjuvant Immune Checkpoint Blockade",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-1 inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Placebo",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Cobolimab 100 mg + Dostarlimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Cobolimab 300 mg + Dostarlimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Cobolimab 900 mg + Dostarlimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Relatlimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "MEKi",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "BRAFi",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "IO (Immuno-Oncology)",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "IO combination therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PV-10",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PV-10 + Immune Checkpoint Inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti PD-1 + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-1 inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "CTLA-4 inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-1 inhibitor + CTLA-4 inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Targeted Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "No Systemic Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Widefield VMAT",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-L1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-CTL4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-L1 + Anti-CTL4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1 + Anti-CTLA4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "KIN-3248",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Tebentafusp",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Investigator's Choice",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-1 +/- CTLA-4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Tocilizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Vemurafenib",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Single-agent BRAFi",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Dual Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-L1 Inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "BRAF/MEK inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ICI Combination Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "hu14.18-IL2",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "hu14.18-IL2 + RT + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "hu14.18-IL2 + RT + Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Placebo",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Control",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-1 Blockade",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD-1 Blockade + Anti-CTLA4 Antibody",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Avelumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Relatlimab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Checkpoint Inhibition",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Relatlimab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Single-agent ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Combination ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "anti PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Combination ICI",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti CTLA-4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Control",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Targeted Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "CTLA4 + PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "BRAF/MEKi",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Widefield VMAT",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Investigator\u2019s Choice",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Investigator's Choice",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Adjuvant Radiation",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "No Adjuvant Radiation",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-(L)1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-CTLA-4",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab + Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Monotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-MEK",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Imatinib",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-(L)1 Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ADC targeting CD74 + Anti-PD-(L)1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "ADC targeting SLAMF7 + Anti-PD-(L)1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Placebo",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Relatlimab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Pembrolizumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD-1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Ipilimumab + Nivolumab",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immune Checkpoint Inhibitor",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Anti-PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "PD1",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "BRAF+MEK inhibitors",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy + Targeted Therapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Immunotherapy",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Regorafenib",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Methylprednisolone",
+      "cancer_types": []
+    },
+    {
+      "arm_name": "Methylprednisolone + Mycophenolate mofetil",
+      "cancer_types": []
+    }
+  ]
+}
