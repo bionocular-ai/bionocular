@@ -341,6 +341,7 @@ export default function DivergingBarChart({
   const [chartAreaWidth, setChartAreaWidth] = useState(0);
   const [isPinned, setIsPinned] = useState(false);
   const [pinnedBarId, setPinnedBarId] = useState<string | null>(null);
+  const [containerDims, setContainerDims] = useState<{width: number; height: number}>({ width: 400, height: 300 });
   // Track current trial index per treatment for tooltip switching
   const [trialIndices, setTrialIndices] = useState<Map<string, number>>(new Map());
 
@@ -364,6 +365,23 @@ export default function DivergingBarChart({
     x?: number;
     y?: number;
   } | null>(null);
+
+  // Use ResizeObserver to track actual dimensions
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setContainerDims({ width, height });
+        }
+      }
+    });
+
+    observer.observe(chartContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Calculate tooltip position
   const calculateTooltipPosition = useCallback((clientX: number, clientY: number) => {
@@ -743,7 +761,7 @@ export default function DivergingBarChart({
           className="flex-1 min-h-0 min-w-0"
           style={{ width: '100%', height: '100%' }}
         >
-          <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <ComposedChart
               data={chartData}
               layout="vertical"
@@ -879,7 +897,7 @@ export default function DivergingBarChart({
           className="flex-1 min-h-0 min-w-0"
           style={{ width: '100%', height: '100%' }}
         >
-          <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <ComposedChart
               data={chartData}
               layout="vertical"
@@ -1001,7 +1019,7 @@ export default function DivergingBarChart({
 
       <CardContent className="pt-4">
         <div ref={chartContainerRef} style={{ width: '100%', height: chartHeight, minHeight: 100 }}>
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <ComposedChart
               data={chartData}
               layout="vertical"

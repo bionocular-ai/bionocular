@@ -14,6 +14,7 @@ export default function Home() {
   const { data: session } = useSession();
   const [headlineIndex, setHeadlineIndex] = useState(0);
   const [activeNav, setActiveNav] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
 
@@ -96,6 +97,29 @@ export default function Home() {
     return () => window.removeEventListener('resize', resize);
   }, []);
 
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
+  // Close mobile menu on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [mobileMenuOpen]);
+
   // Smooth scrolling and active nav
   useEffect(() => {
     const EXTRA_GAP_PX = 10;
@@ -140,18 +164,40 @@ export default function Home() {
       anchor.addEventListener('click', handleAnchorClick);
     });
 
+    // Scroll listener to detect when at the top
+    const handleScroll = () => {
+      if (window.scrollY < 200) {
+        setActiveNav('#hero');
+      }
+    };
+
     // IntersectionObserver for active nav
-    const sections = document.querySelectorAll('main section[id]');
+    const sections = document.querySelectorAll('main section[id], section.hero[id]');
     const sectionObserver = new IntersectionObserver(
       (entries) => {
+        // Only update if we're not near the top of the page
+        if (window.scrollY < 200) {
+          setActiveNav('#hero');
+          return;
+        }
+
+        // Find the entry with the highest intersectionRatio
+        let mostVisible = entries[0];
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const id = '#' + entry.target.id;
-            setActiveNav(id);
+          if (entry.intersectionRatio > mostVisible.intersectionRatio) {
+            mostVisible = entry;
           }
         });
+
+        if (mostVisible && mostVisible.isIntersecting && mostVisible.intersectionRatio > 0.1) {
+          const id = '#' + mostVisible.target.id;
+          setActiveNav(id);
+        }
       },
-      { rootMargin: '-40% 0px -50% 0px', threshold: 0.01 }
+      { 
+        rootMargin: '-80px 0px -50% 0px',
+        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+      }
     );
     sections.forEach((sec) => sectionObserver.observe(sec));
 
@@ -162,6 +208,10 @@ export default function Home() {
         scrollToHash(initialHash);
         setActiveNav(initialHash);
       });
+    } else if (window.scrollY < 200) {
+      requestAnimationFrame(() => {
+        setActiveNav('#hero');
+      });
     }
 
     const handleHashChange = () => {
@@ -171,6 +221,7 @@ export default function Home() {
       }
     };
 
+    window.addEventListener('scroll', handleScroll);
     window.addEventListener('hashchange', handleHashChange);
 
     return () => {
@@ -178,6 +229,7 @@ export default function Home() {
         anchor.removeEventListener('click', handleAnchorClick);
       });
       sectionObserver.disconnect();
+      window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('hashchange', handleHashChange);
     };
   }, []);
@@ -192,25 +244,60 @@ export default function Home() {
 
   return (
     <>
+      {mobileMenuOpen && (
+        <div 
+          className="mobile-menu-backdrop" 
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <header className="site-header">
         <div className="container header-inner">
           <a className="brand" href="#" aria-label="Bionocular Home">
-            <Logo height={36} />
+            <Logo height={32} />
             <span className="brand-text" style={{ lineHeight: '1.2' }}>
               bi<span className="brand-o">o</span>nocular
             </span>
           </a>
-          <nav className="nav">
-            <a href="#hero" className={activeNav === '#hero' ? 'active' : ''}>
+          <button 
+            className="mobile-menu-toggle" 
+            aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            <span className={`hamburger ${mobileMenuOpen ? 'open' : ''}`}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+          </button>
+          <nav className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
+            <a 
+              href="#hero" 
+              className={activeNav === '#hero' ? 'active' : ''}
+              onClick={() => setMobileMenuOpen(false)}
+            >
               Home
             </a>
-            <a href="#platform" className={activeNav === '#platform' ? 'active' : ''}>
+            <a 
+              href="#platform" 
+              className={activeNav === '#platform' ? 'active' : ''}
+              onClick={() => setMobileMenuOpen(false)}
+            >
               Solutions
             </a>
-            <a href="#about" className={activeNav === '#about' ? 'active' : ''}>
+            <a 
+              href="#about" 
+              className={activeNav === '#about' ? 'active' : ''}
+              onClick={() => setMobileMenuOpen(false)}
+            >
               About
             </a>
-            <a href="#contact" className={activeNav === '#contact' ? 'active' : ''}>
+            <a 
+              href="#contact" 
+              className={activeNav === '#contact' ? 'active' : ''}
+              onClick={() => setMobileMenuOpen(false)}
+            >
               Contact
             </a>
             {session ? (

@@ -34,7 +34,7 @@ function Header({ session, onNavigateToDashboard }: HeaderProps) {
       <div className="w-full px-3 sm:px-4 md:px-6">
         <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
           <Link href="/" className="brand flex-shrink-0">
-              <Logo height={36} />
+              <Logo height={32} />
             <span className="brand-text" style={{ lineHeight: '1.2' }}>
               bi<span className="brand-o">o</span>nocular
             </span>

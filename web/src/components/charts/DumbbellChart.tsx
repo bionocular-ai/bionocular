@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   ComposedChart,
   XAxis,
@@ -151,6 +151,26 @@ export default function DumbbellChart({
   compact = false,
   useHrForBubbleSize = true,
 }: DumbbellChartProps) {
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const [containerDims, setContainerDims] = useState<{width: number; height: number}>({ width: 400, height: 300 });
+
+  // Use ResizeObserver to track actual dimensions
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setContainerDims({ width, height });
+        }
+      }
+    });
+
+    observer.observe(chartContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   const { xDomain, xTicks } = useMemo(() => {
     const vals = data.flatMap((d) => [d.valueA, d.valueB]).filter((v) => typeof v === 'number' && !Number.isNaN(v));
     if (vals.length === 0) return { xDomain: [0, 24] as [number, number], xTicks: [0, 5, 10, 15, 20, 25] };
@@ -222,8 +242,8 @@ export default function DumbbellChart({
             </>
           )}
         </div>
-        <div className="w-full min-h-0 flex-1" style={!compact ? { height: chartHeight, flex: 'none' } : undefined}>
-          <ResponsiveContainer width="100%" height="100%" minHeight={200}>
+        <div ref={chartContainerRef} className="w-full min-h-0 flex-1" style={!compact ? { height: chartHeight, flex: 'none' } : undefined}>
+          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <ComposedChart data={data} layout="vertical" margin={margin}>
               <CartesianGrid
                 strokeDasharray="0"

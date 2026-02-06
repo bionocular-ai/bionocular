@@ -88,10 +88,10 @@ const COLORS = {
 };
 
 // Tooltip positioning: offset from anchor, flip when overflowing, clamp to safe viewport (with top inset for fixed header)
-const TOOLTIP_WIDTH = 420;
-const TOOLTIP_HEIGHT = 400;
-const TOOLTIP_OFFSET_X = 15;
-const TOOLTIP_OFFSET_Y = 10;
+const TOOLTIP_WIDTH = 280; // Realistic tooltip width (min-w-[260px] + padding)
+const TOOLTIP_HEIGHT = 220; // Realistic tooltip height for typical content
+const TOOLTIP_OFFSET_X = 40; // Moderate offset to avoid covering bubbles
+const TOOLTIP_OFFSET_Y = 15;  // Moderate offset to avoid covering bubbles
 const TOOLTIP_EDGE_PADDING = 16;
 const TOOLTIP_EDGE_PADDING_TOP = 72; // Reserve space for fixed app header so tooltip is never clipped
 
@@ -105,7 +105,8 @@ function getTooltipViewportBounds(): { top: number; left: number; right: number;
 }
 
 // Bubble radius range (px) – area proportional to value (Recharts maps domain [min,max] to area range)
-const MIN_RADIUS = 5;
+// MIN_RADIUS is smaller (3px) for truly proportional sizing - smallest bubbles will be appropriately tiny
+const MIN_RADIUS = 3;
 const MAX_RADIUS = 60;
 
 const Z_AXIS_MIN_AREA = Math.PI * Math.pow(MIN_RADIUS, 2);
@@ -113,19 +114,22 @@ const Z_AXIS_MAX_AREA = Math.PI * Math.pow(MAX_RADIUS, 2);
 
 /**
  * Radius in px from linear area scale (matches Recharts: domain [min,max] -> area range, radius = sqrt(area/π)).
- * Ensures highest value maps to MAX_RADIUS.
+ * Ensures highest value maps to MAX_RADIUS and bubbles scale truly proportionally from near-zero to max.
  */
 function radiusFromLinearArea(
   value: number,
   dataMin: number,
   dataMax: number
 ): number {
+  // Only use MIN_RADIUS for zero or negative values
   if (value <= 0 || dataMax <= 0) return MIN_RADIUS;
   if (dataMax <= dataMin) return value >= dataMin ? MAX_RADIUS : MIN_RADIUS;
+  // Proportional scaling: normalize value to [0, 1] range
   const t = (value - dataMin) / (dataMax - dataMin);
   const area = Z_AXIS_MIN_AREA + t * (Z_AXIS_MAX_AREA - Z_AXIS_MIN_AREA);
   const radius = Math.sqrt(Math.max(0, area) / Math.PI);
-  return Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, radius));
+  // Cap at MAX_RADIUS but allow truly proportional small sizes (no MIN_RADIUS clamping for positive values)
+  return Math.min(MAX_RADIUS, radius);
 }
 
 // ============================================================================
@@ -480,6 +484,7 @@ export default function BubbleChart({
   const [pinnedBubbleId, setPinnedBubbleId] = useState<string | null>(null);
   const [pinnedAxisConfig, setPinnedAxisConfig] = useState<number | null>(null);
   const [trialIndices, setTrialIndices] = useState<Map<string, number>>(new Map());
+  const [containerDims, setContainerDims] = useState<{width: number; height: number}>({ width: 400, height: 300 });
   const [tooltipData, setTooltipData] = useState<{
     active: boolean;
     payload?: Array<{
@@ -489,8 +494,8 @@ export default function BubbleChart({
     x?: number;
     y?: number;
   } | null>(null);
-  const hoverTooltipPositionRef = useRef<{ x: number; y: number } | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+  const mousePositionRef = useRef<{ x: number; y: number } | null>(null);
 
   const handleTrialIndexChange = useCallback((treatmentName: string, newIndex: number) => {
     setTrialIndices(prev => {
@@ -503,32 +508,44 @@ export default function BubbleChart({
   const normalizedAxisConfig = Math.max(0, Math.min(5, Math.floor(axisConfig || 0)));
   const effectivePinned = isPinned && pinnedAxisConfig === normalizedAxisConfig;
 
-  // Track tooltip position from DOM when hovering
+  // Use ResizeObserver to track actual dimensions
   useEffect(() => {
-    if (isPinned) {
-      hoverTooltipPositionRef.current = null;
-      return;
-    }
-    
-    const updateTooltipPosition = () => {
-      const tooltipWrapper = document.querySelector('.recharts-tooltip-wrapper') as HTMLElement;
-      if (tooltipWrapper && tooltipWrapper.style.display !== 'none' && tooltipWrapper.style.visibility !== 'hidden') {
-        const rect = tooltipWrapper.getBoundingClientRect();
-        if (rect.width > 0 && rect.height > 0) {
-          hoverTooltipPositionRef.current = { x: rect.left, y: rect.top };
+    if (!chartContainerRef.current) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setContainerDims({ width, height });
         }
+      }
+    });
+
+    observer.observe(chartContainerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Track mouse position globally for accurate tooltip positioning
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isPinned) {
+        mousePositionRef.current = {
+          x: e.clientX,
+          y: e.clientY,
+        };
       }
     };
 
-    // Check tooltip position periodically when not pinned
-    const intervalId = setInterval(updateTooltipPosition, 50);
+    // Track mouse position globally to catch all movement
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
 
     return () => {
-      clearInterval(intervalId);
+      window.removeEventListener('mousemove', handleMouseMove);
     };
   }, [isPinned]);
 
   // Anchor in viewport coords → tooltip x,y. Flip when overflowing, clamp to safe bounds (top inset for fixed header).
+  // Smart positioning: prefer right/bottom but flip to left/top if not enough space
   const calculateTooltipPosition = useCallback((anchorX: number, anchorY: number) => {
     const v = getTooltipViewportBounds();
     const W = TOOLTIP_WIDTH;
@@ -536,34 +553,61 @@ export default function BubbleChart({
     const OX = TOOLTIP_OFFSET_X;
     const OY = TOOLTIP_OFFSET_Y;
 
-    let x = anchorX + OX;
-    let y = anchorY + OY;
+    // Calculate available space in all directions
+    const spaceRight = v.right - anchorX;
+    const spaceLeft = anchorX - v.left;
+    const spaceBottom = v.bottom - anchorY;
+    const spaceTop = anchorY - v.top;
 
-    if (x + W > v.right) x = anchorX - W - OX;
+    // Choose horizontal position based on available space
+    let x: number;
+    if (spaceRight >= W + OX) {
+      // Enough space on right
+      x = anchorX + OX;
+    } else if (spaceLeft >= W + OX) {
+      // Not enough on right, try left
+      x = anchorX - W - OX;
+    } else {
+      // Not enough space on either side, center it
+      x = anchorX + OX;
+    }
     x = Math.max(v.left, Math.min(x, v.right - W));
 
-    if (y + H > v.bottom) y = anchorY - H - OY;
+    // Choose vertical position based on available space
+    let y: number;
+    if (spaceBottom >= H + OY) {
+      // Enough space below
+      y = anchorY + OY;
+    } else if (spaceTop >= H + OY) {
+      // Not enough below, try above
+      y = anchorY - H - OY;
+    } else {
+      // Not enough space above or below, position below
+      y = anchorY + OY;
+    }
     y = Math.max(v.top, Math.min(y, v.bottom - H));
 
     return { x, y };
   }, []);
 
-  // Anchor tooltip to bubble center. Recharts coordinate is in chart (viewBox) space;
-  // use the Recharts wrapper as origin so coord matches the same element Recharts uses for tooltip positioning.
+  // Get tooltip position using actual mouse cursor position for accurate placement
   const getHoverTooltipViewportPosition = useCallback((
-    coordX: number | undefined,
-    coordY: number | undefined
+    // Intentionally unused - we use mousePositionRef.current instead
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _coordX: number | undefined,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _coordY: number | undefined
   ): { x: number; y: number } => {
-    if (coordX != null && coordY != null && chartContainerRef.current) {
-      const wrapper = chartContainerRef.current.querySelector('.recharts-wrapper');
-      const rect = wrapper
-        ? (wrapper as HTMLElement).getBoundingClientRect()
-        : chartContainerRef.current.getBoundingClientRect();
-      const anchorX = rect.left + coordX;
-      const anchorY = rect.top + coordY;
-      return calculateTooltipPosition(anchorX, anchorY);
+    // Use the actual mouse cursor position if available
+    if (mousePositionRef.current) {
+      return calculateTooltipPosition(mousePositionRef.current.x, mousePositionRef.current.y);
     }
-    return calculateTooltipPosition(0, TOOLTIP_EDGE_PADDING_TOP);
+    
+    // Fallback to a safe default position
+    return calculateTooltipPosition(
+      window.innerWidth / 2, 
+      TOOLTIP_EDGE_PADDING_TOP + 100
+    );
   }, [calculateTooltipPosition]);
 
   // Helper function to get Z-axis value based on zAxisParam
@@ -668,9 +712,10 @@ export default function BubbleChart({
     });
 
     const rawZValues = rows.map((r) => r.rawZValue).filter((v) => v != null && !Number.isNaN(v) && isFinite(v));
-    const dataMin = rawZValues.length === 0 ? 0 : Math.min(...rawZValues);
+    // Use 0 as dataMin for truly proportional bubble sizing (smallest values = smallest bubbles)
+    const dataMin = 0;
     let dataMax = rawZValues.length === 0 ? 1 : Math.max(...rawZValues);
-    if (dataMax <= dataMin) dataMax = dataMin + 1;
+    if (dataMax <= 0) dataMax = 1;
     const domain: [number, number] = [dataMin, dataMax];
 
     const chartDataOut = rows.map((row) => {
@@ -881,24 +926,22 @@ export default function BubbleChart({
       setTooltipData(null);
       setPinnedBubbleId(null);
       setPinnedAxisConfig(null);
-      hoverTooltipPositionRef.current = null;
+      // Don't reset mousePositionRef - keep tracking for hover tooltips
       return;
     }
     
-    // Pin to this bubble - use hover position if available, otherwise calculate from click event
-    // First try to get the current hover tooltip position from the DOM
-    const tooltipWrapper = document.querySelector('.recharts-tooltip-wrapper') as HTMLElement;
+    // Pin to this bubble - use current mouse position or click event position
     let position: { x: number; y: number };
     
-    if (tooltipWrapper && tooltipWrapper.style.display !== 'none' && tooltipWrapper.style.visibility !== 'hidden') {
-      const rect = tooltipWrapper.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        position = { x: rect.left, y: rect.top };
-      } else {
-        position = hoverTooltipPositionRef.current || (event ? calculateTooltipPosition(event.clientX, event.clientY) : { x: 0, y: 0 });
-      }
+    if (mousePositionRef.current) {
+      // Use the tracked mouse position
+      position = calculateTooltipPosition(mousePositionRef.current.x, mousePositionRef.current.y);
+    } else if (event) {
+      // Fallback to click event position
+      position = calculateTooltipPosition(event.clientX, event.clientY);
     } else {
-      position = hoverTooltipPositionRef.current || (event ? calculateTooltipPosition(event.clientX, event.clientY) : { x: 0, y: 0 });
+      // Last resort: center of screen
+      position = calculateTooltipPosition(window.innerWidth / 2, window.innerHeight / 2);
     }
     
     setPinnedBubbleId(bubbleId);
@@ -1026,7 +1069,7 @@ export default function BubbleChart({
         style={{ outline: 'none' }}
       >
         <div className="flex-1 min-h-0 relative" ref={chartContainerRef}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
           <ScatterChart margin={margin}>
             <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
             <XAxis
@@ -1083,17 +1126,31 @@ export default function BubbleChart({
               strokeDasharray="3 3"
             />
             <Tooltip 
-              wrapperStyle={{ position: 'fixed', pointerEvents: 'none', left: 0, top: 0 }}
+              wrapperStyle={{ 
+                visibility: 'hidden', // Hide Recharts default positioning
+                pointerEvents: 'none',
+              }}
+              animationDuration={0}
+              isAnimationActive={false}
               content={(props) => {
                 if (effectivePinned) return null;
                 if (props.active && props.payload && props.payload.length > 0) {
-                  const coord = props.coordinate as { x?: number; y?: number } | undefined;
-                  const viewportPos = getHoverTooltipViewportPosition(coord?.x, coord?.y);
+                  const viewportPos = getHoverTooltipViewportPosition(undefined, undefined);
                   const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
                   const treatmentName = payloadData?.treatmentName || '';
                   const currentIndex = trialIndices.get(treatmentName) || 0;
                   return (
-                    <div style={{ position: 'fixed', left: viewportPos.x, top: viewportPos.y, zIndex: 9999, pointerEvents: 'auto' }}>
+                    <div style={{ 
+                      position: 'fixed', 
+                      left: `${viewportPos.x}px`, 
+                      top: `${viewportPos.y}px`, 
+                      zIndex: 9999, 
+                      pointerEvents: 'none',
+                      visibility: 'visible',
+                      willChange: 'transform',
+                      transition: 'none',
+                      opacity: 1,
+                    }}>
                       <CustomTooltip
                         active={props.active}
                         payload={props.payload as CustomTooltipProps['payload']}
@@ -1109,7 +1166,7 @@ export default function BubbleChart({
                 }
                 return null;
               }}
-              cursor={{ strokeDasharray: '3 3' }} 
+              cursor={false}
             />
             <Scatter 
               name="Treatments" 
@@ -1131,6 +1188,7 @@ export default function BubbleChart({
                     key={`cell-${index}`} 
                     fill={fillColor}
                     fillOpacity={0.7}
+                    style={{ pointerEvents: 'painted' }}
                   />
                 );
               })}
@@ -1197,7 +1255,7 @@ export default function BubbleChart({
             }
           }}
         >
-          <ResponsiveContainer width="100%" height="100%" minHeight={0}>
+          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <ScatterChart margin={fillHeight ? marginFillHeight : margin}>
               <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} strokeOpacity={0.3} />
               <XAxis
@@ -1242,17 +1300,31 @@ export default function BubbleChart({
               <ReferenceLine x={xMidpoint} stroke={colors.axis} strokeWidth={1.5} strokeOpacity={0.5} strokeDasharray="3 3" />
               <ReferenceLine y={yMidpoint} stroke={colors.axis} strokeWidth={1.5} strokeOpacity={0.5} strokeDasharray="3 3" />
               <Tooltip
-                wrapperStyle={{ position: 'fixed', pointerEvents: 'none', left: 0, top: 0 }}
+                wrapperStyle={{ 
+                  visibility: 'hidden', // Hide Recharts default positioning
+                  pointerEvents: 'none',
+                }}
+                animationDuration={0}
+                isAnimationActive={false}
                 content={(props) => {
                   if (effectivePinned) return null;
                   if (props.active && props.payload && props.payload.length > 0) {
-                    const coord = props.coordinate as { x?: number; y?: number } | undefined;
-                    const viewportPos = getHoverTooltipViewportPosition(coord?.x, coord?.y);
+                    const viewportPos = getHoverTooltipViewportPosition(undefined, undefined);
                     const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
                     const treatmentName = payloadData?.treatmentName || '';
                     const currentIndex = trialIndices.get(treatmentName) || 0;
                     return (
-                      <div style={{ position: 'fixed', left: viewportPos.x, top: viewportPos.y, zIndex: 9999, pointerEvents: 'auto' }}>
+                      <div style={{ 
+                        position: 'fixed', 
+                        left: `${viewportPos.x}px`, 
+                        top: `${viewportPos.y}px`, 
+                        zIndex: 9999, 
+                      pointerEvents: 'none',
+                      visibility: 'visible',
+                      willChange: 'transform',
+                      transition: 'none',
+                      opacity: 1,
+                      }}>
                         <CustomTooltip
                           active={props.active}
                           payload={props.payload as CustomTooltipProps['payload']}
@@ -1268,7 +1340,7 @@ export default function BubbleChart({
                   }
                   return null;
                 }}
-                cursor={{ strokeDasharray: '3 3' }}
+                cursor={false}
               />
               <Scatter
                 name="Treatments"
@@ -1286,7 +1358,7 @@ export default function BubbleChart({
                   const isPinnedBubble = effectivePinned && pinnedBubbleId === bubbleId;
                   const fillColor = isPinnedBubble ? '#fbbf24' : getColor(entry);
                   return (
-                    <Cell key={`cell-${index}`} fill={fillColor} fillOpacity={0.7} />
+                    <Cell key={`cell-${index}`} fill={fillColor} fillOpacity={0.7} style={{ pointerEvents: 'painted' }} />
                   );
                 })}
                 <LabelList dataKey="treatmentName" content={<CustomLabel />} />
@@ -1375,7 +1447,7 @@ export default function BubbleChart({
             }
           }}
         >
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <ScatterChart margin={margin}>
               <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} strokeOpacity={0.3} />
               <XAxis
@@ -1432,17 +1504,31 @@ export default function BubbleChart({
                 strokeDasharray="3 3"
               />
               <Tooltip 
-                wrapperStyle={{ position: 'fixed', pointerEvents: 'none', left: 0, top: 0 }}
+                wrapperStyle={{ 
+                  visibility: 'hidden', // Hide Recharts default positioning
+                  pointerEvents: 'none',
+                }}
+                animationDuration={0}
+                isAnimationActive={false}
                 content={(props) => {
                   if (effectivePinned) return null;
                   if (props.active && props.payload && props.payload.length > 0) {
-                    const coord = props.coordinate as { x?: number; y?: number } | undefined;
-                    const viewportPos = getHoverTooltipViewportPosition(coord?.x, coord?.y);
+                    const viewportPos = getHoverTooltipViewportPosition(undefined, undefined);
                     const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
                     const treatmentName = payloadData?.treatmentName || '';
                     const currentIndex = trialIndices.get(treatmentName) || 0;
                     return (
-                      <div style={{ position: 'fixed', left: viewportPos.x, top: viewportPos.y, zIndex: 9999, pointerEvents: 'auto' }}>
+                      <div style={{ 
+                        position: 'fixed', 
+                        left: `${viewportPos.x}px`, 
+                        top: `${viewportPos.y}px`, 
+                        zIndex: 9999, 
+                      pointerEvents: 'none',
+                      visibility: 'visible',
+                      willChange: 'transform',
+                      transition: 'none',
+                      opacity: 1,
+                      }}>
                         <CustomTooltip
                           active={props.active}
                           payload={props.payload as CustomTooltipProps['payload']}
@@ -1458,7 +1544,7 @@ export default function BubbleChart({
                   }
                   return null;
                 }}
-                cursor={{ strokeDasharray: '3 3' }}
+                cursor={false}
               />
               <Scatter
                 name="Treatments" 
@@ -1480,6 +1566,7 @@ export default function BubbleChart({
                       key={`cell-${index}`} 
                       fill={fillColor}
                       fillOpacity={0.7}
+                      style={{ pointerEvents: 'painted' }}
                     />
                   );
                 })}
