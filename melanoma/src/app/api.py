@@ -2144,6 +2144,26 @@ async def get_disease_landscape_stats(category: str) -> dict:
         ) from e
 
 
+@app.get("/api/landscape/live-ticker/{category}")
+async def get_live_ticker(category: str) -> dict:
+    """Get live ticker data (articles and efficacy/safety results) for a category.
+
+    Uses SQLite when TRIALS_DATA_SOURCE=sqlite (production), otherwise reads from
+    pre-computed live_ticker.json (local development).
+    """
+    try:
+        service = create_clinical_trials_service()
+        data_source = get_trials_data_source()
+        if data_source == "sqlite":
+            return service.repository.get_live_ticker_from_sqlite(category)
+        return service.repository.get_live_ticker_from_json(category)
+    except Exception as e:
+        logger.error(f"Error loading live ticker for {category}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to load live ticker data"
+        ) from e
+
+
 if __name__ == "__main__":
     import uvicorn
 

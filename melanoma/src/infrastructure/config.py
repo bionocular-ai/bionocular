@@ -21,6 +21,9 @@ DISEASE_LANDSCAPE_STATS_PATH = str(
     DATA_DIR / "deployed" / "disease_landscape_stats.json"
 )  # Pre-computed disease landscape statistics
 
+# Live ticker JSON file (articles + efficacy/safety results per category)
+LIVE_TICKER_PATH = str(DATA_DIR / "deployed" / "live_ticker.json")
+
 # Country variants for location checking
 COUNTRY_VARIANTS = {
     "United States": ["United States", "USA", "US"],

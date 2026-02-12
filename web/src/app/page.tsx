@@ -3,99 +3,128 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '@/components/Logo';
 
-const headlines = [
-  'Next-gen AI and Machine learning providing analytics and insights (with Human verification) in the Oncology landscape',
-  'Cutting the noise and only focusing on the key elements'
+const HERO_PHRASES: { strong: string; rest: string }[] = [
+  {
+    strong: 'Next-gen AI and Machine learning',
+    rest: ' providing analytics and insights (with Human verification) in the Oncology landscape.',
+  },
+  {
+    strong: 'Cutting the noise',
+    rest: ' and only focusing on the key elements.',
+  },
 ];
+
+const ROTATOR_DISPLAY_MS = 5000;
+const ROTATOR_FADE_MS = 600;
+
+const slideFade = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -14 },
+  transition: {
+    duration: ROTATOR_FADE_MS / 1000,
+    ease: [0.25, 0.46, 0.45, 0.94] as const,
+  },
+};
+
+function HeroTextRotator() {
+  const [index, setIndex] = useState(0);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    const runCycle = () => {
+      const t = setTimeout(() => {
+        setIndex((i) => (i + 1) % HERO_PHRASES.length);
+      }, ROTATOR_DISPLAY_MS);
+      timeoutsRef.current.push(t);
+    };
+
+    const firstRun = setTimeout(runCycle, ROTATOR_DISPLAY_MS);
+    const interval = setInterval(runCycle, ROTATOR_DISPLAY_MS);
+    return () => {
+      clearTimeout(firstRun);
+      clearInterval(interval);
+      timeoutsRef.current.forEach(clearTimeout);
+      timeoutsRef.current = [];
+    };
+  }, []);
+
+  const phrase = HERO_PHRASES[index];
+
+  return (
+    <div
+      className="hero-rotator-wrapper relative min-h-[7rem] sm:min-h-[8.5rem] md:min-h-[10rem] lg:min-h-[12rem] w-full max-w-xl flex flex-col justify-center"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.p
+          key={index}
+          className="hero-rotator-phrase w-full text-[#E9ECEF] text-xl leading-[1.2] tracking-[-0.02em] sm:text-2xl md:text-3xl lg:text-4xl text-left pr-4"
+          {...slideFade}
+          aria-hidden={false}
+        >
+          <span className="font-bold" style={{ fontWeight: 700 }}>
+            {phrase.strong}
+          </span>
+          <span className="font-light" style={{ fontWeight: 300, opacity: 0.85 }}>
+            {phrase.rest}
+          </span>
+        </motion.p>
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function Home() {
   const { data: session } = useSession();
-  const [headlineIndex, setHeadlineIndex] = useState(0);
   const [activeNav, setActiveNav] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const headlineRef = useRef<HTMLHeadingElement>(null);
+  const navLinksRef = useRef<HTMLDivElement>(null);
+  const indicatorRef = useRef<HTMLSpanElement>(null);
 
-  interface Particle {
-    x: number;
-    y: number;
-    z: number;
-    vx: number;
-    vy: number;
-    r: number;
-    a: number;
-  }
-  const particlesRef = useRef<Particle[]>([]);
-
-  // Rotating headlines
+  // Position sliding indicator on active nav link (smooth when skipping sections)
   useEffect(() => {
-    const interval = setInterval(() => {
-      setHeadlineIndex((prev) => (prev + 1) % headlines.length);
-    }, 9000);
-    return () => clearInterval(interval);
-  }, []);
+    const container = navLinksRef.current;
+    const indicator = indicatorRef.current;
+    if (!container || !indicator) return;
 
-  // Canvas particles
+    const activeLink = container.querySelector(`a[href="${activeNav}"]`) as HTMLAnchorElement | null;
+    if (!activeLink) {
+      indicator.style.opacity = '0';
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const linkRect = activeLink.getBoundingClientRect();
+    indicator.style.left = `${linkRect.left - containerRect.left}px`;
+    indicator.style.width = `${linkRect.width}px`;
+    indicator.style.opacity = '1';
+  }, [activeNav, mobileMenuOpen]);
+
+  // Re-run on resize
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = navLinksRef.current;
+    const indicator = indicatorRef.current;
+    if (!container || !indicator) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const update = () => {
+      const activeLink = container.querySelector(`a[href="${activeNav}"]`) as HTMLAnchorElement | null;
+      if (!activeLink) return;
+      const containerRect = container.getBoundingClientRect();
+      const linkRect = activeLink.getBoundingClientRect();
+      indicator.style.left = `${linkRect.left - containerRect.left}px`;
+      indicator.style.width = `${linkRect.width}px`;
+    };
 
-    function resize() {
-      if (!canvas) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-
-    function spawnParticles(count: number) {
-      if (!canvas) return;
-      particlesRef.current = Array.from({ length: count }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        z: Math.random() * 1 + 0.2,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        r: Math.random() * 1.6 + 0.3,
-        a: Math.random() * 0.4 + 0.2,
-      }));
-    }
-
-    resize();
-    if (canvas) {
-      spawnParticles(Math.min(250, Math.floor((canvas.width * canvas.height) / 3000)));
-    }
-
-    function tick() {
-      if (!ctx || !canvas) return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const p of particlesRef.current) {
-        p.x += p.vx * p.z;
-        p.y += p.vy * p.z;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0ea5e9';
-        const r = parseInt(accent.slice(1, 3), 16);
-        const g = parseInt(accent.slice(3, 5), 16);
-        const b = parseInt(accent.slice(5, 7), 16);
-        ctx.fillStyle = `rgba(${r},${g},${b},${p.a})`;
-        ctx.fill();
-      }
-      requestAnimationFrame(tick);
-    }
-
-    tick();
-
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, []);
+    const ro = new ResizeObserver(update);
+    ro.observe(container);
+    update();
+    return () => ro.disconnect();
+  }, [activeNav]);
 
   // Lock body scroll when mobile menu is open
   useEffect(() => {
@@ -164,42 +193,35 @@ export default function Home() {
       anchor.addEventListener('click', handleAnchorClick);
     });
 
-    // Scroll listener to detect when at the top
+    // Single scroll-based active section: use a fixed "activation line" so one section wins (no bouncing)
+    const ACTIVATION_OFFSET_PX = 120; // distance from top of viewport to decide active section
+    const sectionIds = ['hero', 'platform', 'about', 'contact'];
+
+    function getActiveSectionId(): string {
+      const header = document.querySelector('.site-header');
+      const headerHeight = header ? (header as HTMLElement).offsetHeight : 0;
+      const line = headerHeight + ACTIVATION_OFFSET_PX;
+
+      // Active section = last one whose top is still at or above the activation line (stable, no bounce)
+      let activeId = '#hero';
+      for (const id of sectionIds) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const rect = el.getBoundingClientRect();
+        if (rect.top <= line) activeId = '#' + id;
+        else break;
+      }
+      return activeId;
+    }
+
+    let rafId: number | null = null;
     const handleScroll = () => {
-      if (window.scrollY < 200) {
-        setActiveNav('#hero');
-      }
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        setActiveNav(getActiveSectionId());
+      });
     };
-
-    // IntersectionObserver for active nav
-    const sections = document.querySelectorAll('main section[id], section.hero[id]');
-    const sectionObserver = new IntersectionObserver(
-      (entries) => {
-        // Only update if we're not near the top of the page
-        if (window.scrollY < 200) {
-          setActiveNav('#hero');
-          return;
-        }
-
-        // Find the entry with the highest intersectionRatio
-        let mostVisible = entries[0];
-        entries.forEach((entry) => {
-          if (entry.intersectionRatio > mostVisible.intersectionRatio) {
-            mostVisible = entry;
-          }
-        });
-
-        if (mostVisible && mostVisible.isIntersecting && mostVisible.intersectionRatio > 0.1) {
-          const id = '#' + mostVisible.target.id;
-          setActiveNav(id);
-        }
-      },
-      { 
-        rootMargin: '-80px 0px -50% 0px',
-        threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-      }
-    );
-    sections.forEach((sec) => sectionObserver.observe(sec));
 
     // Handle initial hash - use requestAnimationFrame to avoid setState in effect
     const initialHash = window.location.hash;
@@ -208,10 +230,8 @@ export default function Home() {
         scrollToHash(initialHash);
         setActiveNav(initialHash);
       });
-    } else if (window.scrollY < 200) {
-      requestAnimationFrame(() => {
-        setActiveNav('#hero');
-      });
+    } else {
+      requestAnimationFrame(() => setActiveNav(getActiveSectionId()));
     }
 
     const handleHashChange = () => {
@@ -221,14 +241,14 @@ export default function Home() {
       }
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('hashchange', handleHashChange);
 
     return () => {
       anchors.forEach((anchor) => {
         anchor.removeEventListener('click', handleAnchorClick);
       });
-      sectionObserver.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('hashchange', handleHashChange);
     };
@@ -272,34 +292,37 @@ export default function Home() {
             </span>
           </button>
           <nav className={`nav ${mobileMenuOpen ? 'mobile-open' : ''}`}>
-            <a 
-              href="#hero" 
-              className={activeNav === '#hero' ? 'active' : ''}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Home
-            </a>
-            <a 
-              href="#platform" 
-              className={activeNav === '#platform' ? 'active' : ''}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Solutions
-            </a>
-            <a 
-              href="#about" 
-              className={activeNav === '#about' ? 'active' : ''}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              About
-            </a>
-            <a 
-              href="#contact" 
-              className={activeNav === '#contact' ? 'active' : ''}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Contact
-            </a>
+            <div className="nav-links-wrap" ref={navLinksRef}>
+              <span ref={indicatorRef} className="nav-indicator" aria-hidden="true" />
+              <a 
+                href="#hero" 
+                className={activeNav === '#hero' ? 'active' : ''}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Home
+              </a>
+              <a 
+                href="#platform" 
+                className={activeNav === '#platform' ? 'active' : ''}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Solutions
+              </a>
+              <a 
+                href="#about" 
+                className={activeNav === '#about' ? 'active' : ''}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                About
+              </a>
+              <a 
+                href="#contact" 
+                className={activeNav === '#contact' ? 'active' : ''}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Contact
+              </a>
+            </div>
             {session ? (
               <Link href="/dashboard" className="btn btn-primary btn-small">
                 Dashboard
@@ -313,26 +336,33 @@ export default function Home() {
         </div>
       </header>
 
-      <section className="hero" id="hero">
-        <video
-          className="hero-media"
-          src="/Bionocular.mp4"
-          autoPlay
-          loop
-          muted
-          playsInline
-          aria-hidden="true"
-        />
-        <canvas ref={canvasRef} id="dataCanvas" className="hero-canvas" aria-hidden="true" />
-        <div className="hero-overlay">
-          <h1
-            ref={headlineRef}
-            id="heroHeadline"
-            className="hero-title"
-            style={{ opacity: 1 }}
-          >
-            {headlines[headlineIndex]}
-          </h1>
+      <section
+        className="hero hero-split min-h-[92vh] pt-[62px] md:min-h-[92vh] relative"
+        id="hero"
+      >
+        {/* Full-bleed atmospheric background: radial mesh gradient + noise */}
+        <div className="hero-atmosphere absolute inset-0 pointer-events-none" aria-hidden="true" />
+        <div className="hero-split-grid grid grid-cols-1 md:grid-cols-[2fr_3fr] min-h-[calc(92vh-62px)] relative z-0">
+          {/* Left: text with soft-fade mask and glass divider */}
+          <div className="hero-text-column flex flex-col justify-center py-12 md:py-16 text-left">
+            <h1 id="heroHeadline" className="hero-split-title w-full max-w-xl">
+              <HeroTextRotator />
+            </h1>
+            <div className="hero-glass-divider hidden md:block" aria-hidden="true" />
+          </div>
+          {/* Right: video with 10% dark overlay */}
+          <div className="hero-video-column relative min-h-[50vh] md:min-h-[calc(92vh-62px)] w-full overflow-hidden">
+            <video
+              className="absolute inset-0 w-full h-full object-cover object-center"
+              src="/Bionocular.mp4"
+              autoPlay
+              loop
+              muted
+              playsInline
+              aria-hidden="true"
+            />
+            <div className="hero-video-overlay absolute inset-0 pointer-events-none" aria-hidden="true" />
+          </div>
         </div>
       </section>
 

@@ -12,7 +12,11 @@ from ...domain.clinical_trial_interfaces import (
     ClinicalTrialRepository,
 )
 from ...domain.clinical_trial_models import ClinicalTrialData
-from ..config import CLINICAL_TRIAL_DB_PATH, DISEASE_LANDSCAPE_STATS_PATH
+from ..config import (
+    CLINICAL_TRIAL_DB_PATH,
+    DISEASE_LANDSCAPE_STATS_PATH,
+    LIVE_TICKER_PATH,
+)
 from .cancer_type_mapping import is_active_status
 
 logger = logging.getLogger(__name__)
@@ -134,6 +138,18 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                         phase_json TEXT NOT NULL,
                         funder_type_json TEXT NOT NULL,
                         extracted_count INTEGER DEFAULT 0,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+
+                # Create live_ticker table (articles + efficacy/safety results per category)
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS live_ticker (
+                        category TEXT PRIMARY KEY,
+                        articles_json TEXT NOT NULL,
+                        results_json TEXT NOT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                     """
@@ -1028,3 +1044,50 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 "funder_type": {"Industry": 0, "Non-Industry": 0},
                 "extracted_count": 0,
             }
+
+    def get_live_ticker_from_sqlite(self, category: str) -> dict[str, Any]:
+        """Get live ticker data from SQLite live_ticker table."""
+        empty: dict[str, Any] = {"articles": [], "results": []}
+        if not self.db_path:
+            return empty
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT articles_json, results_json
+                    FROM live_ticker
+                    WHERE category = ?
+                    """,
+                    (category,),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return empty
+                return {
+                    "articles": json.loads(row["articles_json"]),
+                    "results": json.loads(row["results_json"]),
+                }
+        except (sqlite3.Error, json.JSONDecodeError, Exception) as e:
+            logger.error(f"Error reading live ticker from SQLite: {e}")
+            return empty
+
+    def get_live_ticker_from_json(self, category: str) -> dict[str, Any]:
+        """Get live ticker data from pre-computed JSON file."""
+        empty: dict[str, Any] = {"articles": [], "results": []}
+        try:
+            path = Path(LIVE_TICKER_PATH)
+            if not path.exists():
+                logger.warning(f"Live ticker file not found: {path}")
+                return empty
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            payload = data.get(category, {})
+            return {
+                "articles": payload.get("articles", []),
+                "results": payload.get("results", []),
+            }
+        except (OSError, json.JSONDecodeError, Exception) as e:
+            logger.error(f"Error reading live ticker from JSON: {e}")
+            return empty

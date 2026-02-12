@@ -33,7 +33,8 @@ def create_database(db_path: Path) -> sqlite3.Connection:
     Returns:
         Database connection
     """
-    # Remove existing database if it exists
+    db_path = Path(db_path)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
     if db_path.exists():
         logger.info(f"Removing existing database at {db_path}")
         db_path.unlink()
@@ -78,6 +79,18 @@ def create_database(db_path: Path) -> sqlite3.Connection:
             phase_json TEXT NOT NULL,   -- JSON object with phase counts
             funder_type_json TEXT NOT NULL,  -- JSON object with funder type counts
             extracted_count INTEGER DEFAULT 0,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """
+    )
+
+    # Create live_ticker table (articles + efficacy/safety results per category)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS live_ticker (
+            category TEXT PRIMARY KEY,
+            articles_json TEXT NOT NULL,
+            results_json TEXT NOT NULL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """
@@ -372,6 +385,41 @@ def build_database(
         else:
             logger.warning(f"Disease landscape stats file not found: {stats_file}")
 
+        # Load live_ticker.json if it exists
+        ticker_file = (
+            Path(__file__).parent.parent
+            / "data"
+            / "deployed"
+            / "live_ticker.json"
+        )
+        if ticker_file.exists():
+            logger.info(f"Loading live ticker from {ticker_file.name}...")
+            try:
+                with open(ticker_file, encoding="utf-8") as f:
+                    ticker_data = json.load(f)
+                conn.execute("DELETE FROM live_ticker")
+                ticker_inserted = 0
+                for cat, payload in ticker_data.items():
+                    if not isinstance(payload, dict):
+                        continue
+                    articles = payload.get("articles", [])
+                    results = payload.get("results", [])
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO live_ticker
+                        (category, articles_json, results_json, updated_at)
+                        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                        """,
+                        (cat, json.dumps(articles), json.dumps(results)),
+                    )
+                    ticker_inserted += 1
+                conn.commit()
+                logger.info(f"Loaded {ticker_inserted} categories into live_ticker")
+            except Exception as e:
+                logger.error(f"Error loading live ticker: {e}")
+        else:
+            logger.warning(f"Live ticker file not found: {ticker_file}")
+
     finally:
         conn.close()
 
@@ -386,8 +434,8 @@ def main():
     parser.add_argument(
         "--db-path",
         type=Path,
-        default=Path(__file__).parent.parent / "trials.db",
-        help="Path to SQLite database file (default: trials.db in project root)",
+        default=Path(__file__).parent.parent / "data" / "trials_db" / "trials.db",
+        help="Path to SQLite database (default: data/trials_db/trials.db, same as app)",
     )
     parser.add_argument(
         "--json-files",

@@ -129,10 +129,12 @@ export default function DiseaseLandscapePage() {
                 </Link>
               )}
             </div>
-            <div className="block px-3 py-2 text-sm font-medium text-gray-500">
-              &quot;Live&quot; Ticker
-              <span className="ml-2 text-xs text-gray-400">Upcoming</span>
-            </div>
+            <Link
+              href={`/dashboard/${categorySlug}/live-ticker`}
+              className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
+            >
+              Live Ticker
+            </Link>
             <div className="block px-3 py-2 text-sm font-medium text-gray-500">
               AI Chatbot
               <span className="ml-2 text-xs text-gray-400">Upcoming</span>
