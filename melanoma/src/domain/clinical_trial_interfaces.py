@@ -244,6 +244,30 @@ class ClinicalTrialRepository(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_live_ticker_from_sqlite(self, category: str) -> dict[str, Any]:
+        """Get live ticker data (articles and results) from SQLite.
+
+        Args:
+            category: Category slug (e.g. "cutaneous-melanoma")
+
+        Returns:
+            Dict with "articles" and "results" lists; empty lists if not found.
+        """
+        pass
+
+    @abstractmethod
+    def get_live_ticker_from_json(self, category: str) -> dict[str, Any]:
+        """Get live ticker data from pre-computed JSON file.
+
+        Args:
+            category: Category slug (e.g. "cutaneous-melanoma")
+
+        Returns:
+            Dict with "articles" and "results" lists; empty lists if not found.
+        """
+        pass
+
 
 class ClinicalTrialParser(ABC):
     """Interface for parsing API responses into domain models."""

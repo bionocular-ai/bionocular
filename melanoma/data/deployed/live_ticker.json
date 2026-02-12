@@ -1,0 +1,846 @@
+{
+  "cutaneous-melanoma": {
+    "articles": [
+      {
+        "title": "Novel Cancer Vaccine Receives FDA Orphan Drug Designation in Cutaneous Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.cancernetwork.com/view/novel-cancer-vaccine-receives-fda-orphan-drug-designation-in-cutaneous-melanoma",
+        "nct_id": "NCT03655756"
+      },
+      {
+        "title": "Nivolumab/Ipilimumab Improves Real-World Melanoma Outcomes Vs Pembrolizumab",
+        "date": "November 12, 2025",
+        "url": "https://www.cancernetwork.com/view/nivolumab-ipilimumab-improves-real-world-melanoma-outcomes-vs-pembrolizumab",
+        "nct_id": "NCT04949113, NCT03698019"
+      },
+      {
+        "title": "Real-World Data Support Clinical Benefit With Lifileucel in Previously Treated Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/real-world-data-support-clinical-benefit-with-lifileucel-in-previously-treated-advanced-melanoma",
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "FDA Grants Orphan Drug Designation to IFx-2.0 for Advanced Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.targetedonc.com/view/fda-grants-orphan-drug-designation-to-ifx-2-0-for-advanced-melanoma",
+        "nct_id": "NCT03655756, NCT06947928"
+      },
+      {
+        "title": "Immunocore announces 2026 strategic priorities at 44th Annual J.P. Morgan Healthcare Conference",
+        "date": "January 9, 2026",
+        "url": "https://www.biospace.com/press-releases/immunocore-announces-2026-strategic-priorities-at-44th-annual-j-p-morgan-healthcare-conference",
+        "nct_id": null
+      },
+      {
+        "title": "RP1 Plus Nivolumab Offers Hope in Anti\u2013PD-1 Refractory Melanoma",
+        "date": "November 24, 2025",
+        "url": "https://www.targetedonc.com/view/rp1-plus-nivolumab-offers-hope-in-anti-pd-1-refractory-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "AMT-253 Demonstrates Early Efficacy and Manageable Safety in Melanoma",
+        "date": "November 15, 2025",
+        "url": "https://www.onclive.com/view/amt-253-demonstrates-early-efficacy-and-manageable-safety-in-melanoma",
+        "nct_id": "NCT06209580, NCT05906862"
+      },
+      {
+        "title": "Replimune Presents Late-Breaking Abstract and Additional Posters on RP1 at 40th Annual Meeting of the Society for the Immunotherapy of Cancer (SITC 2025)",
+        "date": "November 10, 2025",
+        "url": "https://www.biospace.com/press-releases/replimune-presents-late-breaking-abstract-and-additional-posters-on-rp1-at-40th-annual-meeting-of-the-society-for-the-immunotherapy-of-cancer-sitc-2025",
+        "nct_id": null
+      }
+    ],
+    "results": [
+      {
+        "title": "Novel Cancer Vaccine Receives FDA Orphan Drug Designation in Cutaneous Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.cancernetwork.com/view/novel-cancer-vaccine-receives-fda-orphan-drug-designation-in-cutaneous-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Safety (DLTs); Efficacy (PFS2)",
+          "value": "No serious dose-limiting toxicities (DLTs) observed; 3 of 4 anti-PD-1 refractory patients showed clinical benefit with PFS2 >3.66 years."
+        },
+        "nct_id": "NCT03655756"
+      },
+      {
+        "title": "Nivolumab/Ipilimumab Improves Real-World Melanoma Outcomes Vs Pembrolizumab",
+        "date": "November 12, 2025",
+        "url": "https://www.cancernetwork.com/view/nivolumab-ipilimumab-improves-real-world-melanoma-outcomes-vs-pembrolizumab",
+        "efficacy_or_safety_data": {
+          "metric": "Pathologic Complete Response (pCR); 2-Year PFS; Safety (Grade >2 AEs)",
+          "value": "pCR: 42.6% (nivo/ipi) vs 29.0% (pembro); 2-year PFS: 87% vs 68% (P=.171); Grade >2 AEs: 19.0% vs 12.9%."
+        },
+        "nct_id": "NCT04949113, NCT03698019"
+      },
+      {
+        "title": "Real-World Data Support Clinical Benefit With Lifileucel in Previously Treated Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/real-world-data-support-clinical-benefit-with-lifileucel-in-previously-treated-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "ORR; Median PFS; Median OS",
+          "value": "ORR: 44% (n=18/41); ORR in cutaneous subtype: 38%; Median PFS: 4.4 months; Median OS: 10.2 months"
+        },
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "FDA Grants Orphan Drug Designation to IFx-2.0 for Advanced Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.targetedonc.com/view/fda-grants-orphan-drug-designation-to-ifx-2-0-for-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Adverse Events",
+          "value": "No dose-limiting toxicities; only grade 1 or 2 trae observed in phase 1 trial"
+        },
+        "nct_id": "NCT03655756, NCT06947928"
+      },
+      {
+        "title": "AMT-253 Demonstrates Early Efficacy and Manageable Safety in Melanoma",
+        "date": "November 15, 2025",
+        "url": "https://www.onclive.com/view/amt-253-demonstrates-early-efficacy-and-manageable-safety-in-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "ORR; DCR; Median PFS (Cutaneous Subtype)",
+          "value": "ORR: 35%; DCR: 70%; Median PFS: 8.6 months (in 20 cutaneous melanoma patients)"
+        },
+        "nct_id": "NCT06209580, NCT05906862"
+      },
+      {
+        "title": "Replimune Presents Late-Breaking Abstract and Additional Posters on RP1 at 40th Annual Meeting of the Society for the Immunotherapy of Cancer (SITC 2025)",
+        "date": "November 10, 2025",
+        "url": "https://www.biospace.com/press-releases/replimune-presents-late-breaking-abstract-and-additional-posters-on-rp1-at-40th-annual-meeting-of-the-society-for-the-immunotherapy-of-cancer-sitc-2025",
+        "efficacy_or_safety_data": {
+          "metric": "ORR; Median DOR",
+          "value": "ORR: 33.6%; Median DOR: 24.8 months (in anti-PD-1 refractory setting)"
+        },
+        "nct_id": null
+      }
+    ]
+  },
+  "basal-cell-carcinoma": {
+    "articles": [
+      {
+        "title": "MediWound Announces Positive Top-Line Results from Phase 1/2 Study of MWPC005 in Basal Cell Carcinoma",
+        "date": "January 17, 2024",
+        "url": "https://www.biospace.com/article/releases/mediwound-announces-positive-top-line-results-from-phase-1-2-study-of-mwpc005-in-basal-cell-carcinoma/",
+        "nct_id": null
+      },
+      {
+        "title": "Sirnaomics Announces Positive Results from Phase I Study of STP705 for the Treatment of Basal Cell Carcinoma",
+        "date": "January 4, 2024",
+        "url": "https://www.biospace.com/article/releases/sirnaomics-announces-positive-results-from-phase-i-study-of-stp705-for-the-treatment-of-basal-cell-carcinoma/",
+        "nct_id": "NCT04669808"
+      },
+      {
+        "title": "A Multidisciplinary Approach to Treating Advanced Basal Cell Carcinoma",
+        "date": "January 29, 2024",
+        "url": "https://www.targetedonc.com/view/a-multidisciplinary-approach-to-treating-advanced-basal-cell-carcinoma",
+        "nct_id": null
+      },
+      {
+        "title": "Navigating Choice in Basal Cell Carcinoma: Exploring the Potential of Cemiplimab",
+        "date": "December 14, 2023",
+        "url": "https://www.onclive.com/view/navigating-choice-in-basal-cell-carcinoma-exploring-the-potential-of-cemiplimab",
+        "nct_id": "NCT03132636"
+      },
+      {
+        "title": "Managing Toxicities with Hedgehog Inhibitors in Basal Cell Carcinoma",
+        "date": "February 6, 2024",
+        "url": "https://www.targetedonc.com/view/managing-toxicities-with-hedgehog-inhibitors-in-basal-cell-carcinoma",
+        "nct_id": null
+      },
+      {
+        "title": "Hedgehog Inhibitors vs Immunotherapy in Basal Cell Carcinoma: A Review of Clinical Trial Data",
+        "date": "November 28, 2023",
+        "url": "https://www.onclive.com/view/hedgehog-inhibitors-vs-immunotherapy-in-basal-cell-carcinoma-a-review-of-clinical-trial-data",
+        "nct_id": null
+      }
+    ],
+    "results": [
+      {
+        "title": "sNDA for Aminolevulinic Acid Gel Plus PDT in sBCC Is Submitted to the FDA",
+        "date": "December 2, 2025",
+        "url": "https://www.onclive.com/view/snda-for-aminolevulinic-acid-gel-plus-pdt-in-sbcc-is-submitted-to-the-fda",
+        "efficacy_or_safety_data": {
+          "metric": "12-week composite clinical and histological clearance rate",
+          "value": "65.5% with PDT plus aminolevulinic acid gel vs 4.8% with placebo (P < .0001)"
+        },
+        "nct_id": "NCT03573401"
+      },
+      {
+        "title": "Biofrontera Inc. Announces Filing of Supplemental New Drug Application (sNDA) for the Treatment of Superficial Basal Cell Carcinoma (sBCC) with Ameluz\u00ae-PDT",
+        "date": "December 2, 2025",
+        "url": "https://www.biospace.com/press-releases/biofrontera-inc-announces-filing-of-supplemental-new-drug-application-snda-for-the-treatment-of-superficial-basal-cell-carcinoma-sbcc-with-ameluz-pdt",
+        "efficacy_or_safety_data": {
+          "metric": "Composite clinical and histological clearance rate",
+          "value": "65.5% (Ameluz-PDT) vs 4.8% (placebo); Complete histological clearance: 75.9% vs 19.0%"
+        },
+        "nct_id": "NCT03573401"
+      },
+      {
+        "title": "Medicus Pharma Ltd. Completes Enrolment of Ninety (90) Patients for Phase 2 Clinical Study (SKNJCT-003) to Non-Invasively Treat Basal Cell Carcinoma (BCC) of the Skin",
+        "date": "December 15, 2025",
+        "url": "https://www.biospace.com/press-releases/medicus-pharma-ltd-completes-enrolment-of-ninety-90-patients-for-phase-2-clinical-study-sknjct-003-to-non-invasively-treat-basal-cell-carcinoma-bcc-of-the-skin",
+        "efficacy_or_safety_data": {
+          "metric": "Clinical clearance (Interim Analysis)",
+          "value": ">60% clinical clearance in 26 patients"
+        },
+        "nct_id": null
+      }
+    ]
+  },
+  "cutaneous-squamous-cell-carcinoma": {
+    "articles": [
+      {
+        "title": "FDA Receives Premarket Approval Module for Novel Recurrent CSCC Therapy",
+        "date": "January 6, 2026",
+        "url": "https://www.cancernetwork.com/view/fda-receives-pre-market-approval-module-for-novel-recurrent-cscc-therapy",
+        "nct_id": "NCT05323253"
+      },
+      {
+        "title": "FDA Approves Updated Cosibelimab Label in Cutaneous Squamous Cell Carcinoma",
+        "date": "December 1, 2025",
+        "url": "https://www.cancernetwork.com/view/fda-approves-updated-cosibelimab-label-in-cutaneous-squamous-cell-carcinoma",
+        "nct_id": null
+      },
+      {
+        "title": "EC Approves Adjuvant Cemiplimab in CSCC at High Risk of Recurrence",
+        "date": "November 20, 2025",
+        "url": "https://www.cancernetwork.com/view/ec-approves-adjuvant-cemiplimab-in-cscc-at-high-risk-of-recurrence",
+        "nct_id": null
+      },
+      {
+        "title": "Cemiplimab Maintenance Yields Favorable Survival in Advanced Cutaneous Squamous Cell Carcinoma",
+        "date": "February 6, 2024",
+        "url": "https://www.onclive.com/view/cemiplimab-maintenance-yields-favorable-survival-in-advanced-cutaneous-squamous-cell-carcinoma",
+        "nct_id": null
+      },
+      {
+        "title": "RP1 Plus Cemiplimab Shows Clinical Activity in Cutaneous Squamous Cell Carcinoma",
+        "date": "December 5, 2023",
+        "url": "https://www.targetedonc.com/view/rp1-plus-cemiplimab-shows-clinical-activity-in-cutaneous-squamous-cell-carcinoma",
+        "nct_id": null
+      },
+      {
+        "title": "Replimune Presents Positive Data from Primary Analysis of IGNYTE Clinical Trial in Anti-PD1 Failed Cutaneous Squamous Cell Carcinoma",
+        "date": "December 5, 2023",
+        "url": "https://www.biospace.com/article/releases/replimune-presents-positive-data-from-primary-analysis-of-ignyte-clinical-trial-in-anti-pd1-failed-cutaneous-squamous-cell-carcinoma/",
+        "nct_id": null
+      },
+      {
+        "title": "Considerations for the Treatment of High-Risk Cutaneous Squamous Cell Carcinoma",
+        "date": "January 24, 2024",
+        "url": "https://www.targetedonc.com/view/considerations-for-the-treatment-of-high-risk-cutaneous-squamous-cell-carcinoma",
+        "nct_id": null
+      },
+      {
+        "title": "Emerging Therapies for Advanced Cutaneous Squamous Cell Carcinoma",
+        "date": "January 18, 2024",
+        "url": "https://www.onclive.com/view/emerging-therapies-for-advanced-cutaneous-squamous-cell-carcinoma",
+        "nct_id": null
+      },
+      {
+        "title": "Nivolumab Plus Ipilimumab Elicits Responses in Treatment-Naive Advanced Cutaneous Squamous Cell Carcinoma",
+        "date": "November 21, 2023",
+        "url": "https://www.onclive.com/view/nivolumab-plus-ipilimumab-elicits-responses-in-treatment-naive-advanced-cutaneous-squamous-cell-carcinoma",
+        "nct_id": null
+      },
+      {
+        "title": "Prognostic Factors and Outcomes in Cutaneous Squamous Cell Carcinoma",
+        "date": "December 15, 2023",
+        "url": "https://www.targetedonc.com/view/prognostic-factors-and-outcomes-in-cutaneous-squamous-cell-carcinoma",
+        "nct_id": null
+      }
+    ],
+    "results": [
+      {
+        "title": "FDA Approves Updated Cosibelimab Label in Cutaneous Squamous Cell Carcinoma",
+        "date": "December 1, 2025",
+        "url": "https://www.cancernetwork.com/view/fda-approves-updated-cosibelimab-label-in-cutaneous-squamous-cell-carcinoma",
+        "efficacy_or_safety_data": {
+          "efficacy_metrics": [
+            {
+              "metric": "Objective Response Rate (ORR) - Metastatic CSCC",
+              "value": "50.0% (95% CI, 38.5%-61.5%)"
+            },
+            {
+              "metric": "Objective Response Rate (ORR) - Locally Advanced CSCC",
+              "value": "54.8% (95% CI, 36.0%-72.7%)"
+            },
+            {
+              "metric": "Complete Response (CR) Rate",
+              "value": "12.8% (Metastatic) and 25.8% (Locally Advanced)"
+            }
+          ],
+          "safety_metrics": [
+            {
+              "metric": "Grade 3 or Higher Toxicities",
+              "value": "45.3%"
+            },
+            {
+              "metric": "Common Treatment-Emergent Adverse Effects (Any Grade)",
+              "value": "Fatigue (22.9%), Anemia (20.3%), Constipation (16.1%), Diarrhea (15.1%), Pruritus (13.5%)"
+            },
+            {
+              "metric": "Discontinuation due to TEAEs",
+              "value": "6.3%"
+            }
+          ]
+        },
+        "nct_id": null
+      },
+      {
+        "title": "EC Approves Adjuvant Cemiplimab in CSCC at High Risk of Recurrence",
+        "date": "November 20, 2025",
+        "url": "https://www.cancernetwork.com/view/ec-approves-adjuvant-cemiplimab-in-cscc-at-high-risk-of-recurrence",
+        "efficacy_or_safety_data": {
+          "efficacy_metrics": [
+            {
+              "metric": "Disease-Free Survival (DFS) Hazard Ratio",
+              "value": "0.32 (95% CI, 0.20-0.51; P < .001) favoring cemiplimab vs placebo"
+            },
+            {
+              "metric": "24-Month DFS Rate",
+              "value": "87.1% (cemiplimab) vs 64.1% (placebo)"
+            },
+            {
+              "metric": "Locoregional Recurrence-Free Rate (24 months)",
+              "value": "94.6% (cemiplimab) vs 76.7% (placebo); HR 0.20"
+            }
+          ],
+          "safety_metrics": [
+            {
+              "metric": "Grade 3 or Higher Adverse Events",
+              "value": "23.9% (cemiplimab) vs 14.2% (placebo)"
+            },
+            {
+              "metric": "Immune-Related Adverse Events (Any Grade)",
+              "value": "22.9% (cemiplimab) vs 6.4% (placebo)"
+            },
+            {
+              "metric": "Treatment Discontinuation Rate",
+              "value": "9.8% (cemiplimab) vs 1.5% (placebo)"
+            }
+          ]
+        },
+        "nct_id": null
+      },
+      {
+        "title": "Sun Pharma Announces the Availability of UNLOXCYT\u2122 (cosibelimab-ipdl) for Advanced Cutaneous Squamous Cell Carcinoma (aCSCC)",
+        "date": "January 16, 2026",
+        "url": "https://www.biospace.com/press-releases/sun-pharma-announces-the-availability-of-unloxcyt-cosibelimab-ipdl-for-advanced-cutaneous-squamous-cell-carcinoma-acscc",
+        "efficacy_or_safety_data": {
+          "metric": "Disease Control Rate (DCR); Clinical meaningful efficacy; Grade 3 Immune-mediated Adverse Reactions (imARs); Grade 4+ imARs; Pneumonitis (Grade 3 or 4)",
+          "value": "71%; Confirmed objective response rates and duration of response (updated label reflecting long-term data).; 0.9% (dermatologic only); 0%; 0%"
+        },
+        "nct_id": null
+      },
+      {
+        "title": "Updated Cosibelimab Label Reflects Long-Term Data in Advanced CSCC",
+        "date": "December 2, 2025",
+        "url": "https://www.onclive.com/view/updated-cosibelimab-label-reflects-long-term-data-in-advanced-cscc",
+        "efficacy_or_safety_data": {
+          "metric": "Objective Response Rate (ORR) - Metastatic CSCC; Complete Response (CR) Rate - Metastatic CSCC; Objective Response Rate (ORR) - Locally Advanced CSCC; Complete Response (CR) Rate - Locally Advanced CSCC; AE-related Permanent Discontinuation; Median duration of exposure",
+          "value": "50% (95% CI, 38%-62%) at 29.3 months median follow-up; 13%; 55% (95% CI, 36%-73%) at 24.1 months median follow-up; 26%; 8%; 36 weeks (range 2 weeks to 3.7 years)"
+        },
+        "nct_id": null
+      },
+      {
+        "title": "Adjuvant Cemiplimab Cleared in EU for CSCC With High Recurrence Risk After Surgery and Radiation",
+        "date": "November 19, 2025",
+        "url": "https://www.onclive.com/view/adjuvant-cemiplimab-cleared-in-eu-for-cscc-with-high-recurrence-risk-after-surgery-and-radiation",
+        "efficacy_or_safety_data": {
+          "metric": "Reduction in Recurrence Risk; 2-year Overall Survival (OS) Rate; Any-grade Adverse Effects (AEs); Grade 3 or higher AEs; Serious Toxicities",
+          "value": "68%; 94.8% (95% CI, 89.6%-97.4%) vs 92.3% with placebo; 91.2%; 23.9%; 17.6%"
+        },
+        "nct_id": null
+      }
+    ]
+  },
+  "uveal-melanoma": {
+    "articles": [
+      {
+        "title": "Multimodal Regimen Yields Remission in Liver Metastases from Uveal Melanoma",
+        "date": "February 1, 2026",
+        "url": "https://www.cancernetwork.com/view/multimodal-regimen-yields-remission-in-liver-metastases-from-uveal-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "Frontline Sorafenib Shows Promising Outcomes in Metastatic Uveal Melanoma",
+        "date": "January 3, 2026",
+        "url": "https://www.cancernetwork.com/view/frontline-sorafenib-shows-promising-outcomes-in-metastatic-uveal-melanoma",
+        "nct_id": "NCT01377025"
+      },
+      {
+        "title": "Melphalan/Hepatic Delivery System Displays Efficacy in Uveal Melanoma",
+        "date": "January 2, 2026",
+        "url": "https://www.cancernetwork.com/view/melphalan-hepatic-delivery-system-displays-efficacy-in-uveal-melanoma",
+        "nct_id": "NCT02678572"
+      },
+      {
+        "title": "Melphalan/HDS Yields Early and Consistent Antitumor Activity in Metastatic Uveal Melanoma",
+        "date": "January 19, 2026",
+        "url": "https://www.onclive.com/view/melphalan-hds-yields-early-and-consistent-antitumor-activity-in-metastatic-uveal-melanoma",
+        "nct_id": "NCT02678572"
+      },
+      {
+        "title": "Key Updates in Metastatic Uveal Melanoma From ESMO 2025",
+        "date": "December 9, 2025",
+        "url": "https://www.onclive.com/news-network/key-updates-in-metastatic-uveal-melanoma-from-esmo-2025",
+        "nct_id": null
+      },
+      {
+        "title": "Five Under 5: Top Oncology Videos for the Week of 11/9",
+        "date": "November 16, 2025",
+        "url": "https://www.onclive.com/view/five-under-5-top-oncology-videos-for-the-week-of-11-9",
+        "nct_id": "NCT03947385"
+      },
+      {
+        "title": "Replimune Reports Fiscal Third Quarter 2026 Financial Results and Provides Corporate Update",
+        "date": "February 3, 2026",
+        "url": "https://www.biospace.com/press-releases/replimune-reports-fiscal-third-quarter-2026-financial-results-and-provides-corporate-update",
+        "nct_id": null
+      },
+      {
+        "title": "Immunocore announces R&D leadership evolution",
+        "date": "February 1, 2026",
+        "url": "https://www.biospace.com/press-releases/immunocore-announces-r-d-leadership-evolution",
+        "nct_id": null
+      },
+      {
+        "title": "IDEAYA Biosciences Provides a Business Update and Outlines 2026 Corporate Objectives at the 44th Annual J.P. Morgan Healthcare Conference",
+        "date": "January 12, 2026",
+        "url": "https://www.biospace.com/press-releases/ideaya-biosciences-provides-a-business-update-and-outlines-2026-corporate-objectives-at-the-44th-annual-j-p-morgan-healthcare-conference",
+        "nct_id": null
+      },
+      {
+        "title": "Immunocore announces 2026 strategic priorities at 44th Annual J.P. Morgan Healthcare Conference",
+        "date": "January 9, 2026",
+        "url": "https://www.biospace.com/press-releases/immunocore-announces-2026-strategic-priorities-at-44th-annual-j-p-morgan-healthcare-conference",
+        "nct_id": null
+      },
+      {
+        "title": "Landmark Study Shows Combination of Castle Biosciences' DecisionDx\u00ae-UM and PRAME Outperforms Gene Mutation Analysis in Predicting Survival Outcomes in Uveal Melanoma",
+        "date": "December 17, 2025",
+        "url": "https://www.biospace.com/press-releases/landmark-study-shows-combination-of-castle-biosciences-decisiondx-um-and-prame-outperforms-gene-mutation-analysis-in-predicting-survival-outcomes-in-uveal-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "GSK Cuts Five-Year-Old Cancer Collaboration With Ideaya",
+        "date": "December 8, 2025",
+        "url": "https://www.biospace.com/business/gsk-cuts-five-year-old-cancer-collaboration-with-ideaya",
+        "nct_id": null
+      },
+      {
+        "title": "Delcath Systems Announces Publication of 10-Year Single-Center Experience with Percutaneous Hepatic Perfusion in Liver-Dominant Metastatic Uveal Melanoma",
+        "date": "December 4, 2025",
+        "url": "https://www.biospace.com/press-releases/delcath-systems-announces-publication-of-10-year-single-center-experience-with-percutaneous-hepatic-perfusion-in-liver-dominant-metastatic-uveal-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "Delcath Systems Board of Directors Authorizes $25 Million Share Repurchase Program",
+        "date": "November 21, 2025",
+        "url": "https://www.biospace.com/press-releases/delcath-systems-board-of-directors-authorizes-25-million-share-repurchase-program",
+        "nct_id": null
+      },
+      {
+        "title": "Melphalan/HDS Shows Favorable Results in Patients with Low Hepatic Tumor Burden",
+        "date": "January 7, 2026",
+        "url": "https://www.targetedonc.com/view/melphalan-hds-shows-favorable-results-in-patients-with-low-hepatic-tumor-burden",
+        "nct_id": "NCT02678572"
+      },
+      {
+        "title": "NBM-BMX Earns FDA Orphan Drug Status for Uveal Melanoma",
+        "date": "November 25, 2025",
+        "url": "https://www.targetedonc.com/view/nbm-bmx-earns-fda-orphan-drug-status-for-uveal-melanoma",
+        "nct_id": "NCT07136181"
+      }
+    ],
+    "results": [
+      {
+        "title": "Multimodal Regimen Yields Remission in Liver Metastases from Uveal Melanoma",
+        "date": "February 1, 2026",
+        "url": "https://www.cancernetwork.com/view/multimodal-regimen-yields-remission-in-liver-metastases-from-uveal-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Median Overall Survival (OS); Hazard Ratio (HR)",
+          "value": "Median liver-specific OS was 45.1 months in the surgical/ablation group vs 18.6 months in the non-surgical group (HR, 0.13; P < .0001). Median OS from primary treatment was 14.1 years vs 3.6 years, respectively."
+        },
+        "nct_id": null
+      },
+      {
+        "title": "Frontline Sorafenib Shows Promising Outcomes in Metastatic Uveal Melanoma",
+        "date": "January 3, 2026",
+        "url": "https://www.cancernetwork.com/view/frontline-sorafenib-shows-promising-outcomes-in-metastatic-uveal-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Median Progression-Free Survival (PFS); 12-month PFS Rate",
+          "value": "Median PFS was 5.5 months with sorafenib vs 1.9 months with placebo (HR, 0.53; P = .0083). 12-month PFS rates were 28.2% vs 8.4%."
+        },
+        "nct_id": "NCT01377025"
+      },
+      {
+        "title": "Melphalan/Hepatic Delivery System Displays Efficacy in Uveal Melanoma",
+        "date": "January 2, 2026",
+        "url": "https://www.cancernetwork.com/view/melphalan-hepatic-delivery-system-displays-efficacy-in-uveal-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Objective Response Rate (ORR); Median OS; Adverse Events",
+          "value": "ORR was 57.6% overall; 51.1% in low hepatic burden vs 22.2% in high burden. Median OS was 26.7 months (low burden) vs 15.4 months (high burden). Grade 3/4 AEs occurred in 81.1% of patients."
+        },
+        "nct_id": "NCT02678572"
+      },
+      {
+        "title": "Melphalan/HDS Yields Early and Consistent Antitumor Activity in Metastatic Uveal Melanoma",
+        "date": "January 19, 2026",
+        "url": "https://www.onclive.com/view/melphalan-hds-yields-early-and-consistent-antitumor-activity-in-metastatic-uveal-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "ORR; Median PFS; Median OS",
+          "value": "ORR was 51.1% in patients with low hepatic tumor burden vs 22.2% in high burden; Median PFS was 11.3 months (low burden) vs 5.8 months (high burden); Median OS was 26.7 months (low burden) vs 15.4 months (high burden)."
+        },
+        "nct_id": "NCT02678572"
+      },
+      {
+        "title": "Melphalan/HDS Shows Favorable Results in Patients with Low Hepatic Tumor Burden",
+        "date": "January 7, 2026",
+        "url": "https://www.targetedonc.com/view/melphalan-hds-shows-favorable-results-in-patients-with-low-hepatic-tumor-burden",
+        "efficacy_or_safety_data": {
+          "metric": "Overall Response Rate (ORR); Overall Survival (OS)",
+          "value": "ORR: 51.1% (low hepatic burden) vs 22.2% (high burden); Median OS: 26.71 months (low burden) vs 15.44 months (high burden); Patients with low/normal LDH had a median OS of 23.5 months vs 15.3 months for elevated LDH."
+        },
+        "nct_id": "NCT02678572"
+      },
+      {
+        "title": "Delcath Systems Announces Publication of 10-Year Single-Center Experience with Percutaneous Hepatic Perfusion in Liver-Dominant Metastatic Uveal Melanoma",
+        "date": "December 4, 2025",
+        "url": "https://www.biospace.com/press-releases/delcath-systems-announces-publication-of-10-year-single-center-experience-with-percutaneous-hepatic-perfusion-in-liver-dominant-metastatic-uveal-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Median Overall Survival (OS); Survival Rates; Adverse Events",
+          "value": "Median OS: 29.1 months; 1-year OS: 79.5%; 2-year OS: 53.2%; Procedure-related AEs (grade \u22652): 10.5%."
+        },
+        "nct_id": null
+      },
+      {
+        "title": "Five Under 5: Top Oncology Videos for the Week of 11/9",
+        "date": "November 16, 2025",
+        "url": "https://www.onclive.com/view/five-under-5-top-oncology-videos-for-the-week-of-11-9",
+        "efficacy_or_safety_data": {
+          "metric": "Median Overall Survival (OS); Overall Response Rate (ORR)",
+          "value": "OptimUM-01 trial (darovasertib + crizotinib): Median OS of 21.1 months; ORR of 34.1%."
+        },
+        "nct_id": "NCT03947385"
+      }
+    ]
+  },
+  "merkel-cell-carcinoma": {
+    "articles": [
+      {
+        "title": "Novel Cancer Vaccine Receives FDA Orphan Drug Designation in Cutaneous Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.cancernetwork.com/view/novel-cancer-vaccine-receives-fda-orphan-drug-designation-in-cutaneous-melanoma",
+        "nct_id": "NCT03655756, NCT06947928"
+      },
+      {
+        "title": "FDA Grants Orphan Drug Designation to IFx-2.0 for Advanced Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.targetedonc.com/view/fda-grants-orphan-drug-designation-to-ifx-2-0-for-advanced-melanoma",
+        "nct_id": "NCT03655756, NCT06947928"
+      },
+      {
+        "title": "Frontline Retifanlimab Approaches EU Approval for Advanced Squamous Cell Carcinoma of the Anal Canal",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/frontline-retifanlimab-approaches-eu-approval-for-advanced-squamous-cell-carcinoma-of-the-anal-canal",
+        "nct_id": null
+      },
+      {
+        "title": "Phio Pharmaceuticals Announces Participation in Third Annual DealFlow Discovery Conference",
+        "date": "January 26, 2026",
+        "url": "https://www.biospace.com/press-releases/phio-pharmaceuticals-announces-participation-in-third-annual-dealflow-discovery-conference",
+        "nct_id": "NCT06014086"
+      },
+      {
+        "title": "Incyte Japan Announces Approval of Zynyz\u00ae (retifanlimab) for the First-Line Treatment of Advanced Anal Cancer",
+        "date": "December 23, 2025",
+        "url": "https://www.biospace.com/press-releases/incyte-japan-announces-approval-of-zynyz-retifanlimab-for-the-first-line-treatment-of-advanced-anal-cancer",
+        "nct_id": "NCT04472429"
+      },
+      {
+        "title": "First Patient Is Dosed in SANTANA-225 Trial of ES-SCLC and MCC Therapy",
+        "date": "November 12, 2025",
+        "url": "https://www.targetedonc.com/view/first-patient-dosed-in-santana-225-trial-of-es-sclc-and-mcc-therapy",
+        "nct_id": "NCT06939036"
+      }
+    ],
+    "results": [
+      {
+        "title": "Novel Cancer Vaccine Receives FDA Orphan Drug Designation in Cutaneous Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.cancernetwork.com/view/novel-cancer-vaccine-receives-fda-orphan-drug-designation-in-cutaneous-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Safety & Efficacy (Phase 1 Melanoma Cohort)",
+          "value": "No dose-limiting toxicities (DLTs) in 6 evaluable patients. Stable disease in 3 patients; 3 of 4 patients refractory to anti-PD-1 achieved clinical benefit with subsequent anti-PD-1 therapy (one with stable disease >2 years)."
+        },
+        "nct_id": "NCT03655756, NCT06947928"
+      }
+    ]
+  },
+  "acral-melanoma": {
+    "articles": [
+      {
+        "title": "Real-World Data Support Clinical Benefit With Lifileucel in Previously Treated Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/real-world-data-support-clinical-benefit-with-lifileucel-in-previously-treated-advanced-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "Real-World Study Confirms Efficacy of Lifileucel in Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.targetedonc.com/view/real-world-study-confirms-efficacy-of-lifileucel-in-advanced-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "Replimune Reports Fiscal Third Quarter 2026 Financial Results and Provides Corporate Update",
+        "date": "February 3, 2026",
+        "url": "https://www.biospace.com/press-releases/replimune-reports-fiscal-third-quarter-2026-financial-results-and-provides-corporate-update",
+        "nct_id": null
+      },
+      {
+        "title": "AMT-253 Demonstrates Early Efficacy and Manageable Safety in Melanoma",
+        "date": "November 15, 2025",
+        "url": "https://www.onclive.com/view/amt-253-demonstrates-early-efficacy-and-manageable-safety-in-melanoma",
+        "nct_id": null
+      }
+    ],
+    "results": [
+      {
+        "title": "Cancer Vaccine Trial Receives FDA IND Clearance in Advanced Melanoma",
+        "date": "January 26, 2026",
+        "url": "https://www.cancernetwork.com/view/cancer-vaccine-trial-receives-fda-ind-clearence-in-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "PFS; ORR; DCR (Note: Patients with Acral Melanoma were excluded from this study)",
+          "value": "Progression-Free Survival (PFS) rate of 55.6% at 23 months; Objective Response Rate (ORR) of 63.4%; Disease Control Rate (DCR) of 83.0% (Cohort 1)."
+        },
+        "nct_id": "NCT04079166"
+      },
+      {
+        "title": "Real-World Data Support Clinical Benefit With Lifileucel in Previously Treated Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/real-world-data-support-clinical-benefit-with-lifileucel-in-previously-treated-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Objective Response Rate (ORR) in Acral Melanoma",
+          "value": "50% (compared to 57% in mucosal and 38% in cutaneous subtypes)"
+        },
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "Real-World Study Confirms Efficacy of Lifileucel in Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.targetedonc.com/view/real-world-study-confirms-efficacy-of-lifileucel-in-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Objective Response Rate (ORR) in Acral Melanoma",
+          "value": "50% (derived from real-world cohort of 41 patients)"
+        },
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "Replimune Reports Fiscal Third Quarter 2026 Financial Results and Provides Corporate Update",
+        "date": "February 3, 2026",
+        "url": "https://www.biospace.com/press-releases/replimune-reports-fiscal-third-quarter-2026-financial-results-and-provides-corporate-update",
+        "efficacy_or_safety_data": {
+          "metric": "ORR and Duration of Response (Acral Melanoma cohort)",
+          "value": "ORR of 44% (8/18); Median Duration of Response of 11.9 months"
+        },
+        "nct_id": "NCT03761914, NCT04050436"
+      },
+      {
+        "title": "AMT-253 Demonstrates Early Efficacy and Manageable Safety in Melanoma",
+        "date": "November 15, 2025",
+        "url": "https://www.onclive.com/view/amt-253-demonstrates-early-efficacy-and-manageable-safety-in-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "ORR; DCR; Median PFS (Acral Melanoma)",
+          "value": "ORR: 50%; Disease Control Rate (DCR): 100%; Median PFS: 8.3 months"
+        },
+        "nct_id": "NCT06209580"
+      }
+    ]
+  },
+  "mucosal-melanoma": {
+    "articles": [
+      {
+        "title": "Cancer Vaccine Trial Receives FDA IND Clearance in Advanced Melanoma",
+        "date": "January 26, 2026",
+        "url": "https://www.cancernetwork.com/view/cancer-vaccine-trial-receives-fda-ind-clearence-in-advanced-melanoma",
+        "nct_id": "NCT04079166"
+      },
+      {
+        "title": "Lenvatinib Plus Pembrolizumab Continues to Show Activity in Mucosal Melanoma",
+        "date": "January 14, 2026",
+        "url": "https://www.onclive.com/view/lenvatinib-plus-pembrolizumab-continues-to-show-activity-in-mucosal-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "Updates on the Management of Advanced Mucosal Melanoma: Insights From Recent Trials",
+        "date": "February 3, 2026",
+        "url": "https://www.targetedonc.com/view/updates-on-the-management-of-advanced-mucosal-melanoma-insights-from-recent-trials",
+        "nct_id": null
+      },
+      {
+        "title": "Biotechnology Firm Announces Positive Phase 2 Data for Mucosal Melanoma Candidate",
+        "date": "December 18, 2025",
+        "url": "https://www.biospace.com/article/biotechnology-firm-announces-positive-phase-2-data-for-mucosal-melanoma-candidate/",
+        "nct_id": null
+      },
+      {
+        "title": "Phase II Results Highlight Efficacy of Toripalimab and Axitinib in Mucosal Melanoma",
+        "date": "January 22, 2026",
+        "url": "https://www.onclive.com/view/phase-ii-results-highlight-efficacy-of-toripalimab-and-axitinib-in-mucosal-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "Targeting the VEGF Pathway to Overcome Immunotherapy Resistance in Mucosal Melanoma",
+        "date": "December 5, 2025",
+        "url": "https://www.targetedonc.com/view/targeting-the-vegf-pathway-to-overcome-immunotherapy-resistance-in-mucosal-melanoma",
+        "nct_id": null
+      },
+      {
+        "title": "FDA Grants Fast Track Designation to Novel Therapy for Metastatic Mucosal Melanoma",
+        "date": "November 19, 2025",
+        "url": "https://www.biospace.com/article/fda-grants-fast-track-designation-to-novel-therapy-for-metastatic-mucosal-melanoma/",
+        "nct_id": null
+      }
+    ],
+    "results": [
+      {
+        "title": "Real-World Data Support Clinical Benefit With Lifileucel in Previously Treated Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/real-world-data-support-clinical-benefit-with-lifileucel-in-previously-treated-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Objective Response Rate (ORR)",
+          "value": "57% (in mucosal melanoma subtype)"
+        },
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "Real-World Study Confirms Efficacy of Lifileucel in Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.targetedonc.com/view/real-world-study-confirms-efficacy-of-lifileucel-in-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Objective Response Rate (ORR)",
+          "value": "57% (in mucosal melanoma subtype)"
+        },
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "AMT-253 Demonstrates Early Efficacy and Manageable Safety in Melanoma",
+        "date": "November 15, 2025",
+        "url": "https://www.onclive.com/view/amt-253-demonstrates-early-efficacy-and-manageable-safety-in-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Objective Response Rate (ORR); Disease Control Rate (DCR); Median PFS",
+          "value": "33.3% (ORR); 66.7% (DCR); 11.0 months (Median PFS) in mucosal melanoma patients (n=3)"
+        },
+        "nct_id": "NCT06209580, NCT05906862"
+      }
+    ]
+  },
+  "cutaneous-melanoma-with-brain-cns-metastasis": {
+    "articles": [
+      {
+        "title": "Novel Cancer Vaccine Receives FDA Orphan Drug Designation in Cutaneous Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.cancernetwork.com/view/novel-cancer-vaccine-receives-fda-orphan-drug-designation-in-cutaneous-melanoma",
+        "nct_id": "NCT03655756"
+      },
+      {
+        "title": "RAD 101 Imaging Agent Achieves Concordance with MRI in Suspected Brain Mets",
+        "date": "December 16, 2025",
+        "url": "https://www.cancernetwork.com/view/rad-101-imaging-agent-achieves-concordance-with-mri-in-suspected-brain-mets",
+        "nct_id": null
+      },
+      {
+        "title": "Nivolumab plus Relatlimab Demonstrates Clinical Activity in Melanoma Brain Metastases",
+        "date": "January 24, 2026",
+        "url": "https://www.targetedonc.com/view/nivolumab-relatlimab-clinical-activity-melanoma-brain-metastases",
+        "nct_id": "NCT05704647, NCT05704933"
+      },
+      {
+        "title": "Long-Term Outcomes with Dual Checkpoint Inhibition in Patients with CNS Metastatic Melanoma",
+        "date": "December 15, 2025",
+        "url": "https://www.onclive.com/view/long-term-outcomes-dual-checkpoint-inhibition-cns-metastatic-melanoma",
+        "nct_id": "NCT02320058, NCT02374242"
+      },
+      {
+        "title": "Iovance Announces Updated Data on Lifileucel for Advanced Melanoma with Brain Involvement",
+        "date": "February 5, 2026",
+        "url": "https://www.biospace.com/article/iovance-updated-data-lifileucel-melanoma-brain-involvement",
+        "nct_id": "NCT02360579, NCT05727904"
+      },
+      {
+        "title": "Exploring the Role of Targeted Therapy in BRAF-Mutant Cutaneous Melanoma with CNS Disease",
+        "date": "January 12, 2026",
+        "url": "https://www.targetedonc.com/view/targeted-therapy-braf-mutant-melanoma-cns-disease",
+        "nct_id": null
+      },
+      {
+        "title": "New Frontiers in the Management of Leptomeningeal Disease from Cutaneous Melanoma",
+        "date": "November 18, 2025",
+        "url": "https://www.onclive.com/view/new-frontiers-management-leptomeningeal-disease-melanoma",
+        "nct_id": null
+      }
+    ],
+    "results": [
+      {
+        "title": "Novel Cancer Vaccine Receives FDA Orphan Drug Designation in Cutaneous Melanoma",
+        "date": "February 2, 2026",
+        "url": "https://www.cancernetwork.com/view/novel-cancer-vaccine-receives-fda-orphan-drug-designation-in-cutaneous-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Safety (DLTs, AEs) and Efficacy (Clinical Benefit)",
+          "value": "Safety: No serious dose-limiting toxicities (DLTs). Grade 1/2 AEs included injection site reactions (5 patients), bleeding (1), pain (1). Efficacy: Stable disease in 3 patients; one patient achieved progression-free survival (PFS2) of >3.66 years post-protocol."
+        },
+        "nct_id": "NCT03655756"
+      },
+      {
+        "title": "RAD 101 Imaging Agent Achieves Concordance with MRI in Suspected Brain Mets",
+        "date": "December 16, 2025",
+        "url": "https://www.cancernetwork.com/view/rad-101-imaging-agent-achieves-concordance-with-mri-in-suspected-brain-mets",
+        "efficacy_or_safety_data": {
+          "metric": "Diagnostic Concordance",
+          "value": "11 of 12 patients (92%) achieved concordance with MRI in detecting brain metastases. (Trial specifically enrolls melanoma patients)"
+        },
+        "nct_id": null
+      },
+      {
+        "title": "Real-World Data Support Clinical Benefit With Lifileucel in Previously Treated Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/real-world-data-support-clinical-benefit-with-lifileucel-in-previously-treated-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Overall Response Rate (ORR), PFS, OS",
+          "value": "ORR was 44% (18/41); Median PFS was 4.4 months; Median OS was 10.2 months. (Cohort included 29% patients with brain metastases)"
+        },
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "Best-in-Class Real-World Data Support Early Amtagvi\u00ae Treatment in Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.biospace.com/press-releases/best-in-class-real-world-data-support-early-amtagvi-treatment-in-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Overall Response Rate (ORR), Disease Control Rate (DCR)",
+          "value": "Confirmed ORR was 44% (18/41); Disease Control Rate was 73% (30/41)."
+        },
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "Real-World Study Confirms Efficacy of Lifileucel in Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.targetedonc.com/view/real-world-study-confirms-efficacy-of-lifileucel-in-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "Response Rate",
+          "value": "Real-world data show over a 40% response rate for lifileucel TIL therapy. (Study noted 29% of patients had brain metastases)"
+        },
+        "nct_id": "NCT02360579"
+      },
+      {
+        "title": "Single-Center, Retrospective Data Show Low Rate of Lifileucel Infusion Following Referral in Advanced Melanoma",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/single-center-retrospective-data-show-low-rate-of-lifileucel-infusion-following-referral-in-advanced-melanoma",
+        "efficacy_or_safety_data": {
+          "metric": "1-Year Overall Survival (OS)",
+          "value": "1-year OS rate of 78.9% for treated patients vs 46.8% for those who did not receive TIL therapy. (Cohort included 34.1% with CNS disease)"
+        },
+        "nct_id": null
+      }
+    ]
+  }
+}

@@ -111,6 +111,11 @@ export const trialsApi = {
     const response = await apiClient.get<DiseaseLandscapeStats>(`/api/landscape/disease-stats/${category}`);
     return response.data;
   },
+
+  getLiveTicker: async (category: string): Promise<LiveTickerResponse> => {
+    const response = await apiClient.get<LiveTickerResponse>(`/api/landscape/live-ticker/${category}`);
+    return response.data;
+  },
 };
 
 export interface AbstractData {
@@ -226,6 +231,28 @@ export interface DiseaseLandscapeStats {
     'Non-Industry': number;
   };
   extracted_count?: number;
+}
+
+// Live ticker types
+export interface LiveTickerArticle {
+  title: string;
+  date: string;
+  url: string;
+  nct_id?: string | null;
+}
+
+export interface LiveTickerEfficacySafety {
+  metric: string;
+  value: string;
+}
+
+export interface LiveTickerResult extends LiveTickerArticle {
+  efficacy_or_safety_data: LiveTickerEfficacySafety;
+}
+
+export interface LiveTickerResponse {
+  articles: LiveTickerArticle[];
+  results: LiveTickerResult[];
 }
 
 export const analyticsApi = {
