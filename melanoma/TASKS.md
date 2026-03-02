@@ -80,8 +80,9 @@ python run_tasks.py <task>
 
 # Available tasks:
 python run_tasks.py install     # Install dependencies
-python run_tasks.py test        # Run tests
-python run_tasks.py quality     # Run all quality checks
+python run_tasks.py test        # Run tests (same as CI: pytest with coverage)
+python run_tasks.py quality     # Run all quality checks (ruff, black, mypy, pytest)
+python run_tasks.py ci          # Run quality checks then build (full CI locally)
 python run_tasks.py build       # Build project
 python run_tasks.py run         # Run application
 python run_tasks.py clean       # Clean project

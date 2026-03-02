@@ -80,6 +80,41 @@ The database contains a single table `abstracts` with the following structure:
 - `arm_results` - JSON object containing all arm data
 - `created_at` - Creation timestamp
 
+## Dashboard clinical trials (api_discovery + clinical_trials_cache)
+
+The main dashboard at `/dashboard` shows trial cards by cancer type. That data comes from:
+
+- **`api_discovery`** – NCT numbers per cancer type
+- **`clinical_trials_cache`** – Full API response JSON per NCT
+
+These tables are created and updated by the clinical trials sync (e.g. `scripts/sync_dashboard_data.py`) or by importing from an existing ClinicalTrials.gov API database. If you have data in `data/clinical_trial_api/clinical_trial_api.db`, you can copy it into trials.db:
+
+```bash
+cd melanoma
+poetry run python scripts/import_clinical_trial_api_to_trials.py
+```
+
+See `scripts/import_clinical_trial_api_to_trials.py` for options. Without these tables populated, the dashboard will show zero trials for the selected cancer type.
+
+## Trial categorisation (trial_categorization)
+
+Curated **Modality**, **Target**, **Trial_Name**, and **Cancer type** (e.g. from `data/output/trial_categorizer.txt`) are stored in a separate table **`trial_categorization`** so that:
+
+- The API cache stays a raw copy of ClinicalTrials.gov; categorisation is our layer.
+- You can refresh categorisation without touching the cache or api_discovery.
+- Dashboard trial cards can show and filter by modality/target; title can use the curated Trial_Name when present.
+
+**Cancer type** is not in the categorizer file; it is mapped from the **`api_discovery`** table (same DB). When you load from the txt file or from the seed, any NCT that appears in `api_discovery` gets its `cancer_type` set from the discovery table (if an NCT appears in multiple cancer types, all tags are stored comma-separated). This keeps a single source of truth for “which cancer type(s) this trial belongs to” in `api_discovery`, while still exposing cancer type on trial categorization for display and filtering.
+
+Load from the txt file:
+
+```bash
+cd melanoma
+poetry run python scripts/load_trial_categorizer.py
+```
+
+To bake categorisation into the Docker image: run `scripts/load_trial_categorizer.py --export-seed`, commit `data/deployed/trial_categorization_seed.json`, and rebuild; `build_db.py` will load it when present.
+
 ## Maintenance
 
 To update the database when JSON files change:

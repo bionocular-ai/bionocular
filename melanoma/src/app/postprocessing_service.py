@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class PostprocessingService(PostprocessingServiceInterface):
     """Service for orchestrating conference abstract postprocessing."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the postprocessing service."""
         self.processors: dict[ConferenceType, PostprocessorInterface] = {
             ConferenceType.ASCO: ASCOPostprocessor(),

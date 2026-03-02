@@ -25,6 +25,7 @@ from ..infrastructure.database import (
 )
 from ..infrastructure.repository import SQLAlchemyDocumentRepository
 from ..infrastructure.storage import LocalFileStorage
+from .approval_status_service import ApprovalStatusService
 from .clinical_api import router as clinical_router
 from .ingestion_service import IngestionService
 from .json_trials_service import JSONTrialsService
@@ -1955,27 +1956,41 @@ async def get_filesystem_info() -> dict:
 
 # Landscape API endpoints
 @app.get("/api/landscape/stats")
-async def get_landscape_stats() -> dict:
+async def get_landscape_stats(cancer_type: str | None = None) -> dict:
     """Get landscape statistics for cancer type bubbles.
 
+    If cancer_type (slug) is provided, also returns selected_type_stats with
+    clinical_trials count and placeholders for pipeline_drugs, drug_targets, biomarkers.
+
     Returns:
-        Dictionary with landscape statistics:
-        {
-            "landscape": [
-                {
-                    "cancer_type": str,
-                    "total_api_count": int,
-                    "extracted_count": int,
-                    "bubble_size": int
-                }
-            ]
-        }
+        Dictionary with "landscape" list and optionally "selected_type_stats".
     """
     try:
         service = create_clinical_trials_service()
         stats = service.repository.get_landscape_stats()
 
-        return {"landscape": stats}
+        result: dict = {"landscape": stats}
+
+        if cancer_type:
+            category_name = _slug_to_category_name(cancer_type)
+            for item in stats:
+                if item.get("cancer_type") == category_name:
+                    result["selected_type_stats"] = {
+                        "clinical_trials": item.get("total_api_count", 0),
+                        "pipeline_drugs": None,
+                        "drug_targets": None,
+                        "biomarkers": None,
+                    }
+                    break
+            else:
+                result["selected_type_stats"] = {
+                    "clinical_trials": 0,
+                    "pipeline_drugs": None,
+                    "drug_targets": None,
+                    "biomarkers": None,
+                }
+
+        return result
 
     except Exception as e:
         logger.error(f"Error fetching landscape stats: {str(e)}", exc_info=True)
@@ -2014,6 +2029,109 @@ async def get_therapeutic_index(skip: int = 0, limit: int = 100) -> dict:
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
         ) from e
+
+
+@app.get("/api/landscape/dashboard-trials")
+async def get_dashboard_trials(
+    cancer_type: str,
+    phase: str | None = None,
+    has_abstracts: bool = False,
+    status: str | None = None,
+    sponsor_type: str | None = None,
+    skip: int = 0,
+    limit: int = 500,
+) -> dict:
+    """Get trial cards for dashboard by cancer type.
+
+    Args:
+        cancer_type: Category slug (e.g. cutaneous-melanoma).
+        phase: Optional comma-separated phase names (e.g. "Phase 1,Phase 2").
+        has_abstracts: If True, only return trials that have abstracts or publications data.
+        status: Optional comma-separated study statuses (e.g. "Open,Closed,Suspended").
+        sponsor_type: Optional comma-separated "Industry" and/or "Non-Industry".
+        skip: Pagination offset.
+        limit: Max trials to return.
+
+    Returns:
+        { "trials": [ { nct_id, title, drug_name, sponsor_name, enrollment_count, phase, study_status, sponsor_type, approval_group, abstract_id?, conference?, published_year? }, ... ] }
+    """
+    try:
+        category_name = _slug_to_category_name(cancer_type)
+        phase_filter = (
+            [p.strip() for p in phase.split(",") if p.strip()] if phase else None
+        )
+        status_filter = (
+            [s.strip() for s in status.split(",") if s.strip()] if status else None
+        )
+        sponsor_type_filter = (
+            [s.strip() for s in sponsor_type.split(",") if s.strip()]
+            if sponsor_type
+            else None
+        )
+
+        service = create_clinical_trials_service()
+        cards, total = service.repository.get_dashboard_trials(
+            cancer_type_tag=category_name,
+            phase_filter=phase_filter,
+            has_abstracts_only=has_abstracts,
+            status_filter=status_filter,
+            sponsor_type_filter=sponsor_type_filter,
+            skip=skip,
+            limit=limit,
+        )
+
+        approval_service = ApprovalStatusService()
+        for card in cards:
+            arm_labels = card.get("arm_labels") or []
+            has_approved = False
+            for arm_label in arm_labels:
+                if not arm_label:
+                    continue
+                status = approval_service.get_approval_status(
+                    arm_name=arm_label,
+                    cancer_type=category_name,
+                )
+                if status == "Approved":
+                    has_approved = True
+                    break
+            card["approval_group"] = "Approved" if has_approved else "Non-approved"
+            del card["arm_labels"]
+
+        return {"trials": cards, "total": total}
+
+    except Exception as e:
+        logger.error(f"Error fetching dashboard trials: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/landscape/trial/{nct_id}")
+async def get_trial_detail(nct_id: str) -> dict:
+    """Get full trial API data from clinical_trials_cache for detail view.
+
+    Returns the raw ClinicalTrials.gov API v2 response (protocolSection,
+    resultsSection, etc.) so the frontend can display AlphaSense-style detail.
+    """
+    if not nct_id or not nct_id.strip():
+        raise HTTPException(status_code=400, detail="nct_id is required")
+    nct_id = nct_id.strip().upper()
+    try:
+        service = create_clinical_trials_service()
+        api_json = service.repository.get_cached_trial_api_json(nct_id)
+        if not api_json:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Trial {nct_id} not found in cache. It may not be in the dashboard for this cancer type.",
+            )
+        return api_json
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            f"Error fetching trial detail for {nct_id}: {str(e)}", exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @app.post("/api/landscape/sync")

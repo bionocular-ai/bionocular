@@ -37,7 +37,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.variable} ${ibmPlexSans.variable} antialiased`}
+        className={[inter.variable, ibmPlexSans.variable, "antialiased"].join(" ")}
         style={{ fontFamily: "var(--font-inter)" }}
       >
         <SessionProvider>

@@ -2,17 +2,16 @@
 
 import * as React from 'react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import {
   ChevronDown,
   Check,
   X,
-  LayoutGrid,
-  ArrowLeft,
   FileSpreadsheet,
   Presentation,
   FileText,
@@ -41,6 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
 
 // ============================================================================
 // Category Mapping
@@ -66,17 +66,17 @@ const CATEGORY_SLUG_MAP: Record<string, string> = {
 function normalizeCancerType(cancerType: string | null | undefined): string | null {
   if (!cancerType) return null;
   const normalized = cancerType.trim();
-  
+
   // Map old names to new names
   if (normalized === 'Resected Cutaneous Melanoma' || normalized === 'Unresectable Cutaneous Melanoma') {
     return 'Cutaneous melanoma';
   }
-  if (normalized === 'Cutaneous melanoma with Brain metastasis' || 
-      normalized === 'Cutaneous Melanoma with CNS metastasis' ||
-      normalized === 'Cutaneous melanoma with Brain/CNS metastasis') {
+  if (normalized === 'Cutaneous melanoma with Brain metastasis' ||
+    normalized === 'Cutaneous Melanoma with CNS metastasis' ||
+    normalized === 'Cutaneous melanoma with Brain/CNS metastasis') {
     return 'Cutaneous melanoma with Brain/CNS metastasis';
   }
-  
+
   return normalized;
 }
 
@@ -148,11 +148,15 @@ const EFFICACY_OPTIONS = [
   // Survival - PFS
   { value: 'MEDIAN_PFS', label: 'Median PFS (months)' },
   { value: 'MEDIAN_FOLLOWUP_PFS', label: 'Median PFS Follow-up' },
-  { value: 'P_VALUE_PFS', label: 'p-value (PFS)' },
   // Survival - OS
   { value: 'MEDIAN_OS', label: 'Median OS (months)' },
   { value: 'MEDIAN_FOLLOWUP_OS', label: 'Median OS Follow-up' },
-  { value: 'P_VALUE_OS', label: 'p-value (OS)' },
+  // Hazard ratios (for bubble X/Y)
+  { value: 'HR_PFS', label: 'HR (PFS)' },
+  { value: 'HR_OS', label: 'HR (OS)' },
+  { value: 'HR_EFS', label: 'HR (EFS)' },
+  { value: 'HR_RFS', label: 'HR (RFS)' },
+  { value: 'HR_MFS', label: 'HR (MFS)' },
   // Response Rates
   { value: 'OBJECTIVE_RESPONSE_RATE', label: 'ORR (%)' },
   { value: 'COMPLETE_RESPONSE', label: 'Complete Response (%)' },
@@ -180,9 +184,7 @@ const EFFICACY_OPTIONS = [
   { value: 'OS_RATE_48M', label: 'OS Rate 48mo (%)' },
   // Other Survival
   { value: 'EFS', label: 'Event-Free Survival' },
-  { value: 'P_VALUE_EFS', label: 'p-value (EFS)' },
   { value: 'RFS', label: 'Recurrence-Free Survival' },
-  { value: 'P_VALUE_RFS', label: 'p-value (RFS)' },
   { value: 'LENGTH_RFS', label: 'RFS Follow-up Length' },
   { value: 'MFS', label: 'Metastasis-Free Survival' },
   { value: 'LENGTH_MFS', label: 'MFS Follow-up Length' },
@@ -304,11 +306,19 @@ const SAFETY_OPTIONS = [
 
 const Z_AXIS_OPTIONS = [
   { value: 'NUMBER_OF_PATIENTS', label: 'Number of Patients' },
-  { value: 'HR_PFS', label: 'HR (PFS)' },
-  { value: 'HR_OS', label: 'HR (OS)' },
-  { value: 'HR_EFS', label: 'HR (EFS)' },
-  { value: 'HR_RFS', label: 'HR (RFS)' },
-  { value: 'HR_MFS', label: 'HR (MFS)' },
+  { value: 'P_VALUE_PFS', label: 'p-value (PFS)' },
+  { value: 'P_VALUE_OS', label: 'p-value (OS)' },
+  { value: 'P_VALUE_EFS', label: 'p-value (EFS)' },
+  { value: 'P_VALUE_RFS', label: 'p-value (RFS)' },
+];
+/** Z-axis options for Safety bubble only (no p-values) */
+const Z_AXIS_OPTIONS_SAFETY = Z_AXIS_OPTIONS.filter((o) => !o.value.startsWith('P_VALUE_'));
+/** Efficacy options for Efficacy : Safety bubble only (no HR; HR is for Efficacy-only bubble) */
+const EFFICACY_OPTIONS_NO_HR = EFFICACY_OPTIONS.filter((o) => !o.value.startsWith('HR_'));
+/** Safety bubble X/Y: safety metrics (no None) + HR metrics */
+const SAFETY_BUBBLE_XY_OPTIONS = [
+  ...SAFETY_OPTIONS.filter((o) => o.value !== 'none'),
+  ...EFFICACY_OPTIONS.filter((o) => o.value.startsWith('HR_')),
 ];
 
 // Available therapies for selection
@@ -361,7 +371,7 @@ function FilterSelect({
     () => options.filter(option => option.label.toLowerCase().includes(searchTerm.toLowerCase())),
     [options, searchTerm],
   );
-  
+
   return (
     <div className="space-y-1.5">
       <label className="text-[13px] font-medium text-indigo-900">{label}</label>
@@ -463,11 +473,10 @@ function TherapyMultiSelect({ label, maxLabel, options, selected, onChange, maxS
           {options.map(option => (
             <label
               key={option}
-              className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${
-                selected.includes(option) 
-                  ? 'bg-indigo-50 text-indigo-700' 
+              className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${selected.includes(option)
+                  ? 'bg-indigo-50 text-indigo-700'
                   : 'hover:bg-gray-50 text-gray-700'
-              } ${!selected.includes(option) && selected.length >= maxSelect ? 'opacity-50 cursor-not-allowed' : ''}`}
+                } ${!selected.includes(option) && selected.length >= maxSelect ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <input
                 type="checkbox"
@@ -492,15 +501,23 @@ function TherapyMultiSelect({ label, maxLabel, options, selected, onChange, maxS
 export default function CategoryAnalyticsPage() {
   const { data: session } = useSession();
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
+
+  const handleCancerTypeChange = useCallback(
+    (slug: string) => {
+      const query = searchParams.toString();
+      router.push(`/dashboard/${slug}/analytics${query ? `?${query}` : ''}`);
+    },
+    [router, searchParams]
+  );
 
   // Check if we're in a specific mode (efficacy or safety only)
   // Read from URL params using Next.js useSearchParams to avoid hydration mismatch
   const modeParam = searchParams.get('mode');
-  const mode: 'all' | 'efficacy' | 'safety' = 
+  const mode: 'all' | 'efficacy' | 'safety' =
     modeParam === 'efficacy' || modeParam === 'safety' ? modeParam : 'all';
 
   // Filter states - initialized based on mode
@@ -514,7 +531,7 @@ export default function CategoryAnalyticsPage() {
   // Store raw user selections
   const [rawSelectedApproved, setRawSelectedApproved] = useState<string[]>([]);
   const [rawSelectedNonApproved, setRawSelectedNonApproved] = useState<string[]>([]);
-  
+
   // Initialize params with safe defaults to avoid hydration mismatch
   // These will be updated by useEffect based on mode
   const [efficacyParam, setEfficacyParam] = useState('OBJECTIVE_RESPONSE_RATE');
@@ -524,13 +541,13 @@ export default function CategoryAnalyticsPage() {
   /** Second safety metric for Head to Head Safety (diverging/bubble): X vs Y axis */
   const [safetyParamY, setSafetyParamY] = useState('none');
   const [zAxisParam, setZAxisParam] = useState('NUMBER_OF_PATIENTS');
-  
+
   // Direct axis assignments: track which metric is on which axis
   // Each metric can be assigned to 'x', 'y', or 'z'
   const [zParamAxis, setZParamAxis] = useState<'x' | 'y' | 'z'>('z');
   const [efficacyAxis, setEfficacyAxis] = useState<'x' | 'y' | 'z'>('y');
   const [safetyAxis, setSafetyAxis] = useState<'x' | 'y' | 'z'>('x');
-  
+
   // Convert axis assignments to axisConfig (0-5) for backward compatibility with BubbleChart
   const axisConfig = useMemo(() => {
     // Build assignments object
@@ -539,7 +556,7 @@ export default function CategoryAnalyticsPage() {
       y: safetyAxis === 'y' ? 'safety' : efficacyAxis === 'y' ? 'efficacy' : 'zParam',
       z: safetyAxis === 'z' ? 'safety' : efficacyAxis === 'z' ? 'efficacy' : 'zParam',
     };
-    
+
     // Map to axisConfig number
     const { x, y, z } = assignments;
     if (x === 'safety' && y === 'efficacy' && z === 'zParam') return 0;
@@ -564,13 +581,13 @@ export default function CategoryAnalyticsPage() {
     const currentZ = zParamAxis;
     const currentEfficacy = efficacyAxis;
     const currentSafety = safetyAxis;
-    
+
     // Check if the new axis is already taken
-    const axisTaken = 
+    const axisTaken =
       (metric !== 'zParam' && currentZ === newAxis) ||
       (metric !== 'efficacy' && currentEfficacy === newAxis) ||
       (metric !== 'safety' && currentSafety === newAxis);
-    
+
     if (axisTaken) {
       // Swap: move the metric currently on newAxis to the metric's old axis
       if (metric !== 'zParam' && currentZ === newAxis) {
@@ -593,7 +610,7 @@ export default function CategoryAnalyticsPage() {
       else setSafetyAxis(newAxis);
     }
   }, [zParamAxis, efficacyAxis, safetyAxis, getCurrentAxis]);
-  
+
   // Head to Head Efficacy/Safety: Z is always the z-axis (bubble size), no axis swap
   useEffect(() => {
     if (mode === 'efficacy' || mode === 'safety') {
@@ -621,7 +638,7 @@ export default function CategoryAnalyticsPage() {
       setSafetyParamY('none');
     }
   }, [mode]);
-  
+
   const [efficacySearch, setEfficacySearch] = useState('');
   const [safetySearch, setSafetySearch] = useState('');
 
@@ -658,12 +675,12 @@ export default function CategoryAnalyticsPage() {
       line_of_treatment: lineOfTreatment,
       limit: 2000, // Request all matching records
     };
-    
+
     // Add has_metric filter if safety param is selected (and not being used as display metric)
     if (safetyParam !== 'none' && efficacyParam !== 'none') {
       filters.has_metric = safetyParam;
     }
-    
+
     return filters;
   }, [resourceType, categoryName, therapyType, fundingType, lineOfTreatment, safetyParam, efficacyParam]);
 
@@ -688,6 +705,9 @@ export default function CategoryAnalyticsPage() {
           setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
         }
       } else if (chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell') {
+        if (chartType === 'bubble' && efficacyParam.startsWith('HR_')) {
+          setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
+        }
         if (efficacyParam === 'none' && safetyParam === 'none') {
           setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
           setSafetyParam('GRADE_3_PLUS_AE');
@@ -698,11 +718,18 @@ export default function CategoryAnalyticsPage() {
         }
       }
     } else if (mode === 'efficacy' && (chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell')) {
-      if (efficacyParamY === 'none') {
+      if (chartType === 'bubble') {
+        setEfficacyParam('OBJECTIVE_RESPONSE_RATE'); // ORR
+        setEfficacyParamY('MEDIAN_PFS');             // Median PFS
+        setZAxisParam('NUMBER_OF_PATIENTS');         // Number of patients
+      } else if (efficacyParamY === 'none') {
         setEfficacyParamY(efficacyParam === 'OBJECTIVE_RESPONSE_RATE' ? 'DISEASE_CONTROL_RATE' : 'OBJECTIVE_RESPONSE_RATE');
       }
     } else if (mode === 'safety' && (chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell')) {
-      if (safetyParamY === 'none') {
+      if (chartType === 'bubble') {
+        if (zAxisParam.startsWith('P_VALUE_')) setZAxisParam('NUMBER_OF_PATIENTS');
+        setSafetyParamY('AE'); // Y-axis default: AE (%)
+      } else if (safetyParamY === 'none') {
         setSafetyParamY(safetyParam === 'GRADE_3_PLUS_AE' ? 'TEAE' : 'GRADE_3_PLUS_AE');
       }
     }
@@ -740,7 +767,7 @@ export default function CategoryAnalyticsPage() {
     window.addEventListener('resize', updateHeight);
     return () => window.removeEventListener('resize', updateHeight);
   }, [isFullscreen]);
-  
+
   // Update height when entering fullscreen
   useEffect(() => {
     if (isFullscreen) {
@@ -774,24 +801,24 @@ export default function CategoryAnalyticsPage() {
 
     // Filter by cancer type first
     let categoryTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
-    
+
     if (categoryName) {
       categoryTrials = categoryTrials.filter(trial => {
         for (const arm of Object.values(trial.arm_results)) {
           // Check both key formats: abstracts use 'AttributeType.CANCER_TYPE', publications use 'cancer_type'
           const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'] || arm.attributes['cancer_type'];
           if (cancerTypeAttr === null || cancerTypeAttr === undefined) continue;
-          
+
           const cancerType = typeof cancerTypeAttr === 'object' && 'value' in cancerTypeAttr
             ? String(cancerTypeAttr.value || '')
             : String(cancerTypeAttr || '');
-          
+
           // Normalize both values for comparison
           const normalizedTrialType = normalizeCancerType(cancerType);
           const normalizedCategory = normalizeCancerType(categoryName);
-          
-          if (normalizedTrialType && normalizedCategory && 
-              normalizedTrialType.toLowerCase() === normalizedCategory.toLowerCase()) {
+
+          if (normalizedTrialType && normalizedCategory &&
+            normalizedTrialType.toLowerCase() === normalizedCategory.toLowerCase()) {
             return true;
           }
         }
@@ -810,7 +837,7 @@ export default function CategoryAnalyticsPage() {
     }
 
     const allTreatments = Array.from(treatmentSet).sort();
-    
+
     // Classify treatments as approved or non-approved
     // Using the same logic as chart-transformers
     const APPROVED_TREATMENTS_SET = new Set([
@@ -837,7 +864,7 @@ export default function CategoryAnalyticsPage() {
       // Check for combination therapies with approved drugs
       if (!isApproved && normalized.includes('+')) {
         const parts = normalized.split('+').map(p => p.trim());
-        const hasApproved = parts.some(part => 
+        const hasApproved = parts.some(part =>
           Array.from(APPROVED_TREATMENTS_SET).some(approved => part.includes(approved))
         );
         if (hasApproved) {
@@ -864,7 +891,7 @@ export default function CategoryAnalyticsPage() {
     () => rawSelectedApproved.filter(t => availableTherapies.approved.includes(t)),
     [rawSelectedApproved, availableTherapies.approved]
   );
-  
+
   const selectedNonApproved = useMemo(
     () => rawSelectedNonApproved.filter(t => availableTherapies.nonApproved.includes(t)),
     [rawSelectedNonApproved, availableTherapies.nonApproved]
@@ -1025,24 +1052,7 @@ export default function CategoryAnalyticsPage() {
               </Link>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push(`/dashboard/${categorySlug}`)}
-                className="text-slate-600 hover:text-slate-900"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Trials
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-                className="text-slate-600 hover:text-slate-900"
-              >
-                <LayoutGrid className="h-4 w-4 mr-1" />
-                Categories
-              </Button>
+              <DashboardNavLink />
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
@@ -1055,6 +1065,14 @@ export default function CategoryAnalyticsPage() {
         </div>
       </header>
 
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden px-2 pt-2 pb-4 md:px-4 md:pt-4 md:pb-6 bg-slate-100 gap-4">
+        <div className="w-full bg-white rounded-lg shadow shrink-0 overflow-visible">
+          <DashboardGlobalHeader
+            cancerTypeSlug={categorySlug}
+            onCancerTypeChange={handleCancerTypeChange}
+          />
+        </div>
+
       {/* Mode Banner with Parameter Selection - Compact, professional design */}
       {mode === 'all' && (
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50">
@@ -1065,7 +1083,7 @@ export default function CategoryAnalyticsPage() {
                   <TrendingUp className="h-4 w-4 text-white" />
                 </div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-white font-semibold text-sm">Efficacy : Safety Therapeutic Index</h2>
+                  <h2 className="text-white font-semibold text-sm">Head to Head Efficacy : Safety</h2>
                   <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
                   <p className="text-blue-100 text-xs hidden sm:block">Comparative analysis</p>
                 </div>
@@ -1094,7 +1112,7 @@ export default function CategoryAnalyticsPage() {
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button className="flex h-9 flex-1 items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
-                              <span className="flex items-center gap-2 truncate font-medium">{EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label || 'Select...'}</span>
+                              <span className="flex items-center gap-2 truncate font-medium">{EFFICACY_OPTIONS_NO_HR.find(o => o.value === efficacyParam)?.label || 'Select...'}</span>
                               <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
                             </button>
                           </DropdownMenuTrigger>
@@ -1102,7 +1120,7 @@ export default function CategoryAnalyticsPage() {
                             <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
                               <input type="text" value={efficacySearch} placeholder="Search efficacy metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setEfficacySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                             </div>
-                            {EFFICACY_OPTIONS.filter(option => option.label.toLowerCase().includes(efficacySearch.toLowerCase())).map(option => (
+                            {EFFICACY_OPTIONS_NO_HR.filter(option => option.value !== 'none' && option.label.toLowerCase().includes(efficacySearch.toLowerCase())).map(option => (
                               <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setEfficacyParamWithMode(option.value); setEfficacySearch(''); }}>
                                 <div className="flex items-center justify-between w-full"><span>{option.label}</span>{efficacyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
                               </DropdownMenuItem>
@@ -1140,7 +1158,7 @@ export default function CategoryAnalyticsPage() {
                             <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
                               <input type="text" value={safetySearch} placeholder="Search safety metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setSafetySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                             </div>
-                            {SAFETY_OPTIONS.filter(option => option.label.toLowerCase().includes(safetySearch.toLowerCase())).map(option => (
+                            {SAFETY_OPTIONS.filter(option => option.value !== 'none' && option.label.toLowerCase().includes(safetySearch.toLowerCase())).map(option => (
                               <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setSafetyParamWithMode(option.value); setSafetySearch(''); }}>
                                 <div className="flex items-center justify-between w-full"><span>{option.label}</span>{safetyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
                               </DropdownMenuItem>
@@ -1187,48 +1205,48 @@ export default function CategoryAnalyticsPage() {
                   </div>
                 ))}
                 {chartType !== 'bubble' && (
-                <>
-                  <div className="w-full sm:w-72">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button disabled={mode === 'all' && chartType === 'bar' && safetyParam !== 'none' && safetyParam !== ''} className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/10">
-                          <span className="flex items-center gap-2 truncate font-medium">{EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label || 'Select...'}</span>
-                          <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
-                        <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
-                          <input type="text" value={efficacySearch} placeholder="Search efficacy metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setEfficacySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
-                        </div>
-                        {EFFICACY_OPTIONS.filter(option => option.label.toLowerCase().includes(efficacySearch.toLowerCase())).map(option => (
-                          <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setEfficacyParamWithMode(option.value); setEfficacySearch(''); }}>
-                            <div className="flex items-center justify-between w-full"><span>{option.label}</span>{efficacyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="w-full sm:w-72">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button disabled={mode === 'all' && chartType === 'bar' && efficacyParam !== 'none' && efficacyParam !== ''} className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/10">
-                          <span className="flex items-center gap-2 truncate font-medium">{SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label || 'Select...'}</span>
-                          <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
-                        <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
-                          <input type="text" value={safetySearch} placeholder="Search safety metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setSafetySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
-                        </div>
-                        {SAFETY_OPTIONS.filter(option => option.label.toLowerCase().includes(safetySearch.toLowerCase())).map(option => (
-                          <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setSafetyParamWithMode(option.value); setSafetySearch(''); }}>
-                            <div className="flex items-center justify-between w-full"><span>{option.label}</span>{safetyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </>
+                  <>
+                    <div className="w-full sm:w-72">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button disabled={mode === 'all' && chartType === 'bar' && safetyParam !== 'none' && safetyParam !== ''} className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/10">
+                            <span className="flex items-center gap-2 truncate font-medium">{EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label || 'Select...'}</span>
+                            <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
+                          <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
+                            <input type="text" value={efficacySearch} placeholder="Search efficacy metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setEfficacySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                          </div>
+                          {EFFICACY_OPTIONS.filter(option => (chartType === 'diverging' || chartType === 'bar' ? option.value !== 'none' : true) && option.label.toLowerCase().includes(efficacySearch.toLowerCase())).map(option => (
+                              <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setEfficacyParamWithMode(option.value); setEfficacySearch(''); }}>
+                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{efficacyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                              </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="w-full sm:w-72">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button disabled={mode === 'all' && chartType === 'bar' && efficacyParam !== 'none' && efficacyParam !== ''} className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white/10">
+                            <span className="flex items-center gap-2 truncate font-medium">{SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label || 'Select...'}</span>
+                            <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
+                          <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
+                            <input type="text" value={safetySearch} placeholder="Search safety metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setSafetySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                          </div>
+                          {SAFETY_OPTIONS.filter(option => (chartType === 'diverging' || chartType === 'bar' ? option.value !== 'none' : true) && option.label.toLowerCase().includes(safetySearch.toLowerCase())).map(option => (
+                            <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setSafetyParamWithMode(option.value); setSafetySearch(''); }}>
+                              <div className="flex items-center justify-between w-full"><span>{option.label}</span>{safetyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -1247,7 +1265,7 @@ export default function CategoryAnalyticsPage() {
                   <h2 className="text-white font-semibold text-sm">Head to Head Efficacy</h2>
                   <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
                   <p className="text-blue-100 text-xs hidden sm:block">
-                    {chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell' ? 'X-axis vs Y-axis (efficacy metrics)' : 'Clinical trial efficacy parameters'}
+                    Clinical trial efficacy parameters
                   </p>
                 </div>
               </div>
@@ -1372,7 +1390,7 @@ export default function CategoryAnalyticsPage() {
                   <h2 className="text-white font-semibold text-sm">Head to Head Safety</h2>
                   <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
                   <p className="text-blue-100 text-xs hidden sm:block">
-                    {chartType === 'diverging' || chartType === 'bubble' ? 'X-axis vs Y-axis (safety metrics)' : 'Clinical trial safety parameters'}
+                    Clinical trial safety parameters
                   </p>
                 </div>
               </div>
@@ -1383,7 +1401,7 @@ export default function CategoryAnalyticsPage() {
                       <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
                         <span className="flex items-center gap-2 truncate font-medium">
                           <span className="text-xs text-white/70">{chartType === 'diverging' || chartType === 'bubble' ? 'X-axis:' : 'Parameter:'}</span>
-                          {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label || 'Select...'}
+                          {(chartType === 'bubble' ? SAFETY_BUBBLE_XY_OPTIONS : SAFETY_OPTIONS).find(o => o.value === safetyParam)?.label || 'Select...'}
                         </span>
                         <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
                       </button>
@@ -1399,7 +1417,7 @@ export default function CategoryAnalyticsPage() {
                           onClick={(e) => e.stopPropagation()}
                         />
                       </div>
-                      {SAFETY_OPTIONS.filter(option => {
+                      {(chartType === 'bubble' ? SAFETY_BUBBLE_XY_OPTIONS : SAFETY_OPTIONS).filter(option => {
                         const base = (chartType === 'diverging' || chartType === 'bubble' ? option.value !== 'none' : true) &&
                           option.label.toLowerCase().includes(safetySearch.toLowerCase());
                         // In dual-axis mode, X-axis cannot show the metric selected for Y (avoid duplicate)
@@ -1432,13 +1450,13 @@ export default function CategoryAnalyticsPage() {
                         <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
                           <span className="flex items-center gap-2 truncate font-medium">
                             <span className="text-xs text-white/70">Y-axis:</span>
-                            {SAFETY_OPTIONS.find(o => o.value === safetyParamY)?.label || 'Select...'}
+                            {(chartType === 'bubble' ? SAFETY_BUBBLE_XY_OPTIONS : SAFETY_OPTIONS).find(o => o.value === safetyParamY)?.label || 'Select...'}
                           </span>
                           <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
-                        {SAFETY_OPTIONS.filter(option =>
+                        {(chartType === 'bubble' ? SAFETY_BUBBLE_XY_OPTIONS : SAFETY_OPTIONS).filter(option =>
                           option.value !== 'none' &&
                           // Y-axis cannot show the metric selected for X (avoid duplicate)
                           (option.value !== safetyParam || option.value === safetyParamY)
@@ -1465,13 +1483,13 @@ export default function CategoryAnalyticsPage() {
                         <button className="flex h-9 w-full items-center justify-between rounded-md border border-white/30 bg-white/10 backdrop-blur-sm px-3 text-sm text-white transition-all hover:bg-white/20 hover:border-white/50 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/20">
                           <span className="flex items-center gap-2 truncate font-medium">
                             <span className="text-xs text-white/70">Z-axis:</span>
-                            {Z_AXIS_OPTIONS.find((o) => o.value === zAxisParam)?.label || 'Select...'}
+                            {Z_AXIS_OPTIONS_SAFETY.find((o) => o.value === zAxisParam)?.label || 'Select...'}
                           </span>
                           <ChevronDown className="h-3.5 w-3.5 text-white/70 flex-shrink-0" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
-                        {Z_AXIS_OPTIONS.map((option) => (
+                        {Z_AXIS_OPTIONS_SAFETY.map((option) => (
                           <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${zAxisParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => setZAxisParam(option.value)}>
                             <div className="flex items-center justify-between w-full"><span>{option.label}</span>{zAxisParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
                           </DropdownMenuItem>
@@ -1612,11 +1630,11 @@ export default function CategoryAnalyticsPage() {
         <main className="flex-1 flex flex-col overflow-hidden bg-white min-w-0">
           {/* Compact Chart Header */}
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-end gap-3 flex-shrink-0">
-              {/* Chart type label + selector - Show in all Head to Head modes */}
-              {(mode === 'all' || mode === 'efficacy' || mode === 'safety') && (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Chart type</span>
-                  <DropdownMenu>
+            {/* Chart type label + selector - Show in all Head to Head modes */}
+            {(mode === 'all' || mode === 'efficacy' || mode === 'safety') && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Chart type</span>
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="outline"
@@ -1672,8 +1690,8 @@ export default function CategoryAnalyticsPage() {
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                </div>
-              )}
+              </div>
+            )}
             {/* Fullscreen Button */}
             <Button
               variant="outline"
@@ -1704,9 +1722,9 @@ export default function CategoryAnalyticsPage() {
                         {error instanceof Error ? error.message : 'Unknown error occurred'}
                       </p>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => window.location.reload()}
                       className="mt-2"
                     >
@@ -1715,13 +1733,13 @@ export default function CategoryAnalyticsPage() {
                   </div>
                 ) : (() => {
                   // Determine which data to check based on chart type (bar/diverging/bubble in any mode)
-                  const hasData = chartType === 'bar' 
+                  const hasData = chartType === 'bar'
                     ? chartData.length > 0
                     : chartType === 'diverging'
-                    ? divergingChartData.length > 0
-                    : chartType === 'dumbbell'
-                    ? dumbbellChartData.length > 0
-                    : bubbleChartData.length > 0;
+                      ? divergingChartData.length > 0
+                      : chartType === 'dumbbell'
+                        ? dumbbellChartData.length > 0
+                        : bubbleChartData.length > 0;
                   const chartEfficacyParam = mode === 'efficacy' ? efficacyParam : mode === 'safety' ? safetyParam : efficacyParam;
                   const chartSafetyParam = mode === 'efficacy' ? efficacyParamY : mode === 'safety' ? safetyParamY : safetyParam;
 
@@ -1810,7 +1828,7 @@ export default function CategoryAnalyticsPage() {
                 })()}
               </div>
             </div>
-            
+
             {/* Export Buttons Below Chart */}
             <div className="flex items-center justify-center gap-3 pt-3 flex-shrink-0">
               <Button variant="outline" size="sm" className="h-9 px-4 gap-2 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50" disabled={isLoading || chartData.length === 0}>
@@ -1829,6 +1847,7 @@ export default function CategoryAnalyticsPage() {
           </div>
         </main>
       </div>
+      </main>
 
       {/* Fullscreen Modal */}
       {isFullscreen && (
@@ -1846,61 +1865,61 @@ export default function CategoryAnalyticsPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Chart type</span>
                     <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="group h-10 pl-3.5 pr-4 gap-2.5 rounded-xl border border-slate-200/80 bg-white text-slate-700 font-medium shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-700 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-300"
-                      >
-                        <span className="flex h-7 w-7 items-center justify-center text-indigo-600">
-                          {chartType === 'bar' && <BarChart3 className="h-4 w-4" />}
-                          {chartType === 'diverging' && <TrendingUp className="h-4 w-4" />}
-                          {chartType === 'bubble' && <CircleDot className="h-4 w-4" />}
-                          {chartType === 'dumbbell' && <Minus className="h-4 w-4" />}
-                        </span>
-                        <span className="text-sm tracking-tight">
-                          {chartType === 'bar' ? 'Bar Chart' : chartType === 'diverging' ? 'Diverging Chart' : chartType === 'bubble' ? 'Bubble Chart' : 'Dumbbell Chart'}
-                        </span>
-                        <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200/90 bg-white p-1.5 shadow-lg">
-                      <DropdownMenuItem
-                        onClick={() => setChartType('bar')}
-                        className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
-                      >
-                        <BarChart3 className="h-4 w-4 text-slate-500" />
-                        <span>Bar Chart</span>
-                        {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setChartType('diverging')}
-                        className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
-                      >
-                        <TrendingUp className="h-4 w-4 text-slate-500" />
-                        <span>Diverging Chart</span>
-                        {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setChartType('bubble')}
-                        className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
-                      >
-                        <CircleDot className="h-4 w-4 text-slate-500" />
-                        <span>Bubble Chart</span>
-                        {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
-                      </DropdownMenuItem>
-                      {mode === 'efficacy' && (
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="group h-10 pl-3.5 pr-4 gap-2.5 rounded-xl border border-slate-200/80 bg-white text-slate-700 font-medium shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-700 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-300"
+                        >
+                          <span className="flex h-7 w-7 items-center justify-center text-indigo-600">
+                            {chartType === 'bar' && <BarChart3 className="h-4 w-4" />}
+                            {chartType === 'diverging' && <TrendingUp className="h-4 w-4" />}
+                            {chartType === 'bubble' && <CircleDot className="h-4 w-4" />}
+                            {chartType === 'dumbbell' && <Minus className="h-4 w-4" />}
+                          </span>
+                          <span className="text-sm tracking-tight">
+                            {chartType === 'bar' ? 'Bar Chart' : chartType === 'diverging' ? 'Diverging Chart' : chartType === 'bubble' ? 'Bubble Chart' : 'Dumbbell Chart'}
+                          </span>
+                          <ChevronDown className="h-4 w-4 text-slate-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200/90 bg-white p-1.5 shadow-lg">
                         <DropdownMenuItem
-                          onClick={() => setChartType('dumbbell')}
+                          onClick={() => setChartType('bar')}
                           className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
                         >
-                          <Minus className="h-4 w-4 text-slate-500" />
-                          <span>Dumbbell Chart</span>
-                          {chartType === 'dumbbell' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                          <BarChart3 className="h-4 w-4 text-slate-500" />
+                          <span>Bar Chart</span>
+                          {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
                         </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        <DropdownMenuItem
+                          onClick={() => setChartType('diverging')}
+                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                        >
+                          <TrendingUp className="h-4 w-4 text-slate-500" />
+                          <span>Diverging Chart</span>
+                          {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setChartType('bubble')}
+                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                        >
+                          <CircleDot className="h-4 w-4 text-slate-500" />
+                          <span>Bubble Chart</span>
+                          {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                        </DropdownMenuItem>
+                        {mode === 'efficacy' && (
+                          <DropdownMenuItem
+                            onClick={() => setChartType('dumbbell')}
+                            className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                          >
+                            <Minus className="h-4 w-4 text-slate-500" />
+                            <span>Dumbbell Chart</span>
+                            {chartType === 'dumbbell' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 )}
                 <Button
@@ -1915,7 +1934,7 @@ export default function CategoryAnalyticsPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Mode Banner in Fullscreen - Compact design */}
           {mode === 'all' && (
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
@@ -1923,7 +1942,7 @@ export default function CategoryAnalyticsPage() {
                 <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
                   <TrendingUp className="h-3.5 w-3.5 text-white" />
                 </div>
-                <span className="text-white text-xs font-medium">Efficacy : Safety Therapeutic Index</span>
+                <span className="text-white text-xs font-medium">Head to Head Efficacy : Safety</span>
                 <span className="w-px h-3 bg-white/30 mx-1"></span>
                 <span className="text-blue-100 text-xs">
                   Efficacy: {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}
@@ -1977,13 +1996,13 @@ export default function CategoryAnalyticsPage() {
                   <p className="text-base text-slate-500">Loading analytics data...</p>
                 </div>
               ) : (() => {
-                const hasData = chartType === 'bar' 
+                const hasData = chartType === 'bar'
                   ? chartData.length > 0
                   : chartType === 'diverging'
-                  ? divergingChartData.length > 0
-                  : chartType === 'dumbbell'
-                  ? dumbbellChartData.length > 0
-                  : bubbleChartData.length > 0;
+                    ? divergingChartData.length > 0
+                    : chartType === 'dumbbell'
+                      ? dumbbellChartData.length > 0
+                      : bubbleChartData.length > 0;
                 const chartEfficacyParam = mode === 'efficacy' ? efficacyParam : mode === 'safety' ? safetyParam : efficacyParam;
                 const chartSafetyParam = mode === 'efficacy' ? efficacyParamY : mode === 'safety' ? safetyParamY : safetyParam;
 
@@ -2079,7 +2098,7 @@ export default function CategoryAnalyticsPage() {
                 );
               })()}
             </div>
-            
+
             {/* Export Buttons Below Chart */}
             <div className="flex items-center justify-center gap-4 py-4 px-4 flex-shrink-0 border-t border-slate-200 bg-white">
               <Button variant="outline" size="lg" className="gap-2 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50" disabled={isLoading || chartData.length === 0}>

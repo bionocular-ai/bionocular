@@ -164,6 +164,9 @@ numeric_attributes_test_results.json
 # API response samples (may contain sensitive data)
 data/api_response_sample.json
 
+# Uncompressed clinical trials seed (commit .json.gz instead to stay under GitHub limit)
+data/deployed/clinical_trials_api_seed.json
+
 # Environment variables and secrets
 .env
 .env.local

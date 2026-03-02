@@ -201,7 +201,7 @@ Summary:
 """,
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the prompt manager."""
         self._templates: dict[str, PromptTemplate] = {}
         self._load_default_templates()

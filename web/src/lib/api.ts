@@ -95,8 +95,30 @@ export const trialsApi = {
     return response.data;
   },
 
-  getLandscapeStats: async (): Promise<LandscapeStatsResponse> => {
-    const response = await apiClient.get<LandscapeStatsResponse>('/api/landscape/stats');
+  getLandscapeStats: async (cancerType?: string): Promise<LandscapeStatsResponse> => {
+    const response = await apiClient.get<LandscapeStatsResponse>('/api/landscape/stats', {
+      params: cancerType ? { cancer_type: cancerType } : undefined,
+    });
+    return response.data;
+  },
+
+  getDashboardTrials: async (
+    cancerType: string,
+    filters: DashboardTrialsFilters = {}
+  ): Promise<DashboardTrialsResponse> => {
+    const params: Record<string, string | number | boolean> = {};
+    if (filters.phase?.length) {
+      params.phase = filters.phase.join(',');
+    }
+    if (filters.has_abstracts === true) params.has_abstracts = true;
+    if (filters.status?.length) params.status = filters.status.join(',');
+    if (filters.sponsor_type?.length) params.sponsor_type = filters.sponsor_type.join(',');
+    if (filters.skip != null) params.skip = filters.skip;
+    if (filters.limit != null) params.limit = filters.limit;
+    const response = await apiClient.get<DashboardTrialsResponse>(
+      '/api/landscape/dashboard-trials',
+      { params: { cancer_type: cancerType, ...params } }
+    );
     return response.data;
   },
 
@@ -116,7 +138,68 @@ export const trialsApi = {
     const response = await apiClient.get<LiveTickerResponse>(`/api/landscape/live-ticker/${category}`);
     return response.data;
   },
+
+  /** Full trial API data from clinical_trials_cache (ClinicalTrials.gov API v2 response). */
+  getTrialDetail: async (nctId: string): Promise<TrialDetailApiResponse> => {
+    const response = await apiClient.get<TrialDetailApiResponse>(`/api/landscape/trial/${nctId}`);
+    return response.data;
+  },
 };
+
+/** ClinicalTrials.gov API v2 study response (protocolSection + resultsSection). */
+export interface TrialDetailApiResponse {
+  protocolSection?: {
+    identificationModule?: { nctId?: string; briefTitle?: string; conditions?: string[] };
+    /** Conditions (diseases) are under conditionsModule in API v2, not identificationModule. */
+    conditionsModule?: { conditions?: string[] };
+    designModule?: {
+      phases?: string[];
+      studyType?: string;
+      enrollmentInfo?: { count?: number };
+    };
+    statusModule?: {
+      overallStatus?: string;
+      startDateStruct?: { date?: string };
+      primaryCompletionDateStruct?: { date?: string };
+      completionDateStruct?: { date?: string };
+      studyFirstPostDateStruct?: { date?: string };
+      lastUpdatePostDateStruct?: { date?: string };
+    };
+    sponsorCollaboratorsModule?: {
+      leadSponsor?: { name?: string; class?: string };
+    };
+    armsInterventionsModule?: {
+      interventions?: Array<{ name?: string; type?: string; description?: string; otherNames?: string[] }>;
+      armGroups?: Array<{
+        label?: string;
+        type?: string;
+        description?: string;
+        interventionNames?: string[];
+      }>;
+    };
+    descriptionModule?: { briefSummary?: string; detailedDescription?: string };
+    eligibilityModule?: {
+      eligibilityCriteria?: string;
+      eligibilityInfo?: { minimumAge?: string; maximumAge?: string; sex?: string };
+    };
+    outcomesModule?: {
+      primaryOutcomes?: Array<{ measure?: string; description?: string; timeFrame?: string }>;
+      secondaryOutcomes?: Array<{ measure?: string; description?: string; timeFrame?: string }>;
+    };
+    contactsLocationsModule?: {
+      locations?: Array<{
+        facility?: string;
+        city?: string;
+        state?: string;
+        zip?: string;
+        country?: string;
+        status?: string;
+      }>;
+    };
+  };
+  resultsSection?: Record<string, unknown>;
+  [key: string]: unknown;
+}
 
 export interface AbstractData {
   abstract_id?: string;
@@ -193,8 +276,49 @@ export interface LandscapeStat {
   extracted_count: number;
 }
 
+export interface SelectedTypeStats {
+  clinical_trials: number | null;
+  pipeline_drugs: number | null;
+  drug_targets: number | null;
+  biomarkers: number | null;
+}
+
 export interface LandscapeStatsResponse {
   landscape: LandscapeStat[];
+  selected_type_stats?: SelectedTypeStats;
+}
+
+export interface DashboardTrialCard {
+  nct_id: string;
+  title: string | null;
+  drug_name: string | null;
+  sponsor_name: string | null;
+  enrollment_count: number | null;
+  phase: string;
+  study_status: string;
+  sponsor_type: string;
+  approval_group: string;
+  abstract_id?: string | null;
+  conference?: string | null;
+  published_year?: string | null;
+  /** Curated modality from trial_categorization (e.g. Small Molecule, Vaccine). */
+  modality?: string | null;
+  target?: string | null;
+  trial_name?: string | null;
+}
+
+export interface DashboardTrialsResponse {
+  trials: DashboardTrialCard[];
+  total: number;
+}
+
+export interface DashboardTrialsFilters {
+  phase?: string[];
+  has_abstracts?: boolean;
+  status?: string[];
+  sponsor_type?: string[];
+  skip?: number;
+  limit?: number;
 }
 
 export interface TherapeuticIndexResponse {
@@ -258,7 +382,7 @@ export interface LiveTickerResponse {
 export const analyticsApi = {
   getData: async (filters: AnalyticsFilters = {}): Promise<AnalyticsDataResponse> => {
     const params = new URLSearchParams();
-    
+
     if (filters.skip !== undefined) {
       params.append('skip', filters.skip.toString());
     }
@@ -285,7 +409,7 @@ export const analyticsApi = {
     if (filters.has_metric) {
       params.append('has_metric', filters.has_metric);
     }
-    
+
     const response = await apiClient.get<AnalyticsDataResponse>(`/api/analytics/data?${params.toString()}`);
     return response.data;
   },

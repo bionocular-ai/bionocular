@@ -907,6 +907,10 @@ export default function BubbleChart({
   const getZAxisLabel = useCallback((param: string): string => {
     const labelMap: Record<string, string> = {
       'NUMBER_OF_PATIENTS': 'Number of patients',
+      'P_VALUE_PFS': 'p-value (PFS)',
+      'P_VALUE_OS': 'p-value (OS)',
+      'P_VALUE_EFS': 'p-value (EFS)',
+      'P_VALUE_RFS': 'p-value (RFS)',
       'HR_PFS': 'HR (PFS)',
       'HR_OS': 'HR (OS)',
       'HR_EFS': 'HR (EFS)',

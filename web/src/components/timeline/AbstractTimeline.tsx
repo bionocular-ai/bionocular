@@ -10,6 +10,8 @@ import Link from 'next/link';
 interface AbstractTimelineProps {
   nctId: string;
   currentAbstractId?: string;
+  /** Outer radius = inner (rounded-lg) + padding; use for consistent panel look. */
+  className?: string;
 }
 
 interface TimelineItem {
@@ -21,7 +23,7 @@ interface TimelineItem {
   publicationName?: string;
 }
 
-export function AbstractTimeline({ nctId, currentAbstractId }: AbstractTimelineProps) {
+export function AbstractTimeline({ nctId, currentAbstractId, className = '' }: AbstractTimelineProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['trials', 'nct', nctId],
     queryFn: () => trialsApi.getByNctId(nctId, 0, 100),
@@ -81,9 +83,11 @@ export function AbstractTimeline({ nctId, currentAbstractId }: AbstractTimelineP
     enabled: !!data?.trials && data.trials.length > 0,
   });
 
+  const cardClass = `border-gray-200 shadow-sm ${className}`.trim();
+
   if (isLoading || isLoadingMetrics) {
     return (
-      <Card className="border-gray-200">
+      <Card className={cardClass}>
         <CardContent className="p-6">
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -95,7 +99,7 @@ export function AbstractTimeline({ nctId, currentAbstractId }: AbstractTimelineP
 
   if (!timelineData || timelineData.length === 0) {
     return (
-      <Card className="border-gray-200 shadow-sm sticky top-20">
+      <Card className={`${cardClass} sticky top-20`}>
         <CardHeader className="pb-4">
           <CardTitle className="text-lg font-semibold">Trial History</CardTitle>
           <CardDescription>Previous abstracts and publications</CardDescription>
@@ -119,7 +123,7 @@ export function AbstractTimeline({ nctId, currentAbstractId }: AbstractTimelineP
   const years = Object.keys(groupedByYear).sort((a, b) => parseInt(b) - parseInt(a));
 
   return (
-    <Card className="border-gray-200 shadow-sm sticky top-20">
+    <Card className={`${cardClass} sticky top-20`}>
       <CardHeader className="pb-4">
         <CardTitle className="text-lg font-semibold">Trial History</CardTitle>
         <CardDescription>Previous abstracts and publications</CardDescription>

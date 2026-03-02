@@ -3,6 +3,7 @@
 Tests the SQLite trials service, database build script, and API integration.
 """
 
+import gzip
 import json
 from pathlib import Path
 
@@ -387,3 +388,92 @@ def test_api_endpoint_with_sqlite(temp_db_path, temp_json_file):
         from src.app import api
 
         importlib.reload(api)
+
+
+def test_build_db_loads_seed_gz(temp_db_path, tmp_path):
+    """Test that build_db loads clinical trials seed from .json.gz."""
+    from scripts.build_db import build_database
+
+    deployed = tmp_path / "data" / "deployed"
+    deployed.mkdir(parents=True)
+    seed_data = {
+        "clinical_trials_cache": [
+            {
+                "nct_number": "NCT001",
+                "api_response_json": "{}",
+                "created_at": "2024-01-01",
+                "updated_at": "2024-01-01",
+                "last_accessed_at": "2024-01-01",
+            },
+        ],
+        "api_discovery": [
+            {
+                "nct_number": "NCT001",
+                "cancer_type_tag": "melanoma",
+                "current_status": "recruiting",
+                "discovery_date": "2024-01-01",
+                "is_active": 1,
+                "updated_at": "2024-01-01",
+            },
+        ],
+    }
+    seed_gz = deployed / "clinical_trials_api_seed.json.gz"
+    with gzip.open(seed_gz, "wt", encoding="utf-8") as f:
+        json.dump(seed_data, f)
+
+    build_database(
+        temp_db_path,
+        json_file_paths=[],
+        include_web_scrape=False,
+        deployed_dir=deployed,
+    )
+
+    import sqlite3
+
+    conn = sqlite3.connect(str(temp_db_path))
+    cur = conn.execute("SELECT COUNT(*) FROM clinical_trials_cache")
+    cache_count = cur.fetchone()[0]
+    cur = conn.execute("SELECT COUNT(*) FROM api_discovery")
+    discovery_count = cur.fetchone()[0]
+    conn.close()
+
+    assert cache_count == 1, f"Expected 1 cache row, got {cache_count}"
+    assert discovery_count == 1, f"Expected 1 discovery row, got {discovery_count}"
+
+
+def test_build_db_batch_abstracts(temp_db_path, tmp_path):
+    """Test that build_db batch-inserts many abstracts and completes with correct count."""
+    from scripts.build_db import build_database
+
+    abstracts = [
+        {
+            "abstract_id": f"batch_abstract_{i}",
+            "file": "batch_test.json",
+            "total_arms": 1,
+            "total_attributes_extracted": 1,
+            "overall_confidence": 0.9,
+            "processing_time_ms": 10,
+            "errors": [],
+            "warnings": [],
+            "arm_results": {"arm_1": {"arm_id": "arm_1", "arm_name": "test"}},
+        }
+        for i in range(2500)
+    ]
+    json_file = tmp_path / "batch_data.json"
+    with open(json_file, "w", encoding="utf-8") as f:
+        json.dump({"abstracts": abstracts, "publications": []}, f)
+
+    build_database(
+        temp_db_path,
+        [json_file],
+        include_web_scrape=False,
+    )
+
+    import sqlite3
+
+    conn = sqlite3.connect(str(temp_db_path))
+    cur = conn.execute("SELECT COUNT(*) FROM abstracts")
+    count = cur.fetchone()[0]
+    conn.close()
+
+    assert count == 2500, f"Expected 2500 abstracts, got {count}"
