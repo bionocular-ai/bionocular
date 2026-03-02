@@ -7,8 +7,9 @@ Usage:
 
 Available tasks:
     - install: Install dependencies
-    - test: Run tests
-    - quality: Run all quality checks
+    - test: Run tests (pytest with coverage, same as CI)
+    - quality: Run all quality checks (ruff, black, mypy, pytest)
+    - ci: Run quality checks then build (full CI locally)
     - build: Build project
     - run: Run application
     - clean: Clean project
@@ -43,18 +44,21 @@ def install():
 
 
 def test():
-    """Run tests."""
-    return run_command("poetry run pytest", "Running tests")
+    """Run tests (same as CI: tests/ with coverage)."""
+    return run_command(
+        "poetry run pytest tests/ --cov=src --cov-report=xml --cov-report=html",
+        "Running tests",
+    )
 
 
 def quality():
-    """Run all quality checks."""
+    """Run all quality checks (same order as CI)."""
     checks = [
-        ("poetry run black --check src/ tests/", "Code formatting check"),
-        ("poetry run ruff check src/ tests/", "Linting"),
-        ("poetry run mypy src/", "Type checking"),
+        ("poetry run ruff check src/ tests/", "Lint (ruff)"),
+        ("poetry run black --check src/ tests/", "Format (black)"),
+        ("poetry run mypy src/", "Type check (mypy)"),
         (
-            "poetry run pytest --cov=src --cov-report=term-missing",
+            "poetry run pytest tests/ --cov=src --cov-report=xml --cov-report=html",
             "Tests with coverage",
         ),
     ]
@@ -110,6 +114,7 @@ def main():
         "run": run,
         "clean": clean,
         "help": help,
+        "ci": lambda: quality() and build(),
     }
 
     if task not in tasks:

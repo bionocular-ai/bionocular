@@ -3,20 +3,22 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { TrialDataTable } from '@/components/dashboard/TrialDataTable';
+import { TrialDetailView } from '@/components/trial/TrialDetailView';
+import { AbstractsPublicationsPanel } from '@/components/trial/AbstractsPublicationsPanel';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import { trialsApi } from '@/lib/api';
-import { Loader2, ArrowLeft, LayoutGrid, ExternalLink } from 'lucide-react';
+import { Loader2, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
+import { BackNav } from '@/components/nav/BackNav';
 
 export default function NCTTrialsPage() {
   const { data: session } = useSession();
   const params = useParams();
-  const router = useRouter();
   const nctId = params?.nctId as string;
   
   // Get category from URL search params to know where to go back to
@@ -37,12 +39,21 @@ export default function NCTTrialsPage() {
     enabled: !!nctId,
   });
 
+  const { data: trialDetail, isLoading: detailLoading, error: detailError } = useQuery({
+    queryKey: ['trial-detail', nctId],
+    queryFn: () => trialsApi.getTrialDetail(nctId),
+    retry: false,
+    refetchOnWindowFocus: false,
+    enabled: !!nctId,
+  });
+
   const trials = data?.trials || [];
+  const showDetailView = !!trialDetail && !detailError;
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-white">
+    <div className="flex flex-col min-h-screen w-full min-w-0 overflow-x-hidden bg-white">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shrink-0">
+      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50 shrink-0">
         <div className="w-full px-3 sm:px-4 md:px-6">
           <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
             <Link href="/" className="brand flex-shrink-0">
@@ -52,17 +63,7 @@ export default function NCTTrialsPage() {
               </span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-                className="group border-gray-300 text-xs sm:text-sm text-gray-700 font-medium transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20"
-                aria-label="Navigate to main categories"
-              >
-                <LayoutGrid className="h-3.5 w-3.5 sm:mr-1.5 transition-colors group-hover:text-primary" />
-                <span className="hidden sm:inline">Categories</span>
-                <span className="sm:hidden">Main</span>
-              </Button>
+              <DashboardNavLink />
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
@@ -75,65 +76,55 @@ export default function NCTTrialsPage() {
         </div>
       </header>
 
-      {/* NCT Title */}
-      <div className="bg-gray-50 border-b border-gray-200 px-3 sm:px-4 md:px-6 py-4">
-        <div className="flex items-center gap-4">
-          <Button
-            onClick={() => {
-              if (category) {
-                router.push(`/dashboard/${category}/therapeutic-index`);
-              } else {
-                router.push('/dashboard');
-              }
-            }}
-            variant="outline"
-            size="sm"
-            className="group border-gray-300 text-xs sm:text-sm text-gray-700 font-medium transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20"
-            aria-label="Go back to therapeutic index"
-          >
-            <ArrowLeft className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:-translate-x-0.5 group-hover:text-primary" />
-            Back
-          </Button>
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
-                {nctId}
-              </h1>
-              <a
-                href={`https://clinicaltrials.gov/study/${nctId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors"
-                aria-label="View trial on ClinicalTrials.gov"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </a>
+      {/* Page title strip: back + title (clearly distinct from nav and content) */}
+      <div className="border-b border-gray-200 bg-gray-50 px-3 sm:px-4 md:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-4 min-w-0">
+            <BackNav href="/dashboard" label="Back to dashboard" />
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
+                  {nctId}
+                </h1>
+                <a
+                  href={`https://clinicaltrials.gov/study/${nctId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                  aria-label="View trial on ClinicalTrials.gov"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {isLoading
+                  ? 'Abstracts and publications'
+                  : trials.length > 0
+                    ? (() => {
+                        const abstracts = trials.filter(t => !t.type || t.type === 'abstract').length;
+                        const publications = trials.filter(t => t.type === 'publication').length;
+                        if (abstracts > 0 && publications > 0) {
+                          return `${trials.length} item${trials.length !== 1 ? 's' : ''} found (${abstracts} abstract${abstracts !== 1 ? 's' : ''}, ${publications} publication${publications !== 1 ? 's' : ''})`;
+                        } else if (abstracts > 0) {
+                          return `${abstracts} abstract${abstracts !== 1 ? 's' : ''} found`;
+                        } else if (publications > 0) {
+                          return `${publications} publication${publications !== 1 ? 's' : ''} found`;
+                        } else {
+                          return `${trials.length} item${trials.length !== 1 ? 's' : ''} found`;
+                        }
+                      })()
+                    : 'No results available'}
+              </p>
             </div>
-            <p className="text-sm text-gray-600 mt-1">
-              {trials.length > 0 ? (() => {
-                const abstracts = trials.filter(t => !t.type || t.type === 'abstract').length;
-                const publications = trials.filter(t => t.type === 'publication').length;
-                
-                if (abstracts > 0 && publications > 0) {
-                  return `${trials.length} item${trials.length !== 1 ? 's' : ''} found (${abstracts} abstract${abstracts !== 1 ? 's' : ''}, ${publications} publication${publications !== 1 ? 's' : ''})`;
-                } else if (abstracts > 0) {
-                  return `${abstracts} abstract${abstracts !== 1 ? 's' : ''} found`;
-                } else if (publications > 0) {
-                  return `${publications} publication${publications !== 1 ? 's' : ''} found`;
-                } else {
-                  return `${trials.length} item${trials.length !== 1 ? 's' : ''} found`;
-                }
-              })() : 'Loading...'}
-            </p>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-white">
-        <div className="p-6">
-          {/* Critical Error Banner */}
-          {error && (
+      <main className="flex-1 min-w-0 overflow-auto bg-gray-100">
+        <div className="w-full min-w-0 max-w-[1600px] mx-auto px-4 py-5 sm:px-5 sm:py-6 md:px-6 md:py-6">
+          {/* Critical Error Banner (abstracts/publications only) */}
+          {error && !showDetailView && (
             <Card className="border-yellow-200 bg-yellow-50 mb-6">
               <CardContent className="pt-6">
                 <div className="flex items-start gap-3">
@@ -155,27 +146,59 @@ export default function NCTTrialsPage() {
             </Card>
           )}
 
-          {/* Trials Table */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="flex flex-col items-center gap-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-gray-600">Loading abstracts and publications...</p>
-              </div>
+          {/* AlphaSense-style trial detail (from clinical_trials_cache) */}
+          {detailLoading && !trialDetail ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : trials.length === 0 ? (
-            <Card className="border-gray-200">
-              <CardContent className="pt-6">
-                <div className="text-center py-12">
-                  <p className="text-sm text-gray-600">
-                    No abstracts or publications found for {nctId}
-                  </p>
+          ) : null}
+          {showDetailView && trialDetail ? (
+            <div className="pb-8 sm:pb-10 flex min-w-0 flex-col xl:flex-row xl:gap-8 2xl:gap-10 gap-6">
+              <div className="xl:order-1 flex-1 min-w-0 basis-0">
+                <TrialDetailView data={trialDetail} nctId={nctId} />
+              </div>
+              {trials.length > 0 ? (
+                <aside className="xl:order-2 w-full xl:w-[380px] xl:flex-shrink-0">
+                  <div className="bg-white border border-gray-200 shadow-sm p-4 sm:p-5 md:p-6 h-fit min-w-0 rounded-[calc(0.5rem+1rem)] sm:rounded-[calc(0.5rem+1.25rem)] md:rounded-[calc(0.5rem+1.5rem)]">
+                    <AbstractsPublicationsPanel
+                      trials={trials}
+                      category={category || undefined}
+                    />
+                  </div>
+                </aside>
+              ) : null}
+            </div>
+          ) : !detailLoading && !trialDetail ? (
+            /* No cached API data: show abstracts/publications table only */
+            <>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <TrialDataTable data={trials} showAbstractId={true} hideNctId={true} category={category || undefined} />
-          )}
+              ) : trials.length === 0 ? (
+                <Card className="border-gray-200">
+                  <CardContent className="pt-6">
+                    <div className="text-center py-12">
+                      <p className="text-sm text-gray-600">
+                        No trial data found for {nctId}. This trial may not be in the dashboard cache for the selected cancer type.
+                      </p>
+                      <a
+                        href={`https://clinicaltrials.gov/study/${nctId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 mt-3 text-sm font-medium text-blue-600 hover:underline"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        View on ClinicalTrials.gov
+                      </a>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <TrialDataTable data={trials} showAbstractId={true} hideNctId={true} category={category || undefined} />
+              )}
+            </>
+          ) : null}
         </div>
       </main>
     </div>

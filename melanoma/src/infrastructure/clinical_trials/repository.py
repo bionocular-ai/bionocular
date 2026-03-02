@@ -25,6 +25,35 @@ logger = logging.getLogger(__name__)
 CACHE_EXPIRATION_DAYS = 7
 
 
+def _recreate_trial_categorization_column_order(
+    cursor: sqlite3.Cursor, conn: sqlite3.Connection
+) -> None:
+    """Recreate trial_categorization so cancer_type is the second column (after nct_number)."""
+    cursor.execute(
+        """
+        CREATE TABLE trial_categorization_new (
+            nct_number TEXT PRIMARY KEY,
+            cancer_type TEXT,
+            modality TEXT,
+            target TEXT,
+            trial_name TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    cursor.execute(
+        """
+        INSERT INTO trial_categorization_new (nct_number, cancer_type, modality, target, trial_name, updated_at)
+        SELECT nct_number, cancer_type, modality, target, trial_name, updated_at
+        FROM trial_categorization
+        """
+    )
+    cursor.execute("DROP TABLE trial_categorization")
+    cursor.execute(
+        "ALTER TABLE trial_categorization_new RENAME TO trial_categorization"
+    )
+
+
 class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
     """SQLite implementation of clinical trial cache repository."""
 
@@ -153,6 +182,43 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                     """
+                )
+
+                # Curated categorisation (Modality, Target, Trial_Name) from e.g. trial_categorizer.txt
+                # cancer_type is backfilled from api_discovery (one tag per NCT; same DB). Column order: nct_number, cancer_type, ...
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS trial_categorization (
+                        nct_number TEXT PRIMARY KEY,
+                        cancer_type TEXT,
+                        modality TEXT,
+                        target TEXT,
+                        trial_name TEXT,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+                # Add cancer_type column to existing DBs that were created before it existed (before creating index on it)
+                try:
+                    cursor.execute(
+                        "ALTER TABLE trial_categorization ADD COLUMN cancer_type TEXT"
+                    )
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" not in str(e).lower():
+                        raise
+                # Recreate table so cancer_type is second column if it's currently at the end
+                cursor.execute("PRAGMA table_info(trial_categorization)")
+                cols = [row[1] for row in cursor.fetchall()]
+                if len(cols) >= 2 and cols[1] != "cancer_type":
+                    _recreate_trial_categorization_column_order(cursor, conn)
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_trial_categorization_modality ON trial_categorization(modality)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_trial_categorization_target ON trial_categorization(target)"
+                )
+                cursor.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_trial_categorization_cancer_type ON trial_categorization(cancer_type)"
                 )
 
                 conn.commit()
@@ -445,6 +511,33 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             logger.warning(f"Error reading cached JSON for {nct_number}: {e}")
             return None
 
+    def _get_cached_api_json_ignore_expiry(self, nct_number: str) -> Optional[dict]:
+        """Get raw API JSON from cache without expiration check (for dashboard display)."""
+        if not self.db_path:
+            return None
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "SELECT api_response_json FROM clinical_trials_cache WHERE nct_number = ?",
+                    (nct_number,),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                return json.loads(row[0])
+        except (sqlite3.Error, json.JSONDecodeError) as e:
+            logger.warning(f"Error reading cached JSON for {nct_number}: {e}")
+            return None
+
+    def get_cached_trial_api_json(self, nct_number: str) -> Optional[dict]:
+        """Get full ClinicalTrials.gov API response JSON from cache for a single trial.
+
+        Returns the raw API response (protocolSection, resultsSection, etc.) for
+        use in trial detail views. Returns None if not in cache.
+        """
+        return self._get_cached_api_json_ignore_expiry(nct_number)
+
     def get_existing_discovery_ncts(
         self, nct_numbers: list[str], cancer_type_tag: str
     ) -> set[str]:
@@ -721,6 +814,437 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         except (sqlite3.Error, Exception) as e:
             logger.error(f"Error getting therapeutic index trials: {e}")
             return [], 0
+
+    def _api_phases_to_display(self, api_phases: list[str]) -> list[str]:
+        """Convert API phase values (e.g. PHASE1) to display labels (e.g. Phase 1)."""
+        display = []
+        for p in api_phases or []:
+            if not isinstance(p, str):
+                continue
+            u = p.upper().strip()
+            if u == "EARLY_PHASE1":
+                display.append("Early Phase 1")
+            elif u == "PHASE1":
+                display.append("Phase 1")
+            elif u == "PHASE2":
+                display.append("Phase 2")
+            elif u == "PHASE3":
+                display.append("Phase 3")
+            elif u == "PHASE4":
+                display.append("Phase 4")
+            else:
+                display.append("Not applicable")
+        return display if display else ["Not applicable"]
+
+    def _api_status_to_study_status(self, api_status: str) -> str:
+        """Map API status to short study status label for cards."""
+        if not api_status:
+            return "Unknown"
+        u = (api_status or "").upper().strip().replace(" ", "_").replace(",", "")
+        if u in ("RECRUITING", "NOT_YET_RECRUITING", "ACTIVE_NOT_RECRUITING"):
+            return "Open"
+        if u in ("COMPLETED", "TERMINATED", "WITHDRAWN"):
+            return "Closed"
+        if u == "SUSPENDED":
+            return "Suspended"
+        if u == "ENROLLING_BY_INVITATION":
+            return "Enrolling by invitation"
+        return "Unknown"
+
+    def _get_abstract_map(self) -> dict[str, dict[str, Any]]:
+        """Build map of NCT to abstract metadata for fast lookup."""
+        if not self.db_path:
+            return {}
+
+        import re
+
+        nct_map: dict[str, dict[str, Any]] = {}
+
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT abstract_id, arm_results FROM abstracts")
+
+                rows = cursor.fetchall()
+                for row in rows:
+                    abstract_id = row["abstract_id"]
+                    try:
+                        arm_results_str = row["arm_results"]
+                        if not arm_results_str:
+                            continue
+
+                        # Extract all NCTs mentioned in the blob
+                        found_ncts = set(re.findall(r"NCT\d+", arm_results_str))
+                        if not found_ncts:
+                            continue
+
+                        arm_results = json.loads(arm_results_str)
+
+                        conference = None
+                        year = None
+
+                        # Extract conference/year (reused logic)
+                        for arm in arm_results.values():
+                            attributes = arm.get("attributes", {})
+
+                            # Conference
+                            if not conference:
+                                for key in ["AttributeType.CONFERENCE", "conference"]:
+                                    val = attributes.get(key)
+                                    raw = (
+                                        val.get("value")
+                                        if isinstance(val, dict)
+                                        else val
+                                    )
+                                    if raw and str(raw).lower() not in (
+                                        "not found",
+                                        "n/a",
+                                        "none",
+                                        "",
+                                    ):
+                                        conference = raw
+                                        break
+
+                            # Year
+                            if not year:
+                                for key in [
+                                    "AttributeType.PUBLISHED_YEAR",
+                                    "published_year",
+                                ]:
+                                    val = attributes.get(key)
+                                    raw = (
+                                        val.get("value")
+                                        if isinstance(val, dict)
+                                        else val
+                                    )
+                                    if raw and str(raw).lower() not in (
+                                        "not found",
+                                        "n/a",
+                                        "none",
+                                        "",
+                                    ):
+                                        year = raw
+                                        break
+
+                            if conference and year:
+                                break
+
+                        # Fallback parsing
+                        if not conference and abstract_id and "_" in abstract_id:
+                            parts = abstract_id.split("_")
+                            if len(parts) >= 2:
+                                if parts[0].isalpha():
+                                    conference = parts[0]
+                                if parts[1].isdigit() and len(parts[1]) == 4:
+                                    year = parts[1]
+
+                        data = {
+                            "abstract_id": abstract_id,
+                            "conference": conference,
+                            "published_year": year,
+                        }
+
+                        for nct in found_ncts:
+                            current = nct_map.get(nct)
+                            # Prefer data with conference info if we have duplicate NCTs
+                            if not current or (
+                                not current.get("conference") and conference
+                            ):
+                                nct_map[nct] = data
+
+                    except (json.JSONDecodeError, Exception):
+                        continue
+
+        except Exception as e:
+            logger.warning(f"Error building abstract map: {e}")
+
+        return nct_map
+
+    def _get_categorization_map(
+        self, conn: sqlite3.Connection, nct_numbers: list[str]
+    ) -> dict[str, dict[str, Any]]:
+        """Build map of NCT to trial_categorization (modality, target, trial_name, cancer_type)."""
+        if not nct_numbers:
+            return {}
+        out: dict[str, dict[str, Any]] = {}
+        try:
+            cursor = conn.cursor()
+            placeholders = ",".join("?" * len(nct_numbers))
+            cursor.execute(
+                f"""
+                SELECT nct_number, modality, target, trial_name, cancer_type
+                FROM trial_categorization
+                WHERE nct_number IN ({placeholders})
+                """,
+                nct_numbers,
+            )
+            for row in cursor.fetchall():
+                out[row["nct_number"]] = {
+                    "modality": row["modality"],
+                    "target": row["target"],
+                    "trial_name": row["trial_name"],
+                    "cancer_type": row["cancer_type"],
+                }
+        except sqlite3.Error:
+            pass
+        return out
+
+    def _get_abstract_data_for_nct(self, nct_number: str) -> dict[str, Any]:
+        """Find abstract/publication metadata for an NCT number.
+
+        Args:
+            nct_number: NCT ID to search for
+
+        Returns:
+            Dict with abstract_id, conference, published_year (or None values)
+        """
+        if not self.db_path:
+            return {}
+
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                # Search for the NCT number in the arm_results JSON blob
+                cursor.execute(
+                    """
+                    SELECT abstract_id, arm_results
+                    FROM abstracts
+                    WHERE arm_results LIKE ?
+                    LIMIT 1
+                    """,
+                    (f"%{nct_number}%",),
+                )
+                row = cursor.fetchone()
+
+                if not row:
+                    return {}
+
+                abstract_id = row["abstract_id"]
+                arm_results_str = row["arm_results"]
+
+                try:
+                    arm_results = json.loads(arm_results_str)
+
+                    # Extract conference and year from attributes
+                    conference = None
+                    year = None
+
+                    # Look through arms to find attributes
+                    for arm in arm_results.values():
+                        attributes = arm.get("attributes", {})
+
+                        # Try to find conference
+                        if not conference:
+                            for key in ["AttributeType.CONFERENCE", "conference"]:
+                                val = attributes.get(key)
+                                raw = val.get("value") if isinstance(val, dict) else val
+                                if raw and str(raw).lower() not in (
+                                    "not found",
+                                    "n/a",
+                                    "none",
+                                    "",
+                                ):
+                                    conference = raw
+                                    break
+
+                        # Try to find year
+                        if not year:
+                            for key in [
+                                "AttributeType.PUBLISHED_YEAR",
+                                "published_year",
+                            ]:
+                                val = attributes.get(key)
+                                raw = val.get("value") if isinstance(val, dict) else val
+                                if raw and str(raw).lower() not in (
+                                    "not found",
+                                    "n/a",
+                                    "none",
+                                    "",
+                                ):
+                                    year = raw
+                                    break
+
+                        if conference and year:
+                            break
+
+                    # Fallback: parse from abstract_id (e.g., ASCO_2020_10000)
+                    if not conference and abstract_id and "_" in abstract_id:
+                        parts = abstract_id.split("_")
+                        if len(parts) >= 2:
+                            # Simple heuristic
+                            if parts[0].isalpha():
+                                conference = parts[0]
+                            if parts[1].isdigit() and len(parts[1]) == 4:
+                                year = parts[1]
+
+                    return {
+                        "abstract_id": abstract_id,
+                        "conference": conference,
+                        "published_year": year,
+                    }
+
+                except json.JSONDecodeError:
+                    return {"abstract_id": abstract_id}
+
+        except Exception as e:
+            logger.warning(f"Error getting abstract data for {nct_number}: {e}")
+            return {}
+
+    def get_dashboard_trials(
+        self,
+        cancer_type_tag: str,
+        phase_filter: Optional[list[str]] = None,
+        has_abstracts_only: bool = False,
+        status_filter: Optional[list[str]] = None,
+        sponsor_type_filter: Optional[list[str]] = None,
+        skip: int = 0,
+        limit: int = 500,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Get trial card DTOs for dashboard by cancer type.
+
+        Args:
+            cancer_type_tag: Normalized cancer type tag (e.g. from api_discovery).
+            phase_filter: Optional list of display phase names to include (e.g. ["Phase 1", "Phase 2"]).
+            has_abstracts_only: If True, only include trials that have abstract_id or conference or published_year.
+            status_filter: Optional list of study_status display values to include (e.g. ["Open", "Closed", "Suspended"]).
+            sponsor_type_filter: Optional list of "Industry" and/or "Non-Industry" to include.
+            skip: Number of trials to skip (pagination).
+            limit: Maximum number of trials to return.
+
+        Returns:
+            Tuple of (list of card dicts, total_matching count). approval_group is set by API layer.
+        """
+        if not self.db_path or not self.parser:
+            return [], 0
+
+        # Preload abstract map and categorisation (Modality, Target, Trial_Name) for performance
+        nct_abstract_map = self._get_abstract_map()
+
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT DISTINCT nct_number
+                    FROM api_discovery
+                    WHERE cancer_type_tag = ?
+                    ORDER BY nct_number
+                    """,
+                    (cancer_type_tag,),
+                )
+                nct_rows = cursor.fetchall()
+                all_nct_numbers = [row["nct_number"] for row in nct_rows]
+                nct_categorization_map = self._get_categorization_map(
+                    conn, all_nct_numbers
+                )
+        except sqlite3.Error as e:
+            logger.error(f"Error getting dashboard trial NCTs: {e}")
+            return [], 0
+
+        # Single pass: count all matching trials and build cards for the requested page only
+        cards: list[dict[str, Any]] = []
+        total_matching = 0
+        for nct_number in all_nct_numbers:
+            api_json = self._get_cached_api_json_ignore_expiry(nct_number)
+            if not api_json:
+                continue
+
+            protocol = api_json.get("protocolSection", {})
+            design_module = protocol.get("designModule", {})
+            sponsor_module = protocol.get("sponsorCollaboratorsModule", {})
+            api_phases = design_module.get("phases", [])
+            display_phases = self._api_phases_to_display(
+                [p for p in api_phases if isinstance(p, str)]
+            )
+
+            if phase_filter:
+                if not any(p in phase_filter for p in display_phases):
+                    continue
+
+            trial_data = self.parser.parse_api_response(api_json)
+            status = self.parser.extract_status_from_api_json(api_json)
+            study_status = self._api_status_to_study_status(status)
+
+            if status_filter and study_status not in status_filter:
+                continue
+
+            abstract_data = nct_abstract_map.get(nct_number, {})
+            abstract_id = abstract_data.get("abstract_id")
+            conference = abstract_data.get("conference")
+            published_year = abstract_data.get("published_year")
+            if has_abstracts_only:
+                if not abstract_id and not conference and not published_year:
+                    continue
+
+            lead_sponsor = sponsor_module.get("leadSponsor", {})
+            sponsor_class = (lead_sponsor.get("class") or "").upper().strip()
+            sponsor_type = "Sponsor" if sponsor_class == "INDUSTRY" else "Non-sponsor"
+            if sponsor_type_filter:
+                if sponsor_type == "Sponsor" and "Industry" not in sponsor_type_filter:
+                    continue
+                if (
+                    sponsor_type == "Non-sponsor"
+                    and "Non-Industry" not in sponsor_type_filter
+                ):
+                    continue
+
+            total_matching += 1
+            if total_matching <= skip:
+                continue
+            if len(cards) >= limit:
+                continue
+
+            sponsor_name = (lead_sponsor.get("name") or "").strip() or None
+
+            # Use clean treatment names from interventions[].name (e.g. "pembrolizumab", "placebo"),
+            # not armGroups[].interventionNames (e.g. "Biological: pembrolizumab").
+            arms_interventions = protocol.get("armsInterventionsModule", {})
+            interventions = arms_interventions.get("interventions", [])
+            drug_parts = []
+            for item in interventions:
+                name = (item.get("name") or "").strip()
+                if name and name not in drug_parts:
+                    drug_parts.append(name)
+            drug_name = ", ".join(drug_parts) if drug_parts else None
+
+            phase_display = (
+                ", ".join(display_phases) if display_phases else "Not applicable"
+            )
+
+            cat = nct_categorization_map.get(nct_number, {})
+            title = (
+                (cat.get("trial_name") or "").strip()
+                or trial_data.trial_name
+                or nct_number
+            )
+
+            card = {
+                "nct_id": nct_number,
+                "title": title,
+                "drug_name": drug_name,
+                "sponsor_name": sponsor_name,
+                "enrollment_count": trial_data.number_of_patients,
+                "phase": phase_display,
+                "study_status": study_status,
+                "sponsor_type": sponsor_type,
+                "arm_labels": [
+                    (arm.arm_label or "") or (arm.generic_name or "")
+                    for arm in (trial_data.treatment_arms or [])
+                ],
+                "abstract_id": abstract_id,
+                "conference": conference,
+                "published_year": published_year,
+            }
+            if cat:
+                card["modality"] = cat.get("modality")
+                card["target"] = cat.get("target")
+                card["trial_name"] = cat.get("trial_name")
+            cards.append(card)
+
+        return cards, total_matching
 
     def get_disease_landscape_stats(self, cancer_type_tag: str) -> dict[str, Any]:
         """Get disease landscape statistics for a specific cancer type.

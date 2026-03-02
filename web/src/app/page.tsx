@@ -83,8 +83,11 @@ export default function Home() {
   const { data: session } = useSession();
   const [activeNav, setActiveNav] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [roleSelectValue, setRoleSelectValue] = useState('');
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const navLinksRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
 
   // Position sliding indicator on active nav link (smooth when skipping sections)
   useEffect(() => {
@@ -137,6 +140,18 @@ export default function Home() {
       document.body.style.overflow = '';
     };
   }, [mobileMenuOpen]);
+
+  // Close role dropdown when clicking outside
+  useEffect(() => {
+    if (!roleDropdownOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
+        setRoleDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [roleDropdownOpen]);
 
   // Close mobile menu on Escape key
   useEffect(() => {
@@ -258,7 +273,16 @@ export default function Home() {
     e.preventDefault();
     alert('Thank you for your message! We will get back to you soon.');
     e.currentTarget.reset();
+    setRoleSelectValue('');
   };
+
+  const ROLE_OPTIONS = [
+    { value: 'researcher', label: 'Researcher' },
+    { value: 'healthcare', label: 'Healthcare Professional' },
+    { value: 'patient', label: 'Patient/Advocate' },
+    { value: 'other', label: 'Other' },
+  ];
+  const rolePlaceholder = 'Select Your Role';
 
   const currentYear = new Date().getFullYear();
 
@@ -306,7 +330,7 @@ export default function Home() {
                 className={activeNav === '#platform' ? 'active' : ''}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Solutions
+                Product
               </a>
               <a 
                 href="#about" 
@@ -447,13 +471,42 @@ export default function Home() {
                   required
                   aria-label="Email"
                 />
-                <select name="role" required aria-label="Role">
-                  <option value="">Select Your Role</option>
-                  <option value="researcher">Researcher</option>
-                  <option value="healthcare">Healthcare Professional</option>
-                  <option value="patient">Patient/Advocate</option>
-                  <option value="other">Other</option>
-                </select>
+                <div className="contact-form-role-wrap" ref={roleDropdownRef}>
+                  <input type="hidden" name="role" value={roleSelectValue} required />
+                  <button
+                    type="button"
+                    onClick={() => setRoleDropdownOpen((o) => !o)}
+                    aria-haspopup="listbox"
+                    aria-expanded={roleDropdownOpen}
+                    aria-label="Role"
+                    className="contact-form-role-trigger"
+                  >
+                    <span>{roleSelectValue ? ROLE_OPTIONS.find((o) => o.value === roleSelectValue)?.label : rolePlaceholder}</span>
+                    <svg className="contact-form-role-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
+                  </button>
+                  {roleDropdownOpen && (
+                    <ul
+                      role="listbox"
+                      className="contact-form-role-dropdown"
+                      aria-label="Role"
+                    >
+                      {ROLE_OPTIONS.map((opt) => (
+                        <li
+                          key={opt.value}
+                          role="option"
+                          aria-selected={roleSelectValue === opt.value}
+                          onClick={() => {
+                            setRoleSelectValue(opt.value);
+                            setRoleDropdownOpen(false);
+                          }}
+                          className="contact-form-role-option"
+                        >
+                          {opt.label}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
                 <textarea
                   name="message"
                   placeholder="Message"

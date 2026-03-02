@@ -82,7 +82,7 @@ class PipelineMetrics:
     performance monitoring, quality assessment, and usage statistics.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize pipeline metrics."""
         self.start_time: Optional[datetime] = None
         self.end_time: Optional[datetime] = None

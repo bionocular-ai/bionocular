@@ -25,6 +25,8 @@ interface TrialDataTableProps {
   data: Trial[];
   showAbstractId?: boolean;
   hideNctId?: boolean;
+  /** When true, only show ABSTRACT/PUBLICATION ID and ARM ID columns and hide pagination. */
+  compact?: boolean;
   nctFilter?: string;
   sponsorFilter?: string;
   drugFilter?: string;
@@ -61,7 +63,8 @@ function flattenTrials(trials: Trial[]): Trial[] {
 export function TrialDataTable({ 
   data, 
   showAbstractId = false, 
-  hideNctId = false, 
+  hideNctId = false,
+  compact = false,
   nctFilter = '', 
   sponsorFilter = '',
   drugFilter = '',
@@ -149,136 +152,134 @@ export function TrialDataTable({
     return filtered;
   }, [data, nctFilter, sponsorFilter, drugFilter, armNameFilter, trialNameFilter, armTypeFilter, lineOfTherapyFilter]);
 
-  const columns: ColumnDef<Trial>[] = [
-    ...(!hideNctId ? [{
-      accessorKey: 'nct_id' as const,
-      header: 'TRIAL ID NCT',
-      cell: ({ row }: { row: { getValue: (key: string) => unknown; original: Trial } }) => {
-        const nctId = row.getValue('nct_id') as string;
-        if (!nctId) {
-          return <span className="text-muted-foreground text-xs text-left">—</span>;
-        }
-        const nctUrl = category 
-          ? `/trial/nct/${nctId}?category=${category}` 
-          : `/trial/nct/${nctId}`;
+  const abstractIdColumn: ColumnDef<Trial> = {
+    accessorKey: 'abstract_id' as const,
+    header: 'ABSTRACT/PUBLICATION ID',
+    cell: ({ row }: { row: { getValue: (key: string) => unknown; original: Trial } }) => {
+      const trial = row.original;
+      const abstractId = trial.abstract_id;
+      const publicationName = trial.publication_name;
+      const isPublication = trial.type === 'publication';
+      const sourceUrl = trial.source_url;
+      const displayValue = (isPublication && publicationName) ? publicationName : abstractId;
+      if (!displayValue) {
+        return <span className="text-muted-foreground text-xs text-left">—</span>;
+      }
+      const isWebScraped = abstractId?.startsWith('webscrape_');
+      if (isWebScraped && sourceUrl) {
         return (
-          <Link
-            href={nctUrl}
-            className="inline-flex items-center px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
             style={{ color: '#1A73E8' }}
-          >
-            {nctId}
-          </Link>
-        );
-      },
-    }] : []),
-    ...(showAbstractId ? [{
-      accessorKey: 'abstract_id' as const,
-      header: 'ABSTRACT/PUBLICATION ID',
-      cell: ({ row }: { row: { getValue: (key: string) => unknown; original: Trial } }) => {
-        const trial = row.original;
-        const abstractId = trial.abstract_id;
-        const publicationName = trial.publication_name;
-        const isPublication = trial.type === 'publication';
-        const sourceUrl = trial.source_url;
-        
-        // For publications, show publication_name if available, otherwise fall back to abstract_id
-        // For abstracts, show abstract_id
-        const displayValue = (isPublication && publicationName) ? publicationName : abstractId;
-        
-        if (!displayValue) {
-          return <span className="text-muted-foreground text-xs text-left">—</span>;
-        }
-        
-        // Check if this is a web-scraped trial (abstract_id starts with "webscrape_")
-        const isWebScraped = abstractId?.startsWith('webscrape_');
-        
-        // If web-scraped and has source_url, link to external source
-        if (isWebScraped && sourceUrl) {
-          return (
-            <a
-              href={sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
-              style={{ color: '#1A73E8' }}
-              title={`${abstractId || displayValue} (Click to view source)`}
-            >
-              <span className="max-w-[500px] truncate">{displayValue}</span>
-              <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          );
-        }
-        
-        // Otherwise, link to internal page
-        const linkId = abstractId || displayValue;
-        const abstractUrl = category 
-          ? `/trial/abstract/${linkId}?category=${category}` 
-          : `/trial/abstract/${linkId}`;
-        
-        return (
-          <Link
-            href={abstractUrl}
-            className="inline-flex items-center px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
-            style={{ color: '#1A73E8' }}
-            title={abstractId || displayValue}
+            title={`${abstractId || displayValue} (Click to view source)`}
           >
             <span className="max-w-[500px] truncate">{displayValue}</span>
-          </Link>
+            <svg className="h-3 w-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </a>
         );
-      },
-    }] : []),
-    {
-      accessorKey: 'sponsor',
-      header: 'SPONSOR',
-      cell: ({ row }) => {
-        const sponsor = row.getValue('sponsor') as string;
-        return (
-          <div className="max-w-[200px] truncate text-xs text-left" title={sponsor}>
-            {sponsor || <span className="text-muted-foreground">—</span>}
-          </div>
-        );
-      },
+      }
+      const linkId = abstractId || displayValue;
+      const abstractUrl = category
+        ? `/trial/abstract/${linkId}?category=${category}`
+        : `/trial/abstract/${linkId}`;
+      return (
+        <Link
+          href={abstractUrl}
+          className="inline-flex items-center px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
+          style={{ color: '#1A73E8' }}
+          title={abstractId || displayValue}
+        >
+          <span className="max-w-[500px] truncate">{displayValue}</span>
+        </Link>
+      );
     },
-    {
-      accessorKey: 'generic_name',
-      header: 'GENERIC NAME',
-      cell: ({ row }) => {
-        const genericName = row.getValue('generic_name') as string;
-        return (
-          <div className="max-w-[200px] truncate text-xs text-left" title={genericName}>
-            {genericName || <span className="text-muted-foreground">—</span>}
-          </div>
-        );
-      },
+  };
+
+  const armIdColumn: ColumnDef<Trial> = {
+    accessorKey: 'arm_name',
+    header: 'ARM ID',
+    cell: ({ row }) => {
+      const armName = row.getValue('arm_name') as string;
+      return (
+        <div className="max-w-[150px] truncate text-xs text-left" title={armName}>
+          {armName || <span className="text-muted-foreground">—</span>}
+        </div>
+      );
     },
-    {
-      accessorKey: 'cancer_type',
-      header: 'CANCER TYPE',
-      cell: ({ row }) => {
-        const cancerType = row.getValue('cancer_type') as string;
-        return (
-          <div className="max-w-[200px] truncate text-xs text-left" title={cancerType}>
-            {cancerType || <span className="text-muted-foreground">—</span>}
-          </div>
-        );
-      },
-    },
-    {
-      accessorKey: 'arm_name',
-      header: 'ARM ID',
-      cell: ({ row }) => {
-        const armName = row.getValue('arm_name') as string;
-        return (
-          <div className="max-w-[150px] truncate text-xs text-left" title={armName}>
-            {armName || <span className="text-muted-foreground">—</span>}
-          </div>
-        );
-      },
-    },
-  ];
+  };
+
+  const columns: ColumnDef<Trial>[] = compact
+    ? [
+        ...(showAbstractId ? [abstractIdColumn] : []),
+        armIdColumn,
+      ]
+    : [
+        ...(!hideNctId ? [{
+          accessorKey: 'nct_id' as const,
+          header: 'TRIAL ID NCT',
+          cell: ({ row }: { row: { getValue: (key: string) => unknown; original: Trial } }) => {
+            const nctId = row.getValue('nct_id') as string;
+            if (!nctId) {
+              return <span className="text-muted-foreground text-xs text-left">—</span>;
+            }
+            const nctUrl = category
+              ? `/trial/nct/${nctId}?category=${category}`
+              : `/trial/nct/${nctId}`;
+            return (
+              <Link
+                href={nctUrl}
+                className="inline-flex items-center px-2.5 py-1 rounded-md text-primary font-medium text-xs text-left transition-all duration-200 border border-transparent hover:border-primary/30 hover:bg-blue-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1"
+                style={{ color: '#1A73E8' }}
+              >
+                {nctId}
+              </Link>
+            );
+          },
+        }] : []),
+        ...(showAbstractId ? [abstractIdColumn] : []),
+        {
+          accessorKey: 'sponsor',
+          header: 'SPONSOR',
+          cell: ({ row }) => {
+            const sponsor = row.getValue('sponsor') as string;
+            return (
+              <div className="max-w-[200px] truncate text-xs text-left" title={sponsor}>
+                {sponsor || <span className="text-muted-foreground">—</span>}
+              </div>
+            );
+          },
+        },
+        {
+          accessorKey: 'generic_name',
+          header: 'GENERIC NAME',
+          cell: ({ row }) => {
+            const genericName = row.getValue('generic_name') as string;
+            return (
+              <div className="max-w-[200px] truncate text-xs text-left" title={genericName}>
+                {genericName || <span className="text-muted-foreground">—</span>}
+              </div>
+            );
+          },
+        },
+        {
+          accessorKey: 'cancer_type',
+          header: 'CANCER TYPE',
+          cell: ({ row }) => {
+            const cancerType = row.getValue('cancer_type') as string;
+            return (
+              <div className="max-w-[200px] truncate text-xs text-left" title={cancerType}>
+                {cancerType || <span className="text-muted-foreground">—</span>}
+              </div>
+            );
+          },
+        },
+        armIdColumn,
+      ];
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -286,14 +287,14 @@ export function TrialDataTable({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    ...(compact ? {} : { getPaginationRowModel: getPaginationRowModel() }),
     globalFilterFn: 'includesString',
     state: {
       globalFilter,
     },
     initialState: {
       pagination: {
-        pageSize: 25,
+        pageSize: compact ? flattenedData.length : 25,
       },
     },
   });
@@ -356,50 +357,52 @@ export function TrialDataTable({
         </Table>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="text-xs text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{' '}
-          {table.getPageCount()} ({flattenedData.length} items)
+      {!compact && (
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            Page {table.getState().pagination.pageIndex + 1} of{' '}
+            {table.getPageCount()} ({flattenedData.length} items)
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+              variant="outline"
+              size="sm"
+              className="text-xs h-8"
+            >
+              &lt;&lt;
+            </Button>
+            <Button
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              variant="outline"
+              size="sm"
+              className="text-xs h-8"
+            >
+              &lt;
+            </Button>
+            <Button
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              variant="outline"
+              size="sm"
+              className="text-xs h-8"
+            >
+              &gt;
+            </Button>
+            <Button
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+              variant="outline"
+              size="sm"
+              className="text-xs h-8"
+            >
+              &gt;&gt;
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-            variant="outline"
-            size="sm"
-            className="text-xs h-8"
-          >
-            &lt;&lt;
-          </Button>
-          <Button
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            variant="outline"
-            size="sm"
-            className="text-xs h-8"
-          >
-            &lt;
-          </Button>
-          <Button
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            variant="outline"
-            size="sm"
-            className="text-xs h-8"
-          >
-            &gt;
-          </Button>
-          <Button
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-            variant="outline"
-            size="sm"
-            className="text-xs h-8"
-          >
-            &gt;&gt;
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

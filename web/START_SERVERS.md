@@ -4,19 +4,14 @@
 
 Open a terminal and run:
 
-**Option A: Using the startup script (easiest)**
+**Recommended: Using Poetry**
 ```bash
 cd melanoma
-./start_backend.sh
-```
-
-**Option B: Using Poetry (if you have Poetry installed)**
-```bash
-cd melanoma
+poetry install   # first time only, to install dependencies
 poetry run uvicorn src.app.api:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Option C: Using Python directly (if dependencies are installed)**
+**Alternative: Using Python directly (if dependencies are installed)**
 ```bash
 cd melanoma
 python3 -m uvicorn src.app.api:app --reload --host 0.0.0.0 --port 8000
@@ -26,8 +21,6 @@ python3 -m uvicorn src.app.api:app --reload --host 0.0.0.0 --port 8000
 ```bash
 cd melanoma
 poetry install
-# or
-pip install -r requirements.txt  # if you have a requirements.txt
 ```
 
 **Expected output:**

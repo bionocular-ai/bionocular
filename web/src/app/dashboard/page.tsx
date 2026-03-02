@@ -1,33 +1,279 @@
 'use client';
 
 import * as React from 'react';
+import { Suspense } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { UserMenu } from '@/components/user-menu';
-import { CancerTypeBubbles } from '@/components/dashboard/CancerTypeBubbles';
+import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
+import { SelectedFilters, type FilterTag } from '@/components/dashboard/SelectedFilters';
+import { TrialCard } from '@/components/dashboard/TrialCard';
 import { trialsApi } from '@/lib/api';
-import { Loader2 } from 'lucide-react';
+import type { DashboardTrialCard } from '@/lib/api';
+import { Loader2, Filter, FileDown, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
+import { DEFAULT_CANCER_TYPE_SLUG, PHASE_OPTIONS, STATUS_OPTIONS } from '@/lib/dashboard-constants';
 
+/** Modality column headers in display order (reference). */
+const MODALITY_HEADERS = [
+  'Monoclonal Antibody',
+  'Vaccine',
+  'Immunostimulant/Cytokine',
+  'Bispecific',
+  'CAR-T',
+  'NK or Myeloid Cell Therapy',
+  'TIL Therapy',
+  'Small Molecule',
+  'Antibody-Drug Conjugate',
+  'Oncolytic Virus',
+  'Chemotherapy',
+] as const;
 
-export default function DashboardPage() {
+const MODALITY_OTHER = 'Other';
+
+/** Stable empty list for useMemo when no trials data yet. */
+const EMPTY_TRIALS: DashboardTrialCard[] = [];
+
+/** Map API modality values to display header (case-insensitive match + common aliases). */
+function normalizeModality(apiModality: string | null | undefined): (typeof MODALITY_HEADERS)[number] | typeof MODALITY_OTHER {
+  const raw = (apiModality ?? '').trim();
+  if (!raw) return MODALITY_OTHER;
+  const lower = raw.toLowerCase();
+  const aliases: Record<string, (typeof MODALITY_HEADERS)[number]> = {
+    'monoclonal antibody': 'Monoclonal Antibody',
+    'mab': 'Monoclonal Antibody',
+    'vaccine': 'Vaccine',
+    'immunostimulant/cytokine': 'Immunostimulant/Cytokine',
+    'immunostimulant': 'Immunostimulant/Cytokine',
+    'cytokine': 'Immunostimulant/Cytokine',
+    'bispecific': 'Bispecific',
+    'bi-specific': 'Bispecific',
+    'bi-specifics': 'Bispecific',
+    'car-t': 'CAR-T',
+    'car t': 'CAR-T',
+    'nk or myeloid cell therapy': 'NK or Myeloid Cell Therapy',
+    'nk cell': 'NK or Myeloid Cell Therapy',
+    'til therapy': 'TIL Therapy',
+    'til': 'TIL Therapy',
+    'small molecule': 'Small Molecule',
+    'antibody-drug conjugate': 'Antibody-Drug Conjugate',
+    'adc': 'Antibody-Drug Conjugate',
+    'oncolytic virus': 'Oncolytic Virus',
+    'chemotherapy': 'Chemotherapy',
+  };
+  if (aliases[lower]) return aliases[lower];
+  const exact = MODALITY_HEADERS.find((h) => h.toLowerCase() === lower);
+  return exact ?? MODALITY_OTHER;
+}
+
+const PAGE_SIZE_OPTIONS = [50, 100, 200, 500] as const;
+const DEFAULT_PAGE_SIZE = 100;
+const PAGINATION_WINDOW = 2; // pages to show on each side of current (like GitHub/Linear)
+
+/** Build page numbers to show: [1, null, 4, 5, 6, null, 10]. null = ellipsis. */
+function getPaginationPages(current: number, totalPages: number): (number | null)[] {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+  const set = new Set<number>([1, totalPages]);
+  const lo = Math.max(1, current - PAGINATION_WINDOW);
+  const hi = Math.min(totalPages, current + PAGINATION_WINDOW);
+  for (let i = lo; i <= hi; i++) set.add(i);
+  const sorted = Array.from(set).sort((a, b) => a - b);
+  const out: (number | null)[] = [];
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i]! - sorted[i - 1]! > 1) out.push(null);
+    out.push(sorted[i]!);
+  }
+  return out;
+}
+
+const TARGET_OTHER = 'Other';
+
+type GroupByOption = 'none' | 'modality' | 'target';
+
+function DashboardContent() {
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['landscape-stats'],
-    queryFn: () => trialsApi.getLandscapeStats(),
+  const cancerTypeSlug = searchParams.get('cancer_type') || DEFAULT_CANCER_TYPE_SLUG;
+  const [phaseFilter, setPhaseFilter] = React.useState<string[]>([]);
+  const [hasAbstractsOnly, setHasAbstractsOnly] = React.useState(false);
+  const [statusFilter, setStatusFilter] = React.useState<string[]>([]);
+  const [sponsorTypeFilter, setSponsorTypeFilter] = React.useState<string[]>([]);
+  const [groupBy, setGroupBy] = React.useState<GroupByOption>('none');
+  const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE);
+  const [phaseDropdownOpen, setPhaseDropdownOpen] = React.useState(false);
+  const [groupByDropdownOpen, setGroupByDropdownOpen] = React.useState(false);
+  const [pageSizeDropdownOpen, setPageSizeDropdownOpen] = React.useState(false);
+
+  // Draft filter state (used in panel; applied only on "Apply")
+  const [phaseDraft, setPhaseDraft] = React.useState<string[]>([]);
+  const [statusDraft, setStatusDraft] = React.useState<string[]>([]);
+  const [sponsorTypeDraft, setSponsorTypeDraft] = React.useState<string[]>([]);
+  const [hasAbstractsDraft, setHasAbstractsDraft] = React.useState(false);
+
+  // When opening the filter panel, sync draft from applied state
+  React.useEffect(() => {
+    if (phaseDropdownOpen) {
+      setPhaseDraft(phaseFilter);
+      setStatusDraft(statusFilter);
+      setSponsorTypeDraft(sponsorTypeFilter);
+      setHasAbstractsDraft(hasAbstractsOnly);
+    }
+    // Intentionally only when panel opens; adding filter deps would overwrite draft while user edits
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phaseDropdownOpen]);
+
+  const applyFilterDraft = React.useCallback(() => {
+    setPhaseFilter(phaseDraft);
+    setStatusFilter(statusDraft);
+    setSponsorTypeFilter(sponsorTypeDraft);
+    setHasAbstractsOnly(hasAbstractsDraft);
+    setPage(1);
+    setPhaseDropdownOpen(false);
+  }, [phaseDraft, statusDraft, sponsorTypeDraft, hasAbstractsDraft]);
+
+  const resetFilterDraft = React.useCallback(() => {
+    setPhaseDraft([]);
+    setStatusDraft([]);
+    setSponsorTypeDraft([]);
+    setHasAbstractsDraft(false);
+  }, []);
+
+  // Reset to page 1 when filters or cancer type change
+  const prevFiltersRef = React.useRef<string>('');
+  React.useEffect(() => {
+    const key = `${cancerTypeSlug}-${phaseFilter.join(',')}-${hasAbstractsOnly}-${statusFilter.join(',')}-${sponsorTypeFilter.join(',')}`;
+    if (prevFiltersRef.current && prevFiltersRef.current !== key) setPage(1);
+    prevFiltersRef.current = key;
+  }, [cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter]);
+
+  const setCancerType = React.useCallback(
+    (slug: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('cancer_type', slug);
+      window.history.replaceState(null, '', `?${params.toString()}`);
+    },
+    [searchParams]
+  );
+
+  const { error: statsError } = useQuery({
+    queryKey: ['landscape-stats', cancerTypeSlug],
+    queryFn: () => trialsApi.getLandscapeStats(cancerTypeSlug),
     retry: false,
     refetchOnWindowFocus: false,
   });
 
+  const skip = (page - 1) * pageSize;
+  const { data: trialsData, isLoading: trialsLoading, error: trialsError } = useQuery({
+    queryKey: ['dashboard-trials', cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter, skip, pageSize],
+    queryFn: () =>
+      trialsApi.getDashboardTrials(cancerTypeSlug, {
+        phase: phaseFilter.length > 0 ? phaseFilter : undefined,
+        has_abstracts: hasAbstractsOnly || undefined,
+        status: statusFilter.length > 0 ? statusFilter : undefined,
+        sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
+        skip,
+        limit: pageSize,
+      }),
+    retry: false,
+    refetchOnWindowFocus: false,
+    enabled: !!cancerTypeSlug,
+  });
+
+  const trials = React.useMemo(
+    () => trialsData?.trials ?? EMPTY_TRIALS,
+    [trialsData?.trials]
+  );
+  const trialsTotal = trialsData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(trialsTotal / pageSize));
+  const startRow = trialsTotal === 0 ? 0 : skip + 1;
+  const endRow = Math.min(skip + pageSize, trialsTotal);
+
+  const filterTags: FilterTag[] = React.useMemo(() => {
+    const tags: FilterTag[] = [];
+    if (phaseFilter.length > 0) {
+      tags.push({
+        id: 'phase',
+        label: `Phase: ${phaseFilter.join(', ')}`,
+        onRemove: () => setPhaseFilter([]),
+      });
+    }
+    if (hasAbstractsOnly) {
+      tags.push({
+        id: 'abstracts',
+        label: 'Efficacy & Safety',
+        onRemove: () => setHasAbstractsOnly(false),
+      });
+    }
+    if (statusFilter.length > 0) {
+      tags.push({
+        id: 'status',
+        label: `Status: ${statusFilter.join(', ')}`,
+        onRemove: () => setStatusFilter([]),
+      });
+    }
+    if (sponsorTypeFilter.length > 0) {
+      tags.push({
+        id: 'sponsor_type',
+        label: `Sponsor Type: ${sponsorTypeFilter.join(', ')}`,
+        onRemove: () => setSponsorTypeFilter([]),
+      });
+    }
+    return tags;
+  }, [phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter]);
+
+  const groupedTrials = React.useMemo(() => ({ '': trials }), [trials]);
+
+  /** Trials grouped by modality for column layout. Columns ordered by trial count (most first); Other last. */
+  const trialsByModality = React.useMemo(() => {
+    const allHeaders: string[] = [...MODALITY_HEADERS, MODALITY_OTHER];
+    const map: Record<string, DashboardTrialCard[]> = {};
+    allHeaders.forEach((h) => {
+      map[h] = [];
+    });
+    trials.forEach((t) => {
+      const header = normalizeModality(t.modality ?? undefined);
+      if (map[header]) map[header].push(t);
+      else map[MODALITY_OTHER].push(t);
+    });
+    const order = [...allHeaders].sort((a, b) => {
+      if (a === MODALITY_OTHER) return 1;
+      if (b === MODALITY_OTHER) return -1;
+      return (map[b]?.length ?? 0) - (map[a]?.length ?? 0);
+    });
+    return { order, map };
+  }, [trials]);
+
+  /** Trials grouped by target for column layout. Columns ordered by trial count (most first); Other last. */
+  const trialsByTarget = React.useMemo(() => {
+    const map: Record<string, DashboardTrialCard[]> = {};
+    trials.forEach((t) => {
+      const raw = (t.target ?? '').trim();
+      const key = raw && raw.toLowerCase() !== 'unknown' ? raw : TARGET_OTHER;
+      if (!map[key]) map[key] = [];
+      map[key].push(t);
+    });
+    const order = Object.keys(map).sort((a, b) => {
+      if (a === TARGET_OTHER) return 1;
+      if (b === TARGET_OTHER) return -1;
+      return (map[b]?.length ?? 0) - (map[a]?.length ?? 0);
+    });
+    return { order, map };
+  }, [trials]);
+
+  const error = statsError ?? trialsError;
+
   return (
-    <div className="flex flex-col min-h-screen w-full bg-white overflow-hidden">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shrink-0 shadow-sm backdrop-blur-sm bg-white/95">
+    <>
+    <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden">
+      <header className="bg-white border-b border-slate-200 shrink-0 z-50">
         <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
+          <div className="flex items-center justify-between h-14 gap-3">
             <Link href="/" className="brand flex-shrink-0 hover:opacity-80 transition-opacity">
               <Logo height={32} />
               <span className="brand-text dashboard-brand-text">
@@ -35,6 +281,7 @@ export default function DashboardPage() {
               </span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+              <DashboardNavLink />
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
@@ -47,71 +294,525 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto bg-gradient-to-br from-slate-50 via-white to-blue-50 overscroll-none">
-        <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8 max-w-7xl h-full flex flex-col min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)]">
-          {/* Page Header */}
-          <div className="mb-3 sm:mb-4 md:mb-6 text-center shrink-0 px-2">
-            <h1 className="text-[1.375rem] min-[400px]:text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2 sm:mb-3 tracking-tight leading-tight">
-              Skin Cancer Ecosystem
-            </h1>
-            <p className="text-[0.8125rem] min-[400px]:text-sm sm:text-base md:text-lg text-gray-500 max-w-2xl mx-auto px-2 sm:px-4">
-              Explore clinical trials by cancer type
-            </p>
-          </div>
-
-          {/* Error Banner */}
+      <main className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden px-2 pt-2 pb-4 md:px-4 md:pt-4 md:pb-6 bg-slate-100 gap-4">
+        <div className="w-full bg-white rounded-lg shadow shrink-0 overflow-visible">
           {error && (
-            <Card className="border-yellow-200 bg-yellow-50 mb-3 sm:mb-4 md:mb-6 mx-2 sm:mx-0">
-              <CardContent className="pt-4 sm:pt-6 pb-4 sm:pb-6">
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-yellow-800 mb-1 text-xs sm:text-sm">
-                      Backend Unavailable
-                    </h3>
-                    <p className="text-xs text-yellow-700">
-                      Unable to connect to the backend API. Please ensure the backend is running.
-                    </p>
-                    {error instanceof Error && (
-                      <p className="text-xs text-yellow-600 mt-1 sm:mt-2 break-words">
-                        Error: {error.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 first:mt-0">
+              <Card className="border-yellow-200 bg-yellow-50">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-sm text-yellow-800">
+                    Unable to connect to the backend API. {error instanceof Error ? error.message : 'Please ensure the backend is running.'}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
-          {/* Loading State */}
-          <div className="flex-1 flex items-center justify-center min-h-0 overflow-hidden">
-            {isLoading ? (
-              <div className="flex flex-col items-center gap-3 sm:gap-4">
-                <Loader2 className="h-6 w-6 sm:h-8 sm:w-8 animate-spin text-primary" />
-                <p className="text-xs sm:text-sm text-gray-600">Loading landscape data...</p>
+          {/* Top section: stats + global cancer selection only (Level 1) */}
+          <DashboardGlobalHeader
+            cancerTypeSlug={cancerTypeSlug}
+            onCancerTypeChange={setCancerType}
+          />
+        </div>
+
+        {/* Clinical Trials — landscape section (scrolls with main) */}
+        <div className="w-full bg-white rounded-lg shadow min-h-0 min-w-0">
+          <section className="bg-white min-h-0">
+            <div className="px-4 sm:px-6 lg:px-8 pt-3 pb-2 flex flex-col min-h-0">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0 mb-2">
+                <div>
+                  <h2 className="text-2xl font-medium tracking-wide text-sky-700">Landscape</h2>
+                </div>
+                <nav className="flex flex-wrap items-center gap-x-4 gap-y-1" aria-label="Landscape navigation">
+                  <Link
+                    href={`/dashboard/${cancerTypeSlug}/analytics?mode=efficacy`}
+                    className="relative text-sm font-medium text-sky-700 rounded-md px-2.5 py-1.5 pb-2 transition-all duration-200 ease-out hover:text-sky-800 hover:bg-sky-50/80 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1 after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:block after:h-px after:rounded-full after:bg-sky-600/70 after:content-[''] after:transition-all after:duration-200 after:ease-out hover:after:bg-sky-700 hover:after:h-0.5"
+                  >
+                    Head to Head Efficacy
+                  </Link>
+                  <Link
+                    href={`/dashboard/${cancerTypeSlug}/analytics?mode=safety`}
+                    className="relative text-sm font-medium text-sky-700 rounded-md px-2.5 py-1.5 pb-2 transition-all duration-200 ease-out hover:text-sky-800 hover:bg-sky-50/80 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1 after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:block after:h-px after:rounded-full after:bg-sky-600/70 after:content-[''] after:transition-all after:duration-200 after:ease-out hover:after:bg-sky-700 hover:after:h-0.5"
+                  >
+                    Head to Head Safety
+                  </Link>
+                  <Link
+                    href={`/dashboard/${cancerTypeSlug}/analytics`}
+                    className="relative text-sm font-medium text-sky-700 rounded-md px-2.5 py-1.5 pb-2 transition-all duration-200 ease-out hover:text-sky-800 hover:bg-sky-50/80 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1 after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:block after:h-px after:rounded-full after:bg-sky-600/70 after:content-[''] after:transition-all after:duration-200 after:ease-out hover:after:bg-sky-700 hover:after:h-0.5"
+                  >
+                    Head to Head Efficacy : Safety
+                  </Link>
+                  <Link
+                    href={`/dashboard/${cancerTypeSlug}/live-ticker`}
+                    className="relative text-sm font-medium text-sky-700 rounded-md px-2.5 py-1.5 pb-2 transition-all duration-200 ease-out hover:text-sky-800 hover:bg-sky-50/80 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1 after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:block after:h-px after:rounded-full after:bg-sky-600/70 after:content-[''] after:transition-all after:duration-200 after:ease-out hover:after:bg-sky-700 hover:after:h-0.5"
+                  >
+                    Live Ticker
+                  </Link>
+                  <span className="text-sm font-medium text-slate-400 cursor-default" aria-disabled title="Coming soon">
+                    AI Chatbot <span className="text-xs font-normal">(Soon)</span>
+                  </span>
+                  <span className="text-sm font-medium text-slate-400 cursor-default" aria-disabled title="Coming soon">
+                    Regulatory Milestone <span className="text-xs font-normal">(Soon)</span>
+                  </span>
+                </nav>
               </div>
-            ) : error ? (
-              <Card className="mx-4 max-w-md">
-                <CardContent className="pt-6 pb-6">
-                  <p className="text-xs sm:text-sm text-red-600 text-center break-words">
-                    Error loading landscape data: {error instanceof Error ? error.message : 'Unknown error'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : data?.landscape ? (
-              <CancerTypeBubbles stats={data.landscape} />
-            ) : (
-              <Card className="mx-4 max-w-md">
-                <CardContent className="pt-6 pb-6">
-                  <p className="text-xs sm:text-sm text-gray-600 text-center">
-                    No landscape data available. Please run the sync script to populate data.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+
+              <div className="flex flex-wrap items-center gap-4 py-2 shrink-0 border-y border-slate-100 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-2">
+                <div className="flex flex-wrap items-center gap-6 w-full">
+                  {/* Level 2: Group by, selected filters (left); Export PPT, FILTERS (right) */}
+                  <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm font-medium tracking-wider text-slate-500">Group By:</span>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setGroupByDropdownOpen((o) => !o)}
+                          aria-label="Group by"
+                          aria-expanded={groupByDropdownOpen}
+                          aria-haspopup="listbox"
+                          className="flex w-36 items-center justify-between border-0 border-b-2 border-sky-400 bg-transparent py-2 pl-0 pr-1 text-left text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-0"
+                        >
+                          <span>
+                            {groupBy === 'none' ? 'None' : groupBy === 'modality' ? 'Modality' : 'Target'}
+                          </span>
+                          <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+                        </button>
+                        {groupByDropdownOpen && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              aria-hidden
+                              onClick={() => setGroupByDropdownOpen(false)}
+                            />
+                            <div
+                              role="listbox"
+                              aria-label="Group by"
+                              className="absolute left-0 top-full z-20 mt-2 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                            >
+                              {[
+                                { value: 'none' as GroupByOption, label: 'None' },
+                                { value: 'modality' as GroupByOption, label: 'Modality' },
+                                { value: 'target' as GroupByOption, label: 'Target' },
+                              ].map((opt) => {
+                                const selected = groupBy === opt.value;
+                                return (
+                                  <button
+                                    key={opt.value}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={selected}
+                                    onClick={() => {
+                                      setGroupBy(opt.value);
+                                      setGroupByDropdownOpen(false);
+                                    }}
+                                    className={`flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors ${selected ? 'bg-sky-50 text-slate-900' : 'text-slate-700 hover:bg-slate-50'
+                                      }`}
+                                  >
+                                    <span>{opt.label}</span>
+                                    {selected && <Check className="h-4 w-4 shrink-0 text-sky-600" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <SelectedFilters tags={filterTags} className="flex-1 min-w-0" />
+                  </div>
+                  <div className="flex items-center gap-2 ml-auto shrink-0">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-2xl bg-transparent px-4 py-2.5 text-sm font-semibold text-sky-700 transition-colors duration-150 hover:bg-slate-100 hover:text-sky-800"
+                      title="Export PPT (placeholder)"
+                    >
+                      <FileDown className="h-4 w-4 text-emerald-700 shrink-0" />
+                      <span>EXPORT PPT</span>
+                    </button>
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setPhaseDropdownOpen((o) => !o)}
+                        className="inline-flex items-center gap-2 rounded-sm bg-teal-500 px-3 py-2 sm:px-4 text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2"
+                      >
+                        <Filter className="h-4 w-4 shrink-0 fill-white text-white" strokeWidth={2} />
+                        <span className="text-sm font-medium whitespace-nowrap">FILTERS</span>
+                        <ChevronDown className="h-4 w-4 shrink-0" />
+                      </button>
+                      {phaseDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" aria-hidden onClick={() => setPhaseDropdownOpen(false)} />
+                          <div className="absolute right-0 top-full z-20 mt-2 flex flex-col min-w-[30rem] max-w-[90vw] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5">
+                            <div className="flex overflow-hidden">
+                              {/* Phase */}
+                              <div className="w-[9.5rem] shrink-0 flex flex-col border-r border-slate-200">
+                                <div className="bg-slate-100 px-3 py-2.5 border-b border-slate-200">
+                                  <span className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Phase</span>
+                                </div>
+                                <div className="bg-slate-50/60 py-1">
+                                  {PHASE_OPTIONS.map((phase) => {
+                                    const checked = phaseDraft.includes(phase);
+                                    return (
+                                      <label
+                                        key={phase}
+                                        className={`flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors ${checked ? 'bg-teal-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-white/80'}`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() =>
+                                            setPhaseDraft((prev) =>
+                                              prev.includes(phase) ? prev.filter((p) => p !== phase) : [...prev, phase]
+                                            )
+                                          }
+                                          className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/40"
+                                        />
+                                        <span className="min-w-0 break-words">{phase}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              {/* Status */}
+                              <div className="min-w-[13rem] flex-1 flex flex-col border-r border-slate-200">
+                                <div className="bg-slate-100 px-3 py-2.5 border-b border-slate-200">
+                                  <span className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Status</span>
+                                </div>
+                                <div className="bg-slate-50/60 py-1 max-h-52 overflow-y-auto">
+                                  {STATUS_OPTIONS.map((status) => {
+                                    const checked = statusDraft.includes(status);
+                                    return (
+                                      <label
+                                        key={status}
+                                        className={`flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors ${checked ? 'bg-teal-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-white/80'}`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() =>
+                                            setStatusDraft((prev) =>
+                                              prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+                                            )
+                                          }
+                                          className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/40"
+                                        />
+                                        <span className="min-w-0 break-words">{status}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              {/* Sponsor Type + Data */}
+                              <div className="min-w-[10rem] w-[11rem] shrink-0 flex flex-col">
+                                <div className="bg-slate-100 px-3 py-2.5 border-b border-slate-200">
+                                  <span className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Sponsor Type</span>
+                                </div>
+                                <div className="bg-slate-50/60 py-1">
+                                  {['Industry', 'Non-Industry'].map((option) => {
+                                    const checked = sponsorTypeDraft.includes(option);
+                                    return (
+                                      <label
+                                        key={option}
+                                        className={`flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors ${checked ? 'bg-teal-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-white/80'}`}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() =>
+                                            setSponsorTypeDraft((prev) =>
+                                              prev.includes(option) ? prev.filter((s) => s !== option) : [...prev, option]
+                                            )
+                                          }
+                                          className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/40"
+                                        />
+                                        <span className="min-w-0 break-words">{option}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                                <div className="border-t-2 border-slate-200 mt-0.5">
+                                  <div className="bg-slate-100 px-3 py-2 border-b border-slate-200">
+                                    <span className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Data</span>
+                                  </div>
+                                  <div className="bg-slate-50/60 py-1">
+                                    <label
+                                      className={`flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors ${hasAbstractsDraft ? 'bg-teal-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-white/80'}`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={hasAbstractsDraft}
+                                        onChange={(e) => setHasAbstractsDraft(e.target.checked)}
+                                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/40"
+                                      />
+                                      <span className="min-w-0 break-words">Efficacy & Safety</span>
+                                    </label>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            {/* Footer: Reset + Apply */}
+                            <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 rounded-b-xl">
+                              <button
+                                type="button"
+                                onClick={resetFilterDraft}
+                                className="text-sm font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-md hover:bg-slate-200/80"
+                              >
+                                Reset
+                              </button>
+                              <button
+                                type="button"
+                                onClick={applyFilterDraft}
+                                className="inline-flex items-center gap-2 rounded-sm bg-teal-500 px-4 py-2 text-sm font-medium text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2"
+                              >
+                                Apply filters
+                              </button>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                {trialsLoading ? (
+                  <div className="flex items-center justify-center h-full min-h-[200px]">
+                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                  </div>
+                ) : groupBy === 'modality' ? (
+                  /* Group by Modality — column layout */
+                  <div className="pb-6 min-h-0">
+                    <div className="overflow-x-auto pr-4 w-full min-h-0">
+                      <div className="flex gap-4 min-w-max">
+                        {trialsByModality.order.map((modalityLabel) => {
+                          const groupTrials = trialsByModality.map[modalityLabel] ?? [];
+                          return (
+                            <div
+                              key={modalityLabel}
+                              className="flex flex-col shrink-0 w-[320px] min-h-[124px]"
+                            >
+                              <h3 className="text-sm font-semibold text-slate-600 mb-3 pb-1.5 border-b border-slate-200 shrink-0">
+                                {modalityLabel}
+                              </h3>
+                              <div className="flex flex-col gap-2">
+                                {groupTrials.map((trial) => (
+                                  <TrialCard
+                                    key={trial.nct_id}
+                                    trial={trial}
+                                    category={cancerTypeSlug}
+                                  />
+                                ))}
+                              </div>
+                              {groupTrials.length === 0 && (
+                                <p className="text-sm text-slate-400 py-2">No trials</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : groupBy === 'target' ? (
+                  /* Group by Target — column layout */
+                  <div className="pb-6 min-h-0">
+                    <div className="overflow-x-auto pr-4 w-full min-h-0">
+                      <div className="flex gap-4 min-w-max">
+                        {trialsByTarget.order.map((targetLabel) => {
+                          const groupTrials = trialsByTarget.map[targetLabel] ?? [];
+                          return (
+                            <div
+                              key={targetLabel}
+                              className="flex flex-col shrink-0 w-[320px] min-h-[124px]"
+                            >
+                              <h3 className="text-sm font-semibold text-slate-600 mb-3 pb-1.5 border-b border-slate-200 shrink-0">
+                                {targetLabel}
+                              </h3>
+                              <div className="flex flex-col gap-2">
+                                {groupTrials.map((trial) => (
+                                  <TrialCard
+                                    key={trial.nct_id}
+                                    trial={trial}
+                                    category={cancerTypeSlug}
+                                  />
+                                ))}
+                              </div>
+                              {groupTrials.length === 0 && (
+                                <p className="text-sm text-slate-400 py-2">No trials</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Group by None — single grid */
+                  <div className="space-y-6 pb-6">
+                    {Object.entries(groupedTrials).map(([groupLabel, groupTrials]) => (
+                      <div key={groupLabel || 'all'}>
+                        <div className="overflow-x-auto pr-4 w-full min-h-0">
+                          <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-x-4 gap-y-2 min-w-[1328px] sm:min-w-[1664px] md:min-w-[2000px] lg:min-w-[2336px] xl:min-w-[2672px]">
+                            {groupTrials.map((trial) => (
+                              <TrialCard key={trial.nct_id} trial={trial} category={cancerTypeSlug} />
+                            ))}
+                          </div>
+                        </div>
+                        {groupTrials.length === 0 && (
+                          <p className="text-sm text-slate-500 py-4">No trials.</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Pagination at bottom — industry standard: First / Prev / numbered pages / Next / Last */}
+              {!trialsLoading && trialsTotal > 0 && (
+                <nav
+                  className="flex flex-wrap items-center justify-between gap-4 py-4 mt-auto border-t border-slate-200 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8"
+                  aria-label="Trials pagination"
+                >
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <p className="text-sm text-slate-600">
+                      Showing <span className="font-semibold text-slate-800">{startRow}</span>
+                      –<span className="font-semibold text-slate-800">{endRow}</span> of{' '}
+                      <span className="font-semibold text-slate-800">{trialsTotal.toLocaleString()}</span> trials
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-500">per page</span>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setPageSizeDropdownOpen((o) => !o)}
+                          aria-expanded={pageSizeDropdownOpen}
+                          aria-haspopup="listbox"
+                          aria-label="Items per page"
+                          className="flex w-14 items-center justify-between rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
+                        >
+                          {pageSize}
+                          <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
+                        </button>
+                        {pageSizeDropdownOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" aria-hidden onClick={() => setPageSizeDropdownOpen(false)} />
+                            <div
+                              role="listbox"
+                              aria-label="Per page options"
+                              className="absolute left-0 bottom-full z-20 mb-1 w-20 rounded-lg border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
+                            >
+                              {PAGE_SIZE_OPTIONS.map((size) => (
+                                <button
+                                  key={size}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={pageSize === size}
+                                  onClick={() => {
+                                    setPageSize(size);
+                                    setPage(1);
+                                    setPageSizeDropdownOpen(false);
+                                  }}
+                                  className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${pageSize === size ? 'bg-sky-50 font-medium text-sky-800' : 'text-slate-700 hover:bg-slate-50'}`}
+                                >
+                                  {size}
+                                  {pageSize === size && <Check className="h-4 w-4 text-sky-600 shrink-0" />}
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setPage(1)}
+                      disabled={page <= 1}
+                      aria-label="First page"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
+                    >
+                      <ChevronsLeft className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page <= 1}
+                      aria-label="Previous page"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+
+                    <span className="mx-1 flex items-center gap-0.5">
+                      {getPaginationPages(page, totalPages).map((p, i) =>
+                        p === null ? (
+                          <span key={`ellipsis-${i}`} className="flex h-9 w-9 items-center justify-center text-slate-400" aria-hidden>
+                            …
+                          </span>
+                        ) : (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => setPage(p)}
+                            aria-label={`Page ${p}`}
+                            aria-current={page === p ? 'page' : undefined}
+                            className={`inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-md border px-2 text-sm font-medium transition-colors ${
+                              page === p
+                                ? 'border-sky-500 bg-sky-600 text-white shadow-sm'
+                                : 'border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={page >= totalPages}
+                      aria-label="Next page"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPage(totalPages)}
+                      disabled={page >= totalPages}
+                      aria-label="Last page"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
+                    >
+                      <ChevronsRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </nav>
+              )}
+            </div>
+          </section>
         </div>
       </main>
     </div>
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col min-h-screen w-full bg-white">
+          <header className="bg-white border-b border-gray-200 h-14 sm:h-16" />
+          <main className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </main>
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }

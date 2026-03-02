@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Optional
+from typing import Any, Optional, cast
 
 from ...domain.cancer_type_normalizer import get_primary_cancer_type
 from ...domain.clinical_trial_interfaces import ClinicalTrialParser
@@ -210,7 +210,9 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             anti_pd1_failure=eligibility_data.get("anti_pd1_failure"),
             braf_mutation=eligibility_data.get("braf_mutation"),
             nras_mutation=eligibility_data.get("nras_mutation"),
-            mutation_status=eligibility_data.get("mutation_status"),  # type: ignore[arg-type]
+            mutation_status=cast(
+                Optional[str], eligibility_data.get("mutation_status")
+            ),
             biomarker_inclusion=biomarker_inclusion,
             biomarkers_inclusion_criteria=biomarkers_inclusion_criteria,
             biomarkers_exclusion_criteria=biomarkers_exclusion_criteria,
@@ -706,7 +708,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
 
     def _parse_eligibility_criteria_comprehensive(
         self, eligibility_text: str
-    ) -> dict[str, Optional[bool]]:
+    ) -> dict[str, Any]:
         """Comprehensively parse eligibility criteria to extract all interpretive attributes.
 
         Args:
@@ -896,7 +898,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             "anti_pd1_failure": anti_pd1_failure,
             "braf_mutation": braf_mutation,
             "nras_mutation": nras_mutation,
-            "mutation_status": mutation_status,  # type: ignore[dict-item]
+            "mutation_status": mutation_status,
         }
 
     def _determine_line_of_treatment(

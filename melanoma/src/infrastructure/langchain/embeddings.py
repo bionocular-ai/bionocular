@@ -6,7 +6,7 @@ optimizations for clinical text processing.
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -25,11 +25,11 @@ class ModelManager:
     and make the model management logic testable.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the model manager."""
         self._models: dict[str, HuggingFaceEmbeddings] = {}
         self._model_dimensions: dict[str, int] = {}
-        self._model_metadata: dict[str, dict[str, any]] = {}
+        self._model_metadata: dict[str, dict[str, Any]] = {}
 
     async def get_model(
         self, model_name: str, config: EmbeddingConfiguration

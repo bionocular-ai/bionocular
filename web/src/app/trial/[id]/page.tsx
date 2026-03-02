@@ -1,17 +1,16 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { trialsApi } from '@/lib/api';
 import { extractTrialMetadata, formatDate } from '@/lib/utils/trial-utils';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { BackNav } from '@/components/nav/BackNav';
 
 export default function TrialDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const { data, isLoading, error } = useQuery({
@@ -43,15 +42,7 @@ export default function TrialDetailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={() => router.push('/dashboard')} 
-              variant="outline"
-              className="group border-gray-300 text-xs sm:text-sm text-gray-700 font-medium transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20"
-              aria-label="Go back to dashboard"
-            >
-              <ArrowLeft className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:-translate-x-0.5 group-hover:text-primary" />
-              Back to Dashboard
-            </Button>
+            <BackNav href="/dashboard" label="Back to dashboard" />
           </CardContent>
         </Card>
       </div>
@@ -65,16 +56,7 @@ export default function TrialDetailPage() {
     <div className="container mx-auto py-10">
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button 
-            onClick={() => router.push('/dashboard')} 
-            variant="outline" 
-            size="sm"
-            className="group border-gray-300 text-xs sm:text-sm text-gray-700 font-medium transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20"
-            aria-label="Go back to dashboard"
-          >
-            <ArrowLeft className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:-translate-x-0.5 group-hover:text-primary" />
-            Back
-          </Button>
+          <BackNav href="/dashboard" label="Back to dashboard" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Trial Details</h1>
             <p className="text-muted-foreground mt-1">Detailed information about this clinical trial</p>

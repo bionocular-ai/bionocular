@@ -2,12 +2,12 @@
 
 import * as React from 'react';
 import { useSession } from 'next-auth/react';
-import { useParams, useRouter, usePathname } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { UserMenu } from '@/components/user-menu';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, LayoutGrid } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import { trialsApi, DiseaseLandscapeStats } from '@/lib/api';
@@ -35,10 +35,8 @@ export default function DiseaseLandscapePage() {
   const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname();
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
-  const isTherapeuticIndexPage = pathname?.includes('/therapeutic-index');
   const [showNavigationBars, setShowNavigationBars] = React.useState(false);
 
   const { data: stats, isLoading, error } = useQuery<DiseaseLandscapeStats>({
@@ -60,17 +58,7 @@ export default function DiseaseLandscapePage() {
               </span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-                className="group border-gray-300 text-xs sm:text-sm text-gray-700 font-medium transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20"
-                aria-label="Navigate to main categories"
-              >
-                <LayoutGrid className="h-3.5 w-3.5 sm:mr-1.5 transition-colors group-hover:text-primary" />
-                <span className="hidden sm:inline">Categories</span>
-                <span className="sm:hidden">Main</span>
-              </Button>
+              <DashboardNavLink />
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
@@ -115,19 +103,17 @@ export default function DiseaseLandscapePage() {
             </Link>
             <div>
               <Link
-                href={`/dashboard/${categorySlug}/therapeutic-index`}
+                href={`/dashboard/${categorySlug}/analytics`}
                 className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
               >
                 Head to Head Efficacy : Safety
               </Link>
-              {isTherapeuticIndexPage && (
-                <Link
-                  href={`/dashboard/${categorySlug}/analytics`}
-                  className="block px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md ml-6 border-l-2 border-gray-300 hover:border-orange-400 transition-colors"
-                >
-                  Efficacy : Safety Therapeutic Index
-                </Link>
-              )}
+              <Link
+                href={`/dashboard/${categorySlug}/therapeutic-index`}
+                className="block px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md ml-6 border-l-2 border-gray-300 hover:border-orange-400 transition-colors"
+              >
+                Efficacy : Safety Trial Data
+              </Link>
             </div>
             <Link
               href={`/dashboard/${categorySlug}/live-ticker`}
@@ -152,7 +138,7 @@ export default function DiseaseLandscapePage() {
             <h2 className="text-3xl font-light text-gray-400 mb-6" style={{ letterSpacing: '0.05em' }}>
               Clinical trials
             </h2>
-            
+
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -169,7 +155,7 @@ export default function DiseaseLandscapePage() {
                   const maxPhaseValue = Math.max(...Object.values(stats.phase));
                   const maxFunderValue = Math.max(...Object.values(stats.funder_type));
                   const globalMax = Math.max(overallStatusCount, maxPhaseValue, maxFunderValue);
-                  
+
                   return (
                     <>
                       {/* Status */}
@@ -182,110 +168,110 @@ export default function DiseaseLandscapePage() {
                               const isOverallStatus = key === 'Overall Status';
                               const extractedCount = stats.extracted_count || 0;
                               const extractedPercentage = globalMax > 0 ? (extractedCount / globalMax) * 100 : 0;
-                        
-                        return (
-                          <div key={key} className="flex items-center gap-3">
-                            <span className="text-sm text-gray-700 whitespace-nowrap">
-                              {key} <span className="font-medium text-gray-900">({value})</span>
-                            </span>
-                            {isOverallStatus && extractedCount > 0 ? (
-                              <div className="flex-1 relative">
-                                {/* Navigation bars - shown above when clicked, positioned absolutely */}
-                                {showNavigationBars && (
-                                  <div className="absolute bottom-full left-0 mb-2 flex gap-2 z-10" style={{ width: `${extractedPercentage}%` }}>
-                                    <button
-                                      onClick={() => router.push(`/dashboard/${categorySlug}/analytics?mode=efficacy`)}
-                                      className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
-                                    >
-                                      Head to Head Efficacy
-                                    </button>
-                                    <button
-                                      onClick={() => router.push(`/dashboard/${categorySlug}/analytics?mode=safety`)}
-                                      className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
-                                    >
-                                      Head to Head Safety
-                                    </button>
-                                    <button
-                                      onClick={() => router.push(`/dashboard/${categorySlug}/therapeutic-index`)}
-                                      className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
-                                    >
-                                      Head to Head Efficacy : Safety
-                                    </button>
-                                  </div>
-                                )}
-                                <div className="relative h-6">
-                                  {/* Outer bar (Overall Status) */}
+
+                              return (
+                                <div key={key} className="flex items-center gap-3">
+                                  <span className="text-sm text-gray-700 whitespace-nowrap">
+                                    {key} <span className="font-medium text-gray-900">({value})</span>
+                                  </span>
+                                  {isOverallStatus && extractedCount > 0 ? (
+                                    <div className="flex-1 relative">
+                                      {/* Navigation bars - shown above when clicked, positioned absolutely */}
+                                      {showNavigationBars && (
+                                        <div className="absolute bottom-full left-0 mb-2 flex gap-2 z-10" style={{ width: `${extractedPercentage}%` }}>
+                                          <button
+                                            onClick={() => router.push(`/dashboard/${categorySlug}/analytics?mode=efficacy`)}
+                                            className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
+                                          >
+                                            Head to Head Efficacy
+                                          </button>
+                                          <button
+                                            onClick={() => router.push(`/dashboard/${categorySlug}/analytics?mode=safety`)}
+                                            className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
+                                          >
+                                            Head to Head Safety
+                                          </button>
+                                          <button
+                                            onClick={() => router.push(`/dashboard/${categorySlug}/analytics`)}
+                                            className="h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer flex items-center justify-center text-xs text-white font-medium px-3 whitespace-nowrap"
+                                          >
+                                            Head to Head Efficacy : Safety
+                                          </button>
+                                        </div>
+                                      )}
+                                      <div className="relative h-6">
+                                        {/* Outer bar (Overall Status) */}
+                                        <div
+                                          className="absolute h-6 bg-gray-400 rounded-md transition-all duration-300"
+                                          style={{ width: `${percentage}%` }}
+                                        />
+                                        {/* Inner bar (Extracted count) - Clickable */}
+                                        <button
+                                          onClick={() => setShowNavigationBars(!showNavigationBars)}
+                                          className="absolute h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer"
+                                          style={{ width: `${extractedPercentage}%` }}
+                                          title={`View ${extractedCount} therapeutic index trials`}
+                                        />
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div
+                                      className="h-6 bg-gray-400 rounded-md transition-all duration-300"
+                                      style={{ width: `${percentage}%` }}
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Phase */}
+                      <Card className="border-blue-200">
+                        <CardContent className="pt-6">
+                          <h3 className="text-sm font-semibold text-gray-900 mb-4">Phase</h3>
+                          <div className="space-y-2">
+                            {Object.entries(stats.phase).map(([key, value]) => {
+                              const percentage = globalMax > 0 ? (value / globalMax) * 100 : 0;
+                              return (
+                                <div key={key} className="flex items-center gap-3">
+                                  <span className="text-sm text-gray-700 whitespace-nowrap">
+                                    {key} <span className="font-medium text-gray-900">({value})</span>
+                                  </span>
                                   <div
-                                    className="absolute h-6 bg-gray-400 rounded-md transition-all duration-300"
+                                    className="h-6 bg-gray-400 rounded-md transition-all duration-300"
                                     style={{ width: `${percentage}%` }}
                                   />
-                                  {/* Inner bar (Extracted count) - Clickable */}
-                                  <button
-                                    onClick={() => setShowNavigationBars(!showNavigationBars)}
-                                    className="absolute h-6 bg-blue-500 rounded-md transition-all duration-300 hover:bg-blue-600 cursor-pointer"
-                                    style={{ width: `${extractedPercentage}%` }}
-                                    title={`View ${extractedCount} therapeutic index trials`}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Funder Type */}
+                      <Card className="border-blue-200 rounded-tl-lg rounded-tr-lg">
+                        <CardContent className="pt-6">
+                          <h3 className="text-sm font-semibold text-gray-900 mb-4">Funder Type</h3>
+                          <div className="space-y-2">
+                            {Object.entries(stats.funder_type).map(([key, value]) => {
+                              const percentage = globalMax > 0 ? (value / globalMax) * 100 : 0;
+                              return (
+                                <div key={key} className="flex items-center gap-3">
+                                  <span className="text-sm text-gray-700 whitespace-nowrap">
+                                    {key} <span className="font-medium text-gray-900">({value})</span>
+                                  </span>
+                                  <div
+                                    className="h-6 bg-gray-400 rounded-md transition-all duration-300"
+                                    style={{ width: `${percentage}%` }}
                                   />
                                 </div>
-                              </div>
-                            ) : (
-                              <div
-                                className="h-6 bg-gray-400 rounded-md transition-all duration-300"
-                                style={{ width: `${percentage}%` }}
-                              />
-                            )}
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Phase */}
-                <Card className="border-blue-200">
-                  <CardContent className="pt-6">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Phase</h3>
-                    <div className="space-y-2">
-                      {Object.entries(stats.phase).map(([key, value]) => {
-                        const percentage = globalMax > 0 ? (value / globalMax) * 100 : 0;
-                        return (
-                          <div key={key} className="flex items-center gap-3">
-                            <span className="text-sm text-gray-700 whitespace-nowrap">
-                              {key} <span className="font-medium text-gray-900">({value})</span>
-                            </span>
-                            <div
-                              className="h-6 bg-gray-400 rounded-md transition-all duration-300"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Funder Type */}
-                <Card className="border-blue-200 rounded-tl-lg rounded-tr-lg">
-                  <CardContent className="pt-6">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-4">Funder Type</h3>
-                    <div className="space-y-2">
-                      {Object.entries(stats.funder_type).map(([key, value]) => {
-                        const percentage = globalMax > 0 ? (value / globalMax) * 100 : 0;
-                        return (
-                          <div key={key} className="flex items-center gap-3">
-                            <span className="text-sm text-gray-700 whitespace-nowrap">
-                              {key} <span className="font-medium text-gray-900">({value})</span>
-                            </span>
-                            <div
-                              className="h-6 bg-gray-400 rounded-md transition-all duration-300"
-                              style={{ width: `${percentage}%` }}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                        </CardContent>
+                      </Card>
                     </>
                   );
                 })()}

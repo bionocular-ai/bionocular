@@ -3,14 +3,14 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
-import { useParams, useRouter, usePathname } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { TrialDataTable } from '@/components/dashboard/TrialDataTable';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { UserMenu } from '@/components/user-menu';
 import { trialsApi, Trial } from '@/lib/api';
-import { Loader2, ChevronDown, Check, LayoutGrid } from 'lucide-react';
+import { Loader2, ChevronDown, Check } from 'lucide-react';
+import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import {
@@ -41,17 +41,17 @@ const CATEGORY_SLUG_MAP: Record<string, string> = {
 function normalizeCancerType(cancerType: string | null | undefined): string | null {
   if (!cancerType) return null;
   const normalized = cancerType.trim();
-  
+
   // Map old names to new names
   if (normalized === 'Resected Cutaneous Melanoma' || normalized === 'Unresectable Cutaneous Melanoma') {
     return 'Cutaneous melanoma';
   }
-  if (normalized === 'Cutaneous melanoma with Brain metastasis' || 
-      normalized === 'Cutaneous Melanoma with CNS metastasis' ||
-      normalized === 'Cutaneous melanoma with Brain/CNS metastasis') {
+  if (normalized === 'Cutaneous melanoma with Brain metastasis' ||
+    normalized === 'Cutaneous Melanoma with CNS metastasis' ||
+    normalized === 'Cutaneous melanoma with Brain/CNS metastasis') {
     return 'Cutaneous melanoma with Brain/CNS metastasis';
   }
-  
+
   return normalized;
 }
 
@@ -66,10 +66,7 @@ function slugToCategory(slug: string): string {
 export default function TherapeuticIndexPage() {
   const { data: session } = useSession();
   const params = useParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const categorySlug = params?.category as string;
-  const isTherapeuticIndexPage = pathname?.includes('/therapeutic-index');
   const categoryName = slugToCategory(categorySlug);
   const [sponsorFilter, setSponsorFilter] = React.useState<string>('');
   const [nctFilter, setNctFilter] = React.useState<string>('');
@@ -97,7 +94,7 @@ export default function TherapeuticIndexPage() {
       setLoadingLineOfTreatment(true);
       const fetchLineOfTreatment = async () => {
         const lotMap = new Map<string, string>();
-        
+
         // First, filter trials by category
         const categoryFilteredTrials = data.trials.filter((trial: Trial) => {
           if (!trial.nct_id || !trial.nct_id.trim()) return false;
@@ -117,9 +114,9 @@ export default function TherapeuticIndexPage() {
               const armResults = abstractData.arm_results || {};
               const firstArm = Object.values(armResults)[0] as { attributes?: Record<string, { value?: string }> } | undefined;
               const attributes = firstArm?.attributes || {};
-              const lineOfTreatment = attributes['LINE_OF_TREATMENT']?.value || 
-                                     attributes['line_of_treatment']?.value || 
-                                     attributes['AttributeType.LINE_OF_TREATMENT']?.value || '';
+              const lineOfTreatment = attributes['LINE_OF_TREATMENT']?.value ||
+                attributes['line_of_treatment']?.value ||
+                attributes['AttributeType.LINE_OF_TREATMENT']?.value || '';
               if (trial.abstract_id) {
                 lotMap.set(trial.abstract_id, lineOfTreatment);
               }
@@ -151,11 +148,11 @@ export default function TherapeuticIndexPage() {
       if (!trial.nct_id || !trial.nct_id.trim()) {
         return false;
       }
-      
+
       // Normalize both the trial's cancer type and the selected category for comparison
       const normalizedTrialType = normalizeCancerType(trial.cancer_type);
       const normalizedCategory = normalizeCancerType(categoryName);
-      
+
       // Strict filtering: only match if the primary cancer_type matches the selected category
       // This ensures we only see trials that are primarily for the selected cancer type
       return normalizedTrialType === normalizedCategory;
@@ -167,45 +164,45 @@ export default function TherapeuticIndexPage() {
         // Handle phase as string, number, or undefined/null
         const trialPhase = trial.phase != null ? String(trial.phase) : '';
         const normalizedPhase = trialPhase.toLowerCase().trim();
-        
+
         if (!normalizedPhase) {
           return false;
         }
-        
+
         // Map UI filter values to database phase values
         // Database values are cleaned (PHASE1 -> "1", PHASE1, PHASE2 -> "1, 2", etc.)
         switch (phaseFilter) {
           case 'Early Phase 1':
             // Match "EARLY_1" or "EARLY_PHASE1" (before cleaning) or "early_phase1"
             return normalizedPhase.includes('early') && normalizedPhase.includes('1');
-          
+
           case 'Phase 1':
             // Match "1" or combinations like "1, 2" or "2, 1"
             // Split by comma and check if "1" is in the list of phases
             const phases1 = normalizedPhase.split(',').map(p => p.trim()).filter(p => p);
             return phases1.includes('1');
-          
+
           case 'Phase 2':
             // Match "2" or combinations like "1, 2" or "2, 3"
             const phases2 = normalizedPhase.split(',').map(p => p.trim()).filter(p => p);
             return phases2.includes('2');
-          
+
           case 'Phase 3':
             // Match "3" or combinations like "2, 3"
             const phases3 = normalizedPhase.split(',').map(p => p.trim()).filter(p => p);
             return phases3.includes('3');
-          
+
           case 'Phase 4':
             // Match "4" or combinations
             const phases4 = normalizedPhase.split(',').map(p => p.trim()).filter(p => p);
             return phases4.includes('4');
-          
+
           case 'Not applicable':
             // Match "NA" or "na" or "not applicable"
-            return normalizedPhase === 'na' || 
-                   normalizedPhase.includes('not applicable') ||
-                   normalizedPhase.includes('n/a');
-          
+            return normalizedPhase === 'na' ||
+              normalizedPhase.includes('not applicable') ||
+              normalizedPhase.includes('n/a');
+
           default:
             return false;
         }
@@ -218,65 +215,65 @@ export default function TherapeuticIndexPage() {
         if (!trial.abstract_id) return false;
         const lineOfTreatment = lineOfTreatmentMap.get(trial.abstract_id) || '';
         const normalizedLot = lineOfTreatment.toLowerCase().trim();
-        
+
         // More precise matching to avoid substring issues (e.g., "adjuvant" matching "neoadjuvant")
         switch (lineOfTherapyFilter) {
           case 'neoadjuvant_resected':
             // Match neoadjuvant (but not adjuvant), resected, or combinations
-            return normalizedLot.includes('neoadjuvant') || 
-                   normalizedLot === 'resected' ||
-                   normalizedLot.includes('neoadjuvant/resected') ||
-                   normalizedLot.includes('neoadjuvant / resected');
-          
+            return normalizedLot.includes('neoadjuvant') ||
+              normalizedLot === 'resected' ||
+              normalizedLot.includes('neoadjuvant/resected') ||
+              normalizedLot.includes('neoadjuvant / resected');
+
           case 'adjuvant':
             // Match adjuvant but NOT neoadjuvant (use word boundary check)
             // Check for exact match or word boundary to avoid matching "neoadjuvant"
             if (normalizedLot.includes('neoadjuvant')) {
               return false; // Explicitly exclude neoadjuvant
             }
-            return normalizedLot === 'adjuvant' || 
-                   normalizedLot === 'adjuvant*' ||
-                   normalizedLot.startsWith('adjuvant ') ||
-                   normalizedLot.startsWith('adjuvant* ') ||
-                   normalizedLot.includes(' adjuvant') ||
-                   normalizedLot.includes(' adjuvant*') ||
-                   normalizedLot.includes('/adjuvant') ||
-                   normalizedLot.includes('/adjuvant*') ||
-                   normalizedLot.includes(' / adjuvant') ||
-                   normalizedLot.includes(' / adjuvant*');
-          
+            return normalizedLot === 'adjuvant' ||
+              normalizedLot === 'adjuvant*' ||
+              normalizedLot.startsWith('adjuvant ') ||
+              normalizedLot.startsWith('adjuvant* ') ||
+              normalizedLot.includes(' adjuvant') ||
+              normalizedLot.includes(' adjuvant*') ||
+              normalizedLot.includes('/adjuvant') ||
+              normalizedLot.includes('/adjuvant*') ||
+              normalizedLot.includes(' / adjuvant') ||
+              normalizedLot.includes(' / adjuvant*');
+
           case 'first_line':
-            return normalizedLot.includes('first line') || 
-                   normalizedLot.includes('first-line') ||
-                   normalizedLot === '1l' ||
-                   normalizedLot.startsWith('1l+') ||
-                   normalizedLot === 'first' ||
-                   normalizedLot.includes('1st line') ||
-                   normalizedLot.includes('1st-line');
-          
+            return normalizedLot.includes('first line') ||
+              normalizedLot.includes('first-line') ||
+              normalizedLot === '1l' ||
+              normalizedLot.startsWith('1l+') ||
+              normalizedLot === 'first' ||
+              normalizedLot.includes('1st line') ||
+              normalizedLot.includes('1st-line');
+
           case 'second_line':
-            return normalizedLot.includes('second line') || 
-                   normalizedLot.includes('second-line') ||
-                   normalizedLot === '2l' ||
-                   normalizedLot.startsWith('2l+') ||
-                   normalizedLot === 'second' ||
-                   normalizedLot.includes('2nd line') ||
-                   normalizedLot.includes('2nd-line');
-          
+            return normalizedLot.includes('second line') ||
+              normalizedLot.includes('second-line') ||
+              normalizedLot === '2l' ||
+              normalizedLot.startsWith('2l+') ||
+              normalizedLot === 'second' ||
+              normalizedLot.includes('2nd line') ||
+              normalizedLot.includes('2nd-line');
+
           case 'third_line_plus':
-            return normalizedLot.includes('third line') || 
-                   normalizedLot.includes('third-line') ||
-                   normalizedLot === '3l' ||
-                   normalizedLot.startsWith('3l+') ||
-                   normalizedLot === 'third' ||
-                   normalizedLot.includes('fourth') ||
-                   normalizedLot.includes('fifth') ||
-                   normalizedLot.includes('later') ||
-                   normalizedLot.includes('3rd line') ||
-                   normalizedLot.includes('3rd-line') ||
-                   normalizedLot.includes('4th') ||
-                   normalizedLot.includes('5th');
-          
+            return normalizedLot.includes('third line') ||
+              normalizedLot.includes('third-line') ||
+              normalizedLot === '3l' ||
+              normalizedLot.startsWith('3l+') ||
+              normalizedLot === 'third' ||
+              normalizedLot.includes('fourth') ||
+              normalizedLot.includes('fifth') ||
+              normalizedLot.includes('later') ||
+              normalizedLot.includes('3rd line') ||
+              normalizedLot.includes('3rd-line') ||
+              normalizedLot.includes('4th') ||
+              normalizedLot.includes('5th');
+
           default:
             return false;
         }
@@ -299,17 +296,7 @@ export default function TherapeuticIndexPage() {
               </span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-                className="group border-gray-300 text-xs sm:text-sm text-gray-700 font-medium transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20"
-                aria-label="Navigate to main categories"
-              >
-                <LayoutGrid className="h-3.5 w-3.5 sm:mr-1.5 transition-colors group-hover:text-primary" />
-                <span className="hidden sm:inline">Categories</span>
-                <span className="sm:hidden">Main</span>
-              </Button>
+              <DashboardNavLink />
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
@@ -354,19 +341,17 @@ export default function TherapeuticIndexPage() {
             </Link>
             <div>
               <Link
-                href={`/dashboard/${categorySlug}/therapeutic-index`}
-                className="block px-3 py-2 text-sm font-medium text-orange-600 bg-orange-50 rounded-md"
+                href={`/dashboard/${categorySlug}/analytics`}
+                className="block px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md"
               >
                 Head to Head Efficacy : Safety
               </Link>
-              {isTherapeuticIndexPage && (
-                <Link
-                  href={`/dashboard/${categorySlug}/analytics`}
-                  className="block px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-md ml-6 border-l-2 border-gray-300 hover:border-orange-400 transition-colors"
-                >
-                  Efficacy : Safety Therapeutic Index
-                </Link>
-              )}
+              <Link
+                href={`/dashboard/${categorySlug}/therapeutic-index`}
+                className="block px-3 py-2.5 text-sm font-medium text-orange-600 bg-orange-50 rounded-md ml-6 border-l-2 border-orange-400 transition-colors"
+              >
+                Efficacy : Safety Trial Data
+              </Link>
             </div>
             <Link
               href={`/dashboard/${categorySlug}/live-ticker`}
@@ -451,11 +436,10 @@ export default function TherapeuticIndexPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className={`flex h-8 items-center justify-between rounded-md border bg-white px-3 py-1.5 text-xs text-gray-900 shadow-sm transition-all hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 ${
-                        phaseFilter 
-                          ? 'border-primary/50' 
+                      className={`flex h-8 items-center justify-between rounded-md border bg-white px-3 py-1.5 text-xs text-gray-900 shadow-sm transition-all hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 ${phaseFilter
+                          ? 'border-primary/50'
                           : 'border-gray-300'
-                      }`}
+                        }`}
                     >
                       <span className="text-left">
                         {phaseFilter || 'All'}
@@ -463,17 +447,16 @@ export default function TherapeuticIndexPage() {
                       <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent 
-                    align="start" 
+                  <DropdownMenuContent
+                    align="start"
                     className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[8rem] p-1"
                     sideOffset={4}
                   >
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        phaseFilter === '' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${phaseFilter === ''
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setPhaseFilter('')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -486,11 +469,10 @@ export default function TherapeuticIndexPage() {
                     {['Early Phase 1', 'Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Not applicable'].map((phase) => (
                       <DropdownMenuItem
                         key={phase}
-                        className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                          phaseFilter === phase 
-                            ? 'bg-blue-50 text-primary font-medium' 
+                        className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${phaseFilter === phase
+                            ? 'bg-blue-50 text-primary font-medium'
                             : 'text-gray-700 hover:bg-gray-100'
-                        }`}
+                          }`}
                         onClick={() => setPhaseFilter(phase)}
                       >
                         <div className="flex items-center justify-between w-full">
@@ -511,41 +493,39 @@ export default function TherapeuticIndexPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className={`flex h-8 items-center justify-between rounded-md border bg-white px-3 py-1.5 text-xs text-gray-900 shadow-sm transition-all hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 ${
-                        lineOfTherapyFilter !== 'all' 
-                          ? 'border-primary/50' 
+                      className={`flex h-8 items-center justify-between rounded-md border bg-white px-3 py-1.5 text-xs text-gray-900 shadow-sm transition-all hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 ${lineOfTherapyFilter !== 'all'
+                          ? 'border-primary/50'
                           : 'border-gray-300'
-                      }`}
+                        }`}
                     >
                       <span className="text-left">
-                        {lineOfTherapyFilter === 'all' 
-                          ? 'All' 
+                        {lineOfTherapyFilter === 'all'
+                          ? 'All'
                           : lineOfTherapyFilter === 'neoadjuvant_resected'
-                          ? 'Neoadjuvant / Resected'
-                          : lineOfTherapyFilter === 'adjuvant'
-                          ? 'Adjuvant'
-                          : lineOfTherapyFilter === 'first_line'
-                          ? 'First Line'
-                          : lineOfTherapyFilter === 'second_line'
-                          ? 'Second Line'
-                          : lineOfTherapyFilter === 'third_line_plus'
-                          ? 'Third Line plus'
-                          : lineOfTherapyFilter}
+                            ? 'Neoadjuvant / Resected'
+                            : lineOfTherapyFilter === 'adjuvant'
+                              ? 'Adjuvant'
+                              : lineOfTherapyFilter === 'first_line'
+                                ? 'First Line'
+                                : lineOfTherapyFilter === 'second_line'
+                                  ? 'Second Line'
+                                  : lineOfTherapyFilter === 'third_line_plus'
+                                    ? 'Third Line plus'
+                                    : lineOfTherapyFilter}
                       </span>
                       <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent 
-                    align="start" 
+                  <DropdownMenuContent
+                    align="start"
                     className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[10rem] p-1"
                     sideOffset={4}
                   >
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        lineOfTherapyFilter === 'all' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${lineOfTherapyFilter === 'all'
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setLineOfTherapyFilter('all')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -556,11 +536,10 @@ export default function TherapeuticIndexPage() {
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        lineOfTherapyFilter === 'neoadjuvant_resected' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${lineOfTherapyFilter === 'neoadjuvant_resected'
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setLineOfTherapyFilter('neoadjuvant_resected')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -571,11 +550,10 @@ export default function TherapeuticIndexPage() {
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        lineOfTherapyFilter === 'adjuvant' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${lineOfTherapyFilter === 'adjuvant'
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setLineOfTherapyFilter('adjuvant')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -586,11 +564,10 @@ export default function TherapeuticIndexPage() {
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        lineOfTherapyFilter === 'first_line' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${lineOfTherapyFilter === 'first_line'
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setLineOfTherapyFilter('first_line')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -601,11 +578,10 @@ export default function TherapeuticIndexPage() {
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        lineOfTherapyFilter === 'second_line' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${lineOfTherapyFilter === 'second_line'
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setLineOfTherapyFilter('second_line')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -616,11 +592,10 @@ export default function TherapeuticIndexPage() {
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        lineOfTherapyFilter === 'third_line_plus' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${lineOfTherapyFilter === 'third_line_plus'
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setLineOfTherapyFilter('third_line_plus')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -640,33 +615,31 @@ export default function TherapeuticIndexPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className={`flex h-8 items-center justify-between rounded-md border bg-white px-3 py-1.5 text-xs text-gray-900 shadow-sm transition-all hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 ${
-                        sponsorFilter 
-                          ? 'border-primary/50' 
+                      className={`flex h-8 items-center justify-between rounded-md border bg-white px-3 py-1.5 text-xs text-gray-900 shadow-sm transition-all hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-50 ${sponsorFilter
+                          ? 'border-primary/50'
                           : 'border-gray-300'
-                      }`}
+                        }`}
                     >
                       <span className="text-left">
-                        {sponsorFilter === 'industry' 
-                          ? 'Industry' 
-                          : sponsorFilter === 'non-industry' 
-                          ? 'Non-Industry' 
-                          : 'All'}
+                        {sponsorFilter === 'industry'
+                          ? 'Industry'
+                          : sponsorFilter === 'non-industry'
+                            ? 'Non-Industry'
+                            : 'All'}
                       </span>
                       <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent 
-                    align="start" 
+                  <DropdownMenuContent
+                    align="start"
                     className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-[8rem] p-1"
                     sideOffset={4}
                   >
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        sponsorFilter === '' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${sponsorFilter === ''
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setSponsorFilter('')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -677,11 +650,10 @@ export default function TherapeuticIndexPage() {
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        sponsorFilter === 'industry' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${sponsorFilter === 'industry'
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setSponsorFilter('industry')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -692,11 +664,10 @@ export default function TherapeuticIndexPage() {
                       </div>
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${
-                        sponsorFilter === 'non-industry' 
-                          ? 'bg-blue-50 text-primary font-medium' 
+                      className={`text-xs cursor-pointer rounded-md px-2 py-1.5 ${sponsorFilter === 'non-industry'
+                          ? 'bg-blue-50 text-primary font-medium'
                           : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                        }`}
                       onClick={() => setSponsorFilter('non-industry')}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -715,44 +686,44 @@ export default function TherapeuticIndexPage() {
           {/* Table Content */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4 sm:p-6">
-            {isLoading || loadingLineOfTreatment ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="flex flex-col items-center gap-4">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  <p className="text-sm text-gray-600">
-                    {loadingLineOfTreatment ? 'Loading line of treatment data...' : 'Loading trials...'}
-                  </p>
+              {isLoading || loadingLineOfTreatment ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-gray-600">
+                      {loadingLineOfTreatment ? 'Loading line of treatment data...' : 'Loading trials...'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ) : error ? (
-              <Card className="border-red-200 bg-red-50">
-                <CardContent className="pt-6">
-                  <p className="text-sm text-red-800 text-center">
-                    Error loading trials. Please try again later.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : trials.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6">
-                  <p className="text-sm text-gray-600 text-center">
-                    No trials found for {categoryName}.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <TrialDataTable
-                data={trials}
-                nctFilter={nctFilter}
-                sponsorFilter={sponsorFilter}
-                drugFilter={drugFilter}
-                armNameFilter={armNameFilter}
-                trialNameFilter={trialNameFilter}
-                armTypeFilter={armTypeFilter}
-                lineOfTherapyFilter={lineOfTherapyFilter}
-                category={categorySlug}
-              />
-            )}
+              ) : error ? (
+                <Card className="border-red-200 bg-red-50">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-red-800 text-center">
+                      Error loading trials. Please try again later.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : trials.length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-gray-600 text-center">
+                      No trials found for {categoryName}.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <TrialDataTable
+                  data={trials}
+                  nctFilter={nctFilter}
+                  sponsorFilter={sponsorFilter}
+                  drugFilter={drugFilter}
+                  armNameFilter={armNameFilter}
+                  trialNameFilter={trialNameFilter}
+                  armTypeFilter={armTypeFilter}
+                  lineOfTherapyFilter={lineOfTherapyFilter}
+                  category={categorySlug}
+                />
+              )}
             </div>
           </div>
         </main>

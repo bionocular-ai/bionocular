@@ -2,15 +2,17 @@
 
 import * as React from 'react';
 import { useSession } from 'next-auth/react';
-import { useParams, useRouter, usePathname } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { UserMenu } from '@/components/user-menu';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { trialsApi, LiveTickerArticle, LiveTickerResult } from '@/lib/api';
-import { Loader2, LayoutGrid, ExternalLink, Newspaper, BarChart3, Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, ExternalLink, Newspaper, BarChart3, Calendar, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
+import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
   'cutaneous-melanoma': 'Cutaneous melanoma',
@@ -70,9 +72,9 @@ function ResultCard({ result }: { result: LiveTickerResult }) {
   const valueParts = ed.value
     ? ed.value.split(';').map((s) => s.trim()).filter(Boolean)
     : [
-        ...(ed.efficacy_metrics ?? []).map((m) => `${m.metric}: ${m.value}`),
-        ...(ed.safety_metrics ?? []).map((m) => `${m.metric}: ${m.value}`),
-      ];
+      ...(ed.efficacy_metrics ?? []).map((m) => `${m.metric}: ${m.value}`),
+      ...(ed.safety_metrics ?? []).map((m) => `${m.metric}: ${m.value}`),
+    ];
   const metricLabel = ed.metric ?? (ed.efficacy_metrics || ed.safety_metrics ? 'Efficacy & Safety' : '');
   return (
     <Card className="overflow-hidden border border-slate-200 border-l-4 border-l-[var(--primary)] bg-white shadow-sm transition-all duration-200 hover:border-slate-300 hover:border-l-[var(--accent-dark)] hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--primary)]/30 focus-within:ring-offset-2">
@@ -143,10 +145,15 @@ export default function LiveTickerPage() {
   const { data: session } = useSession();
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname();
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
-  const isLiveTickerPage = pathname?.includes('/live-ticker');
+
+  const handleCancerTypeChange = React.useCallback(
+    (slug: string) => {
+      router.push(`/dashboard/${slug}/live-ticker`);
+    },
+    [router]
+  );
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['live-ticker', categorySlug],
@@ -160,6 +167,7 @@ export default function LiveTickerPage() {
 
   const [efficacyFirst, setEfficacyFirst] = React.useState(false);
   const [selectedMonthKey, setSelectedMonthKey] = React.useState<string>('');
+  const [monthDropdownOpen, setMonthDropdownOpen] = React.useState(false);
 
   const latestItems = React.useMemo(() => {
     if (!data) return [];
@@ -209,29 +217,24 @@ export default function LiveTickerPage() {
     return items;
   }, [latestItems, selectedMonthKey, efficacyFirst]);
 
+  const navLinkClass =
+    "relative text-sm font-medium text-sky-700 rounded-md px-2.5 py-1.5 pb-2 transition-all duration-200 ease-out hover:text-sky-800 hover:bg-sky-50/80 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1 after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:block after:h-px after:rounded-full after:bg-sky-600/70 after:content-[''] after:transition-all after:duration-200 after:ease-out hover:after:bg-sky-700 hover:after:h-0.5";
+  const navLinkActiveClass =
+    "relative text-sm font-medium text-sky-800 rounded-md px-2.5 py-1.5 pb-2 bg-sky-50/80 after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:block after:h-px after:rounded-full after:bg-sky-600/70 after:content-['']";
+
   return (
-    <div className="flex min-h-screen w-full flex-col bg-white">
-      <header className="sticky top-0 z-50 shrink-0 border-b border-gray-200 bg-white">
-        <div className="w-full px-3 sm:px-4 md:px-6">
-          <div className="flex h-16 items-center justify-between gap-2 sm:gap-4">
-            <Link href="/" className="brand flex-shrink-0">
+    <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden">
+      <header className="bg-white border-b border-slate-200 shrink-0 z-50">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 gap-3">
+            <Link href="/" className="brand flex-shrink-0 hover:opacity-80 transition-opacity">
               <Logo height={32} />
-              <span className="brand-text" style={{ lineHeight: '1.2' }}>
+              <span className="brand-text dashboard-brand-text">
                 bi<span className="brand-o">o</span>nocular
               </span>
             </Link>
-            <div className="flex flex-shrink-0 items-center gap-2 sm:gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push('/dashboard')}
-                className="group border-gray-300 text-xs font-medium text-gray-700 transition-all duration-200 hover:border-primary hover:bg-blue-50 hover:text-primary hover:shadow-md focus-visible:ring-2 focus-visible:ring-primary/20 sm:text-sm"
-                aria-label="Navigate to main categories"
-              >
-                <LayoutGrid className="mr-1.5 h-3.5 w-3.5 transition-colors group-hover:text-primary sm:mr-1.5" />
-                <span className="hidden sm:inline">Categories</span>
-                <span className="sm:hidden">Main</span>
-              </Button>
+            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+              <DashboardNavLink />
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
@@ -244,173 +247,191 @@ export default function LiveTickerPage() {
         </div>
       </header>
 
-      <div className="border-b border-gray-200 bg-gray-50 px-3 py-4 sm:px-4 md:px-6">
-        <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">
-          {categoryName}
-        </h1>
-      </div>
-
-      <div className="flex flex-1 w-full overflow-hidden">
-        <aside className="w-[280px] shrink-0 overflow-y-auto border-r border-gray-200 bg-gray-50/50 p-4">
-          <nav className="space-y-1">
-            <Link
-              href={`/dashboard/${categorySlug}/disease-landscape`}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-            >
-              Disease Landscape
-            </Link>
-            <Link
-              href={`/dashboard/${categorySlug}/analytics?mode=efficacy`}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-            >
-              Head to Head Efficacy
-            </Link>
-            <Link
-              href={`/dashboard/${categorySlug}/analytics?mode=safety`}
-              className="block rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-            >
-              Head to Head Safety
-            </Link>
-            <div>
-              <Link
-                href={`/dashboard/${categorySlug}/therapeutic-index`}
-                className="block rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-              >
-                Head to Head Efficacy : Safety
-              </Link>
-            </div>
-            <Link
-              href={`/dashboard/${categorySlug}/live-ticker`}
-              className={`block rounded-md px-3 py-2 text-sm font-medium ${
-                isLiveTickerPage
-                  ? 'bg-[var(--accent-light)] text-[var(--primary)]'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Live Ticker
-            </Link>
-            <div className="block px-3 py-2 text-sm font-medium text-gray-500">
-              AI Chatbot
-              <span className="ml-2 text-xs text-gray-400">Upcoming</span>
-            </div>
-            <div className="block px-3 py-2 text-sm font-medium text-gray-500">
-              Regulatory Milestone
-              <span className="ml-2 text-xs text-gray-400">Upcoming</span>
-            </div>
-          </nav>
-        </aside>
-
-        <main className="flex-1 overflow-y-auto bg-slate-50/50">
-          <div className="p-6 md:p-8">
-            <div className="mb-8">
-              <h2 className="text-2xl font-semibold tracking-tight text-gray-900 md:text-3xl">
-                Live updates
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Recent news and efficacy & safety data for {categoryName}.
-              </p>
-            </div>
-
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-16">
-                <Loader2 className="h-10 w-10 animate-spin text-slate-400" aria-hidden />
-                <p className="mt-4 text-sm text-slate-500">Loading latest articles…</p>
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden px-2 pt-2 pb-0 md:px-4 md:pt-4 md:pb-0 bg-slate-100 gap-4">
+        <div className="w-full bg-white rounded-lg shadow shrink-0 overflow-visible">
+          <DashboardGlobalHeader
+            cancerTypeSlug={categorySlug}
+            onCancerTypeChange={handleCancerTypeChange}
+          />
+        </div>
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full bg-white rounded-lg shadow overflow-hidden">
+          <section className="flex-1 flex flex-col min-h-0 bg-white overflow-hidden">
+            <div className="px-4 sm:px-6 lg:px-8 pt-3 pb-2 flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0 mb-2">
+                <div>
+                  <h2 className="text-2xl font-medium tracking-wide text-sky-700">Live Ticker</h2>
+                </div>
+                <nav className="flex flex-wrap items-center gap-x-4 gap-y-1" aria-label="Dashboard navigation">
+                  <Link href={`/dashboard?cancer_type=${categorySlug}`} className={navLinkClass}>
+                    Landscape
+                  </Link>
+                  <Link href={`/dashboard/${categorySlug}/analytics?mode=efficacy`} className={navLinkClass}>
+                    Head to Head Efficacy
+                  </Link>
+                  <Link href={`/dashboard/${categorySlug}/analytics?mode=safety`} className={navLinkClass}>
+                    Head to Head Safety
+                  </Link>
+                  <Link href={`/dashboard/${categorySlug}/analytics`} className={navLinkClass}>
+                    Head to Head Efficacy : Safety
+                  </Link>
+                  <span className={navLinkActiveClass}>Live Ticker</span>
+                  <span className="text-sm font-medium text-slate-400 cursor-default" aria-disabled title="Coming soon">
+                    AI Chatbot <span className="text-xs font-normal">(Soon)</span>
+                  </span>
+                  <span className="text-sm font-medium text-slate-400 cursor-default" aria-disabled title="Coming soon">
+                    Regulatory Milestone <span className="text-xs font-normal">(Soon)</span>
+                  </span>
+                </nav>
               </div>
-            ) : error ? (
-              <div className="rounded-xl border border-slate-200 bg-white py-12 text-center shadow-sm">
-                <p className="text-slate-600">Could not load live ticker. Please try again.</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-4"
-                  onClick={() => refetch()}
-                >
-                  Retry
-                </Button>
-              </div>
-            ) : isEmpty ? (
-              <div className="rounded-xl border border-slate-200 bg-white py-16 text-center shadow-sm">
-                <Newspaper className="mx-auto h-12 w-12 text-slate-300" aria-hidden />
-                <p className="mt-4 font-medium text-slate-600">No updates yet</p>
-                <p className="mt-1 text-sm text-slate-500">
-                  Latest articles and efficacy & safety highlights will appear here for this category.
-                </p>
-              </div>
-            ) : (
-              <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Latest articles
-                    </h3>
-                    <p className="mt-0.5 text-sm text-slate-500">
-                      {displayedItems.length} {displayedItems.length === 1 ? 'item' : 'items'}
-                      {selectedMonthKey
-                        ? ` in ${availableMonths.find((m) => m.key === selectedMonthKey)?.label ?? ''}`
-                        : ''}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 pl-2.5 pr-1 py-1.5 focus-within:border-slate-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-[var(--primary)]/20 focus-within:ring-offset-1 transition-colors">
-                      <Calendar className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
-                      <select
-                        value={selectedMonthKey}
-                        onChange={(e) => setSelectedMonthKey(e.target.value)}
-                        aria-label="Filter by month"
-                        className="min-w-[10rem] border-0 bg-transparent py-2 pr-8 pl-2 text-sm font-medium text-slate-800 focus:ring-0 focus:outline-none"
-                      >
-                        <option value="">All months ({latestItems.length})</option>
-                        {availableMonths.map((month) => (
-                          <option key={month.key} value={month.key}>
-                            {month.label} ({month.count})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+
+              <div className="flex flex-wrap items-center gap-4 py-2 shrink-0 border-y border-slate-100 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-2">
+                <div className="flex flex-wrap items-center gap-4 w-full">
+                  <div className="relative">
                     <button
                       type="button"
-                      onClick={() => setEfficacyFirst((v) => !v)}
-                      aria-pressed={efficacyFirst}
-                      aria-label={efficacyFirst ? 'Show latest first' : 'Show efficacy & safety highlights first'}
-                      className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:ring-offset-2 shrink-0 ${
-                        efficacyFirst
-                          ? 'border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm hover:bg-[var(--accent-dark)] hover:border-[var(--accent-dark)]'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
+                      onClick={() => setMonthDropdownOpen((o) => !o)}
+                      aria-label="Filter by month"
+                      aria-expanded={monthDropdownOpen}
+                      aria-haspopup="listbox"
+                      className="flex w-52 items-center justify-between border-0 border-b-2 border-sky-400 bg-transparent py-2 pl-0 pr-1 text-left text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-0"
                     >
-                      <BarChart3 className="h-4 w-4 shrink-0" aria-hidden />
-                      Efficacy & Safety highlights
+                      <span className="truncate flex items-center gap-2">
+                        <Calendar className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+                        {selectedMonthKey === ''
+                          ? `All months (${latestItems.length})`
+                          : (() => {
+                              const m = availableMonths.find((ma) => ma.key === selectedMonthKey);
+                              return m ? `${m.label} (${m.count})` : selectedMonthKey;
+                            })()}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
                     </button>
+                    {monthDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          aria-hidden
+                          onClick={() => setMonthDropdownOpen(false)}
+                        />
+                        <div
+                          role="listbox"
+                          aria-label="Filter by month"
+                          className="absolute left-0 top-full z-20 mt-1.5 w-80 max-h-60 overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
+                        >
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={selectedMonthKey === ''}
+                            onClick={() => {
+                              setSelectedMonthKey('');
+                              setMonthDropdownOpen(false);
+                            }}
+                            className={`flex w-full items-center justify-between gap-2.5 px-3 py-2.5 text-left text-sm transition-colors ${selectedMonthKey === ''
+                              ? 'bg-sky-50 text-slate-900'
+                              : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                          >
+                            <span className="min-w-0 flex-1 break-words text-sm">All months ({latestItems.length})</span>
+                            {selectedMonthKey === '' && <Check className="h-4 w-4 shrink-0 text-sky-600" />}
+                          </button>
+                          {availableMonths.map((month) => {
+                            const selected = selectedMonthKey === month.key;
+                            return (
+                              <button
+                                key={month.key}
+                                type="button"
+                                role="option"
+                                aria-selected={selected}
+                                onClick={() => {
+                                  setSelectedMonthKey(month.key);
+                                  setMonthDropdownOpen(false);
+                                }}
+                                className={`flex w-full items-center justify-between gap-2.5 px-3 py-2.5 text-left text-sm transition-colors ${selected
+                                  ? 'bg-sky-50 text-slate-900'
+                                  : 'text-slate-700 hover:bg-slate-50'
+                                  }`}
+                              >
+                                <span className="min-w-0 flex-1 break-words text-sm">{month.label} ({month.count})</span>
+                                {selected && <Check className="h-4 w-4 shrink-0 text-sky-600" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setEfficacyFirst((v) => !v)}
+                    aria-pressed={efficacyFirst}
+                    aria-label={efficacyFirst ? 'Show latest first' : 'Show efficacy & safety highlights first'}
+                    className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 shrink-0 active:scale-[0.98] ${efficacyFirst
+                      ? 'bg-teal-500 text-white shadow-md shadow-teal-500/30 hover:bg-teal-600 hover:shadow-lg hover:shadow-teal-500/25'
+                      : 'bg-white text-slate-600 border-2 border-slate-200 hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50/50'
+                      }`}
+                  >
+                    <BarChart3 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                    Efficacy & Safety highlights
+                  </button>
                 </div>
+              </div>
 
-                {displayedItems.length === 0 ? (
-                  <div className="rounded-lg bg-slate-50 py-10 text-center">
+              <div className="flex-1 min-h-0 overflow-auto">
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <Loader2 className="h-10 w-10 animate-spin text-slate-400" aria-hidden />
+                    <p className="mt-4 text-sm text-slate-500">Loading latest articles…</p>
+                  </div>
+                ) : error ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 py-12 text-center mx-4">
+                    <p className="text-slate-600">Could not load live ticker. Please try again.</p>
+                    <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
+                      Retry
+                    </Button>
+                  </div>
+                ) : isEmpty ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 py-16 text-center mx-4">
+                    <Newspaper className="mx-auto h-12 w-12 text-slate-300" aria-hidden />
+                    <p className="mt-4 font-medium text-slate-600">No updates yet</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Latest articles and efficacy & safety highlights will appear here for {categoryName}.
+                    </p>
+                  </div>
+                ) : displayedItems.length === 0 ? (
+                  <div className="rounded-lg bg-slate-50 py-10 text-center mx-4">
                     <p className="text-sm text-slate-600">No articles in this month.</p>
                     <button
                       type="button"
                       onClick={() => setSelectedMonthKey('')}
-                      className="mt-3 text-sm font-medium text-[var(--primary)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:ring-offset-2 rounded"
+                      className="mt-3 text-sm font-medium text-sky-700 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-400/30 focus:ring-offset-2 rounded"
                     >
                       Show all months
                     </button>
                   </div>
                 ) : (
-                  <div className="grid gap-5 sm:grid-cols-1 lg:grid-cols-2">
-                    {displayedItems.map((item, i) =>
-                      item.type === 'result' ? (
-                        <ResultCard key={`result-${item.value.url}-${i}`} result={item.value} />
-                      ) : (
-                        <ArticleCard key={`article-${item.value.url}-${i}`} article={item.value} />
-                      )
-                    )}
+                  <div className="px-4 sm:px-6 lg:px-8 pb-6 space-y-6">
+                    <p className="text-sm text-slate-500">
+                      {displayedItems.length} {displayedItems.length === 1 ? 'item' : 'items'}
+                      {selectedMonthKey
+                        ? ` in ${availableMonths.find((m) => m.key === selectedMonthKey)?.label ?? ''}`
+                        : ''}
+                    </p>
+                    <div className="grid gap-5 sm:grid-cols-1 lg:grid-cols-2">
+                      {displayedItems.map((item, i) =>
+                        item.type === 'result' ? (
+                          <ResultCard key={`result-${item.value.url}-${i}`} result={item.value} />
+                        ) : (
+                          <ArticleCard key={`article-${item.value.url}-${i}`} article={item.value} />
+                        )
+                      )}
+                    </div>
                   </div>
                 )}
-              </section>
-            )}
-          </div>
-        </main>
-      </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
   );
 }
