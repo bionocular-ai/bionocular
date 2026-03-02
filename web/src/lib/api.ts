@@ -7,13 +7,18 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 seconds
+  timeout: 60000, // 60s - dashboard-trials can be slow on cold start / large result sets
 });
 
 // Add response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    if (error.code === 'ECONNABORTED' && error.message?.includes('timeout')) {
+      throw new Error(
+        `Backend request timed out. The server may be starting or under load. Please try again in a moment.`
+      );
+    }
     if (error.code === 'ECONNREFUSED' || error.code === 'ERR_NETWORK') {
       throw new Error(
         `Cannot connect to backend API at ${API_BASE_URL}. Please ensure the server is running.`
@@ -115,6 +120,11 @@ export const trialsApi = {
     if (filters.sponsor_type?.length) params.sponsor_type = filters.sponsor_type.join(',');
     if (filters.skip != null) params.skip = filters.skip;
     if (filters.limit != null) params.limit = filters.limit;
+    if (filters.balance_by_modality === true) params.balance_by_modality = true;
+    if (filters.per_group != null) params.per_group = filters.per_group;
+    if (filters.modality != null) params.modality = filters.modality;
+    if (filters.modality_skip != null) params.modality_skip = filters.modality_skip;
+    if (filters.modality_limit != null) params.modality_limit = filters.modality_limit;
     const response = await apiClient.get<DashboardTrialsResponse>(
       '/api/landscape/dashboard-trials',
       { params: { cancer_type: cancerType, ...params } }
@@ -310,6 +320,8 @@ export interface DashboardTrialCard {
 export interface DashboardTrialsResponse {
   trials: DashboardTrialCard[];
   total: number;
+  /** When balance_by_modality was used, per-modality total counts (overall category size). */
+  totals_by_modality?: Record<string, number>;
 }
 
 export interface DashboardTrialsFilters {
@@ -319,6 +331,13 @@ export interface DashboardTrialsFilters {
   sponsor_type?: string[];
   skip?: number;
   limit?: number;
+  /** When true, backend returns up to per_group trials per modality (balanced columns). */
+  balance_by_modality?: boolean;
+  per_group?: number;
+  /** Fetch one modality only (for "Load more"); backend returns trials and total for that modality. */
+  modality?: string;
+  modality_skip?: number;
+  modality_limit?: number;
 }
 
 export interface TherapeuticIndexResponse {

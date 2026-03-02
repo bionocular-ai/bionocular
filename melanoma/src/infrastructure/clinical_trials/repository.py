@@ -24,6 +24,57 @@ logger = logging.getLogger(__name__)
 # Cache expiration: refresh data after 7 days
 CACHE_EXPIRATION_DAYS = 7
 
+# Modality buckets for balancing (must match frontend MODALITY_HEADERS + Other)
+_MODALITY_HEADERS = (
+    "Monoclonal Antibody",
+    "Vaccine",
+    "Immunostimulant/Cytokine",
+    "Bispecific",
+    "CAR-T",
+    "NK or Myeloid Cell Therapy",
+    "TIL Therapy",
+    "Small Molecule",
+    "Antibody-Drug Conjugate",
+    "Oncolytic Virus",
+    "Chemotherapy",
+)
+_MODALITY_OTHER = "Other"
+_MODALITY_ALIASES = {
+    "monoclonal antibody": "Monoclonal Antibody",
+    "mab": "Monoclonal Antibody",
+    "vaccine": "Vaccine",
+    "immunostimulant/cytokine": "Immunostimulant/Cytokine",
+    "immunostimulant": "Immunostimulant/Cytokine",
+    "cytokine": "Immunostimulant/Cytokine",
+    "bispecific": "Bispecific",
+    "bi-specific": "Bispecific",
+    "bi-specifics": "Bispecific",
+    "car-t": "CAR-T",
+    "car t": "CAR-T",
+    "nk or myeloid cell therapy": "NK or Myeloid Cell Therapy",
+    "nk cell": "NK or Myeloid Cell Therapy",
+    "til therapy": "TIL Therapy",
+    "til": "TIL Therapy",
+    "small molecule": "Small Molecule",
+    "antibody-drug conjugate": "Antibody-Drug Conjugate",
+    "adc": "Antibody-Drug Conjugate",
+    "oncolytic virus": "Oncolytic Virus",
+    "chemotherapy": "Chemotherapy",
+}
+
+
+def _normalize_modality(raw: Optional[str]) -> str:
+    """Normalize modality to one of MODALITY_HEADERS or Other (matches frontend)."""
+    if not raw or not str(raw).strip():
+        return _MODALITY_OTHER
+    lower = str(raw).strip().lower()
+    if lower in _MODALITY_ALIASES:
+        return _MODALITY_ALIASES[lower]
+    for h in _MODALITY_HEADERS:
+        if h.lower() == lower:
+            return h
+    return _MODALITY_OTHER
+
 
 def _recreate_trial_categorization_column_order(
     cursor: sqlite3.Cursor, conn: sqlite3.Connection
@@ -530,6 +581,35 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             logger.warning(f"Error reading cached JSON for {nct_number}: {e}")
             return None
 
+    def _get_cached_api_json_batch(
+        self, nct_numbers: list[str]
+    ) -> dict[str, dict[str, Any]]:
+        """Get raw API JSON for many NCTs in one query. Returns dict nct_number -> parsed JSON."""
+        if not self.db_path or not nct_numbers:
+            return {}
+        out: dict[str, dict[str, Any]] = {}
+        # SQLite limits bound params; chunk to stay safe
+        chunk_size = 500
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                for i in range(0, len(nct_numbers), chunk_size):
+                    chunk = nct_numbers[i : i + chunk_size]
+                    placeholders = ",".join("?" * len(chunk))
+                    cursor.execute(
+                        f"SELECT nct_number, api_response_json FROM clinical_trials_cache WHERE nct_number IN ({placeholders})",
+                        chunk,
+                    )
+                    for row in cursor.fetchall():
+                        nct_number = row[0]
+                        try:
+                            out[nct_number] = json.loads(row[1])
+                        except json.JSONDecodeError:
+                            pass
+        except sqlite3.Error as e:
+            logger.warning(f"Error batch reading cached JSON: {e}")
+        return out
+
     def get_cached_trial_api_json(self, nct_number: str) -> Optional[dict]:
         """Get full ClinicalTrials.gov API response JSON from cache for a single trial.
 
@@ -968,24 +1048,27 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         if not nct_numbers:
             return {}
         out: dict[str, dict[str, Any]] = {}
+        chunk_size = 500  # stay under SQLite max bound params
         try:
             cursor = conn.cursor()
-            placeholders = ",".join("?" * len(nct_numbers))
-            cursor.execute(
-                f"""
-                SELECT nct_number, modality, target, trial_name, cancer_type
-                FROM trial_categorization
-                WHERE nct_number IN ({placeholders})
-                """,
-                nct_numbers,
-            )
-            for row in cursor.fetchall():
-                out[row["nct_number"]] = {
-                    "modality": row["modality"],
-                    "target": row["target"],
-                    "trial_name": row["trial_name"],
-                    "cancer_type": row["cancer_type"],
-                }
+            for i in range(0, len(nct_numbers), chunk_size):
+                chunk = nct_numbers[i : i + chunk_size]
+                placeholders = ",".join("?" * len(chunk))
+                cursor.execute(
+                    f"""
+                    SELECT nct_number, modality, target, trial_name, cancer_type
+                    FROM trial_categorization
+                    WHERE nct_number IN ({placeholders})
+                    """,
+                    chunk,
+                )
+                for row in cursor.fetchall():
+                    out[row["nct_number"]] = {
+                        "modality": row["modality"],
+                        "target": row["target"],
+                        "trial_name": row["trial_name"],
+                        "cancer_type": row["cancer_type"],
+                    }
         except sqlite3.Error:
             pass
         return out
@@ -1092,6 +1175,53 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             logger.warning(f"Error getting abstract data for {nct_number}: {e}")
             return {}
 
+    def _trial_passes_dashboard_filters(
+        self,
+        api_json: dict[str, Any],
+        nct_number: str,
+        nct_abstract_map: dict[str, dict],
+        phase_filter: Optional[list[str]],
+        status_filter: Optional[list[str]],
+        has_abstracts_only: bool,
+        sponsor_type_filter: Optional[list[str]],
+    ) -> bool:
+        """Return True if this trial passes the dashboard phase/status/abstracts/sponsor filters."""
+        if not self.parser:
+            return False
+        protocol = api_json.get("protocolSection", {})
+        design_module = protocol.get("designModule", {})
+        sponsor_module = protocol.get("sponsorCollaboratorsModule", {})
+        api_phases = design_module.get("phases", [])
+        display_phases = self._api_phases_to_display(
+            [p for p in api_phases if isinstance(p, str)]
+        )
+        if phase_filter:
+            if not any(p in phase_filter for p in display_phases):
+                return False
+        status = self.parser.extract_status_from_api_json(api_json)
+        study_status = self._api_status_to_study_status(status)
+        if status_filter and study_status not in status_filter:
+            return False
+        abstract_data = nct_abstract_map.get(nct_number, {})
+        abstract_id = abstract_data.get("abstract_id")
+        conference = abstract_data.get("conference")
+        published_year = abstract_data.get("published_year")
+        if has_abstracts_only:
+            if not abstract_id and not conference and not published_year:
+                return False
+        lead_sponsor = sponsor_module.get("leadSponsor", {})
+        sponsor_class = (lead_sponsor.get("class") or "").upper().strip()
+        sponsor_type = "Sponsor" if sponsor_class == "INDUSTRY" else "Non-sponsor"
+        if sponsor_type_filter:
+            if sponsor_type == "Sponsor" and "Industry" not in sponsor_type_filter:
+                return False
+            if (
+                sponsor_type == "Non-sponsor"
+                and "Non-Industry" not in sponsor_type_filter
+            ):
+                return False
+        return True
+
     def get_dashboard_trials(
         self,
         cancer_type_tag: str,
@@ -1101,7 +1231,12 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         sponsor_type_filter: Optional[list[str]] = None,
         skip: int = 0,
         limit: int = 500,
-    ) -> tuple[list[dict[str, Any]], int]:
+        balance_by_modality: bool = False,
+        per_group: int = 15,
+        modality_filter: Optional[str] = None,
+        modality_skip: int = 0,
+        modality_limit: int = 15,
+    ) -> tuple[list[dict[str, Any]], int, Optional[dict[str, int]]]:
         """Get trial card DTOs for dashboard by cancer type.
 
         Args:
@@ -1112,12 +1247,14 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             sponsor_type_filter: Optional list of "Industry" and/or "Non-Industry" to include.
             skip: Number of trials to skip (pagination).
             limit: Maximum number of trials to return.
+            balance_by_modality: If True, return up to per_group trials per modality so each column has trials.
+            per_group: When balance_by_modality, max trials per modality (default 15).
 
         Returns:
-            Tuple of (list of card dicts, total_matching count). approval_group is set by API layer.
+            Tuple of (list of card dicts, total_matching count, totals_by_modality or None). approval_group is set by API layer.
         """
         if not self.db_path or not self.parser:
-            return [], 0
+            return [], 0, None
 
         # Preload abstract map and categorisation (Modality, Target, Trial_Name) for performance
         nct_abstract_map = self._get_abstract_map()
@@ -1142,109 +1279,191 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 )
         except sqlite3.Error as e:
             logger.error(f"Error getting dashboard trial NCTs: {e}")
-            return [], 0
+            return [], 0, None
 
-        # Single pass: count all matching trials and build cards for the requested page only
+        # Single-modality pagination: return trials for one modality only (for "Load more" in a column)
+        if modality_filter and nct_categorization_map:
+            by_modality: dict[str, list[str]] = {}
+            for nct in all_nct_numbers:
+                cat = nct_categorization_map.get(nct, {})
+                mod = _normalize_modality(cat.get("modality"))
+                if mod not in by_modality:
+                    by_modality[mod] = []
+                by_modality[mod].append(nct)
+            normalized_filter = _normalize_modality(modality_filter)
+            ncts_for_modality = by_modality.get(normalized_filter, [])
+            nct_numbers_to_process = ncts_for_modality
+            effective_limit = modality_limit
+            use_modality_pagination = True
+        else:
+            use_modality_pagination = False
+
+        # Optionally restrict to a balanced set (up to per_group per modality) so each column has trials
+        totals_by_modality: Optional[dict[str, int]] = None
+        if not use_modality_pagination:
+            nct_numbers_to_process = all_nct_numbers
+            if balance_by_modality and nct_categorization_map:
+                by_modality_bal: dict[str, list[str]] = {}
+                for nct in all_nct_numbers:
+                    cat = nct_categorization_map.get(nct, {})
+                    mod = _normalize_modality(cat.get("modality"))
+                    if mod not in by_modality_bal:
+                        by_modality_bal[mod] = []
+                    by_modality_bal[mod].append(nct)
+                order = list(_MODALITY_HEADERS) + [_MODALITY_OTHER]
+                nct_numbers_to_process = []
+                for mod in order:
+                    ncts = by_modality_bal.get(mod, [])
+                    nct_numbers_to_process.extend(ncts[:per_group])
+                for mod, ncts in by_modality_bal.items():
+                    if mod not in order:
+                        nct_numbers_to_process.extend(ncts[:per_group])
+                # Count filtered trials per modality so the UI can show overall category totals
+                totals_by_modality = {mod: 0 for mod in by_modality_bal}
+                all_ncts_with_mod = [
+                    (nct, mod) for mod, ncts in by_modality_bal.items() for nct in ncts
+                ]
+                for count_start in range(0, len(all_ncts_with_mod), 500):
+                    count_chunk = all_ncts_with_mod[count_start : count_start + 500]
+                    count_ncts = [nct for nct, _ in count_chunk]
+                    count_json = self._get_cached_api_json_batch(count_ncts)
+                    for nct_number, mod in count_chunk:
+                        api_json = count_json.get(nct_number)
+                        if api_json and self._trial_passes_dashboard_filters(
+                            api_json,
+                            nct_number,
+                            nct_abstract_map,
+                            phase_filter,
+                            status_filter,
+                            has_abstracts_only,
+                            sponsor_type_filter,
+                        ):
+                            totals_by_modality[mod] += 1
+
+        # When returning a balanced set per modality, return all of it (do not apply request limit)
+        # When single-modality pagination, use modality_skip/modality_limit
+        if use_modality_pagination:
+            effective_skip = modality_skip
+            effective_limit = modality_limit
+        elif balance_by_modality:
+            effective_skip = skip
+            effective_limit = len(nct_numbers_to_process)
+        else:
+            effective_skip = skip
+            effective_limit = limit
+
+        # Process in chunks so we don't hold 4000+ parsed JSONs in memory (bottleneck on 512MB)
+        CARD_CHUNK_SIZE = 500
         cards: list[dict[str, Any]] = []
         total_matching = 0
-        for nct_number in all_nct_numbers:
-            api_json = self._get_cached_api_json_ignore_expiry(nct_number)
-            if not api_json:
-                continue
-
-            protocol = api_json.get("protocolSection", {})
-            design_module = protocol.get("designModule", {})
-            sponsor_module = protocol.get("sponsorCollaboratorsModule", {})
-            api_phases = design_module.get("phases", [])
-            display_phases = self._api_phases_to_display(
-                [p for p in api_phases if isinstance(p, str)]
-            )
-
-            if phase_filter:
-                if not any(p in phase_filter for p in display_phases):
+        for chunk_start in range(0, len(nct_numbers_to_process), CARD_CHUNK_SIZE):
+            chunk_ncts = nct_numbers_to_process[
+                chunk_start : chunk_start + CARD_CHUNK_SIZE
+            ]
+            chunk_json = self._get_cached_api_json_batch(chunk_ncts)
+            for nct_number in chunk_ncts:
+                api_json = chunk_json.get(nct_number)
+                if not api_json:
                     continue
 
-            trial_data = self.parser.parse_api_response(api_json)
-            status = self.parser.extract_status_from_api_json(api_json)
-            study_status = self._api_status_to_study_status(status)
+                protocol = api_json.get("protocolSection", {})
+                design_module = protocol.get("designModule", {})
+                sponsor_module = protocol.get("sponsorCollaboratorsModule", {})
+                api_phases = design_module.get("phases", [])
+                display_phases = self._api_phases_to_display(
+                    [p for p in api_phases if isinstance(p, str)]
+                )
 
-            if status_filter and study_status not in status_filter:
-                continue
+                if phase_filter:
+                    if not any(p in phase_filter for p in display_phases):
+                        continue
 
-            abstract_data = nct_abstract_map.get(nct_number, {})
-            abstract_id = abstract_data.get("abstract_id")
-            conference = abstract_data.get("conference")
-            published_year = abstract_data.get("published_year")
-            if has_abstracts_only:
-                if not abstract_id and not conference and not published_year:
+                trial_data = self.parser.parse_api_response(api_json)
+                status = self.parser.extract_status_from_api_json(api_json)
+                study_status = self._api_status_to_study_status(status)
+
+                if status_filter and study_status not in status_filter:
                     continue
 
-            lead_sponsor = sponsor_module.get("leadSponsor", {})
-            sponsor_class = (lead_sponsor.get("class") or "").upper().strip()
-            sponsor_type = "Sponsor" if sponsor_class == "INDUSTRY" else "Non-sponsor"
-            if sponsor_type_filter:
-                if sponsor_type == "Sponsor" and "Industry" not in sponsor_type_filter:
+                abstract_data = nct_abstract_map.get(nct_number, {})
+                abstract_id = abstract_data.get("abstract_id")
+                conference = abstract_data.get("conference")
+                published_year = abstract_data.get("published_year")
+                if has_abstracts_only:
+                    if not abstract_id and not conference and not published_year:
+                        continue
+
+                lead_sponsor = sponsor_module.get("leadSponsor", {})
+                sponsor_class = (lead_sponsor.get("class") or "").upper().strip()
+                sponsor_type = (
+                    "Sponsor" if sponsor_class == "INDUSTRY" else "Non-sponsor"
+                )
+                if sponsor_type_filter:
+                    if (
+                        sponsor_type == "Sponsor"
+                        and "Industry" not in sponsor_type_filter
+                    ):
+                        continue
+                    if (
+                        sponsor_type == "Non-sponsor"
+                        and "Non-Industry" not in sponsor_type_filter
+                    ):
+                        continue
+
+                total_matching += 1
+                if total_matching <= effective_skip:
                     continue
-                if (
-                    sponsor_type == "Non-sponsor"
-                    and "Non-Industry" not in sponsor_type_filter
-                ):
+                if len(cards) >= effective_limit:
                     continue
 
-            total_matching += 1
-            if total_matching <= skip:
-                continue
-            if len(cards) >= limit:
-                continue
+                sponsor_name = (lead_sponsor.get("name") or "").strip() or None
 
-            sponsor_name = (lead_sponsor.get("name") or "").strip() or None
+                # Use clean treatment names from interventions[].name (e.g. "pembrolizumab", "placebo"),
+                # not armGroups[].interventionNames (e.g. "Biological: pembrolizumab").
+                arms_interventions = protocol.get("armsInterventionsModule", {})
+                interventions = arms_interventions.get("interventions", [])
+                drug_parts = []
+                for item in interventions:
+                    name = (item.get("name") or "").strip()
+                    if name and name not in drug_parts:
+                        drug_parts.append(name)
+                drug_name = ", ".join(drug_parts) if drug_parts else None
 
-            # Use clean treatment names from interventions[].name (e.g. "pembrolizumab", "placebo"),
-            # not armGroups[].interventionNames (e.g. "Biological: pembrolizumab").
-            arms_interventions = protocol.get("armsInterventionsModule", {})
-            interventions = arms_interventions.get("interventions", [])
-            drug_parts = []
-            for item in interventions:
-                name = (item.get("name") or "").strip()
-                if name and name not in drug_parts:
-                    drug_parts.append(name)
-            drug_name = ", ".join(drug_parts) if drug_parts else None
+                phase_display = (
+                    ", ".join(display_phases) if display_phases else "Not applicable"
+                )
 
-            phase_display = (
-                ", ".join(display_phases) if display_phases else "Not applicable"
-            )
+                cat = nct_categorization_map.get(nct_number, {})
+                title = (
+                    (cat.get("trial_name") or "").strip()
+                    or trial_data.trial_name
+                    or nct_number
+                )
 
-            cat = nct_categorization_map.get(nct_number, {})
-            title = (
-                (cat.get("trial_name") or "").strip()
-                or trial_data.trial_name
-                or nct_number
-            )
+                card = {
+                    "nct_id": nct_number,
+                    "title": title,
+                    "drug_name": drug_name,
+                    "sponsor_name": sponsor_name,
+                    "enrollment_count": trial_data.number_of_patients,
+                    "phase": phase_display,
+                    "study_status": study_status,
+                    "sponsor_type": sponsor_type,
+                    "arm_labels": [
+                        (arm.arm_label or "") or (arm.generic_name or "")
+                        for arm in (trial_data.treatment_arms or [])
+                    ],
+                    "abstract_id": abstract_id,
+                    "conference": conference,
+                    "published_year": published_year,
+                }
+                if cat:
+                    card["modality"] = cat.get("modality")
+                    card["target"] = cat.get("target")
+                    card["trial_name"] = cat.get("trial_name")
+                cards.append(card)
 
-            card = {
-                "nct_id": nct_number,
-                "title": title,
-                "drug_name": drug_name,
-                "sponsor_name": sponsor_name,
-                "enrollment_count": trial_data.number_of_patients,
-                "phase": phase_display,
-                "study_status": study_status,
-                "sponsor_type": sponsor_type,
-                "arm_labels": [
-                    (arm.arm_label or "") or (arm.generic_name or "")
-                    for arm in (trial_data.treatment_arms or [])
-                ],
-                "abstract_id": abstract_id,
-                "conference": conference,
-                "published_year": published_year,
-            }
-            if cat:
-                card["modality"] = cat.get("modality")
-                card["target"] = cat.get("target")
-                card["trial_name"] = cat.get("trial_name")
-            cards.append(card)
-
-        return cards, total_matching
+        return cards, total_matching, totals_by_modality
 
     def get_disease_landscape_stats(self, cancer_type_tag: str) -> dict[str, Any]:
         """Get disease landscape statistics for a specific cancer type.

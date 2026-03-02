@@ -92,6 +92,16 @@ function getPaginationPages(current: number, totalPages: number): (number | null
 
 const TARGET_OTHER = 'Other';
 
+/** When grouping by modality/target, show this many cards per column initially and per "Load more". */
+const CARDS_PER_GROUP_INITIAL = 15;
+const CARDS_PER_GROUP_LOAD_MORE = 15;
+
+/** When grouping by modality, fetch this many per category so "Load more" has more to reveal. */
+const CARDS_PER_GROUP_FETCH_MODALITY = 45;
+
+/** When grouping by modality/target, fetch this many trials (target view). Modality view uses top-per-category from API. */
+const GROUP_VIEW_PAGE_SIZE = 300;
+
 type GroupByOption = 'none' | 'modality' | 'target';
 
 function DashboardContent() {
@@ -109,6 +119,15 @@ function DashboardContent() {
   const [phaseDropdownOpen, setPhaseDropdownOpen] = React.useState(false);
   const [groupByDropdownOpen, setGroupByDropdownOpen] = React.useState(false);
   const [pageSizeDropdownOpen, setPageSizeDropdownOpen] = React.useState(false);
+
+  /** When grouping by modality/target, how many cards to show per column (key = modality or target label). */
+  const [visibleCountByGroup, setVisibleCountByGroup] = React.useState<Record<string, number>>({});
+  /** Extra trials loaded via "Load more" per modality (server-side pagination for that column). */
+  const [extraTrialsByModality, setExtraTrialsByModality] = React.useState<Record<string, DashboardTrialCard[]>>({});
+  /** Total trial count per modality from server (set when we fetch a modality page). */
+  const [totalByModality, setTotalByModality] = React.useState<Record<string, number>>({});
+  const [loadingMoreModality, setLoadingMoreModality] = React.useState<string | null>(null);
+  const [loadingMoreAll, setLoadingMoreAll] = React.useState(false);
 
   // Draft filter state (used in panel; applied only on "Apply")
   const [phaseDraft, setPhaseDraft] = React.useState<string[]>([]);
@@ -152,6 +171,13 @@ function DashboardContent() {
     prevFiltersRef.current = key;
   }, [cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter]);
 
+  // When switching group-by mode or filters, reset per-column visible counts so we show 15 again
+  React.useEffect(() => {
+    setVisibleCountByGroup({});
+    setExtraTrialsByModality({});
+    setTotalByModality({});
+  }, [groupBy, cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter]);
+
   const setCancerType = React.useCallback(
     (slug: string) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -169,16 +195,24 @@ function DashboardContent() {
   });
 
   const skip = (page - 1) * pageSize;
+  const isGroupView = groupBy === 'modality' || groupBy === 'target';
+  const effectiveSkip = isGroupView ? 0 : skip;
+  const effectiveLimit = isGroupView ? GROUP_VIEW_PAGE_SIZE : pageSize;
+
   const { data: trialsData, isLoading: trialsLoading, error: trialsError } = useQuery({
-    queryKey: ['dashboard-trials', cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter, skip, pageSize],
+    queryKey: ['dashboard-trials', cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter, effectiveSkip, effectiveLimit, groupBy],
     queryFn: () =>
       trialsApi.getDashboardTrials(cancerTypeSlug, {
         phase: phaseFilter.length > 0 ? phaseFilter : undefined,
         has_abstracts: hasAbstractsOnly || undefined,
         status: statusFilter.length > 0 ? statusFilter : undefined,
         sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
-        skip,
-        limit: pageSize,
+        skip: effectiveSkip,
+        limit: effectiveLimit,
+        ...(groupBy === 'modality' && {
+          balance_by_modality: true,
+          per_group: CARDS_PER_GROUP_FETCH_MODALITY,
+        }),
       }),
     retry: false,
     refetchOnWindowFocus: false,
@@ -190,6 +224,20 @@ function DashboardContent() {
     [trialsData?.trials]
   );
   const trialsTotal = trialsData?.total ?? 0;
+
+  // Populate per-modality totals from initial balanced response so the pill shows overall count (e.g. 667) not fetched count (45)
+  React.useEffect(() => {
+    if (groupBy === 'modality' && trialsData?.totals_by_modality) {
+      setTotalByModality((prev) => ({ ...prev, ...trialsData.totals_by_modality }));
+    }
+  }, [groupBy, trialsData?.totals_by_modality]);
+
+  /** Base trials + extra loaded per modality (for "Load more" server fetch). */
+  const allTrialsForModality = React.useMemo(() => {
+    const extra = Object.values(extraTrialsByModality).flat();
+    return trials.concat(extra);
+  }, [trials, extraTrialsByModality]);
+
   const totalPages = Math.max(1, Math.ceil(trialsTotal / pageSize));
   const startRow = trialsTotal === 0 ? 0 : skip + 1;
   const endRow = Math.min(skip + pageSize, trialsTotal);
@@ -236,7 +284,7 @@ function DashboardContent() {
     allHeaders.forEach((h) => {
       map[h] = [];
     });
-    trials.forEach((t) => {
+    allTrialsForModality.forEach((t) => {
       const header = normalizeModality(t.modality ?? undefined);
       if (map[header]) map[header].push(t);
       else map[MODALITY_OTHER].push(t);
@@ -247,7 +295,23 @@ function DashboardContent() {
       return (map[b]?.length ?? 0) - (map[a]?.length ?? 0);
     });
     return { order, map };
-  }, [trials]);
+  }, [allTrialsForModality]);
+
+  /** Modality columns that have more trials to load (for "Load more in all" button). */
+  const modalitiesWithMore = React.useMemo(() => {
+    if (groupBy !== 'modality') return [];
+    return trialsByModality.order.filter((mod) => {
+      const groupTrials = trialsByModality.map[mod] ?? [];
+      const visibleCount = visibleCountByGroup[mod] ?? CARDS_PER_GROUP_INITIAL;
+      const totalForModality = totalByModality[mod];
+      const hasMoreClient = groupTrials.length > visibleCount;
+      const hasMoreServer =
+        totalForModality != null
+          ? visibleCount < totalForModality
+          : groupTrials.length >= CARDS_PER_GROUP_FETCH_MODALITY;
+      return hasMoreClient || hasMoreServer;
+    });
+  }, [groupBy, trialsByModality, visibleCountByGroup, totalByModality]);
 
   /** Trials grouped by target for column layout. Columns ordered by trial count (most first); Other last. */
   const trialsByTarget = React.useMemo(() => {
@@ -265,6 +329,62 @@ function DashboardContent() {
     });
     return { order, map };
   }, [trials]);
+
+  const handleLoadMoreAll = React.useCallback(() => {
+    if (modalitiesWithMore.length === 0) return;
+    setLoadingMoreAll(true);
+    const baseFilters = {
+      phase: phaseFilter.length > 0 ? phaseFilter : undefined,
+      has_abstracts: hasAbstractsOnly || undefined,
+      status: statusFilter.length > 0 ? statusFilter : undefined,
+      sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
+    };
+    const promises = modalitiesWithMore.map((mod) => {
+      const groupTrials = trialsByModality.map[mod] ?? [];
+      return trialsApi
+        .getDashboardTrials(cancerTypeSlug, {
+          ...baseFilters,
+          modality: mod,
+          modality_skip: groupTrials.length,
+          modality_limit: CARDS_PER_GROUP_LOAD_MORE,
+        })
+        .then((res) => ({ mod, res }));
+    });
+    Promise.all(promises)
+      .then((pairs) => {
+        setExtraTrialsByModality((prev) => {
+          const next = { ...prev };
+          pairs.forEach(({ mod, res }) => {
+            next[mod] = [...(next[mod] ?? []), ...res.trials];
+          });
+          return next;
+        });
+        setTotalByModality((prev) => {
+          const next = { ...prev };
+          pairs.forEach(({ mod, res }) => {
+            next[mod] = res.total;
+          });
+          return next;
+        });
+        setVisibleCountByGroup((prev) => {
+          const next = { ...prev };
+          pairs.forEach(({ mod, res }) => {
+            const cur = prev[mod] ?? CARDS_PER_GROUP_INITIAL;
+            next[mod] = cur + res.trials.length;
+          });
+          return next;
+        });
+      })
+      .finally(() => setLoadingMoreAll(false));
+  }, [
+    cancerTypeSlug,
+    phaseFilter,
+    hasAbstractsOnly,
+    statusFilter,
+    sponsorTypeFilter,
+    trialsByModality,
+    modalitiesWithMore,
+  ]);
 
   const error = statsError ?? trialsError;
 
@@ -581,12 +701,64 @@ function DashboardContent() {
                     <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                   </div>
                 ) : groupBy === 'modality' ? (
-                  /* Group by Modality — column layout */
-                  <div className="pb-6 min-h-0">
-                    <div className="overflow-x-auto pr-4 w-full min-h-0">
+                  /* Group by Modality — column layout: top 15 per column, then Load more */
+                  <div className="pb-4 min-h-0">
+                    <div className="overflow-x-auto pr-4 w-full min-h-0 pb-6">
                       <div className="flex gap-4 min-w-max">
                         {trialsByModality.order.map((modalityLabel) => {
                           const groupTrials = trialsByModality.map[modalityLabel] ?? [];
+                          const visibleCount = visibleCountByGroup[modalityLabel] ?? CARDS_PER_GROUP_INITIAL;
+                          const visibleTrials = groupTrials.slice(0, visibleCount);
+                          const hasMoreClient = groupTrials.length > visibleCount;
+                          const totalForModality = totalByModality[modalityLabel];
+                          const hasMoreServer = totalForModality != null
+                            ? visibleCount < totalForModality
+                            : groupTrials.length >= CARDS_PER_GROUP_FETCH_MODALITY;
+                          const hasMore = hasMoreClient || hasMoreServer;
+                          const isLoadingMore = loadingMoreModality === modalityLabel;
+                          const handleLoadMore = () => {
+                            if (hasMoreClient) {
+                              setVisibleCountByGroup((prev) => {
+                                const current = prev[modalityLabel] ?? CARDS_PER_GROUP_INITIAL;
+                                const next = current + CARDS_PER_GROUP_LOAD_MORE;
+                                const capped = Math.min(next, groupTrials.length);
+                                return { ...prev, [modalityLabel]: capped };
+                              });
+                              return;
+                            }
+                            if (hasMoreServer && !isLoadingMore) {
+                              setLoadingMoreModality(modalityLabel);
+                              const filters = {
+                                phase: phaseFilter.length > 0 ? phaseFilter : undefined,
+                                has_abstracts: hasAbstractsOnly || undefined,
+                                status: statusFilter.length > 0 ? statusFilter : undefined,
+                                sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
+                                modality: modalityLabel,
+                                modality_skip: groupTrials.length,
+                                modality_limit: CARDS_PER_GROUP_LOAD_MORE,
+                              };
+                              trialsApi.getDashboardTrials(cancerTypeSlug, filters).then((res) => {
+                                setExtraTrialsByModality((prev) => ({
+                                  ...prev,
+                                  [modalityLabel]: [...(prev[modalityLabel] ?? []), ...res.trials],
+                                }));
+                                setTotalByModality((prev) => ({ ...prev, [modalityLabel]: res.total }));
+                                setVisibleCountByGroup((prev) => ({
+                                  ...prev,
+                                  [modalityLabel]: (prev[modalityLabel] ?? visibleCount) + res.trials.length,
+                                }));
+                              }).finally(() => setLoadingMoreModality(null));
+                            }
+                          };
+                          const remaining = Math.max(0, totalForModality != null
+                            ? totalForModality - visibleCount
+                            : groupTrials.length - visibleCount);
+                          const nextBatch = hasMoreClient
+                            ? Math.min(CARDS_PER_GROUP_LOAD_MORE, groupTrials.length - visibleCount)
+                            : CARDS_PER_GROUP_LOAD_MORE;
+                          const showCountPill = remaining > 0 || totalForModality != null;
+                          const categoryTotal = totalForModality ?? groupTrials.length;
+                          const loadMoreMainLabel = showCountPill ? `Show next ${nextBatch}` : 'Load more';
                           return (
                             <div
                               key={modalityLabel}
@@ -596,7 +768,7 @@ function DashboardContent() {
                                 {modalityLabel}
                               </h3>
                               <div className="flex flex-col gap-2">
-                                {groupTrials.map((trial) => (
+                                {visibleTrials.map((trial) => (
                                   <TrialCard
                                     key={trial.nct_id}
                                     trial={trial}
@@ -604,6 +776,39 @@ function DashboardContent() {
                                   />
                                 ))}
                               </div>
+                              {hasMore && (
+                                <div className="mt-5 pt-1 pb-0.5 w-full">
+                                  <button
+                                    type="button"
+                                    disabled={isLoadingMore || loadingMoreAll}
+                                    onClick={handleLoadMore}
+                                    aria-busy={isLoadingMore}
+                                    aria-disabled={isLoadingMore || loadingMoreAll}
+                                    title={showCountPill ? `${categoryTotal.toLocaleString()} in this category` : undefined}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-slate-200 bg-transparent text-slate-700 text-sm font-medium transition-colors hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:ring-offset-1 disabled:opacity-60 disabled:pointer-events-none"
+                                  >
+                                    {isLoadingMore ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                                        <span>Loading…</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+                                        <span>{loadMoreMainLabel}</span>
+                                        {showCountPill && (
+                                          <span
+                                            className="shrink-0 text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5 tabular-nums"
+                                            aria-hidden
+                                          >
+                                            {categoryTotal.toLocaleString()}
+                                          </span>
+                                        )}
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
                               {groupTrials.length === 0 && (
                                 <p className="text-sm text-slate-400 py-2">No trials</p>
                               )}
@@ -614,12 +819,18 @@ function DashboardContent() {
                     </div>
                   </div>
                 ) : groupBy === 'target' ? (
-                  /* Group by Target — column layout */
-                  <div className="pb-6 min-h-0">
-                    <div className="overflow-x-auto pr-4 w-full min-h-0">
+                  /* Group by Target — column layout: top 15 per column, then Load more */
+                  <div className="pb-4 min-h-0">
+                    <div className="overflow-x-auto pr-4 w-full min-h-0 pb-6">
                       <div className="flex gap-4 min-w-max">
                         {trialsByTarget.order.map((targetLabel) => {
                           const groupTrials = trialsByTarget.map[targetLabel] ?? [];
+                          const visibleCount = visibleCountByGroup[targetLabel] ?? CARDS_PER_GROUP_INITIAL;
+                          const visibleTrials = groupTrials.slice(0, visibleCount);
+                          const hasMore = groupTrials.length > visibleCount;
+                          const remaining = groupTrials.length - visibleCount;
+                          const nextBatch = Math.min(CARDS_PER_GROUP_LOAD_MORE, remaining);
+                          const categoryTotal = groupTrials.length;
                           return (
                             <div
                               key={targetLabel}
@@ -629,7 +840,7 @@ function DashboardContent() {
                                 {targetLabel}
                               </h3>
                               <div className="flex flex-col gap-2">
-                                {groupTrials.map((trial) => (
+                                {visibleTrials.map((trial) => (
                                   <TrialCard
                                     key={trial.nct_id}
                                     trial={trial}
@@ -637,6 +848,33 @@ function DashboardContent() {
                                   />
                                 ))}
                               </div>
+                              {hasMore && (
+                                <div className="mt-5 pt-1 pb-0.5 w-full">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setVisibleCountByGroup((prev) => ({
+                                        ...prev,
+                                        [targetLabel]: Math.min(
+                                          (prev[targetLabel] ?? CARDS_PER_GROUP_INITIAL) + CARDS_PER_GROUP_LOAD_MORE,
+                                          groupTrials.length
+                                        ),
+                                      }))
+                                    }
+                                    title={`${categoryTotal.toLocaleString()} in this category`}
+                                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-slate-200 bg-transparent text-slate-700 text-sm font-medium transition-colors hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:ring-offset-1"
+                                  >
+                                    <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+                                    <span>Show next {nextBatch}</span>
+                                    <span
+                                      className="shrink-0 text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5 tabular-nums"
+                                      aria-hidden
+                                    >
+                                      {categoryTotal.toLocaleString()}
+                                    </span>
+                                  </button>
+                                </div>
+                              )}
                               {groupTrials.length === 0 && (
                                 <p className="text-sm text-slate-400 py-2">No trials</p>
                               )}
@@ -648,10 +886,10 @@ function DashboardContent() {
                   </div>
                 ) : (
                   /* Group by None — single grid */
-                  <div className="space-y-6 pb-6">
+                  <div className="space-y-6 pb-4">
                     {Object.entries(groupedTrials).map(([groupLabel, groupTrials]) => (
                       <div key={groupLabel || 'all'}>
-                        <div className="overflow-x-auto pr-4 w-full min-h-0">
+                        <div className="overflow-x-auto pr-4 w-full min-h-0 pb-6">
                           <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-x-4 gap-y-2 min-w-[1328px] sm:min-w-[1664px] md:min-w-[2000px] lg:min-w-[2336px] xl:min-w-[2672px]">
                             {groupTrials.map((trial) => (
                               <TrialCard key={trial.nct_id} trial={trial} category={cancerTypeSlug} />
@@ -667,8 +905,40 @@ function DashboardContent() {
                 )}
               </div>
 
-              {/* Pagination at bottom — industry standard: First / Prev / numbered pages / Next / Last */}
-              {!trialsLoading && trialsTotal > 0 && (
+              {/* When grouped by modality/target: show note instead of pagination */}
+              {!trialsLoading && trialsTotal > 0 && isGroupView && (
+                <div className="pt-1 mt-0 border-t border-slate-100 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+                  <div className="flex flex-col items-center gap-2 py-2">
+                    {groupBy === 'modality' && modalitiesWithMore.length > 0 && (
+                      <button
+                        type="button"
+                        disabled={loadingMoreAll}
+                        onClick={handleLoadMoreAll}
+                        aria-busy={loadingMoreAll}
+                        className="inline-flex items-center gap-2 py-2 px-4 rounded-lg border border-slate-200 bg-slate-100 text-slate-700 text-sm font-medium transition-colors hover:bg-slate-200 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:ring-offset-1 disabled:opacity-60 disabled:pointer-events-none"
+                      >
+                        {loadingMoreAll ? (
+                          <>
+                            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                            <span>Loading all…</span>
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+                            <span>Load more in all columns</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                    <p className="text-xs text-slate-500">
+                      Showing {CARDS_PER_GROUP_LOAD_MORE} trials per category at a time.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Pagination at bottom — industry standard: First / Prev / numbered pages / Next / Last (hidden when grouped by modality/target) */}
+              {!trialsLoading && trialsTotal > 0 && !isGroupView && (
                 <nav
                   className="flex flex-wrap items-center justify-between gap-4 py-4 mt-auto border-t border-slate-200 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8"
                   aria-label="Trials pagination"

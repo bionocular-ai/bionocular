@@ -25,7 +25,6 @@ from ..infrastructure.database import (
 )
 from ..infrastructure.repository import SQLAlchemyDocumentRepository
 from ..infrastructure.storage import LocalFileStorage
-from .approval_status_service import ApprovalStatusService
 from .clinical_api import router as clinical_router
 from .ingestion_service import IngestionService
 from .json_trials_service import JSONTrialsService
@@ -2040,20 +2039,30 @@ async def get_dashboard_trials(
     sponsor_type: str | None = None,
     skip: int = 0,
     limit: int = 500,
+    balance_by_modality: bool = False,
+    per_group: int = 15,
+    modality: str | None = None,
+    modality_skip: int = 0,
+    modality_limit: int = 15,
 ) -> dict:
     """Get trial cards for dashboard by cancer type.
 
     Args:
         cancer_type: Category slug (e.g. cutaneous-melanoma).
-        phase: Optional comma-separated phase names (e.g. "Phase 1,Phase 2").
+        phase: Optional comma-separated phase names.
         has_abstracts: If True, only return trials that have abstracts or publications data.
-        status: Optional comma-separated study statuses (e.g. "Open,Closed,Suspended").
+        status: Optional comma-separated study statuses.
         sponsor_type: Optional comma-separated "Industry" and/or "Non-Industry".
-        skip: Pagination offset.
-        limit: Max trials to return.
+        skip: Pagination offset (ignored when modality= is set).
+        limit: Max trials to return (ignored when modality= or balance_by_modality is set).
+        balance_by_modality: If True, return up to per_group trials per modality (balanced columns).
+        per_group: When balance_by_modality, max per modality (default 15).
+        modality: If set, return only this modality with pagination (modality_skip, modality_limit); total = total for that modality.
+        modality_skip: Skip this many trials within the modality (when modality= is set).
+        modality_limit: Max trials to return for that modality (when modality= is set).
 
     Returns:
-        { "trials": [ { nct_id, title, drug_name, sponsor_name, enrollment_count, phase, study_status, sponsor_type, approval_group, abstract_id?, conference?, published_year? }, ... ] }
+        { "trials": [ ... ], "total": total }
     """
     try:
         category_name = _slug_to_category_name(cancer_type)
@@ -2070,7 +2079,7 @@ async def get_dashboard_trials(
         )
 
         service = create_clinical_trials_service()
-        cards, total = service.repository.get_dashboard_trials(
+        cards, total, totals_by_modality = service.repository.get_dashboard_trials(
             cancer_type_tag=category_name,
             phase_filter=phase_filter,
             has_abstracts_only=has_abstracts,
@@ -2078,26 +2087,22 @@ async def get_dashboard_trials(
             sponsor_type_filter=sponsor_type_filter,
             skip=skip,
             limit=limit,
+            balance_by_modality=balance_by_modality,
+            per_group=per_group,
+            modality_filter=modality.strip() if modality else None,
+            modality_skip=modality_skip,
+            modality_limit=modality_limit,
         )
 
-        approval_service = ApprovalStatusService()
+        # Dashboard has no approval filter; omit approval status (chart pages use it)
         for card in cards:
-            arm_labels = card.get("arm_labels") or []
-            has_approved = False
-            for arm_label in arm_labels:
-                if not arm_label:
-                    continue
-                status = approval_service.get_approval_status(
-                    arm_name=arm_label,
-                    cancer_type=category_name,
-                )
-                if status == "Approved":
-                    has_approved = True
-                    break
-            card["approval_group"] = "Approved" if has_approved else "Non-approved"
-            del card["arm_labels"]
+            card["approval_group"] = ""
+            card.pop("arm_labels", None)
 
-        return {"trials": cards, "total": total}
+        out: dict = {"trials": cards, "total": total}
+        if totals_by_modality is not None:
+            out["totals_by_modality"] = totals_by_modality
+        return out
 
     except Exception as e:
         logger.error(f"Error fetching dashboard trials: {str(e)}", exc_info=True)
