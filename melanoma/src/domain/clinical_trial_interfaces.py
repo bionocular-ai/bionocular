@@ -164,7 +164,12 @@ class ClinicalTrialRepository(ABC):
         sponsor_type_filter: Optional[list[str]] = None,
         skip: int = 0,
         limit: int = 500,
-    ) -> tuple[list[dict[str, Any]], int]:
+        balance_by_modality: bool = False,
+        per_group: int = 15,
+        modality_filter: Optional[str] = None,
+        modality_skip: int = 0,
+        modality_limit: int = 15,
+    ) -> tuple[list[dict[str, Any]], int, Optional[dict[str, int]]]:
         """Get trial card DTOs for dashboard by cancer type.
 
         Args:
@@ -175,9 +180,14 @@ class ClinicalTrialRepository(ABC):
             sponsor_type_filter: Optional list of "Industry" and/or "Non-Industry".
             skip: Number of trials to skip (pagination).
             limit: Maximum number of trials to return.
+            balance_by_modality: If True, return up to per_group trials per modality (balanced view).
+            per_group: When balance_by_modality, max trials per modality (default 15).
+            modality_filter: If set, return only trials in this modality (normalized name); skip/limit apply within this modality.
+            modality_skip: When modality_filter set, skip this many trials in that modality.
+            modality_limit: When modality_filter set, return at most this many trials.
 
         Returns:
-            Tuple of (list of card dicts, total_matching count).
+            Tuple of (list of card dicts, total_matching count, totals_by_modality or None when balance_by_modality).
         """
         pass
 
