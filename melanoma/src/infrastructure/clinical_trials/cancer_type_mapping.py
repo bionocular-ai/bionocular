@@ -15,51 +15,22 @@ SKIN_CANCER_TYPES = [
     "Cutaneous melanoma with Brain/CNS metastasis",
 ]
 
-# Mapping from normalized cancer type to ClinicalTrials.gov search terms
+# Mapping from normalized cancer type to ClinicalTrials.gov search terms.
+# One exact canonical term per type — the API's partial matching handles
+# variant phrasings (e.g. "Merkel Cell Carcinoma" matches
+# "Merkel cell carcinoma of the skin").
 CANCER_TYPE_MAPPING = {
-    "Basal Cell Carcinoma": [
-        "Basal Cell Carcinoma",
-        "BCC",
-        "Basal cell cancer",
-    ],
-    "Cutaneous Squamous Cell Carcinoma": [
-        "Cutaneous Squamous Cell Carcinoma",
-        "CSCC",
-        "Cutaneous SCC",
-        "Squamous cell carcinoma of skin",
-    ],
-    "Cutaneous melanoma": [
-        "Cutaneous melanoma",
-        "Melanoma",
-        "Skin melanoma",
-    ],
-    "Uveal Melanoma": [
-        "Uveal Melanoma",
-        "Uveal melanoma",
-        "Choroidal melanoma",
-        "Iris melanoma",
-    ],
-    "Merkel Cell Carcinoma": [
-        "Merkel Cell Carcinoma",
-        "MCC",
-        "Merkel cell cancer",
-    ],
-    "Acral Melanoma": [
-        "Acral Melanoma",
-        "Acral lentiginous melanoma",
-        "Acral melanoma",
-    ],
-    "Mucosal Melanoma": [
-        "Mucosal Melanoma",
-        "Mucosal melanoma",
-    ],
+    "Cutaneous melanoma": ["Cutaneous melanoma"],
+    "Cutaneous Squamous Cell Carcinoma": ["Cutaneous Squamous Cell Carcinoma"],
+    "Uveal Melanoma": ["Uveal Melanoma", "Rare melanoma"],
+    "Acral Melanoma": ["Acral Melanoma", "Rare melanoma"],
+    "Mucosal Melanoma": ["Mucosal Melanoma", "Rare melanoma"],
+    "Basal Cell Carcinoma": ["Basal Cell Carcinoma"],
+    "Merkel Cell Carcinoma": ["Merkel Cell Carcinoma"],
+    # Brain and CNS are queried separately in the service and merged under this tag
     "Cutaneous melanoma with Brain/CNS metastasis": [
         "Cutaneous melanoma with Brain metastasis",
         "Cutaneous melanoma with CNS metastasis",
-        "Melanoma brain metastasis",
-        "Melanoma CNS metastasis",
-        "Melanoma brain metastases",
-        "Melanoma CNS metastases",
     ],
 }
 

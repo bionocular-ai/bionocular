@@ -47,8 +47,8 @@ import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHea
 // ============================================================================
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'cutaneous-melanoma': 'Cutaneous melanoma',
-  'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
+  'cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
+  'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
   'uveal-melanoma': 'Uveal Melanoma',
   'mucosal-melanoma': 'Mucosal Melanoma',
   'acral-melanoma': 'Acral Melanoma',
@@ -56,10 +56,10 @@ const CATEGORY_SLUG_MAP: Record<string, string> = {
   'merkel-cell-carcinoma': 'Merkel Cell Carcinoma',
   'cutaneous-squamous-cell-carcinoma': 'Cutaneous Squamous Cell Carcinoma',
   // Legacy slugs for backward compatibility
-  'resected-cutaneous-melanoma': 'Cutaneous melanoma',
-  'unresectable-cutaneous-melanoma': 'Cutaneous melanoma',
-  'cutaneous-melanoma-with-brain-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
-  'cutaneous-melanoma-with-cns-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
+  'resected-cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
+  'unresectable-cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
+  'cutaneous-melanoma-with-brain-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
+  'cutaneous-melanoma-with-cns-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
 };
 
 // Normalize cancer type names to handle legacy data
@@ -69,12 +69,12 @@ function normalizeCancerType(cancerType: string | null | undefined): string | nu
 
   // Map old names to new names
   if (normalized === 'Resected Cutaneous Melanoma' || normalized === 'Unresectable Cutaneous Melanoma') {
-    return 'Cutaneous melanoma';
+    return 'Cutaneous/Metastasis Melanoma';
   }
-  if (normalized === 'Cutaneous melanoma with Brain metastasis' ||
+  if (normalized === 'Cutaneous Melanoma with Brain metastasis' ||
     normalized === 'Cutaneous Melanoma with CNS metastasis' ||
-    normalized === 'Cutaneous melanoma with Brain/CNS metastasis') {
-    return 'Cutaneous melanoma with Brain/CNS metastasis';
+    normalized === 'Cutaneous Melanoma with Brain/CNS Metastasis') {
+    return 'Cutaneous Melanoma with Brain/CNS Metastasis';
   }
 
   return normalized;
@@ -108,15 +108,6 @@ const THERAPY_TYPE_OPTIONS = [
   { value: 'Chemotherapy', label: 'Chemotherapy' },
 ];
 
-const LINE_OF_TREATMENT_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'neoadjuvant_resected', label: 'Neoadjuvant / Resected' },
-  { value: 'adjuvant', label: 'Adjuvant' },
-  { value: 'first_line', label: 'First Line' },
-  { value: 'second_line', label: 'Second Line' },
-  { value: 'third_line_plus', label: 'Third Line plus' },
-];
-
 const RESOURCE_TYPE_OPTIONS = [
   { value: 'all', label: 'All' },
   { value: 'conference', label: 'Conference' },
@@ -133,14 +124,6 @@ const BIOMARKER_OPTIONS = [
   { value: 'all', label: 'All' },
   { value: 'yes', label: 'Yes' },
   { value: 'no', label: 'No' },
-];
-
-const BIOMARKER_TYPE_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'BRAF', label: 'BRAF V600' },
-  { value: 'PDL1', label: 'PD-L1' },
-  { value: 'TMB', label: 'TMB' },
-  { value: 'MSI', label: 'MSI-H' },
 ];
 
 const EFFICACY_OPTIONS = [
@@ -342,6 +325,73 @@ const NON_APPROVED_THERAPIES = [
   'RP1 + Nivolumab',
 ];
 
+// Advanced filters: options from Landscape page (separate filters, not "Group by")
+const ADVANCED_MODALITY_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'Monoclonal Antibody', label: 'Monoclonal Antibody' },
+  { value: 'Vaccine', label: 'Vaccine' },
+  { value: 'Immunostimulant/Cytokine', label: 'Immunostimulant/Cytokine' },
+  { value: 'Bispecific', label: 'Bispecific' },
+  { value: 'CAR-T', label: 'CAR-T' },
+  { value: 'NK or Myeloid Cell Therapy', label: 'NK or Myeloid Cell Therapy' },
+  { value: 'TIL Therapy', label: 'TIL Therapy' },
+  { value: 'Small Molecule', label: 'Small Molecule' },
+  { value: 'Antibody-Drug Conjugate', label: 'Antibody-Drug Conjugate' },
+  { value: 'Oncolytic Virus', label: 'Oncolytic Virus' },
+  { value: 'Chemotherapy', label: 'Chemotherapy' },
+  { value: 'Other', label: 'Other' },
+];
+const ADVANCED_STAGE_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'Stage I', label: 'Stage I' },
+  { value: 'Stage I/II', label: 'Stage I/II' },
+  { value: 'Stage II', label: 'Stage II' },
+  { value: 'Stage II/III', label: 'Stage II/III' },
+  { value: 'Stage III', label: 'Stage III' },
+  { value: 'Stage III/IV', label: 'Stage III/IV' },
+  { value: 'Stage IV', label: 'Stage IV' },
+];
+const ADVANCED_BIOMARKER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'BRAF (V600)', label: 'BRAF (V600)' },
+  { value: 'PD-L1', label: 'PD-L1' },
+  { value: 'HLA-A*02:01', label: 'HLA-A*02:01' },
+  { value: 'LAG-3', label: 'LAG-3' },
+  { value: 'TMB', label: 'TMB' },
+  { value: 'c-KIT', label: 'c-KIT' },
+  { value: 'NRAS', label: 'NRAS' },
+  { value: 'NF1', label: 'NF1' },
+  { value: 'PRAME', label: 'PRAME' },
+  { value: 'CDKN2A / CDK4', label: 'CDKN2A / CDK4' },
+  { value: 'MSI-H / dMMR', label: 'MSI-H / dMMR' },
+  { value: 'GNAQ / GNA11', label: 'GNAQ / GNA11' },
+  { value: 'SF3B1 / EIF1AX', label: 'SF3B1 / EIF1AX' },
+  { value: 'BAP1', label: 'BAP1' },
+  { value: 'MCPyV', label: 'MCPyV' },
+  { value: 'PTCH1 / SMO', label: 'PTCH1 / SMO' },
+  { value: 'PIK3CA', label: 'PIK3CA' },
+  { value: 'EGFR', label: 'EGFR' },
+  { value: 'ctDNA (MRD)', label: 'ctDNA (MRD)' },
+  { value: 'MART-1', label: 'MART-1' },
+  { value: 'gp100', label: 'gp100' },
+  { value: 'Other', label: 'Other' },
+];
+const ADVANCED_LINE_OF_THERAPY_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: '1L', label: '1L' },
+  { value: '2L', label: '2L' },
+  { value: '3L', label: '3L' },
+  { value: 'R/R', label: 'R/R' },
+  { value: 'Adjuvant', label: 'Adjuvant' },
+  { value: 'Neoadjuvant', label: 'Neoadjuvant' },
+];
+const ADVANCED_PREVIOUS_TREATMENT_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'Failed IO', label: 'Failed IO' },
+  { value: 'No prior BRAFi', label: 'No prior BRAFi' },
+  { value: 'IO Naive', label: 'IO Naive' },
+];
+
 // ============================================================================
 // Filter Select Component
 // ============================================================================
@@ -523,14 +573,18 @@ export default function CategoryAnalyticsPage() {
   // Filter states - initialized based on mode
   const [company, setCompany] = useState('all');
   const [therapyType, setTherapyType] = useState('all');
-  const [lineOfTreatment, setLineOfTreatment] = useState('all');
   const [resourceType, setResourceType] = useState<'all' | 'conference' | 'publication'>('all');
   const [fundingType, setFundingType] = useState<'all' | 'industry' | 'non-industry'>('all');
   const [biomarker, setBiomarker] = useState('all');
-  const [biomarkerType, setBiomarkerType] = useState('all');
   // Store raw user selections
   const [rawSelectedApproved, setRawSelectedApproved] = useState<string[]>([]);
   const [rawSelectedNonApproved, setRawSelectedNonApproved] = useState<string[]>([]);
+  // Advanced filters (same dimensions as Landscape, separate dropdowns)
+  const [advancedModality, setAdvancedModality] = useState('all');
+  const [advancedStage, setAdvancedStage] = useState('all');
+  const [advancedBiomarker, setAdvancedBiomarker] = useState('all');
+  const [advancedLineOfTherapy, setAdvancedLineOfTherapy] = useState('all');
+  const [advancedPreviousTreatment, setAdvancedPreviousTreatment] = useState('all');
 
   // Initialize params with safe defaults to avoid hydration mismatch
   // These will be updated by useEffect based on mode
@@ -672,7 +726,6 @@ export default function CategoryAnalyticsPage() {
       cancer_type: categoryName || undefined,
       therapy_type: therapyType,
       funding_type: fundingType as 'all' | 'industry' | 'non-industry',
-      line_of_treatment: lineOfTreatment,
       limit: 2000, // Request all matching records
     };
 
@@ -682,7 +735,7 @@ export default function CategoryAnalyticsPage() {
     }
 
     return filters;
-  }, [resourceType, categoryName, therapyType, fundingType, lineOfTreatment, safetyParam, efficacyParam]);
+  }, [resourceType, categoryName, therapyType, fundingType, safetyParam, efficacyParam]);
 
   // Fetch analytics data from backend with filters
   const { data: analyticsData, isLoading, error } = useQuery({
@@ -1082,11 +1135,30 @@ export default function CategoryAnalyticsPage() {
                 <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-md">
                   <TrendingUp className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-white font-semibold text-sm">Head to Head Efficacy : Safety</h2>
-                  <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
-                  <p className="text-blue-100 text-xs hidden sm:block">Comparative analysis</p>
-                </div>
+                <nav className="flex items-center gap-1 sm:gap-2 flex-wrap" aria-label="Analytics mode">
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics?mode=efficacy`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    Head to Head Efficacy
+                  </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics?mode=safety`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    Head to Head Safety
+                  </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics`}
+                    className="px-2 py-1 rounded text-sm font-semibold text-white bg-white/20"
+                  >
+                    Head to Head Efficacy : Safety
+                  </Link>
+                </nav>
+                <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
+                <p className="text-blue-100 text-xs hidden sm:block">Comparative analysis</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                 {chartType === 'bubble' && (['x', 'y', 'z'] as const).map((axis) => (
@@ -1261,13 +1333,32 @@ export default function CategoryAnalyticsPage() {
                 <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-md">
                   <TrendingUp className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-white font-semibold text-sm">Head to Head Efficacy</h2>
-                  <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
-                  <p className="text-blue-100 text-xs hidden sm:block">
-                    Clinical trial efficacy parameters
-                  </p>
-                </div>
+                <nav className="flex items-center gap-1 sm:gap-2 flex-wrap" aria-label="Analytics mode">
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics?mode=efficacy`}
+                    className="px-2 py-1 rounded text-sm font-semibold text-white bg-white/20"
+                  >
+                    Head to Head Efficacy
+                  </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics?mode=safety`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    Head to Head Safety
+                  </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    Head to Head Efficacy : Safety
+                  </Link>
+                </nav>
+                <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
+                <p className="text-blue-100 text-xs hidden sm:block">
+                  Clinical trial efficacy parameters
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <div className={chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell' ? 'w-full sm:w-72' : 'w-full sm:w-80'}>
@@ -1386,13 +1477,32 @@ export default function CategoryAnalyticsPage() {
                 <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-md">
                   <AlertCircle className="h-4 w-4 text-white" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-white font-semibold text-sm">Head to Head Safety</h2>
-                  <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
-                  <p className="text-blue-100 text-xs hidden sm:block">
-                    Clinical trial safety parameters
-                  </p>
-                </div>
+                <nav className="flex items-center gap-1 sm:gap-2 flex-wrap" aria-label="Analytics mode">
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics?mode=efficacy`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    Head to Head Efficacy
+                  </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics?mode=safety`}
+                    className="px-2 py-1 rounded text-sm font-semibold text-white bg-white/20"
+                  >
+                    Head to Head Safety
+                  </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/analytics`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    Head to Head Efficacy : Safety
+                  </Link>
+                </nav>
+                <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
+                <p className="text-blue-100 text-xs hidden sm:block">
+                  Clinical trial safety parameters
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                 <div className={chartType === 'diverging' || chartType === 'bubble' ? 'w-full sm:w-72' : 'w-full sm:w-80'}>
@@ -1532,12 +1642,6 @@ export default function CategoryAnalyticsPage() {
 
             {/* Row 2 */}
             <FilterSelect
-              label="Line of Treatment"
-              value={lineOfTreatment}
-              options={LINE_OF_TREATMENT_OPTIONS}
-              onChange={setLineOfTreatment}
-            />
-            <FilterSelect
               label="Type of Resource"
               value={resourceType}
               options={RESOURCE_TYPE_OPTIONS}
@@ -1577,12 +1681,45 @@ export default function CategoryAnalyticsPage() {
               options={BIOMARKER_OPTIONS}
               onChange={setBiomarker}
             />
-            <FilterSelect
-              label="Biomarker Selected"
-              value={biomarkerType}
-              options={BIOMARKER_TYPE_OPTIONS}
-              onChange={setBiomarkerType}
-            />
+          </div>
+
+          {/* Advanced filters (same dimensions as Landscape page, separate filters) */}
+          <div className="mt-4 space-y-3">
+            <div className="text-[11px] font-medium text-indigo-600 uppercase tracking-wider">
+              Advanced filters
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FilterSelect
+                label="Modality"
+                value={advancedModality}
+                options={ADVANCED_MODALITY_OPTIONS}
+                onChange={setAdvancedModality}
+              />
+              <FilterSelect
+                label="Stage"
+                value={advancedStage}
+                options={ADVANCED_STAGE_OPTIONS}
+                onChange={setAdvancedStage}
+              />
+              <FilterSelect
+                label="Biomarker"
+                value={advancedBiomarker}
+                options={ADVANCED_BIOMARKER_OPTIONS}
+                onChange={setAdvancedBiomarker}
+              />
+              <FilterSelect
+                label="Line of therapy"
+                value={advancedLineOfTherapy}
+                options={ADVANCED_LINE_OF_THERAPY_OPTIONS}
+                onChange={setAdvancedLineOfTherapy}
+              />
+              <FilterSelect
+                label="Previous treatment"
+                value={advancedPreviousTreatment}
+                options={ADVANCED_PREVIOUS_TREATMENT_OPTIONS}
+                onChange={setAdvancedPreviousTreatment}
+              />
+            </div>
           </div>
 
           {/* Divider */}
@@ -1596,13 +1733,16 @@ export default function CategoryAnalyticsPage() {
               onClick={() => {
                 setCompany('all');
                 setTherapyType('all');
-                setLineOfTreatment('all');
                 setResourceType('all');
                 setFundingType('all');
                 setBiomarker('all');
-                setBiomarkerType('all');
                 setRawSelectedApproved([]);
                 setRawSelectedNonApproved([]);
+                setAdvancedModality('all');
+                setAdvancedStage('all');
+                setAdvancedBiomarker('all');
+                setAdvancedLineOfTherapy('all');
+                setAdvancedPreviousTreatment('all');
                 // Reset parameters based on mode
                 setEfficacyParamY('none');
                 setSafetyParamY('none');
@@ -1938,30 +2078,38 @@ export default function CategoryAnalyticsPage() {
           {/* Mode Banner in Fullscreen - Compact design */}
           {mode === 'all' && (
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
                   <TrendingUp className="h-3.5 w-3.5 text-white" />
                 </div>
-                <span className="text-white text-xs font-medium">Head to Head Efficacy : Safety</span>
-                <span className="w-px h-3 bg-white/30 mx-1"></span>
-                <span className="text-blue-100 text-xs">
-                  Efficacy: {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}
-                </span>
-                <span className="w-px h-3 bg-white/30 mx-1"></span>
-                <span className="text-blue-100 text-xs">
-                  Safety: {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label}
-                </span>
+                <nav className="flex items-center gap-1" aria-label="Analytics mode">
+                  <Link href={`/dashboard/${categorySlug}/analytics?mode=efficacy`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy</Link>
+                  <span className="w-px h-3 bg-white/30" />
+                  <Link href={`/dashboard/${categorySlug}/analytics?mode=safety`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Safety</Link>
+                  <span className="w-px h-3 bg-white/30" />
+                  <span className="px-1.5 py-0.5 rounded text-xs font-semibold text-white bg-white/20">Head to Head Efficacy : Safety</span>
+                </nav>
+                <span className="w-px h-3 bg-white/30 mx-1" />
+                <span className="text-blue-100 text-xs">Efficacy: {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}</span>
+                <span className="w-px h-3 bg-white/30 mx-1" />
+                <span className="text-blue-100 text-xs">Safety: {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label}</span>
               </div>
             </div>
           )}
           {mode === 'efficacy' && (
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
                   <TrendingUp className="h-3.5 w-3.5 text-white" />
                 </div>
-                <span className="text-white text-xs font-medium">Head to Head Efficacy</span>
-                <span className="w-px h-3 bg-white/30 mx-1"></span>
+                <nav className="flex items-center gap-1" aria-label="Analytics mode">
+                  <span className="px-1.5 py-0.5 rounded text-xs font-semibold text-white bg-white/20">Head to Head Efficacy</span>
+                  <span className="w-px h-3 bg-white/30" />
+                  <Link href={`/dashboard/${categorySlug}/analytics?mode=safety`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Safety</Link>
+                  <span className="w-px h-3 bg-white/30" />
+                  <Link href={`/dashboard/${categorySlug}/analytics`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy : Safety</Link>
+                </nav>
+                <span className="w-px h-3 bg-white/30 mx-1" />
                 <span className="text-blue-100 text-xs">
                   {(chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell') && efficacyParamY !== 'none'
                     ? `${EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label} vs ${EFFICACY_OPTIONS.find(o => o.value === efficacyParamY)?.label}`
@@ -1972,12 +2120,18 @@ export default function CategoryAnalyticsPage() {
           )}
           {mode === 'safety' && (
             <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
                   <AlertCircle className="h-3.5 w-3.5 text-white" />
                 </div>
-                <span className="text-white text-xs font-medium">Head to Head Safety</span>
-                <span className="w-px h-3 bg-white/30 mx-1"></span>
+                <nav className="flex items-center gap-1" aria-label="Analytics mode">
+                  <Link href={`/dashboard/${categorySlug}/analytics?mode=efficacy`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy</Link>
+                  <span className="w-px h-3 bg-white/30" />
+                  <span className="px-1.5 py-0.5 rounded text-xs font-semibold text-white bg-white/20">Head to Head Safety</span>
+                  <span className="w-px h-3 bg-white/30" />
+                  <Link href={`/dashboard/${categorySlug}/analytics`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy : Safety</Link>
+                </nav>
+                <span className="w-px h-3 bg-white/30 mx-1" />
                 <span className="text-blue-100 text-xs">
                   {(chartType === 'diverging' || chartType === 'bubble') && safetyParamY !== 'none'
                     ? `${SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label} vs ${SAFETY_OPTIONS.find(o => o.value === safetyParamY)?.label}`
@@ -2093,6 +2247,7 @@ export default function CategoryAnalyticsPage() {
                       showReferenceLine={true}
                       showLegend={true}
                       compact={true}
+                      bottomMargin={140}
                     />
                   </div>
                 );

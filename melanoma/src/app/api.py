@@ -16,6 +16,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from ..domain.models import BatchIngestionResponse, DocumentType, IngestionRequest
+from ..infrastructure.clinical_trials.cancer_type_mapping import SKIN_CANCER_TYPES
 from ..infrastructure.clinical_trials.factory import create_clinical_trials_service
 from ..infrastructure.database import (
     DocumentModel,
@@ -1234,10 +1235,11 @@ def _normalize_cancer_type(cancer_type: str | None) -> str | None:
 
     normalized = cancer_type.strip()
 
-    # Map old names to new names
+    # Map old names and display names to canonical filter value
     if (
         normalized == "Resected Cutaneous Melanoma"
         or normalized == "Unresectable Cutaneous Melanoma"
+        or normalized == "Cutaneous/Metastasis Melanoma"
     ):
         return "Cutaneous melanoma"
 
@@ -2044,6 +2046,10 @@ async def get_dashboard_trials(
     modality: str | None = None,
     modality_skip: int = 0,
     modality_limit: int = 15,
+    balance_by_group: str | None = None,
+    category_filter: str | None = None,
+    category_skip: int = 0,
+    category_limit: int = 15,
 ) -> dict:
     """Get trial cards for dashboard by cancer type.
 
@@ -2079,7 +2085,12 @@ async def get_dashboard_trials(
         )
 
         service = create_clinical_trials_service()
-        cards, total, totals_by_modality = service.repository.get_dashboard_trials(
+        (
+            cards,
+            total,
+            totals_by_modality,
+            totals_by_group,
+        ) = service.repository.get_dashboard_trials(
             cancer_type_tag=category_name,
             phase_filter=phase_filter,
             has_abstracts_only=has_abstracts,
@@ -2092,6 +2103,10 @@ async def get_dashboard_trials(
             modality_filter=modality.strip() if modality else None,
             modality_skip=modality_skip,
             modality_limit=modality_limit,
+            balance_by_group=balance_by_group.strip() if balance_by_group else None,
+            category_filter=category_filter.strip() if category_filter else None,
+            category_skip=category_skip,
+            category_limit=category_limit,
         )
 
         # Dashboard has no approval filter; omit approval status (chart pages use it)
@@ -2102,10 +2117,67 @@ async def get_dashboard_trials(
         out: dict = {"trials": cards, "total": total}
         if totals_by_modality is not None:
             out["totals_by_modality"] = totals_by_modality
+        if totals_by_group is not None:
+            out["totals_by_group"] = totals_by_group
         return out
 
     except Exception as e:
         logger.error(f"Error fetching dashboard trials: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/landscape/latest-trial-updates")
+async def get_latest_trial_updates(
+    cancer_type: str,
+    limit: int = 5,
+) -> dict:
+    """Get the latest trials for the category (by last update date from API).
+
+    Returns list of { nct_id, title, sponsor_name, date_iso, update_type } sorted by date desc.
+    """
+    if not cancer_type or not cancer_type.strip():
+        raise HTTPException(status_code=400, detail="cancer_type is required")
+    try:
+        category_name = _slug_to_category_name(cancer_type.strip())
+        service = create_clinical_trials_service()
+        items = service.repository.get_latest_trial_updates(
+            cancer_type_tag=category_name, limit=limit
+        )
+        return {"trials": items}
+    except Exception as e:
+        logger.error(f"Error fetching latest trial updates: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/landscape/trial-updates-count")
+async def get_trial_updates_count(
+    cancer_type: str,
+    days: int = 30,
+) -> dict:
+    """Get counts of trials first posted (new records) and last updated in the window.
+
+    Window is the last `days` days before our last cache pull. Dates are from the
+    ClinicalTrials.gov API (studyFirstPostDateStruct, lastUpdatePostDateStruct).
+    Counts are per cancer type (cancer_type slug -> exact api_discovery cancer_type_tag).
+
+    Returns:
+        { new_records_added: int, updates: int, window_end_iso: str, window_start_iso: str }
+    """
+    if not cancer_type or not cancer_type.strip():
+        raise HTTPException(status_code=400, detail="cancer_type is required")
+    try:
+        category_name = _slug_to_category_name(cancer_type.strip())
+        service = create_clinical_trials_service()
+        counts = service.repository.get_trial_updates_counts(
+            cancer_type_tag=category_name, days=days
+        )
+        return counts
+    except Exception as e:
+        logger.error(f"Error fetching trial updates count: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
         ) from e
@@ -2172,34 +2244,48 @@ async def trigger_landscape_sync() -> dict:
         ) from e
 
 
+# Slug -> exact cancer_type_tag as stored in api_discovery (must match SKIN_CANCER_TYPES)
+_SLUG_TO_CANCER_TYPE_TAG = {
+    "cutaneous-melanoma": "Cutaneous melanoma",
+    "cutaneous-melanoma-with-brain-cns-metastasis": "Cutaneous melanoma with Brain/CNS metastasis",
+    "uveal-melanoma": "Uveal Melanoma",
+    "mucosal-melanoma": "Mucosal Melanoma",
+    "acral-melanoma": "Acral Melanoma",
+    "basal-cell-carcinoma": "Basal Cell Carcinoma",
+    "merkel-cell-carcinoma": "Merkel Cell Carcinoma",
+    "cutaneous-squamous-cell-carcinoma": "Cutaneous Squamous Cell Carcinoma",
+}
+
+
 def _slug_to_category_name(slug: str) -> str:
-    """Convert URL slug to category name.
+    """Convert URL slug to category name (exact tag used in api_discovery / SKIN_CANCER_TYPES).
 
     Args:
         slug: URL slug (e.g., "cutaneous-melanoma")
 
     Returns:
-        Category name (e.g., "Cutaneous melanoma")
+        Category name exactly as in SKIN_CANCER_TYPES for DB lookups.
     """
-    slug_to_category_map = {
-        "cutaneous-melanoma": "Cutaneous melanoma",
-        "cutaneous-melanoma-with-brain-cns-metastasis": "Cutaneous melanoma with Brain/CNS metastasis",
-        "uveal-melanoma": "Uveal Melanoma",
-        "mucosal-melanoma": "Mucosal Melanoma",
-        "acral-melanoma": "Acral Melanoma",
-        "basal-cell-carcinoma": "Basal Cell Carcinoma",
-        "merkel-cell-carcinoma": "Merkel Cell Carcinoma",
-        "cutaneous-squamous-cell-carcinoma": "Cutaneous Squamous Cell Carcinoma",
-    }
-    return slug_to_category_map.get(slug, slug.replace("-", " ").title())
+    if slug in _SLUG_TO_CANCER_TYPE_TAG:
+        return _SLUG_TO_CANCER_TYPE_TAG[slug]
+    # Fallback: ensure we only return a tag that exists in api_discovery
+    fallback = slug.replace("-", " ").title()
+    if fallback in SKIN_CANCER_TYPES:
+        return fallback
+    return fallback
 
 
 @app.get("/api/landscape/disease-stats/{category}")
-async def get_disease_landscape_stats(category: str) -> dict:
+async def get_disease_landscape_stats(
+    category: str,
+    sponsor_type: str | None = None,
+) -> dict:
     """Get disease landscape statistics for a specific cancer type.
 
     Args:
         category: Category slug (e.g., "cutaneous-melanoma") or category name
+        sponsor_type: Optional comma-separated sponsor types to filter by
+            (e.g. "Industry"). When set, stats are computed for that subset only.
 
     Returns:
         Dictionary with status, phase, and funder_type counts
@@ -2210,22 +2296,36 @@ async def get_disease_landscape_stats(category: str) -> dict:
 
         service = create_clinical_trials_service()
 
-        # Use SQLite when TRIALS_DATA_SOURCE=sqlite (production on Render)
-        # Fall back to JSON for local development
-        data_source = get_trials_data_source()
-        if data_source == "sqlite":
-            # Try SQLite table first (pre-computed stats from build_db.py)
-            stats = service.repository.get_disease_landscape_stats_from_sqlite(
-                category_name
+        sponsor_type_filter: list[str] | None = None
+        if sponsor_type:
+            sponsor_type_filter = [
+                s.strip() for s in sponsor_type.split(",") if s.strip()
+            ]
+
+        # When filtering by sponsor type, we must compute from API data (no cached stats)
+        if sponsor_type_filter:
+            stats = service.repository.get_disease_landscape_stats(
+                category_name, sponsor_type_filter=sponsor_type_filter
             )
-            # If no stats in SQLite table, fall back to computing from api_discovery
-            if not stats.get("status") and not stats.get("phase"):
-                stats = service.repository.get_disease_landscape_stats(category_name)
         else:
-            # Read from pre-computed JSON file (local development)
-            stats = service.repository.get_disease_landscape_stats_from_json(
-                category_name
-            )
+            # Use SQLite when TRIALS_DATA_SOURCE=sqlite (production on Render)
+            # Fall back to JSON for local development
+            data_source = get_trials_data_source()
+            if data_source == "sqlite":
+                # Try SQLite table first (pre-computed stats from build_db.py)
+                stats = service.repository.get_disease_landscape_stats_from_sqlite(
+                    category_name
+                )
+                # If no stats in SQLite table, fall back to computing from api_discovery
+                if not stats.get("status") and not stats.get("phase"):
+                    stats = service.repository.get_disease_landscape_stats(
+                        category_name
+                    )
+            else:
+                # Read from pre-computed JSON file (local development)
+                stats = service.repository.get_disease_landscape_stats_from_json(
+                    category_name
+                )
 
         # Calculate overall status (sum of all statuses)
         overall_status_count = sum(stats.get("status", {}).values())

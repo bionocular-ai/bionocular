@@ -42,6 +42,8 @@ interface DumbbellChartProps {
   compact?: boolean;
   /** Use HR for bubble size when true and hr is present in data */
   useHrForBubbleSize?: boolean;
+  /** When false, container has no rounded corners (e.g. dashboard grid) */
+  rounded?: boolean;
 }
 
 const COLOR_A = '#3b82f6'; // Medium blue (PFS)
@@ -150,6 +152,7 @@ export default function DumbbellChart({
   height = 400,
   compact = false,
   useHrForBubbleSize = true,
+  rounded = true,
 }: DumbbellChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const [containerDims, setContainerDims] = useState<{width: number; height: number}>({ width: 400, height: 300 });
@@ -204,9 +207,11 @@ export default function DumbbellChart({
     return (hr: number) => MIN_RADIUS + ((hr - minHr) / range) * (MAX_RADIUS - MIN_RADIUS);
   }, [data, useHrForBubbleSize]);
 
+  const roundedClass = rounded ? 'rounded-lg' : 'rounded-none';
+
   if (data.length === 0) {
     return (
-      <Card className="w-full bg-slate-50 rounded-lg border border-slate-200 shadow-sm">
+      <Card className={`w-full bg-slate-50 border border-slate-200 shadow-sm ${roundedClass}`}>
         <CardContent className={`flex items-center justify-center ${compact ? 'h-[200px]' : 'h-[300px]'}`}>
           <p className="text-slate-500 text-sm">No data available</p>
         </CardContent>
@@ -214,24 +219,26 @@ export default function DumbbellChart({
     );
   }
 
-  const margin = compact ? { top: 28, right: 24, left: 16, bottom: 28 } : { top: 36, right: 32, left: 20, bottom: 32 };
+  const margin = compact ? { top: 36, right: 6, left: 6, bottom: 20 } : { top: 36, right: 32, left: 20, bottom: 32 };
   const tickFontSize = compact ? 10 : 11;
 
   const chartHeight = height || 400;
 
+  const yAxisWidth = compact ? 72 : 160;
+
   return (
-    <Card className={`w-full bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col min-h-0 ${compact ? 'h-full' : ''}`}>
-      <CardContent className={`p-0 overflow-hidden rounded-lg flex flex-col min-h-0 ${compact ? 'h-full' : ''}`}>
-        {/* Parameters with color above the plot */}
+    <Card className={`w-full bg-white border border-slate-200 shadow-sm flex flex-col min-h-0 ${roundedClass} ${compact ? 'h-full' : ''}`}>
+      <CardContent className={`p-0 overflow-hidden flex flex-col min-h-0 ${roundedClass} ${compact ? 'h-full' : ''}`}>
+        {/* Parameters with color above the plot (labelB first, then labelA) */}
         <div className={`flex flex-wrap items-center justify-center gap-x-4 gap-y-1 flex-shrink-0 ${compact ? 'px-2 py-1.5' : 'px-3 py-2'} border-b border-slate-200 bg-slate-50/80`}>
-          <span className="inline-flex items-center gap-1.5 text-slate-600" style={{ fontSize: compact ? 11 : 12 }}>
-            <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLOR_A }} aria-hidden />
-            <span className="font-medium">{labelA}</span>
-          </span>
-          <span className="text-slate-400 hidden sm:inline">|</span>
           <span className="inline-flex items-center gap-1.5 text-slate-600" style={{ fontSize: compact ? 11 : 12 }}>
             <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLOR_B }} aria-hidden />
             <span className="font-medium">{labelB}</span>
+          </span>
+          <span className="text-slate-400 hidden sm:inline">|</span>
+          <span className="inline-flex items-center gap-1.5 text-slate-600" style={{ fontSize: compact ? 11 : 12 }}>
+            <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLOR_A }} aria-hidden />
+            <span className="font-medium">{labelA}</span>
           </span>
           {useHrForBubbleSize && (
             <>
@@ -268,7 +275,7 @@ export default function DumbbellChart({
               <YAxis
                 type="category"
                 dataKey="treatmentName"
-                width={compact ? 120 : 160}
+                width={yAxisWidth}
                 tick={{ fontSize: tickFontSize, fill: '#475569', fontWeight: 500 }}
                 tickLine={{ stroke: GRID_STROKE, strokeWidth: 1 }}
                 axisLine={{ stroke: AXIS_STROKE, strokeWidth: 1 }}

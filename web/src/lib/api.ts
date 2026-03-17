@@ -107,6 +107,28 @@ export const trialsApi = {
     return response.data;
   },
 
+  getTrialUpdatesCount: async (
+    cancerType: string,
+    days: number = 30
+  ): Promise<TrialUpdatesCountResponse> => {
+    const response = await apiClient.get<TrialUpdatesCountResponse>(
+      '/api/landscape/trial-updates-count',
+      { params: { cancer_type: cancerType, days } }
+    );
+    return response.data;
+  },
+
+  getLatestTrialUpdates: async (
+    cancerType: string,
+    limit: number = 5
+  ): Promise<LatestTrialUpdatesResponse> => {
+    const response = await apiClient.get<LatestTrialUpdatesResponse>(
+      '/api/landscape/latest-trial-updates',
+      { params: { cancer_type: cancerType, limit } }
+    );
+    return response.data;
+  },
+
   getDashboardTrials: async (
     cancerType: string,
     filters: DashboardTrialsFilters = {}
@@ -125,6 +147,10 @@ export const trialsApi = {
     if (filters.modality != null) params.modality = filters.modality;
     if (filters.modality_skip != null) params.modality_skip = filters.modality_skip;
     if (filters.modality_limit != null) params.modality_limit = filters.modality_limit;
+    if (filters.balance_by_group != null) params.balance_by_group = filters.balance_by_group;
+    if (filters.category_filter != null) params.category_filter = filters.category_filter;
+    if (filters.category_skip != null) params.category_skip = filters.category_skip;
+    if (filters.category_limit != null) params.category_limit = filters.category_limit;
     const response = await apiClient.get<DashboardTrialsResponse>(
       '/api/landscape/dashboard-trials',
       { params: { cancer_type: cancerType, ...params } }
@@ -139,8 +165,15 @@ export const trialsApi = {
     return response.data;
   },
 
-  getDiseaseLandscapeStats: async (category: string): Promise<DiseaseLandscapeStats> => {
-    const response = await apiClient.get<DiseaseLandscapeStats>(`/api/landscape/disease-stats/${category}`);
+  getDiseaseLandscapeStats: async (
+    category: string,
+    opts?: { sponsor_type?: string }
+  ): Promise<DiseaseLandscapeStats> => {
+    const params = new URLSearchParams();
+    if (opts?.sponsor_type) params.set('sponsor_type', opts.sponsor_type);
+    const qs = params.toString();
+    const url = `/api/landscape/disease-stats/${category}${qs ? `?${qs}` : ''}`;
+    const response = await apiClient.get<DiseaseLandscapeStats>(url);
     return response.data;
   },
 
@@ -298,6 +331,25 @@ export interface LandscapeStatsResponse {
   selected_type_stats?: SelectedTypeStats;
 }
 
+export interface TrialUpdatesCountResponse {
+  new_records_added: number;
+  updates: number;
+  window_end_iso: string | null;
+  window_start_iso: string | null;
+}
+
+export interface LatestTrialUpdateItem {
+  nct_id: string;
+  title: string;
+  sponsor_name: string | null;
+  date_iso: string;
+  update_type: 'new' | 'updated';
+}
+
+export interface LatestTrialUpdatesResponse {
+  trials: LatestTrialUpdateItem[];
+}
+
 export interface DashboardTrialCard {
   nct_id: string;
   title: string | null;
@@ -313,8 +365,17 @@ export interface DashboardTrialCard {
   published_year?: string | null;
   /** Curated modality from trial_categorization (e.g. Small Molecule, Vaccine). */
   modality?: string | null;
-  target?: string | null;
+  /** Curated treatment name from trial_categorization LLM extraction. */
+  treatment_name?: string | null;
   trial_name?: string | null;
+  /** Stage(s) from trial_categorization (e.g. "Stage III", "Stage IV"). */
+  stage?: string | null;
+  /** Biomarker(s) from trial_categorization. */
+  biomarker?: string | null;
+  /** Line of therapy from trial_categorization. */
+  line_of_therapy?: string | null;
+  /** Previous treatment criteria from trial_categorization. */
+  previous_treatment_criteria?: string | null;
 }
 
 export interface DashboardTrialsResponse {
@@ -322,6 +383,8 @@ export interface DashboardTrialsResponse {
   total: number;
   /** When balance_by_modality was used, per-modality total counts (overall category size). */
   totals_by_modality?: Record<string, number>;
+  /** When balance_by_group was used (stage/biomarker/line_of_therapy/previous_treatment), per-category total counts. */
+  totals_by_group?: Record<string, number>;
 }
 
 export interface DashboardTrialsFilters {
@@ -338,6 +401,12 @@ export interface DashboardTrialsFilters {
   modality?: string;
   modality_skip?: number;
   modality_limit?: number;
+  /** Balance by category dimension (stage | biomarker | line_of_therapy | previous_treatment); top per_group per category. */
+  balance_by_group?: string;
+  /** Fetch one category only (for "Load more" in that column). */
+  category_filter?: string;
+  category_skip?: number;
+  category_limit?: number;
 }
 
 export interface TherapeuticIndexResponse {

@@ -198,3 +198,24 @@ class LLMService(ABC):
             Structured data dictionary
         """
         pass
+
+    @abstractmethod
+    async def extract_json(
+        self,
+        prompt: str,
+        operation: str = "extraction",
+        attribute_type: Optional[str] = None,
+        max_retries: int = 1,
+    ) -> dict[str, Any]:
+        """Generate a response expected to be pure JSON and parse it.
+
+        Args:
+            prompt: Fully formed prompt with embedded JSON schema/instructions.
+            operation: Label for cost tracking/logging.
+            attribute_type: Attribute being extracted.
+            max_retries: Number of additional attempts if result is empty.
+
+        Returns:
+            Parsed JSON dict, or empty dict if all attempts fail.
+        """
+        pass

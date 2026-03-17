@@ -17,12 +17,22 @@ logger = logging.getLogger(__name__)
 
 
 class ModelType(str, Enum):
-    """Supported OpenAI models with their pricing."""
+    """Supported models with their pricing (OpenAI and OpenRouter/Gemini)."""
 
     GPT_4O_MINI = "gpt-4o-mini"
     GPT_4O = "gpt-4o"
     GPT_5_MINI = "gpt-5-mini"
     GPT_5 = "gpt-5"
+
+    # Google Gemini via OpenRouter (prices per 1M tokens, as of March 2026)
+    GEMINI_31_PRO_PREVIEW = "google/gemini-3.1-pro-preview"
+    GEMINI_25_PRO = "google/gemini-2.5-pro"
+    GEMINI_25_FLASH = "google/gemini-2.5-flash"
+
+    # Google Gemini via direct Gemini API (bare model names)
+    GEMINI_31_PRO_PREVIEW_DIRECT = "gemini-3.1-pro-preview"
+    GEMINI_25_PRO_DIRECT = "gemini-2.5-pro"
+    GEMINI_25_FLASH_DIRECT = "gemini-2.5-flash"
 
 
 @dataclass
@@ -73,8 +83,9 @@ class CostSummary:
 class CostCalculator:
     """Comprehensive cost calculator for LLM API usage."""
 
-    # Model pricing as of November 2024 (per 1M tokens) - Standard tier
-    # Source: https://platform.openai.com/docs/pricing
+    # Model pricing (per 1M tokens) - Standard tier
+    # OpenAI: https://platform.openai.com/docs/pricing
+    # OpenRouter/Gemini: https://openrouter.ai/google
     MODEL_PRICING = {
         ModelType.GPT_4O_MINI: ModelPricing(
             model=ModelType.GPT_4O_MINI,
@@ -103,6 +114,50 @@ class CostCalculator:
             completion_cost_per_1m=10.00,
             max_tokens=128000,
             description="GPT-5 - Next-generation flagship model",
+        ),
+        # Gemini via OpenRouter — token counts come directly from API response
+        ModelType.GEMINI_31_PRO_PREVIEW: ModelPricing(
+            model=ModelType.GEMINI_31_PRO_PREVIEW,
+            prompt_cost_per_1m=2.00,
+            completion_cost_per_1m=12.00,
+            max_tokens=1048576,
+            description="Gemini 3.1 Pro Preview - Latest Google flagship (OpenRouter)",
+        ),
+        ModelType.GEMINI_25_PRO: ModelPricing(
+            model=ModelType.GEMINI_25_PRO,
+            prompt_cost_per_1m=1.25,
+            completion_cost_per_1m=10.00,
+            max_tokens=1048576,
+            description="Gemini 2.5 Pro - Google production model (OpenRouter)",
+        ),
+        ModelType.GEMINI_25_FLASH: ModelPricing(
+            model=ModelType.GEMINI_25_FLASH,
+            prompt_cost_per_1m=0.30,
+            completion_cost_per_1m=2.50,
+            max_tokens=1048576,
+            description="Gemini 2.5 Flash - Fast and cost-effective Gemini (OpenRouter)",
+        ),
+        # Gemini via direct Gemini API (same pricing, bare model names)
+        ModelType.GEMINI_31_PRO_PREVIEW_DIRECT: ModelPricing(
+            model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT,
+            prompt_cost_per_1m=2.00,
+            completion_cost_per_1m=12.00,
+            max_tokens=1048576,
+            description="Gemini 3.1 Pro Preview - Latest Google flagship (Gemini API)",
+        ),
+        ModelType.GEMINI_25_PRO_DIRECT: ModelPricing(
+            model=ModelType.GEMINI_25_PRO_DIRECT,
+            prompt_cost_per_1m=1.25,
+            completion_cost_per_1m=10.00,
+            max_tokens=1048576,
+            description="Gemini 2.5 Pro - Google production model (Gemini API)",
+        ),
+        ModelType.GEMINI_25_FLASH_DIRECT: ModelPricing(
+            model=ModelType.GEMINI_25_FLASH_DIRECT,
+            prompt_cost_per_1m=0.30,
+            completion_cost_per_1m=2.50,
+            max_tokens=1048576,
+            description="Gemini 2.5 Flash - Fast and cost-effective Gemini (Gemini API)",
         ),
     }
 

@@ -334,23 +334,9 @@ class ClinicalTrialsService:
         if cancer_type_tag == "Cutaneous melanoma with Brain/CNS metastasis":
             all_nct_numbers: set[str] = set()
 
-            # Split terms into Brain and CNS groups for separate searches
-            brain_terms = [
-                "Melanoma Brain Metastases",
-                "Melanoma Brain Metastasis",
-                "Cutaneous Melanoma with Brain Metastasis",
-                "Melanoma Metastatic to Brain",
-                "Brain Metastases Melanoma",
-                "Melanoma with Brain Metastases",
-            ]
-            cns_terms = [
-                "Melanoma CNS Metastases",
-                "Melanoma Central Nervous System Metastasis",
-                "Cutaneous Melanoma with CNS Metastasis",
-                "Melanoma Metastatic to Central Nervous System",
-                "CNS Metastases Melanoma",
-                "Melanoma with CNS Metastases",
-            ]
+            # Split into Brain and CNS queries for separate searches
+            brain_terms = ["Cutaneous melanoma with Brain metastasis"]
+            cns_terms = ["Cutaneous melanoma with CNS metastasis"]
 
             # Search Brain metastasis terms
             logger.info(f"Searching Brain metastasis terms for '{cancer_type_tag}'")

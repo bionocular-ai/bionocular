@@ -169,7 +169,13 @@ class ClinicalTrialRepository(ABC):
         modality_filter: Optional[str] = None,
         modality_skip: int = 0,
         modality_limit: int = 15,
-    ) -> tuple[list[dict[str, Any]], int, Optional[dict[str, int]]]:
+        balance_by_group: Optional[str] = None,
+        category_filter: Optional[str] = None,
+        category_skip: int = 0,
+        category_limit: int = 15,
+    ) -> tuple[
+        list[dict[str, Any]], int, Optional[dict[str, int]], Optional[dict[str, int]]
+    ]:
         """Get trial card DTOs for dashboard by cancer type.
 
         Args:
@@ -185,9 +191,13 @@ class ClinicalTrialRepository(ABC):
             modality_filter: If set, return only trials in this modality (normalized name); skip/limit apply within this modality.
             modality_skip: When modality_filter set, skip this many trials in that modality.
             modality_limit: When modality_filter set, return at most this many trials.
+            balance_by_group: If set ("stage"|"biomarker"|"line_of_therapy"|"previous_treatment"), return balanced trials per category.
+            category_filter: When balance_by_group set, if provided return only this category with pagination (category_skip, category_limit).
+            category_skip: When category_filter set, skip this many trials in that category.
+            category_limit: When category_filter set, return at most this many trials.
 
         Returns:
-            Tuple of (list of card dicts, total_matching count, totals_by_modality or None when balance_by_modality).
+            Tuple of (cards, total, totals_by_modality or None, totals_by_group or None).
         """
         pass
 
@@ -228,11 +238,17 @@ class ClinicalTrialRepository(ABC):
         pass
 
     @abstractmethod
-    def get_disease_landscape_stats(self, cancer_type_tag: str) -> dict[str, Any]:
+    def get_disease_landscape_stats(
+        self,
+        cancer_type_tag: str,
+        sponsor_type_filter: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Get disease landscape statistics for a specific cancer type.
 
         Args:
             cancer_type_tag: Normalized cancer type tag
+            sponsor_type_filter: If set, only include trials whose lead sponsor
+                class is in this list (e.g. ["Industry"]).
 
         Returns:
             Dictionary with status, phase, and funder_type counts:
@@ -313,6 +329,36 @@ class ClinicalTrialRepository(ABC):
 
         Returns:
             Dict with "articles" and "results" lists; empty lists if not found.
+        """
+        pass
+
+    @abstractmethod
+    def get_trial_updates_counts(
+        self, cancer_type_tag: str, days: int = 30
+    ) -> dict[str, Any]:
+        """Count trials first posted or last updated within a rolling window.
+
+        Args:
+            cancer_type_tag: Normalized cancer type tag.
+            days: Window size in days.
+
+        Returns:
+            Dict with new_records_added, updates, window_start_iso, window_end_iso.
+        """
+        pass
+
+    @abstractmethod
+    def get_latest_trial_updates(
+        self, cancer_type_tag: str, limit: int = 5
+    ) -> list[dict[str, Any]]:
+        """Return the latest trials by last updated/first posted date.
+
+        Args:
+            cancer_type_tag: Normalized cancer type tag.
+            limit: Maximum number of trials to return.
+
+        Returns:
+            List of dicts with nct_id, title, sponsor_name, date_iso, update_type.
         """
         pass
 
