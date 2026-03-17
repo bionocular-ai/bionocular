@@ -2,8 +2,9 @@
 
 import json
 import logging
+import re as _re
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -74,6 +75,111 @@ def _normalize_modality(raw: Optional[str]) -> str:
         if h.lower() == lower:
             return h
     return _MODALITY_OTHER
+
+
+def _parse_modalities(raw: Optional[str]) -> list[str]:
+    """Split a potentially semicolon-delimited modality string into normalized buckets.
+
+    E.g. "Vaccine; Immunostimulant/Cytokine" → ["Vaccine", "Immunostimulant/Cytokine"]
+    Always returns at least one element (falls back to _MODALITY_OTHER).
+    """
+    if not raw or not str(raw).strip():
+        return [_MODALITY_OTHER]
+    parts = [_normalize_modality(p.strip()) for p in str(raw).split(";")]
+    # Deduplicate while preserving order
+    seen: set[str] = set()
+    result = []
+    for p in parts:
+        if p not in seen:
+            seen.add(p)
+            result.append(p)
+    return result
+
+
+_GROUP_UNSPECIFIED = "Unspecified"
+
+# Canonical category orders for balance_by_group (match trials_extraction_prompts + frontend)
+_STAGE_ORDER = [
+    "Stage I",
+    "Stage I/II",
+    "Stage II",
+    "Stage II/III",
+    "Stage III",
+    "Stage III/IV",
+    "Stage IV",
+]
+_BIOMARKER_ORDER = [
+    "BRAF (V600)",
+    "PD-L1",
+    "HLA-A*02:01",
+    "LAG-3",
+    "TMB",
+    "c-KIT",
+    "NRAS",
+    "NF1",
+    "PRAME",
+    "CDKN2A / CDK4",
+    "MSI-H / dMMR",
+    "GNAQ / GNA11",
+    "SF3B1 / EIF1AX",
+    "BAP1",
+    "MCPyV",
+    "PTCH1 / SMO",
+    "PIK3CA",
+    "EGFR",
+    "ctDNA (MRD)",
+    "MART-1",
+    "gp100",
+    "Other",
+]
+_LINE_OF_THERAPY_ORDER = ["1L", "2L", "3L", "R/R", "Adjuvant", "Neoadjuvant"]
+_PREVIOUS_TREATMENT_ORDER = ["Failed IO", "No prior BRAFi", "IO Naive"]
+
+
+def _parse_group_values(raw: Optional[str]) -> list[str]:
+    """Split semicolon- or comma-separated category string; return ['Unspecified'] if empty."""
+    if not raw or not str(raw).strip():
+        return [_GROUP_UNSPECIFIED]
+    parts = [p.strip() for p in _re.split(r"[;,]", str(raw)) if p and p.strip()]
+    return parts if parts else [_GROUP_UNSPECIFIED]
+
+
+def _get_group_order(balance_by_group: str) -> list[str]:
+    """Return canonical column order for the given group dimension."""
+    if balance_by_group == "stage":
+        return list(_STAGE_ORDER)
+    if balance_by_group == "biomarker":
+        return list(_BIOMARKER_ORDER)
+    if balance_by_group == "line_of_therapy":
+        return list(_LINE_OF_THERAPY_ORDER)
+    if balance_by_group == "previous_treatment":
+        return list(_PREVIOUS_TREATMENT_ORDER)
+    return []
+
+
+_BRACKET_RE = _re.compile(r"[\(\[]([^\)\]]+)[\)\]]\s*$")
+
+
+def _resolve_trial_name(id_module: dict, nct_number: str) -> str:
+    """Derive a short, human-readable trial name from identificationModule data.
+
+    Priority:
+      1. ``acronym`` field – e.g. "KEYNOTE-006"
+      2. Trailing (...) or [...] in ``briefTitle`` – e.g. the "KEYNOTE-006" part
+         of "A Phase 3 Study of Pembrolizumab (KEYNOTE-006)"
+      3. ``nct_number`` as final fallback.
+    """
+    acronym = (id_module.get("acronym") or "").strip()
+    if acronym:
+        return acronym
+
+    brief_title = (id_module.get("briefTitle") or "").strip()
+    if brief_title:
+        m = _BRACKET_RE.search(brief_title)
+        if m:
+            return m.group(1).strip()
+
+    return nct_number
 
 
 def _recreate_trial_categorization_column_order(
@@ -257,6 +363,22 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 except sqlite3.OperationalError as e:
                     if "duplicate column name" not in str(e).lower():
                         raise
+                for col in (
+                    "treatment_name",
+                    "biomarker",
+                    "stage",
+                    "line_of_therapy",
+                    "previous_treatment_criteria",
+                    "extraction_status",
+                    "error_message",
+                ):
+                    try:
+                        cursor.execute(
+                            f"ALTER TABLE trial_categorization ADD COLUMN {col} TEXT"
+                        )
+                    except sqlite3.OperationalError as e:
+                        if "duplicate column name" not in str(e).lower():
+                            raise
                 # Recreate table so cancer_type is second column if it's currently at the end
                 cursor.execute("PRAGMA table_info(trial_categorization)")
                 cols = [row[1] for row in cursor.fetchall()]
@@ -438,6 +560,206 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         except sqlite3.Error as e:
             logger.error(f"Error getting cache stats: {e}")
             return {"total": 0, "expired": 0, "valid": 0}
+
+    def get_trial_updates_counts(
+        self, cancer_type_tag: str, days: int = 30
+    ) -> dict[str, Any]:
+        """Count trials first posted or last updated (ClinicalTrials.gov API dates) in the window.
+
+        Window is [last_pull - days, last_pull] where last_pull is max(updated_at) from cache.
+        Dates are from the API: studyFirstPostDateStruct.date and lastUpdatePostDateStruct.date.
+
+        Returns:
+            dict with new_records_added (first posted in window), updates (last updated in window),
+            window_end_iso, window_start_iso.
+        """
+
+        def _parse_api_date(s: Optional[str]) -> Optional[datetime]:
+            if not s or not str(s).strip():
+                return None
+            s = str(s).strip()
+            try:
+                if len(s) >= 10:
+                    return datetime.strptime(s[:10], "%Y-%m-%d").replace(
+                        tzinfo=timezone.utc
+                    )
+                if len(s) >= 7:
+                    return datetime.strptime(s[:7], "%Y-%m").replace(
+                        tzinfo=timezone.utc, day=1
+                    )
+            except ValueError:
+                pass
+            return None
+
+        if not self.db_path:
+            return {
+                "new_records_added": 0,
+                "updates": 0,
+                "window_end_iso": None,
+                "window_start_iso": None,
+            }
+
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT max(updated_at) as t FROM clinical_trials_cache")
+                row = cursor.fetchone()
+                if not row or not row[0]:
+                    return {
+                        "new_records_added": 0,
+                        "updates": 0,
+                        "window_end_iso": None,
+                        "window_start_iso": None,
+                    }
+                try:
+                    window_end = datetime.fromisoformat(row[0].replace("Z", "+00:00"))
+                    if window_end.tzinfo is None:
+                        window_end = window_end.replace(tzinfo=timezone.utc)
+                except ValueError:
+                    window_end = datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S").replace(
+                        tzinfo=timezone.utc
+                    )
+
+                window_start = window_end - timedelta(days=days)
+
+                cursor.execute(
+                    """
+                    SELECT DISTINCT nct_number
+                    FROM api_discovery
+                    WHERE cancer_type_tag = ?
+                    """,
+                    (cancer_type_tag,),
+                )
+                nct_numbers = [r[0] for r in cursor.fetchall()]
+
+        except sqlite3.Error as e:
+            logger.error(f"Error getting trial updates counts: {e}")
+            return {
+                "new_records_added": 0,
+                "updates": 0,
+                "window_end_iso": None,
+                "window_start_iso": None,
+            }
+
+        if not nct_numbers:
+            return {
+                "new_records_added": 0,
+                "updates": 0,
+                "window_end_iso": window_end.isoformat(),
+                "window_start_iso": window_start.isoformat(),
+            }
+
+        api_jsons = self._get_cached_api_json_batch(nct_numbers)
+        new_records_added = 0
+        updates = 0
+        for api_json in api_jsons.values():
+            status = (api_json.get("protocolSection") or {}).get("statusModule") or {}
+            first_posted = _parse_api_date(
+                (status.get("studyFirstPostDateStruct") or {}).get("date")
+            )
+            if first_posted is not None and window_start <= first_posted <= window_end:
+                new_records_added += 1
+            last_updated = _parse_api_date(
+                (status.get("lastUpdatePostDateStruct") or {}).get("date")
+            )
+            if last_updated is not None and window_start <= last_updated <= window_end:
+                updates += 1
+
+        return {
+            "new_records_added": new_records_added,
+            "updates": updates,
+            "window_end_iso": window_end.isoformat(),
+            "window_start_iso": window_start.isoformat(),
+        }
+
+    def get_latest_trial_updates(
+        self, cancer_type_tag: str, limit: int = 5
+    ) -> list[dict[str, Any]]:
+        """Return the latest trials by lastUpdatePostDateStruct (ClinicalTrials.gov API).
+
+        Each item has nct_id, title, sponsor_name, date_iso, update_type ("new" or "updated").
+        Sorted by date descending; show up to `limit` trials.
+        """
+
+        def _parse_api_date(s: Optional[str]) -> Optional[datetime]:
+            if not s or not str(s).strip():
+                return None
+            s = str(s).strip()
+            try:
+                if len(s) >= 10:
+                    return datetime.strptime(s[:10], "%Y-%m-%d").replace(
+                        tzinfo=timezone.utc
+                    )
+                if len(s) >= 7:
+                    return datetime.strptime(s[:7], "%Y-%m").replace(
+                        tzinfo=timezone.utc, day=1
+                    )
+            except ValueError:
+                pass
+            return None
+
+        if not self.db_path or limit <= 0:
+            return []
+
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT DISTINCT nct_number
+                    FROM api_discovery
+                    WHERE cancer_type_tag = ?
+                    """,
+                    (cancer_type_tag,),
+                )
+                nct_numbers = [r[0] for r in cursor.fetchall()]
+        except sqlite3.Error as e:
+            logger.error(f"Error getting latest trial updates: {e}")
+            return []
+
+        if not nct_numbers:
+            return []
+
+        api_jsons = self._get_cached_api_json_batch(nct_numbers)
+        window_end = datetime.now(timezone.utc)
+        window_start = window_end - timedelta(days=30)
+        rows: list[dict[str, Any]] = []
+
+        for nct_number, api_json in api_jsons.items():
+            protocol = api_json.get("protocolSection") or {}
+            status = protocol.get("statusModule") or {}
+            id_module = protocol.get("identificationModule") or {}
+            sponsor_module = protocol.get("sponsorCollaboratorsModule") or {}
+            lead_sponsor = sponsor_module.get("leadSponsor") or {}
+
+            last_updated = _parse_api_date(
+                (status.get("lastUpdatePostDateStruct") or {}).get("date")
+            )
+            first_posted = _parse_api_date(
+                (status.get("studyFirstPostDateStruct") or {}).get("date")
+            )
+            date_for_sort = last_updated or first_posted
+            if date_for_sort is None:
+                continue
+
+            is_new = (
+                first_posted is not None and window_start <= first_posted <= window_end
+            )
+            title = (id_module.get("briefTitle") or "").strip() or nct_number
+            sponsor_name = (lead_sponsor.get("name") or "").strip() or None
+
+            rows.append(
+                {
+                    "nct_id": nct_number,
+                    "title": title,
+                    "sponsor_name": sponsor_name,
+                    "date_iso": date_for_sort.date().isoformat(),
+                    "update_type": "new" if is_new else "updated",
+                }
+            )
+
+        rows.sort(key=lambda r: r["date_iso"], reverse=True)
+        return rows[:limit]
 
     def upsert_discovery_record(
         self, nct_number: str, cancer_type_tag: str, current_status: str
@@ -1044,7 +1366,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
     def _get_categorization_map(
         self, conn: sqlite3.Connection, nct_numbers: list[str]
     ) -> dict[str, dict[str, Any]]:
-        """Build map of NCT to trial_categorization (modality, target, trial_name, cancer_type)."""
+        """Build map of NCT to trial_categorization fields."""
         if not nct_numbers:
             return {}
         out: dict[str, dict[str, Any]] = {}
@@ -1056,7 +1378,8 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 placeholders = ",".join("?" * len(chunk))
                 cursor.execute(
                     f"""
-                    SELECT nct_number, modality, target, trial_name, cancer_type
+                    SELECT nct_number, modality, treatment_name, cancer_type,
+                           biomarker, stage, line_of_therapy, previous_treatment_criteria
                     FROM trial_categorization
                     WHERE nct_number IN ({placeholders})
                     """,
@@ -1065,9 +1388,14 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 for row in cursor.fetchall():
                     out[row["nct_number"]] = {
                         "modality": row["modality"],
-                        "target": row["target"],
-                        "trial_name": row["trial_name"],
+                        "treatment_name": row["treatment_name"],
                         "cancer_type": row["cancer_type"],
+                        "biomarker": row["biomarker"],
+                        "stage": row["stage"],
+                        "line_of_therapy": row["line_of_therapy"],
+                        "previous_treatment_criteria": row[
+                            "previous_treatment_criteria"
+                        ],
                     }
         except sqlite3.Error:
             pass
@@ -1236,25 +1564,36 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         modality_filter: Optional[str] = None,
         modality_skip: int = 0,
         modality_limit: int = 15,
-    ) -> tuple[list[dict[str, Any]], int, Optional[dict[str, int]]]:
+        balance_by_group: Optional[str] = None,
+        category_filter: Optional[str] = None,
+        category_skip: int = 0,
+        category_limit: int = 15,
+    ) -> tuple[
+        list[dict[str, Any]], int, Optional[dict[str, int]], Optional[dict[str, int]]
+    ]:
         """Get trial card DTOs for dashboard by cancer type.
 
         Args:
             cancer_type_tag: Normalized cancer type tag (e.g. from api_discovery).
-            phase_filter: Optional list of display phase names to include (e.g. ["Phase 1", "Phase 2"]).
+            phase_filter: Optional list of display phase names to include.
             has_abstracts_only: If True, only include trials that have abstract_id or conference or published_year.
-            status_filter: Optional list of study_status display values to include (e.g. ["Open", "Closed", "Suspended"]).
+            status_filter: Optional list of study_status display values to include.
             sponsor_type_filter: Optional list of "Industry" and/or "Non-Industry" to include.
             skip: Number of trials to skip (pagination).
             limit: Maximum number of trials to return.
-            balance_by_modality: If True, return up to per_group trials per modality so each column has trials.
-            per_group: When balance_by_modality, max trials per modality (default 15).
+            balance_by_modality: If True, return up to per_group trials per modality (balanced columns).
+            per_group: When balance_by_modality or balance_by_group, max trials per category (default 15).
+            modality_filter: If set, return only this modality with pagination (modality_skip, modality_limit).
+            modality_skip, modality_limit: Pagination for single-modality fetch.
+            balance_by_group: If set ("stage"|"biomarker"|"line_of_therapy"|"previous_treatment"), return balanced trials per category.
+            category_filter: If set with balance_by_group, return only this category with pagination (category_skip, category_limit).
+            category_skip, category_limit: Pagination for single-category fetch ("Load more" in one column).
 
         Returns:
-            Tuple of (list of card dicts, total_matching count, totals_by_modality or None). approval_group is set by API layer.
+            Tuple of (cards, total, totals_by_modality or None, totals_by_group or None). approval_group set by API layer.
         """
         if not self.db_path or not self.parser:
-            return [], 0, None
+            return [], 0, None, None
 
         # Preload abstract map and categorisation (Modality, Target, Trial_Name) for performance
         nct_abstract_map = self._get_abstract_map()
@@ -1279,17 +1618,21 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 )
         except sqlite3.Error as e:
             logger.error(f"Error getting dashboard trial NCTs: {e}")
-            return [], 0, None
+            return [], 0, None, None
 
         # Single-modality pagination: return trials for one modality only (for "Load more" in a column)
         if modality_filter and nct_categorization_map:
             by_modality: dict[str, list[str]] = {}
+            seen_in_mod: dict[str, set[str]] = {}  # dedup per modality bucket
             for nct in all_nct_numbers:
                 cat = nct_categorization_map.get(nct, {})
-                mod = _normalize_modality(cat.get("modality"))
-                if mod not in by_modality:
-                    by_modality[mod] = []
-                by_modality[mod].append(nct)
+                for mod in _parse_modalities(cat.get("modality")):
+                    if mod not in by_modality:
+                        by_modality[mod] = []
+                        seen_in_mod[mod] = set()
+                    if nct not in seen_in_mod[mod]:
+                        by_modality[mod].append(nct)
+                        seen_in_mod[mod].add(nct)
             normalized_filter = _normalize_modality(modality_filter)
             ncts_for_modality = by_modality.get(normalized_filter, [])
             nct_numbers_to_process = ncts_for_modality
@@ -1298,26 +1641,124 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         else:
             use_modality_pagination = False
 
-        # Optionally restrict to a balanced set (up to per_group per modality) so each column has trials
-        totals_by_modality: Optional[dict[str, int]] = None
         if not use_modality_pagination:
             nct_numbers_to_process = all_nct_numbers
+
+        # Single-category pagination: return trials for one category only ("Load more" in Stage/Biomarker/etc. column)
+        use_category_pagination = False
+        totals_by_group: Optional[dict[str, int]] = None
+        group_field = {
+            "stage": "stage",
+            "biomarker": "biomarker",
+            "line_of_therapy": "line_of_therapy",
+            "previous_treatment": "previous_treatment_criteria",
+        }.get(balance_by_group or "", "")
+        if (
+            balance_by_group
+            and group_field
+            and category_filter is not None
+            and nct_categorization_map
+        ):
+            by_group: dict[str, list[str]] = {}
+            seen_in_grp: dict[str, set[str]] = {}
+            for nct in all_nct_numbers:
+                cat = nct_categorization_map.get(nct, {})
+                raw = cat.get(group_field)
+                for key in _parse_group_values(raw):
+                    if key not in by_group:
+                        by_group[key] = []
+                        seen_in_grp[key] = set()
+                    if nct not in seen_in_grp[key]:
+                        by_group[key].append(nct)
+                        seen_in_grp[key].add(nct)
+            cat_label = (category_filter or "").strip()
+            ncts_for_category = by_group.get(cat_label, [])
+            nct_numbers_to_process = ncts_for_category
+            use_category_pagination = True
+
+        # Optionally restrict to a balanced set (up to per_group per category) for Stage/Biomarker/Line/Previous treatment
+        if (
+            not use_modality_pagination
+            and not use_category_pagination
+            and balance_by_group
+            and group_field
+            and nct_categorization_map
+        ):
+            by_group_bal: dict[str, list[str]] = {}
+            seen_in_grp_bal: dict[str, set[str]] = {}
+            for nct in all_nct_numbers:
+                cat = nct_categorization_map.get(nct, {})
+                raw = cat.get(group_field)
+                for key in _parse_group_values(raw):
+                    if key not in by_group_bal:
+                        by_group_bal[key] = []
+                        seen_in_grp_bal[key] = set()
+                    if nct not in seen_in_grp_bal[key]:
+                        by_group_bal[key].append(nct)
+                        seen_in_grp_bal[key].add(nct)
+            order_grp = _get_group_order(balance_by_group)
+            order_grp = (
+                order_grp
+                + [k for k in by_group_bal if k not in order_grp]
+                + [_GROUP_UNSPECIFIED]
+            )
+            nct_numbers_to_process = []
+            seen_in_process_grp: set[str] = set()
+            for key in order_grp:
+                for nct in by_group_bal.get(key, [])[:per_group]:
+                    if nct not in seen_in_process_grp:
+                        nct_numbers_to_process.append(nct)
+                        seen_in_process_grp.add(nct)
+            totals_by_group = {k: 0 for k in by_group_bal}
+            all_ncts_with_grp = [
+                (nct, k) for k, ncts in by_group_bal.items() for nct in ncts
+            ]
+            for count_start in range(0, len(all_ncts_with_grp), 500):
+                count_chunk = all_ncts_with_grp[count_start : count_start + 500]
+                count_ncts = [nct for nct, _ in count_chunk]
+                count_json = self._get_cached_api_json_batch(count_ncts)
+                for nct_number, k in count_chunk:
+                    api_json = count_json.get(nct_number)
+                    if api_json and self._trial_passes_dashboard_filters(
+                        api_json,
+                        nct_number,
+                        nct_abstract_map,
+                        phase_filter,
+                        status_filter,
+                        has_abstracts_only,
+                        sponsor_type_filter,
+                    ):
+                        totals_by_group[k] += 1
+
+        # Optionally restrict to a balanced set (up to per_group per modality) so each column has trials
+        totals_by_modality: Optional[dict[str, int]] = None
+        if not use_modality_pagination and not use_category_pagination:
             if balance_by_modality and nct_categorization_map:
                 by_modality_bal: dict[str, list[str]] = {}
+                seen_in_bal: dict[str, set[str]] = {}  # dedup per modality bucket
                 for nct in all_nct_numbers:
                     cat = nct_categorization_map.get(nct, {})
-                    mod = _normalize_modality(cat.get("modality"))
-                    if mod not in by_modality_bal:
-                        by_modality_bal[mod] = []
-                    by_modality_bal[mod].append(nct)
+                    for mod in _parse_modalities(cat.get("modality")):
+                        if mod not in by_modality_bal:
+                            by_modality_bal[mod] = []
+                            seen_in_bal[mod] = set()
+                        if nct not in seen_in_bal[mod]:
+                            by_modality_bal[mod].append(nct)
+                            seen_in_bal[mod].add(nct)
                 order = list(_MODALITY_HEADERS) + [_MODALITY_OTHER]
                 nct_numbers_to_process = []
+                seen_in_process: set[str] = set()
                 for mod in order:
-                    ncts = by_modality_bal.get(mod, [])
-                    nct_numbers_to_process.extend(ncts[:per_group])
+                    for nct in by_modality_bal.get(mod, [])[:per_group]:
+                        if nct not in seen_in_process:
+                            nct_numbers_to_process.append(nct)
+                            seen_in_process.add(nct)
                 for mod, ncts in by_modality_bal.items():
                     if mod not in order:
-                        nct_numbers_to_process.extend(ncts[:per_group])
+                        for nct in ncts[:per_group]:
+                            if nct not in seen_in_process:
+                                nct_numbers_to_process.append(nct)
+                                seen_in_process.add(nct)
                 # Count filtered trials per modality so the UI can show overall category totals
                 totals_by_modality = {mod: 0 for mod in by_modality_bal}
                 all_ncts_with_mod = [
@@ -1340,12 +1781,15 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                         ):
                             totals_by_modality[mod] += 1
 
-        # When returning a balanced set per modality, return all of it (do not apply request limit)
-        # When single-modality pagination, use modality_skip/modality_limit
+        # When returning a balanced set per modality/group, return all of it (do not apply request limit)
+        # When single-modality or single-category pagination, use skip/limit for that dimension
         if use_modality_pagination:
             effective_skip = modality_skip
             effective_limit = modality_limit
-        elif balance_by_modality:
+        elif use_category_pagination:
+            effective_skip = category_skip
+            effective_limit = category_limit
+        elif balance_by_modality or (balance_by_group and group_field):
             effective_skip = skip
             effective_limit = len(nct_numbers_to_process)
         else:
@@ -1434,11 +1878,13 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 )
 
                 cat = nct_categorization_map.get(nct_number, {})
-                title = (
-                    (cat.get("trial_name") or "").strip()
-                    or trial_data.trial_name
-                    or nct_number
-                )
+
+                # Resolve trial name from clinical_trials_cache identificationModule:
+                #   1. acronym field (e.g. "KEYNOTE-006")
+                #   2. trailing (...) or [...] in briefTitle (e.g. "A Study of X (KEYNOTE-006)")
+                #   3. NCT number as final fallback
+                id_module = protocol.get("identificationModule", {})
+                title = _resolve_trial_name(id_module, nct_number)
 
                 card = {
                     "nct_id": nct_number,
@@ -1457,19 +1903,32 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                     "conference": conference,
                     "published_year": published_year,
                 }
+                # Always set trial_name so the frontend has a consistent field
+                card["trial_name"] = title
                 if cat:
                     card["modality"] = cat.get("modality")
-                    card["target"] = cat.get("target")
-                    card["trial_name"] = cat.get("trial_name")
+                    card["treatment_name"] = cat.get("treatment_name")
+                    card["stage"] = cat.get("stage")
+                    card["biomarker"] = cat.get("biomarker")
+                    card["line_of_therapy"] = cat.get("line_of_therapy")
+                    card["previous_treatment_criteria"] = cat.get(
+                        "previous_treatment_criteria"
+                    )
                 cards.append(card)
 
-        return cards, total_matching, totals_by_modality
+        return cards, total_matching, totals_by_modality, totals_by_group
 
-    def get_disease_landscape_stats(self, cancer_type_tag: str) -> dict[str, Any]:
+    def get_disease_landscape_stats(
+        self,
+        cancer_type_tag: str,
+        sponsor_type_filter: list[str] | None = None,
+    ) -> dict[str, Any]:
         """Get disease landscape statistics for a specific cancer type.
 
         Args:
             cancer_type_tag: Normalized cancer type tag
+            sponsor_type_filter: If set, only include trials whose lead sponsor
+                class is in this list (e.g. ["Industry"] or ["Non-Industry"]).
 
         Returns:
             Dictionary with status, phase, and funder_type counts
@@ -1546,6 +2005,22 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                     api_json = self.get_cached_api_json(nct_number)
                     if not api_json:
                         continue
+
+                    # Optionally filter by sponsor type (align with landscape filter)
+                    if sponsor_type_filter is not None:
+                        sponsor_module = api_json.get("protocolSection", {}).get(
+                            "sponsorCollaboratorsModule", {}
+                        )
+                        lead_sponsor = sponsor_module.get("leadSponsor", {})
+                        sponsor_class = (
+                            (lead_sponsor.get("class") or "").strip().upper()
+                        )
+                        if sponsor_class == "INDUSTRY":
+                            trial_funder = "Industry"
+                        else:
+                            trial_funder = "Non-Industry"
+                        if trial_funder not in sponsor_type_filter:
+                            continue
 
                     # Extract status
                     status = self.parser.extract_status_from_api_json(api_json)

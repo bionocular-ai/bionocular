@@ -4,8 +4,8 @@
 Reads each trial from clinical_trials_cache, extracts:
   - NCT (identificationModule.nctId)
   - officialTitle (identificationModule.officialTitle)
-  - first entry from armsInterventionsModule: armGroups[0] if present, else interventions[0]
-  - Inclusion Criteria (eligibilityModule.eligibilityCriteria, inclusion section only)
+  - briefSummary (descriptionModule.briefSummary)
+  - eligibilityCriteria (eligibilityModule.eligibilityCriteria, full text)
 
 and writes one text file per trial named {NCT_ID}.txt (e.g. NCT01234567.txt).
 
@@ -40,75 +40,118 @@ DEFAULT_OUT_DIR = Path(__file__).resolve().parent / "data" / "trials_db" / "tria
 
 NCT_PATTERN = re.compile(r"^NCT\d+$", re.IGNORECASE)
 
+# Section header that starts the block we strip from eligibilityCriteria
+_PATIENT_CHARACTERISTICS_START = re.compile(
+    r"\n\s*PATIENT\s+CHARACTERISTICS\s*:|\n\s*--\s*Patient\s+Characteristics\s*--",
+    re.IGNORECASE,
+)
+# Next section headers (all-caps with colon, or --Name--); used as end boundary
+_NEXT_SECTION_AFTER_PATIENT = re.compile(
+    r"\n\s*(?:PRIOR\s+CONCURRENT\s+THERAPY|DISEASE\s+CHARACTERISTICS|PROTOCOL\s+ENTRY\s+CRITERIA)\s*:"
+    r"|\n\s*--\s*[A-Za-z/\s]+\s*--",
+    re.IGNORECASE,
+)
 
-def parse_inclusion_criteria(eligibility_criteria: str | None) -> str:
-    """Extract only the inclusion criteria section from eligibilityModule.eligibilityCriteria.
+# Exclusion-criteria section headers (all variants) — we strip these blocks from eligibility
+_EXCLUSION_SECTION_START = re.compile(
+    r"\n\s*EXCLUSION\s+CRITERIA\s*(?:\s+for\s+[^:\n]+)?\s*:"
+    r"|\n\s*EXCLUSION\s+CRITERIA\s*[\-\s]"  # e.g. "EXCLUSION CRITERIA - Patients meeting..."
+    r"|\n\s*CELL\s+INFUSION\s+EXCLUSION\s+CRITERIA\s*:"
+    r"|\n\s*\\?\[Exclusion\s+Criteria\s+[^\]]*\]"  # "[Exclusion Criteria (Phase 1 and Phase 2)]" or \[...\]
+    r"|\n\s*Tissue\s+Procurement\s+Exclusion\s+Criteria\s*:"
+    r"|\n\s*Study\s+Enrollment\s+Exclusion\s+Criteria\s*:"
+    r"|\n\s*Key\s+Exclusion\s+Criteria\s*(?:\s*\([^)]*\))?\s*:?\s*\n?"  # with or without (Phase...), (both parts), (applicable...)
+    r"|\n\s*Key\s+exclusion\s+criteria\s+common\s+to\s+[^\n]*:"
+    r"|\n\s*Exclusion\s+Criteria\s*[\-\:]"  # "Exclusion Criteria - Key criteria include:" or "...:"
+    r"|\n\s*Exclusion\s+Criteria\s*\("  # "Exclusion Criteria (Potential...", "(Summary):", "(Parts B & C):", "'Normals':"
+    r"|\n\s*Exclusion\s+Criteria\s*\'[^\']*\'"  # "Exclusion Criteria 'Normals':"
+    r"|\n\s*Exclusion\s+Criteria\s+Part\s+[A-Za-z]\s*\n"  # "Exclusion Criteria Part A" / "Part B"
+    r"|\n\s*Exclusion\s+Criteria\s*\.\s*\n"  # "Exclusion Criteria."
+    r"|\n\s*Exclusion\s+Criteria\s*\.\s+Patients\s+who\s+meet"  # "Exclusion Criteria. Patients who meet any of the criteria below..."
+    r"|\n\s*Exclusion\s+Criteria\s*\n"
+    r"|\n\s*Exclusion\s+Criteria\s*[\:\：]\s*\n?"  # "Exclusion Criteria:" or fullwidth colon
+    r"|\n\s*Exclusion\s*:\s*\n"  # "Exclusion:" on its own line
+    r"|\n\s*Exclusion\s+criteria\s*\.\s+Subjects\s+who\s+fulfill"  # "Exclusion criteria. Subjects who fulfill..."
+    r"|\n\s*Exclusion\s*\n"
+    r"|\n\s*Patients\s+meeting\s+[^\n]*exclusion\s+criteria[^\n]*:"  # "Patients meeting any one of these exclusion criteria will be prohibited..."
+    r"|\n\s*Primary\s+exclusion\s+criteria\s*:"
+    r"|\n\s*Main\s+exclusion\s+criteria\s+include\s*:"
+    r"|\n\s*Main\s+Exclusion\s+Criteria\s*(?:\s+for\s+[^\n]*)?\s*:?\s*\n?"  # "Main Exclusion Criteria:", "Main Exclusion Criteria", "Main Exclusion Criteria for patients..."
+    r"|\n\s*Main\s+exclusion\s+criteria\s+(?:Cohort\s+\d+\s*:)?\s*\n?"  # "Main exclusion criteria", "Main exclusion criteria Cohort 1:"
+    r"|\n\s*Additional\s+exclusion\s+criteria\s+for\s+[^\n]*:"  # "Additional exclusion criteria for the triple combinations:"
+    r"|\n\s*Criteria\s+for\s+Exclusion\s*:"  # "Criteria for Exclusion:"
+    r"|\n\s*\d+\.\d+\s+Exclusion\s+Criteria\s*\n?"  # "4.2 Exclusion Criteria" (numbered section)
+    r"|\n\s*General\s+Exclusion\s+Criteria\s*[\:\s\(]"  # "General Exclusion Criteria:", "(All patients...)"
+    r"|\n\s*Part\s+[A-Za-z]+-specific\s+Exclusion\s+Criteria\s*:"  # "Part A-specific Exclusion Criteria:"
+    r"|\n\s*Select\s+Exclusion\s+Criteria\s*:"
+    r"|\n\s*Partial\s+Exclusion\s+Criteria\s*:"
+    r"|\n\s*Monotherapy\s+Exclusion\s+Criteria\s*\("  # "Monotherapy Exclusion Criteria (Parts A and B)"
+    r"|\n\s*Combination\s+Exclusion\s+Criteria\s*\("  # "Combination Exclusion Criteria (Part C/D)"
+    r"|\n\s*Abbreviated\s+Exclusion\s+Criteria\s*:"
+    r"|\n\s*Prospective\s+Exclusion\s+Criteria\s*:"
+    r"|\n\s*Control\s+Arm\s+Exclusion\s+Criteria\s*:"
+    r"|\n\s*Diagnosis\s+and\s+main\s+criteria\s+for\s+inclusion\s+and\s+exclusion\s*:"
+    r"|\n\s*The\s+following\s+are\s+the\s+main\s+exclusion\s+criteria\s*:"
+    r"|\n\s*Part\s+\d+\s*:\s*Key\s+Exclusion\s+Criteria\s*\n?"  # "Part 1: Key Exclusion Criteria"
+    r"|\n\s*[A-Za-z]+-specific\s+exclusion\s+criteria\s*:"  # "Melanoma-specific exclusion criteria:", "SCCHN-specific..."
+    r"|\n\s*Parts\s+[A-Za-z,\s]+\s+Exclusion\s+Criteria\s*:"  # "Parts A, B, C and D Exclusion Criteria:"
+    r"|\n\s*Phase\s+\d+\s+and\s+\d+\s+Exclusion\s+Criteria\s*:"  # "Phase 1 and 2 Exclusion Criteria:"
+    r"|\n\s*Recent\s+medical\s+concerns\s+exclusions\s*:"
+    r"|\n\s*Medical\s+Exclusion\s+Criteria\s*:"
+    r"|\n\s*Common\s+exclusion\s+criteria\s+"  # "Common exclusion criteria to Dose escalation..."
+    r"|\n\s*For\s+[^\n]*additional\s+exclusion\s+criteria\s+are\s*:",  # "For the HNSCC... additional exclusion criteria are:"
+    re.IGNORECASE,
+)
 
-    Cuts at "Exclusion Criteria:" or "Key Exclusion Criteria:" (case-insensitive).
-    Keeps the inclusion block including headers like "Key Inclusion Criteria:" or
-    "Inclusion Criteria:" and any subsections (e.g. "Additional key inclusion criterion...").
-    """
-    if not eligibility_criteria or not eligibility_criteria.strip():
-        return ""
-    text = eligibility_criteria.strip()
-    # Cut at Exclusion (with optional "Key " prefix)
-    exclusion_marker = re.compile(r"\n\s*(Key\s+)?Exclusion Criteria\s*:", re.IGNORECASE)
-    match = exclusion_marker.search(text)
-    if match is not None:
-        text = text[: match.start()].strip()
-    # Optionally trim any preamble before the first Inclusion section
-    incl_start = re.compile(r"(Key\s+)?Inclusion Criteria\s*:", re.IGNORECASE)
-    incl_match = incl_start.search(text)
-    if incl_match is not None:
-        text = text[incl_match.start() :].strip()
-    return text
+
+def _strip_patient_characteristics_section(text: str) -> str:
+    """Remove the PATIENT CHARACTERISTICS / --Patient Characteristics-- block from eligibility text."""
+    if not text or not text.strip():
+        return text
+    result = text
+    start_match = _PATIENT_CHARACTERISTICS_START.search(result)
+    while start_match:
+        start_pos = start_match.start()
+        rest = result[start_match.end() :]
+        end_match = _NEXT_SECTION_AFTER_PATIENT.search(rest)
+        end_offset = end_match.start() if end_match else len(rest)
+        section_end = start_match.end() + end_offset
+        result = result[:start_pos] + result[section_end:]
+        result = re.sub(r"\n{3,}", "\n\n", result)
+        start_match = _PATIENT_CHARACTERISTICS_START.search(result)
+    return result.strip()
 
 
-def parse_first_criteria_section(eligibility_criteria: str | None) -> str:
-    """When eligibility has no 'Inclusion Criteria:', return the first section that mentions 'criteria'.
-
-    Cuts at Exclusion if present, then finds the first line containing 'criteria'
-    (e.g. 'Eligibility Criteria:', 'Key Criteria:') and returns from that line to end of block.
-    """
-    if not eligibility_criteria or not eligibility_criteria.strip():
-        return ""
-    text = eligibility_criteria.strip()
-    # Cut at Exclusion (with optional "Key " prefix)
-    exclusion_marker = re.compile(r"\n\s*(Key\s+)?Exclusion Criteria\s*:", re.IGNORECASE)
-    match = exclusion_marker.search(text)
-    if match is not None:
-        text = text[: match.start()].strip()
-    if not text or "criteria" not in text.lower():
-        return ""
-    # Find first line that contains "criteria"; start output from the start of that line
-    criteria_line = re.compile(r"(^|\n)([^\n]*\bcriteria\b[^\n]*)", re.IGNORECASE)
-    m = criteria_line.search(text)
-    if m is None:
-        return ""
-    return text[m.start(2) :].strip()
+def _strip_exclusion_criteria_sections(text: str) -> str:
+    """Remove EXCLUSION CRITERIA / Exclusion / CELL INFUSION EXCLUSION CRITERIA blocks from eligibility text."""
+    if not text or not text.strip():
+        return text
+    result = text
+    start_match = _EXCLUSION_SECTION_START.search(result)
+    while start_match:
+        start_pos = start_match.start()
+        rest = result[start_match.end() :]
+        # End of block: next exclusion section or end of string
+        next_match = _EXCLUSION_SECTION_START.search(rest)
+        end_offset = next_match.start() if next_match else len(rest)
+        section_end = start_match.end() + end_offset
+        result = result[:start_pos] + result[section_end:]
+        result = re.sub(r"\n{3,}", "\n\n", result)
+        start_match = _EXCLUSION_SECTION_START.search(result)
+    return result.strip()
 
 
 def extract_fields(api_response_json: dict) -> dict:
     """Extract the requested API fields from a full API response."""
     protocol = api_response_json.get("protocolSection", {})
     id_module = protocol.get("identificationModule", {})
-    arms_interventions = protocol.get("armsInterventionsModule", {})
+    description_module = protocol.get("descriptionModule", {})
     eligibility_module = protocol.get("eligibilityModule", {})
 
-    arm_groups = arms_interventions.get("armGroups") or []
-    interventions = arms_interventions.get("interventions") or []
-    # First entry from module: prefer first armGroup, else first intervention (not all trials have armGroups)
-    first_arm_or_intervention = (
-        arm_groups[0] if arm_groups else (interventions[0] if interventions else None)
+    eligibility_criteria = _strip_patient_characteristics_section(
+        eligibility_module.get("eligibilityCriteria") or ""
     )
-
-    eligibility_criteria = eligibility_module.get("eligibilityCriteria") or ""
-    if "inclusion criteria:" in eligibility_criteria.lower():
-        inclusion_criteria = parse_inclusion_criteria(eligibility_criteria)
-    elif "criteria" in eligibility_criteria.lower():
-        inclusion_criteria = parse_first_criteria_section(eligibility_criteria)
-    else:
-        inclusion_criteria = ""
+    eligibility_criteria = _strip_exclusion_criteria_sections(eligibility_criteria)
 
     sponsor_module = protocol.get("sponsorCollaboratorsModule", {})
     lead_sponsor = sponsor_module.get("leadSponsor", {})
@@ -118,8 +161,8 @@ def extract_fields(api_response_json: dict) -> dict:
     return {
         "nct_number": id_module.get("nctId"),
         "officialTitle": id_module.get("officialTitle"),
-        "first_arm_or_intervention": first_arm_or_intervention,
-        "inclusion_criteria": inclusion_criteria,
+        "briefSummary": description_module.get("briefSummary"),
+        "eligibilityCriteria": eligibility_criteria,
         "is_industry_sponsor": is_industry,
         # Keep for --index
         "briefTitle": id_module.get("briefTitle"),
@@ -144,10 +187,11 @@ def write_trial_file(out_path: Path, fields: dict) -> None:
         "officialTitle:",
         format_value(fields.get("officialTitle")) or "(empty)",
         "",
-        "firstArmOrIntervention:",
-        format_value(fields.get("first_arm_or_intervention")) or "(none)",
+        "briefSummary:",
+        format_value(fields.get("briefSummary")) or "(empty)",
         "",
-        format_value(fields.get("inclusion_criteria")) or "(empty)",
+        "eligibilityCriteria:",
+        format_value(fields.get("eligibilityCriteria")) or "(empty)",
     ]
     out_path.write_text("\n".join(lines), encoding="utf-8")
 
@@ -269,7 +313,7 @@ def main() -> int:
         index_path.write_text("\n".join(index_lines), encoding="utf-8")
         logger.info("Wrote index %s (%d trials, %s)", index_path, len(all_fields), args.index_style)
 
-    # Remove trial files in out_dir that were not exported this run (e.g. no "Inclusion Criteria:", or non-Industry when --industry-only)
+    # Remove trial files in out_dir that were not exported this run (e.g. non-Industry when --industry-only)
     if exported_ncts:
         removed = 0
         for path in args.out_dir.iterdir():

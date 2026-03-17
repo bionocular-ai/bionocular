@@ -79,9 +79,9 @@ export function TrialCard({ trial, className, category }: TrialCardProps) {
             </div>
             <div
               className="text-xs text-slate-200 leading-snug font-medium shrink-0 min-w-0 line-clamp-2 break-words"
-              title={trial.drug_name || undefined}
+              title={(trial.treatment_name || trial.drug_name) || undefined}
             >
-              {trial.drug_name || '—'}
+              {trial.treatment_name || trial.drug_name || '—'}
             </div>
           </div>
           {/* Sponsor — always just above the footer */}

@@ -10,8 +10,8 @@ interface CancerTypeBubblesProps {
 
 // Mapping of category names to slugs for consistent URL generation
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'Cutaneous melanoma': 'cutaneous-melanoma',
-  'Cutaneous melanoma with Brain/CNS metastasis': 'cutaneous-melanoma-with-brain-cns-metastasis',
+  'Cutaneous/Metastasis Melanoma': 'cutaneous-melanoma',
+  'Cutaneous Melanoma with Brain/CNS Metastasis': 'cutaneous-melanoma-with-brain-cns-metastasis',
   'Uveal Melanoma': 'uveal-melanoma',
   'Mucosal Melanoma': 'mucosal-melanoma',
   'Acral Melanoma': 'acral-melanoma',
@@ -266,7 +266,7 @@ export function CancerTypeBubbles({ stats }: CancerTypeBubblesProps) {
             return (
               <Link
                 key={stat.cancer_type}
-                href={`/dashboard/${categoryToSlug(stat.cancer_type)}/disease-landscape`}
+                href={`/dashboard/${categoryToSlug(stat.cancer_type)}`}
                 className="group cursor-pointer transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
               >
                 <div
@@ -384,7 +384,7 @@ export function CancerTypeBubbles({ stats }: CancerTypeBubblesProps) {
           return (
             <Link
               key={bubble.stat.cancer_type}
-              href={`/dashboard/${categoryToSlug(bubble.stat.cancer_type)}/disease-landscape`}
+              href={`/dashboard/${categoryToSlug(bubble.stat.cancer_type)}`}
               className="absolute group cursor-pointer transition-all duration-300 hover:scale-110 hover:z-20 active:scale-105"
               style={{
                 left: `${position.x}px`,

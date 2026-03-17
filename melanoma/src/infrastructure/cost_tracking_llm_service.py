@@ -212,6 +212,53 @@ class CostTrackingLLMService(LLMService):
             logger.error(f"Failed to extract structured data: {e}")
             raise
 
+    async def extract_json(
+        self,
+        prompt: str,
+        operation: str = "extraction",
+        attribute_type: Optional[str] = None,
+        max_retries: int = 1,
+    ) -> dict[str, Any]:
+        """Extract JSON data with cost tracking."""
+        try:
+            prompt_tokens = self.cost_calculator.count_tokens(prompt, "gpt-4o-mini")
+
+            data = await self.llm_service.extract_json(
+                prompt,
+                operation=operation,
+                attribute_type=attribute_type,
+                max_retries=max_retries,
+            )
+
+            response_str = str(data)
+            completion_tokens = self.cost_calculator.count_tokens(
+                response_str, "gpt-4o-mini"
+            )
+
+            self.cost_calculator.record_api_call(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                model="gpt-4o-mini",
+                operation=operation,
+                attribute_type=attribute_type,
+                success=True,
+            )
+
+            return data
+        except Exception as e:
+            prompt_tokens = self.cost_calculator.count_tokens(prompt, "gpt-4o-mini")
+            self.cost_calculator.record_api_call(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=0,
+                model="gpt-4o-mini",
+                operation=operation,
+                attribute_type=attribute_type,
+                success=False,
+                error_message=str(e),
+            )
+            logger.error(f"Failed to extract JSON: {e}")
+            raise
+
     def get_cost_summary(self):
         """Get current cost summary."""
         return self.cost_calculator.get_summary()

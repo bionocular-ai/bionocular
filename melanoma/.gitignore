@@ -18,6 +18,10 @@ data/processed/ESMO_Abstracts/
 # Output files directory (all generated output files)
 data/output/
 
+# Trial API export and merged files
+data/trials_db/trial_api_exports/
+data/trials_db/trial_api_merged/
+
 # Python cache and build files
 __pycache__/
 *.py[cod]

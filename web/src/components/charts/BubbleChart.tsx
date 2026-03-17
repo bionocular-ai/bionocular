@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect, createContext, useContext } from 'react';
 import Link from 'next/link';
 import {
   Scatter,
@@ -48,6 +48,12 @@ interface BubbleChartProps {
   axisMode?: 'efficacy-safety' | 'efficacy-efficacy' | 'safety-safety';
   /** When true (non-compact), chart fills parent height like DivergingBarChart */
   fillHeight?: boolean;
+  /** When true (e.g. dashboard card), use minimal margins so chart uses full area */
+  isCompact?: boolean;
+  /** When false, container has no rounded corners (e.g. dashboard grid) */
+  rounded?: boolean;
+  /** When false, tooltips (hover and pin) are disabled (e.g. dashboard snapshot) */
+  showTooltip?: boolean;
 }
 
 // ============================================================================
@@ -133,6 +139,12 @@ function radiusFromLinearArea(
 }
 
 // ============================================================================
+// Text selection context (when showTooltip is false, allow selecting label text)
+// ============================================================================
+
+const BubbleChartSelectionContext = createContext<{ allowTextSelection: boolean }>({ allowTextSelection: false });
+
+// ============================================================================
 // Custom Label Component
 // ============================================================================
 
@@ -145,6 +157,7 @@ interface CustomLabelProps {
 
 // CustomLabel uses radiusPx from payload (set by chartData) for positioning
 const CustomLabel = ({ x, y, payload, value }: CustomLabelProps) => {
+  const { allowTextSelection } = useContext(BubbleChartSelectionContext);
   const labelText = value || payload?.treatmentName;
 
   if (!x || !y || !labelText) return null;
@@ -170,7 +183,7 @@ const CustomLabel = ({ x, y, payload, value }: CustomLabelProps) => {
         opacity={0.4}
         pointerEvents="none"
       />
-      {/* Label text - dark text for light background */}
+      {/* Label text - dark text for light background; selectable when tooltip disabled (e.g. dashboard) */}
       <text
         x={labelX}
         y={labelY}
@@ -179,8 +192,8 @@ const CustomLabel = ({ x, y, payload, value }: CustomLabelProps) => {
         fontWeight={400}
         textAnchor="middle"
         style={{ 
-          pointerEvents: 'none',
-          userSelect: 'none',
+          pointerEvents: allowTextSelection ? 'auto' : 'none',
+          userSelect: allowTextSelection ? 'text' : 'none',
           fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
@@ -478,6 +491,9 @@ export default function BubbleChart({
   safetyParam,
   axisMode,
   fillHeight = false,
+  isCompact = false,
+  rounded = true,
+  showTooltip = true,
 }: BubbleChartProps) {
   const chartHeight = Math.max(height || 600, 100);
   const [isPinned, setIsPinned] = useState(false);
@@ -902,6 +918,9 @@ export default function BubbleChart({
     bottom: 50,
     left: 70,
   };
+  // Margins for dashboard card (isCompact): reduced left for tighter layout
+  const marginCompact = { top: 20, right: 30, bottom: 15, left: 6 };
+  const effectiveMargin = isCompact ? marginCompact : (fillHeight ? marginFillHeight : margin);
 
   // Get readable label for Z-axis parameter - defined early so it can be used in other callbacks
   const getZAxisLabel = useCallback((param: string): string => {
@@ -922,6 +941,7 @@ export default function BubbleChart({
 
   // Handle bubble click - pin/unpin the tooltip
   const handleBubbleClick = useCallback((data: BubbleChartDataPoint, event?: React.MouseEvent) => {
+    if (!showTooltip) return;
     const bubbleId = `${data.treatmentName}-${data.efficacy}-${data.safety}`;
     
     // If clicking the same pinned bubble, unpin
@@ -960,7 +980,7 @@ export default function BubbleChart({
       x: position.x,
       y: position.y,
     });
-  }, [isPinned, pinnedBubbleId, normalizedAxisConfig, calculateTooltipPosition]);
+  }, [showTooltip, isPinned, pinnedBubbleId, normalizedAxisConfig, calculateTooltipPosition]);
 
   // Get unique treatments and assign colors
   const treatmentColorMap = useMemo(() => {
@@ -1059,8 +1079,9 @@ export default function BubbleChart({
 
   if (compact) {
     return (
+      <BubbleChartSelectionContext.Provider value={{ allowTextSelection: !showTooltip }}>
       <div 
-        className="w-full h-full bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm outline-none focus:outline-none [&_svg]:outline-none [&_svg]:focus:outline-none [&_.recharts-wrapper]:outline-none [&_.recharts-wrapper]:focus:outline-none flex flex-col" 
+        className={`w-full h-full bg-white border border-slate-200 overflow-hidden shadow-sm outline-none focus:outline-none [&_svg]:outline-none [&_svg]:focus:outline-none [&_.recharts-wrapper]:outline-none [&_.recharts-wrapper]:focus:outline-none flex flex-col ${rounded ? 'rounded-lg' : 'rounded-none'} ${!showTooltip ? '[&_text]:select-text' : ''}`} 
         tabIndex={-1}
         onMouseDown={(e) => {
           const target = e.target as HTMLElement;
@@ -1072,9 +1093,9 @@ export default function BubbleChart({
         }}
         style={{ outline: 'none' }}
       >
-        <div className="flex-1 min-h-0 relative" ref={chartContainerRef}>
+        <div className="flex-1 min-h-0 relative min-w-0" ref={chartContainerRef}>
         <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
-          <ScatterChart margin={margin}>
+          <ScatterChart margin={effectiveMargin}>
             <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
             <XAxis
               type="number"
@@ -1137,7 +1158,7 @@ export default function BubbleChart({
               animationDuration={0}
               isAnimationActive={false}
               content={(props) => {
-                if (effectivePinned) return null;
+                if (!showTooltip || effectivePinned) return null;
                 if (props.active && props.payload && props.payload.length > 0) {
                   const viewportPos = getHoverTooltipViewportPosition(undefined, undefined);
                   const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
@@ -1205,7 +1226,7 @@ export default function BubbleChart({
         </ResponsiveContainer>
         
         {/* Custom pinned tooltip */}
-        {effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
+        {showTooltip && effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
           <div 
             className="fixed z-[9999] tooltip-enter"
             style={{ 
@@ -1233,12 +1254,14 @@ export default function BubbleChart({
         )}
         </div>
       </div>
+      </BubbleChartSelectionContext.Provider>
     );
   }
 
   if (fillHeight) {
     return (
-      <div className="w-full h-full flex flex-col min-h-0 min-w-0 bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+      <BubbleChartSelectionContext.Provider value={{ allowTextSelection: !showTooltip }}>
+      <div className={`w-full h-full flex flex-col min-h-0 min-w-0 flex-1 overflow-hidden ${isCompact ? 'bg-transparent [&_.recharts-wrapper]:bg-transparent [&_.recharts-responsive-container]:bg-transparent' : `bg-white border border-slate-200 shadow-sm ${rounded ? 'rounded-lg' : 'rounded-none'}`}`}>
         {title ? (
           <div className="flex-shrink-0 px-4 pt-3 pb-1">
             <h3 className="text-xl font-bold text-slate-900">{title}</h3>
@@ -1247,8 +1270,8 @@ export default function BubbleChart({
         ) : null}
         <div
           ref={chartContainerRef}
-          className="flex-1 min-h-0 min-w-0 outline-none focus:outline-none"
-          style={{ width: '100%', height: '100%', outline: 'none' }}
+          className={`flex-1 min-h-0 min-w-0 outline-none focus:outline-none self-stretch ${isCompact ? 'bg-transparent' : ''}`}
+          style={{ width: '100%', height: '100%', minHeight: 0, outline: 'none' }}
           tabIndex={-1}
           onMouseDown={(e) => {
             const target = e.target as HTMLElement;
@@ -1259,8 +1282,13 @@ export default function BubbleChart({
             }
           }}
         >
-          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
-            <ScatterChart margin={fillHeight ? marginFillHeight : margin}>
+          <ResponsiveContainer
+            width={containerDims.width || '100%'}
+            height={containerDims.height || 300}
+            minWidth={0}
+            minHeight={100}
+          >
+            <ScatterChart margin={effectiveMargin}>
               <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} strokeOpacity={0.3} />
               <XAxis
                 type="number"
@@ -1311,7 +1339,7 @@ export default function BubbleChart({
                 animationDuration={0}
                 isAnimationActive={false}
                 content={(props) => {
-                  if (effectivePinned) return null;
+                  if (!showTooltip || isCompact || effectivePinned) return null;
                   if (props.active && props.payload && props.payload.length > 0) {
                     const viewportPos = getHoverTooltipViewportPosition(undefined, undefined);
                     const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
@@ -1353,13 +1381,14 @@ export default function BubbleChart({
                 fillOpacity={0.7}
                 isAnimationActive={false}
                 onClick={(point: { payload?: BubbleChartDataPoint }, _index: number, e: React.MouseEvent) => {
+                  if (isCompact) return;
                   const payload = point.payload;
                   if (payload) handleBubbleClick(payload, e);
                 }}
               >
                 {chartData.map((entry, index) => {
                   const bubbleId = `${entry.treatmentName}-${entry.efficacy}-${entry.safety}`;
-                  const isPinnedBubble = effectivePinned && pinnedBubbleId === bubbleId;
+                  const isPinnedBubble = !isCompact && effectivePinned && pinnedBubbleId === bubbleId;
                   const fillColor = isPinnedBubble ? '#fbbf24' : getColor(entry);
                   return (
                     <Cell key={`cell-${index}`} fill={fillColor} fillOpacity={0.7} style={{ pointerEvents: 'painted' }} />
@@ -1370,7 +1399,7 @@ export default function BubbleChart({
             </ScatterChart>
           </ResponsiveContainer>
         </div>
-        {effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
+        {showTooltip && !isCompact && effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
           <div
             className="fixed z-[9999] tooltip-enter"
             style={{
@@ -1397,10 +1426,12 @@ export default function BubbleChart({
           </div>
         )}
       </div>
+      </BubbleChartSelectionContext.Provider>
     );
   }
 
   return (
+    <BubbleChartSelectionContext.Provider value={{ allowTextSelection: !showTooltip }}>
     <Card 
       className="w-full overflow-hidden bg-white border-slate-200 outline-none focus:outline-none [&_svg]:outline-none [&_svg]:focus:outline-none [&_.recharts-wrapper]:outline-none [&_.recharts-wrapper]:focus:outline-none" 
       tabIndex={-1}
@@ -1451,8 +1482,8 @@ export default function BubbleChart({
             }
           }}
         >
-          <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
-            <ScatterChart margin={margin}>
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={effectiveMargin}>
               <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} strokeOpacity={0.3} />
               <XAxis
                 type="number"
@@ -1515,7 +1546,7 @@ export default function BubbleChart({
                 animationDuration={0}
                 isAnimationActive={false}
                 content={(props) => {
-                  if (effectivePinned) return null;
+                  if (!showTooltip || effectivePinned) return null;
                   if (props.active && props.payload && props.payload.length > 0) {
                     const viewportPos = getHoverTooltipViewportPosition(undefined, undefined);
                     const payloadData = props.payload?.[0]?.payload as BubbleChartDataPoint | undefined;
@@ -1583,7 +1614,7 @@ export default function BubbleChart({
           </ResponsiveContainer>
           
           {/* Custom pinned tooltip */}
-          {effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
+          {showTooltip && effectivePinned && tooltipData && tooltipData.x !== undefined && tooltipData.y !== undefined && (
             <div 
               className="fixed z-[9999] tooltip-enter"
               style={{ 
@@ -1612,5 +1643,6 @@ export default function BubbleChart({
         </div>
       </CardContent>
     </Card>
+    </BubbleChartSelectionContext.Provider>
   );
 }

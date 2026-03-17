@@ -15,8 +15,8 @@ import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'cutaneous-melanoma': 'Cutaneous melanoma',
-  'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous melanoma with Brain/CNS metastasis',
+  'cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
+  'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
   'uveal-melanoma': 'Uveal Melanoma',
   'mucosal-melanoma': 'Mucosal Melanoma',
   'acral-melanoma': 'Acral Melanoma',
@@ -217,11 +217,6 @@ export default function LiveTickerPage() {
     return items;
   }, [latestItems, selectedMonthKey, efficacyFirst]);
 
-  const navLinkClass =
-    "relative text-sm font-medium text-sky-700 rounded-md px-2.5 py-1.5 pb-2 transition-all duration-200 ease-out hover:text-sky-800 hover:bg-sky-50/80 hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-1 after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:block after:h-px after:rounded-full after:bg-sky-600/70 after:content-[''] after:transition-all after:duration-200 after:ease-out hover:after:bg-sky-700 hover:after:h-0.5";
-  const navLinkActiveClass =
-    "relative text-sm font-medium text-sky-800 rounded-md px-2.5 py-1.5 pb-2 bg-sky-50/80 after:absolute after:left-2.5 after:right-2.5 after:bottom-0 after:block after:h-px after:rounded-full after:bg-sky-600/70 after:content-['']";
-
   return (
     <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden">
       <header className="bg-white border-b border-slate-200 shrink-0 z-50">
@@ -261,27 +256,6 @@ export default function LiveTickerPage() {
                 <div>
                   <h2 className="text-2xl font-medium tracking-wide text-sky-700">Live Ticker</h2>
                 </div>
-                <nav className="flex flex-wrap items-center gap-x-4 gap-y-1" aria-label="Dashboard navigation">
-                  <Link href={`/dashboard?cancer_type=${categorySlug}`} className={navLinkClass}>
-                    Landscape
-                  </Link>
-                  <Link href={`/dashboard/${categorySlug}/analytics?mode=efficacy`} className={navLinkClass}>
-                    Head to Head Efficacy
-                  </Link>
-                  <Link href={`/dashboard/${categorySlug}/analytics?mode=safety`} className={navLinkClass}>
-                    Head to Head Safety
-                  </Link>
-                  <Link href={`/dashboard/${categorySlug}/analytics`} className={navLinkClass}>
-                    Head to Head Efficacy : Safety
-                  </Link>
-                  <span className={navLinkActiveClass}>Live Ticker</span>
-                  <span className="text-sm font-medium text-slate-400 cursor-default" aria-disabled title="Coming soon">
-                    AI Chatbot <span className="text-xs font-normal">(Soon)</span>
-                  </span>
-                  <span className="text-sm font-medium text-slate-400 cursor-default" aria-disabled title="Coming soon">
-                    Regulatory Milestone <span className="text-xs font-normal">(Soon)</span>
-                  </span>
-                </nav>
               </div>
 
               <div className="flex flex-wrap items-center gap-4 py-2 shrink-0 border-y border-slate-100 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-2">

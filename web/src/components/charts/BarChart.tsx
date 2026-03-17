@@ -80,6 +80,65 @@ interface RechartsLabelContentProps {
   value?: React.ReactNode;
 }
 
+/** Wrap treatment name into multiple lines for dashboard (compact) X-axis. Max chars per line; prefer word boundaries. */
+function wrapTreatmentName(text: string, maxCharsPerLine = 14): string[] {
+  if (!text || !text.trim()) return [text || ''];
+  const words = text.trim().split(/\s+/);
+  if (words.length <= 1) {
+    if (text.length <= maxCharsPerLine) return [text];
+    return [text.slice(0, maxCharsPerLine), text.slice(maxCharsPerLine)].filter(Boolean);
+  }
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxCharsPerLine) {
+      current = next;
+    } else {
+      if (current) lines.push(current);
+      current = word.length > maxCharsPerLine ? word.slice(0, maxCharsPerLine) : word;
+      if (word.length > maxCharsPerLine && word.slice(maxCharsPerLine)) {
+        lines.push(current);
+        current = word.slice(maxCharsPerLine);
+      }
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+/** Custom X-axis tick for compact (dashboard) mode: multi-line treatment names. */
+interface CompactXAxisTickProps {
+  x?: number;
+  y?: number;
+  payload?: { value?: string; treatmentName?: string };
+  fill?: string;
+  fontSize?: number;
+  fontWeight?: number;
+}
+function CompactXAxisTick({ x = 0, y = 0, payload, fill = COLORS.axis, fontSize = 10, fontWeight = 500 }: CompactXAxisTickProps) {
+  const name = payload?.value ?? payload?.treatmentName ?? '';
+  const lines = wrapTreatmentName(name, 12);
+  const lineHeight = fontSize * 1.15;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        textAnchor="middle"
+        fill={fill}
+        fontSize={fontSize}
+        fontWeight={fontWeight}
+        dominantBaseline="hanging"
+      >
+        {lines.map((line, i) => (
+          <tspan key={i} x={0} dy={i === 0 ? 0 : lineHeight}>
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
+  );
+}
+
 // ============================================================================
 // Custom Tooltip Component
 // ============================================================================
@@ -304,6 +363,14 @@ interface BarChartProps {
   showReferenceLine?: boolean;
   referenceValue?: number;
   compact?: boolean;
+  /** When false, container has no rounded corners (e.g. dashboard grid) */
+  rounded?: boolean;
+  /** When true (dashboard only), X-axis treatment names wrap to multiple lines. Ignored when compact is false. */
+  wrapXAxisLabels?: boolean;
+  /** Optional override for bottom margin (e.g. analytics fullscreen). */
+  bottomMargin?: number;
+  /** When false, tooltips (hover and pin) are disabled (e.g. dashboard snapshot) */
+  showTooltip?: boolean;
 }
 
 export default function BarChart({
@@ -316,6 +383,10 @@ export default function BarChart({
   showReferenceLine = false,
   referenceValue,
   compact = false,
+  rounded = true,
+  wrapXAxisLabels = false,
+  bottomMargin: bottomMarginProp,
+  showTooltip = true,
 }: BarChartProps) {
   // Ensure height is always a valid positive number (fixes SSR warnings)
   const chartHeight = Math.max(height || 500, 100);
@@ -397,8 +468,18 @@ export default function BarChart({
   }, [data]);
 
   const margin = compact
-    ? { top: 20, right: showReferenceLine ? 14 : 30, bottom: 80, left: 55 }
-    : { top: 20, right: showReferenceLine ? 14 : 30, bottom: 100, left: 60 };
+    ? {
+        top: 20,
+        right: 6,
+        bottom: bottomMarginProp ?? (wrapXAxisLabels ? 24 : 140),
+        left: 6,
+      }
+    : {
+        top: 20,
+        right: showReferenceLine ? 14 : 30,
+        bottom: bottomMarginProp ?? 130,
+        left: 60,
+      };
 
   // Median label on the right: white/chart background + subtle border, anchored to end of reference line
   const medianLabelRight = useMemo(() => {
@@ -539,6 +620,7 @@ export default function BarChart({
 
   // Handle dot click - pin/unpin the tooltip
   const handleDotClick = useCallback((point: ScatterPoint, event: React.MouseEvent) => {
+    if (!showTooltip) return;
     event.stopPropagation();
     event.preventDefault();
     
@@ -562,11 +644,11 @@ export default function BarChart({
       x: position.x,
       y: position.y,
     });
-  }, [isPinned, pinnedDotId, calculateTooltipPosition]);
+  }, [showTooltip, isPinned, pinnedDotId, calculateTooltipPosition]);
 
   // Handle bar hover  
   const handleBarMouseEnter = useCallback((entry: HeadToHeadDataPoint, event: React.MouseEvent) => {
-    if (isPinned) return; // Don't change tooltip on hover if pinned
+    if (!showTooltip || isPinned) return; // Don't change tooltip on hover if pinned or disabled
     if (hideTimeoutRef.current) {
       clearTimeout(hideTimeoutRef.current);
     }
@@ -578,7 +660,7 @@ export default function BarChart({
       x: position.x,
       y: position.y,
     });
-  }, [isPinned, calculateTooltipPosition]);
+  }, [showTooltip, isPinned, calculateTooltipPosition]);
 
   const handleBarMouseLeave = useCallback(() => {
     if (isPinned) return; // Don't hide if pinned
@@ -756,7 +838,7 @@ export default function BarChart({
     return (
       <div 
         ref={chartContainerRef}
-        className="w-full h-full bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm flex flex-col outline-none focus:outline-none"
+        className={`w-full h-full bg-white border border-slate-200 overflow-hidden shadow-sm flex flex-col outline-none focus:outline-none ${rounded ? 'rounded-lg' : 'rounded-none'}`}
         tabIndex={-1}
       >
         {showLegend && (
@@ -788,7 +870,7 @@ export default function BarChart({
         )}
         
         <div 
-          className="flex-1 bg-white relative outline-none [&_*]:outline-none [&_svg]:outline-none [&_svg_*]:outline-none" 
+          className="flex-1 bg-white relative outline-none [&_*]:outline-none [&_svg]:outline-none [&_svg_*]:outline-none min-h-0 min-w-0" 
           onMouseLeave={handleChartMouseLeave} 
           tabIndex={-1}
           style={{ WebkitTapHighlightColor: 'transparent' }}
@@ -802,13 +884,19 @@ export default function BarChart({
               />
               <XAxis
                 dataKey="treatmentName"
-                tick={{ fontSize: 10, fill: colors.axis, fontWeight: 500 }}
+                tick={
+                  wrapXAxisLabels ? (
+                    <CompactXAxisTick fill={colors.axis} fontSize={10} fontWeight={500} />
+                  ) : (
+                    { fontSize: 10, fill: colors.axis, fontWeight: 500 }
+                  )
+                }
                 tickLine={{ stroke: colors.grid }}
                 axisLine={{ stroke: colors.grid }}
                 interval={0}
-                angle={-45}
-                textAnchor="end"
-                height={80}
+                angle={wrapXAxisLabels ? undefined : -45}
+                textAnchor={wrapXAxisLabels ? undefined : 'end'}
+                height={wrapXAxisLabels ? 48 : 80}
               />
               <YAxis
                 tick={{ fontSize: 12, fill: colors.axis }}
@@ -862,7 +950,7 @@ export default function BarChart({
           </ResponsiveContainer>
           
           {/* Custom tooltip */}
-          {tooltipData && (
+          {showTooltip && tooltipData && (
             <div 
               className={`fixed z-[9999]`}
               style={{ 
@@ -1002,7 +1090,7 @@ export default function BarChart({
           </ResponsiveContainer>
           
           {/* Custom tooltip */}
-          {tooltipData && (
+          {showTooltip && tooltipData && (
             <div 
               className={`fixed z-[9999]`}
               style={{ 

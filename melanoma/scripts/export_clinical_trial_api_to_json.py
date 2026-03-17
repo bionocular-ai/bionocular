@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export clinical_trials_cache and api_discovery from clinical_trial_api.db to JSON.
+"""Export clinical_trials_cache (and optionally api_discovery) from trials.db to JSON.
 
 Use this to produce a seed file that can be baked into the Docker image so
 production has trial API data without calling the API at deploy or startup.
@@ -7,7 +7,7 @@ production has trial API data without calling the API at deploy or startup.
 Usage:
   cd melanoma
   poetry run python scripts/export_clinical_trial_api_to_json.py
-  poetry run python scripts/export_clinical_trial_api_to_json.py --source path/to/api.db --out data/deployed/clinical_trials_api_seed.json
+  poetry run python scripts/export_clinical_trial_api_to_json.py --source path/to/trials.db --out data/deployed/clinical_trials_api_seed.json
   poetry run python scripts/export_clinical_trial_api_to_json.py --gzip   # write .json.gz (compact) for smaller commit
   poetry run python scripts/export_clinical_trial_api_to_json.py --compact  # write compact JSON (no indent)
 """
@@ -26,12 +26,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DEFAULT_SOURCE = (
-    Path(__file__).parent.parent / "data" / "clinical_trial_api" / "clinical_trial_api.db"
-)
+DEFAULT_SOURCE = Path(__file__).parent.parent / "data" / "trials_db" / "trials.db"
 DEFAULT_OUT = (
     Path(__file__).parent.parent / "data" / "deployed" / "clinical_trials_api_seed.json"
 )
+
+
+def _table_exists(cur: sqlite3.Cursor, table_name: str) -> bool:
+    cur.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
+        (table_name,),
+    )
+    return cur.fetchone() is not None
 
 
 def main() -> int:
@@ -78,6 +84,11 @@ def main() -> int:
         conn = sqlite3.connect(str(args.source))
         cur = conn.cursor()
 
+        if not _table_exists(cur, "clinical_trials_cache"):
+            logger.error("Source database missing required table: clinical_trials_cache")
+            conn.close()
+            return 1
+
         cur.execute(
             "SELECT nct_number, api_response_json, created_at, updated_at, last_accessed_at "
             "FROM clinical_trials_cache"
@@ -94,22 +105,24 @@ def main() -> int:
             for r in cache_rows
         ]
 
-        cur.execute(
-            "SELECT nct_number, cancer_type_tag, current_status, discovery_date, is_active, updated_at "
-            "FROM api_discovery"
-        )
-        discovery_rows = cur.fetchall()
-        api_discovery = [
-            {
-                "nct_number": r[0],
-                "cancer_type_tag": r[1],
-                "current_status": r[2],
-                "discovery_date": r[3],
-                "is_active": r[4],
-                "updated_at": r[5],
-            }
-            for r in discovery_rows
-        ]
+        api_discovery = []
+        if _table_exists(cur, "api_discovery"):
+            cur.execute(
+                "SELECT nct_number, cancer_type_tag, current_status, discovery_date, is_active, updated_at "
+                "FROM api_discovery"
+            )
+            discovery_rows = cur.fetchall()
+            api_discovery = [
+                {
+                    "nct_number": r[0],
+                    "cancer_type_tag": r[1],
+                    "current_status": r[2],
+                    "discovery_date": r[3],
+                    "is_active": r[4],
+                    "updated_at": r[5],
+                }
+                for r in discovery_rows
+            ]
 
         conn.close()
 

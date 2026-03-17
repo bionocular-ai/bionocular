@@ -39,6 +39,7 @@ export default function RootLayout({
       <body
         className={[inter.variable, ibmPlexSans.variable, "antialiased"].join(" ")}
         style={{ fontFamily: "var(--font-inter)" }}
+        suppressHydrationWarning
       >
         <SessionProvider>
           <QueryProvider>{children}</QueryProvider>
