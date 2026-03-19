@@ -3,198 +3,380 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="AI signal detection plus expert verification across trials, publications, pipelines, and real‑world data. Faster oncology insights your teams can trust.">
-  <meta name="theme-color" content="#1A73E8">
+  <meta name="description" content="Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.">
+  <meta name="theme-color" content="#1B4F65">
   <meta name="robots" content="index, follow">
   <meta property="og:title" content="Bionocular.ai — Human‑Verified Oncology Signal, Not Noise">
-  <meta property="og:description" content="AI signal detection plus expert verification across trials, publications, pipelines, and real‑world data. Faster oncology insights your teams can trust.">
+  <meta property="og:description" content="Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.">
   <meta property="og:type" content="website">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="shortcut icon" href="favicon.ico">
   <link rel="apple-touch-icon" href="logo.png">
-  <title>Bionocular.ai — Human‑Verified Oncology Signal, Not Noise</title>
+  <title>Bionocular.ai — The New Standard in Oncology Intelligence</title>
+
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome for fallback or specific icons like social media -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  
+  <!-- Tailwind Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              primary: '#1B4F65',
+              'primary-hover': '#16404F',
+              accent: '#7AC1A2',
+              'accent-light': '#DAF0E6',
+              bg: '#F7FAF9',
+              surface: '#FFFFFF',
+              text: '#102B36',
+              'text-muted': '#4A6B77',
+              border: '#C8E0D8'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Custom Styles -->
   <link rel="preload" href="styles.css" as="style">
-  <link rel="preload" href="script.js" as="script">
   <link rel="preload" href="Bionocular.mp4" as="video" type="video/mp4">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="bg-brand-bg text-brand-text font-sans antialiased selection:bg-brand-accent-light selection:text-brand-primary">
+
+  <div id="mobileMenuBackdrop" class="mobile-menu-backdrop" aria-hidden="true"></div>
+
   <header class="site-header">
     <div class="container header-inner">
       <a class="brand" href="#" aria-label="Bionocular Home">
-        <img src="logo.png" alt="Bionocular Logo" class="brand-mark" width="37" height="37">
-        <span class="brand-text">
+        <img src="logo.png" alt="Bionocular Logo" class="object-contain flex-shrink-0 responsive-logo" style="--logo-height: 32px; height: var(--logo-height); width: auto;">
+        <span class="brand-text" style="line-height: 1.2">
           bi<span class="brand-o">o</span>nocular
         </span>
       </a>
-      <nav class="nav">
-        <a href="#hero" class="nav-link" data-section="hero">Home</a>
-        <a href="#platform" class="nav-link" data-section="platform">Solutions</a>
-        <a href="#about" class="nav-link" data-section="about">About</a>
-        <a href="#contact" class="nav-link" data-section="contact">Contact</a>
+      <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+        <span class="hamburger">
+          <span></span><span></span><span></span>
+        </span>
+      </button>
+      
+      <nav id="siteNav" class="nav">
+        <div class="nav-links-wrap" id="navLinksWrap">
+          <span id="navIndicator" class="nav-indicator" aria-hidden="true"></span>
+          <a href="#hero" class="active">Home</a>
+          <a href="#platform">Product</a>
+          <a href="#about">About</a>
+          <a href="#contact">Contact</a>
+        </div>
       </nav>
     </div>
   </header>
 
-  <section class="hero" id="hero">
-    <video
-      class="hero-media"
-      src="Bionocular.mp4"
-      autoplay
-      loop
-      muted
-      playsinline
-      aria-hidden="true"
-    ></video>
-    <canvas id="dataCanvas" class="hero-canvas" aria-hidden="true"></canvas>
-    <div class="hero-overlay">
-      <h1 id="heroHeadline" class="hero-title"></h1>
+  <section class="hero hero-split min-h-[92vh] pt-[62px] md:min-h-[92vh] relative" id="hero" aria-labelledby="heroHeadline">
+    <div class="hero-atmosphere absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+
+    <div class="hero-split-grid grid grid-cols-1 md:grid-cols-[2fr_3fr] min-h-[calc(92vh-62px)] relative z-0">
+      <div class="hero-text-column flex flex-col justify-center gap-8 py-12 md:py-16 text-left">
+        <div class="inline-flex items-center gap-2 self-start">
+          <span class="text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full" style="background: rgba(122,193,162,0.18); color: #7AC1A2; border: 1px solid rgba(122,193,162,0.35);">
+            Oncology Intelligence Platform
+          </span>
+        </div>
+
+        <h1 id="heroHeadline" class="hero-split-title w-full max-w-xl m-0">
+          <div class="hero-rotator-wrapper relative min-h-[7rem] sm:min-h-[8.5rem] md:min-h-[10rem] lg:min-h-[12rem] w-full max-w-xl flex flex-col justify-center" aria-live="polite" aria-atomic="true">
+            <p id="heroRotatorPhrase" class="hero-rotator-phrase w-full text-[#E9ECEF] text-xl leading-[1.2] tracking-[-0.02em] sm:text-2xl md:text-3xl lg:text-4xl text-left pr-4" style="transition: opacity 0.6s ease, transform 0.6s ease;">
+              <!-- Dynamic content -->
+            </p>
+          </div>
+        </h1>
+
+        <p class="text-base md:text-lg max-w-md leading-relaxed m-0" style="color: rgba(218,240,230,0.8);">
+          Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.
+        </p>
+
+        <div class="hero-split-ctas flex mt-6">
+          <a href="#platform" class="btn flex items-center justify-center" style="background: var(--brand-accent); color: #0E3547; border: none; border-radius: 9999px; padding: 16px 36px; font-weight: 700; font-size: 1.05rem; letter-spacing: 0.01em; transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.1);" onmouseenter="this.style.background='#5EADA8'; this.style.boxShadow='0 8px 24px rgba(122,193,162,0.45)'; this.style.transform='translateY(-2px)';" onmouseleave="this.style.background='var(--brand-accent)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; this.style.transform='translateY(0)';">
+            See How It Works
+            <i data-lucide="arrow-right" class="w-5 h-5 ml-2 transition-transform duration-200 group-hover:translate-x-1" stroke-width="2.5"></i>
+          </a>
+        </div>
+
+        <div class="hero-glass-divider hidden md:block" aria-hidden="true"></div>
+      </div>
+
+      <div class="hero-video-column relative min-h-[50vh] md:min-h-[calc(92vh-62px)] w-full overflow-hidden">
+        <video class="absolute inset-0 w-full h-full object-cover object-center" src="Bionocular.mp4" autoplay loop muted playsinline aria-hidden="true"></video>
+        <div class="hero-video-overlay absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+      </div>
     </div>
   </section>
 
   <main>
-    <section class="section section-problem" id="platform">
-      <div class="container">
-        <h2 class="section-title center">Comprehensive Research Intelligence</h2>
-        <div class="card-grid">
-          <article class="card feature-card">
-            <i class="fas fa-microscope"></i>
-            <h3>Research Aggregation</h3>
-            <p>
-              Access consolidated oncology research findings from major medical congresses and
-              pharmaceutical companies.
-            </p>
-          </article>
-          <article class="card feature-card">
-            <i class="fas fa-chart-line"></i>
-            <h3>Treatment Insights</h3>
-            <p>
-              Track emerging approaches, drug developments, and clinical trial outcomes across
-              oncology treatment.
-            </p>
-          </article>
-          <article class="card feature-card">
-            <i class="fas fa-brain"></i>
-            <h3>AI‑Powered Analysis</h3>
-            <p>
-              Leverage analytics to identify trends and patterns—surfacing the signals that
-              matter and suppressing noise.
-            </p>
-          </article>
+    <!-- SECTION 1: COMPARISON -->
+    <section class="section py-20" id="platform" style="background: var(--brand-bg)">
+      <div class="container max-w-6xl mx-auto px-4">
+        <div class="text-center mb-16">
+          <span class="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4" style="background: var(--brand-accent-light); color: var(--brand-primary)">
+            Why Bionocular
+          </span>
+          <h2 class="text-3xl md:text-4xl font-bold mb-4" style="color: var(--brand-text)">
+            The New Standard in <span style="color: var(--brand-primary)">Oncology Intelligence</span>
+          </h2>
+          <p class="text-lg max-w-2xl mx-auto" style="color: var(--brand-text-muted)">
+            Discover why leading research and medical teams are leaving static databases behind for dynamic, AI-driven insights.
+          </p>
+        </div>
+
+        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+          <!-- VS Badge -->
+          <div class="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center font-bold shadow-lg z-10 border-4" style="background: var(--brand-primary); color: #fff; border-color: var(--brand-bg)">
+            VS
+          </div>
+
+          <!-- Left: bionocularAI -->
+          <div class="rounded-2xl shadow-xl p-8 relative overflow-hidden" style="background: #fff; border: 1.5px solid var(--brand-border)">
+            <!-- Top accent stripe -->
+            <div class="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style="background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent))"></div>
+            <h3 class="text-2xl font-bold mb-1" style="color: var(--brand-primary)">
+              With bi<span style="text-decoration: underline; text-decoration-color: var(--brand-accent); text-decoration-thickness: 2px; text-underline-offset: 4px;">o</span>nocularAI
+            </h3>
+            <p class="font-medium mb-8" style="color: var(--brand-accent)">Dynamic, AI-Driven Intelligence</p>
+
+            <div class="space-y-6">
+              <div class="flex gap-4">
+                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: var(--brand-accent-light); color: var(--brand-primary)">
+                  <i data-lucide="clock" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center">
+                  <p class="font-medium" style="color: var(--brand-text)">Offers real-time trial and treatment landscape changes in specific cancers</p>
+                </div>
+              </div>
+              
+              <div class="flex gap-4">
+                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: var(--brand-accent-light); color: var(--brand-primary)">
+                  <i data-lucide="line-chart" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center">
+                  <p class="font-medium" style="color: var(--brand-text)">Instantly plots 100+ endpoints on dynamic 2D & 3D analytical models</p>
+                </div>
+              </div>
+              
+              <div class="flex gap-4">
+                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: var(--brand-accent-light); color: var(--brand-primary)">
+                  <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center">
+                  <p class="font-medium" style="color: var(--brand-text)">Disease-Specific AI Agent, Active Reasoning Partner</p>
+                </div>
+              </div>
+              
+              <div class="flex gap-4">
+                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: var(--brand-accent-light); color: var(--brand-primary)">
+                  <i data-lucide="filter" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center">
+                  <p class="font-medium" style="color: var(--brand-text)">The full ecosystem is connected with innovative filters to streamline data and is very user-friendly</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Others -->
+          <div class="rounded-2xl p-8" style="background: var(--brand-bg); border: 1.5px solid var(--brand-border)">
+            <h3 class="text-2xl font-bold mb-1" style="color: var(--brand-text)">Others</h3>
+            <p class="font-medium mb-8" style="color: var(--brand-text-muted)">Static, Passive Data</p>
+
+            <div class="space-y-6">
+              <div class="flex gap-4 opacity-75">
+                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: #E8EFF2; color: #8AAAB5">
+                  <i data-lucide="database" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center flex-col items-start justify-center">
+                  <p style="color: var(--brand-text-muted); margin: 0;">Siloed Oncology Vendors & Flat Clinical Scrapers</p>
+                  <span class="italic text-sm" style="color: var(--brand-text-muted);">"Give you a login to a database"</span>
+                </div>
+              </div>
+              
+              <div class="flex gap-4 opacity-75">
+                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: #E8EFF2; color: #8AAAB5">
+                  <i data-lucide="help-circle" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center">
+                  <p style="color: var(--brand-text-muted); margin: 0;">Generic LLMs lacking disease-specific context or specialized oncology training.</p>
+                </div>
+              </div>
+              
+              <div class="flex gap-4 opacity-75">
+                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: #E8EFF2; color: #8AAAB5">
+                  <i data-lucide="clipboard-list" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center flex-col items-start justify-center">
+                  <p style="color: var(--brand-text-muted); margin: 0;">Static Data Aggregators</p>
+                  <span class="italic text-sm" style="color: var(--brand-text-muted);">"Just dump lists of trial updates"</span>
+                </div>
+              </div>
+              
+              <div class="flex gap-4 opacity-75">
+                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: #E8EFF2; color: #8AAAB5">
+                  <i data-lucide="unplug" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center">
+                  <p style="color: var(--brand-text-muted); margin: 0;">Data is highly fragmented and segregated</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="section section-about" id="about">
-      <div class="container">
-        <h2 class="section-title center">Why Choose Bionocular</h2>
-        <div class="card-grid">
-          <article class="card">
-            <h3>Comprehensive Coverage</h3>
-            <p>
-              Aggregate research from major oncology conferences, pharma pipelines, and advocacy
-              organizations.
+    <!-- SECTION 2: PIPELINE FLOW -->
+    <section class="section py-20" id="about" style="background: #fff">
+      <div class="container max-w-6xl mx-auto px-4">
+        <div class="text-center mb-16">
+          <span class="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4" style="background: var(--brand-accent-light); color: var(--brand-primary)">
+            How It Works
+          </span>
+          <h2 class="text-3xl md:text-4xl font-bold mb-4" style="color: var(--brand-text)">
+            The Clinical Clarity Pipeline
+          </h2>
+          <p class="text-lg max-w-2xl mx-auto" style="color: var(--brand-text-muted)">
+            From data noise to clinical clarity: The bi<span style="text-decoration: underline; text-decoration-color: var(--brand-accent); text-decoration-thickness: 2px; text-underline-offset: 4px;">o</span>nocular AI Advantage
+          </p>
+        </div>
+
+        <div class="flex flex-col md:flex-row items-stretch gap-4 md:gap-2 lg:gap-4 relative w-full">
+          <!-- Step 1: Challenge -->
+          <div class="flex-1 flex flex-col items-center text-center p-6 rounded-xl" style="background: var(--brand-bg); border: 1.5px solid var(--brand-border)">
+            <h4 class="font-bold mb-1 text-xl" style="color: var(--brand-text)">The Challenge:</h4>
+            <p class="text-sm mb-6" style="color: var(--brand-text-muted)">Fragmented Data &amp; Noise</p>
+
+            <div class="relative w-32 h-32 mb-6 flex items-center justify-center opacity-60">
+              <div class="absolute grid grid-cols-2 gap-2">
+                <i data-lucide="file-x" class="w-8 h-8" style="color: #E57373" stroke-width="1.5"></i>
+                <i data-lucide="table" class="w-8 h-8" style="color: var(--brand-text-muted)" stroke-width="1.5"></i>
+                <i data-lucide="file-text" class="w-8 h-8" style="color: var(--brand-accent)" stroke-width="1.5"></i>
+                <i data-lucide="file-x" class="w-8 h-8" style="color: var(--brand-text-muted)" stroke-width="1.5"></i>
+              </div>
+            </div>
+
+            <p class="text-sm leading-relaxed" style="color: var(--brand-text-muted)">
+              Voluminous, unstructured data across disparate sources makes manual analysis slow and incomplete.
             </p>
-          </article>
-          <article class="card">
-            <h3>Specialized Focus</h3>
-            <p>
-              Oncology‑tuned extraction and verification deliver clinically relevant, low‑noise
-              insights.
+          </div>
+
+          <!-- Arrow 1 -->
+          <div class="hidden md:flex items-center justify-center px-1 lg:px-2 shrink-0" style="color: var(--brand-border)">
+            <i data-lucide="arrow-right" class="w-8 h-8 lg:w-10 lg:h-10" stroke-width="1.5"></i>
+          </div>
+
+          <!-- Step 2: Solution -->
+          <div class="flex-1 flex flex-col items-center text-center p-6 rounded-xl" style="background: var(--brand-accent-light); border: 1.5px solid var(--brand-accent)">
+            <h4 class="font-bold mb-1 text-xl" style="color: var(--brand-primary)">The Solution:</h4>
+            <p class="text-sm mb-6" style="color: var(--brand-primary)">Intelligent Synthesis &amp; Structure</p>
+
+            <div class="relative w-32 h-32 mb-6 flex flex-col items-center justify-center">
+              <i data-lucide="filter" class="w-16 h-16 mb-2" style="color: var(--brand-primary)" stroke-width="1.5"></i>
+              <div class="text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded" style="background: var(--brand-primary); color: #fff">
+                AI + Human Engine
+              </div>
+              <i data-lucide="network" class="w-8 h-8 mt-2" style="color: var(--brand-accent)" stroke-width="1.5"></i>
+            </div>
+
+            <p class="text-sm leading-relaxed" style="color: var(--brand-text)">
+              Real-time aggregation and structuring of trials, publications, and news using advanced NLP and machine learning.
             </p>
-          </article>
-          <article class="card">
-            <h3>Time‑Saving</h3>
-            <p>
-              Eliminate manual sifting with organized, analyst‑verified briefs, alerts, and
-              datasets.
-            </p>
-          </article>
+          </div>
+
+          <!-- Arrow 2 -->
+          <div class="hidden md:flex items-center justify-center px-1 lg:px-2 shrink-0" style="color: var(--brand-accent)">
+            <i data-lucide="arrow-right" class="w-8 h-8 lg:w-10 lg:h-10" stroke-width="1.5"></i>
+          </div>
+
+          <!-- Step 3: Edge -->
+          <div class="flex-1 flex flex-col items-center text-left p-6 rounded-xl" style="background: var(--brand-primary); border: 1.5px solid var(--brand-primary)">
+            <h4 class="font-bold mb-1 text-center w-full text-xl" style="color: #fff">The Unique Edge:</h4>
+            <p class="text-sm mb-6 text-center w-full" style="color: var(--brand-accent)">Expert-Curated Visualization</p>
+
+            <div class="flex gap-4 mb-6 w-full justify-center" style="color: var(--brand-accent)">
+              <i data-lucide="layout-dashboard" class="w-8 h-8" stroke-width="1.5"></i>
+              <i data-lucide="brain" class="w-8 h-8" stroke-width="1.5"></i>
+              <i data-lucide="refresh-cw" class="w-8 h-8" stroke-width="1.5"></i>
+            </div>
+
+            <ul class="text-sm space-y-2 list-disc pl-4" style="color: rgba(218,240,230,0.9)">
+              <li>Real-time trial updates and live news</li>
+              <li>Trial landscape with treatment cards and critical filters</li>
+              <li>All trial outcome data with user friendly analytics</li>
+              <li>Cancer specific AI agent</li>
+              <li>Regulatory timeline analytics</li>
+            </ul>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="section section-contact" id="contact">
-      <div class="container contact-wrap">
-        <h2 class="section-title center">Get in Touch</h2>
-        <div class="contact-form">
-          <form id="contactForm">
-            <input
-              type="text"
-              name="name"
-              placeholder="Name"
-              required
-              aria-label="Name"
-            />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email"
-              required
-              aria-label="Email"
-            />
-            <select name="role" required aria-label="Role">
-              <option value="">Select Your Role</option>
-              <option value="researcher">Researcher</option>
-              <option value="healthcare">Healthcare Professional</option>
-              <option value="patient">Patient/Advocate</option>
-              <option value="other">Other</option>
-            </select>
-            <textarea
-              name="message"
-              placeholder="Message"
-              required
-              aria-label="Message"
-            ></textarea>
-            <button type="submit" class="btn btn-primary">
-              Request Access
-            </button>
-          </form>
-        </div>
-      </div>
-    </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="container footer-content">
-      <div class="footer-section">
-        <h4>Bionocular.ai</h4>
-        <p>Human‑verified oncology intelligence for research and medical teams.</p>
+  <!-- FOOTER -->
+  <footer id="contact" class="site-footer" style="background: linear-gradient(180deg, #09232F 0%, #041218 100%); color: #ffffff; padding: 56px 0 16px;">
+    <div class="container footer-content grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+      <div class="footer-section flex flex-col items-center md:items-start text-center md:text-left gap-4">
+        <div class="flex items-center gap-2">
+          <img src="logo.png" alt="Bionocular" style="height: 28px; width: auto;">
+          <span style="font-weight: 700; font-size: 1.25rem; font-family: 'IBM Plex Sans', sans-serif; letter-spacing: 0.2px;">
+            bi<span style="text-decoration: underline; text-decoration-color: var(--brand-accent); text-decoration-thickness: 2px; text-underline-offset: 3px;">o</span>nocular
+          </span>
+        </div>
+        <p style="color: rgba(255, 255, 255, 0.82); max-width: 250px; margin: 0;">Human‑verified oncology intelligence for research and medical teams.</p>
       </div>
-      <div class="footer-section">
-        <h4>Contact</h4>
-        <p>
-          <a href="mailto:info@bionocular.ai">info@bionocular.ai</a>
-        </p>
+      
+      <div class="footer-section flex flex-col items-center gap-2">
+        <h4 style="color: #fff; margin: 0; font-size: 1.1rem; font-weight: 600;">Contact</h4>
+        <p style="margin: 0;"><a href="mailto:info@bionocular.ai" style="color: rgba(255, 255, 255, 0.86); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255, 255, 255, 0.86)'">info@bionocular.ai</a></p>
       </div>
-      <div class="footer-section">
-        <h4>Connect</h4>
-        <div class="social-links">
-          <a href="#" aria-label="LinkedIn">
-            <i class="fab fa-linkedin"></i>
+      
+      <div class="footer-section flex flex-col items-center md:items-end gap-3">
+        <h4 style="color: #fff; margin:0; font-size: 1.1rem; font-weight: 600;">Connect</h4>
+        <div class="social-links flex gap-4">
+          <a href="#" aria-label="LinkedIn" style="color: rgba(255,255,255,0.86); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255, 255, 255, 0.86)'">
+            <i class="fab fa-linkedin text-xl"></i>
           </a>
-          <a href="#" aria-label="Twitter/X">
-            <i class="fab fa-x-twitter"></i>
+          <a href="#" aria-label="Twitter/X" style="color: rgba(255,255,255,0.86); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255, 255, 255, 0.86)'">
+            <i class="fab fa-x-twitter text-xl"></i>
           </a>
-          <a href="mailto:info@bionocular.ai" aria-label="Email">
-            <i class="fas fa-envelope"></i>
+          <a href="mailto:info@bionocular.ai" aria-label="Email" style="color: rgba(255,255,255,0.86); text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255, 255, 255, 0.86)'">
+            <i class="fas fa-envelope text-xl"></i>
           </a>
         </div>
       </div>
     </div>
-    <div class="container footer-bottom">
-      <p id="copyright"></p>
+    
+    <div class="container footer-bottom mt-12 pt-6 border-t border-white/10 text-center text-white/70 text-sm">
+      <p id="copyright" style="margin: 0;"></p>
     </div>
   </footer>
 
   <script src="script.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
 </body>
 </html>
-

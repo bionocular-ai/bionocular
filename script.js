@@ -1,7 +1,13 @@
 // Headlines rotation
-const headlines = [
-  'Next-gen AI and Machine learning providing analytics and insights (with Human verification) in the Oncology landscape',
-  'Cutting the noise and only focusing on the key elements'
+const HERO_PHRASES = [
+  {
+    strong: 'Next-gen AI and Machine learning',
+    rest: ' providing analytics and insights (with Human verification) in the Oncology landscape.',
+  },
+  {
+    strong: 'Cutting the noise',
+    rest: ' and only focusing on the key elements.',
+  },
 ];
 
 let headlineIndex = 0;
@@ -9,84 +15,44 @@ let activeNav = '';
 
 // Initialize headline rotation
 function initHeadlineRotation() {
-  const headlineEl = document.getElementById('heroHeadline');
-  if (!headlineEl) return;
+  const phraseEl = document.getElementById('heroRotatorPhrase');
+  if (!phraseEl) return;
 
-  headlineEl.textContent = headlines[headlineIndex];
-  headlineEl.style.opacity = '1';
-
-  setInterval(() => {
-    headlineEl.style.opacity = '0';
+  function updatePhrase() {
+    const phrase = HERO_PHRASES[headlineIndex];
+    phraseEl.style.opacity = '0';
+    phraseEl.style.transform = 'translateY(-14px)';
+    
     setTimeout(() => {
-      headlineIndex = (headlineIndex + 1) % headlines.length;
-      headlineEl.textContent = headlines[headlineIndex];
-      headlineEl.style.opacity = '1';
-    }, 500);
-  }, 9000);
-}
-
-// Canvas particles animation
-function initParticles() {
-  const canvas = document.getElementById('dataCanvas');
-  if (!canvas) return;
-
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  let particles = [];
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+      phraseEl.innerHTML = `
+        <span class="font-bold" style="font-weight: 700">${phrase.strong}</span>
+        <span class="font-light" style="font-weight: 300; opacity: 0.85">${phrase.rest}</span>
+      `;
+      // Start from below before animating in
+      phraseEl.style.transform = 'translateY(14px)';
+      
+      requestAnimationFrame(() => {
+        // Must delay slightly for browser to register the translateY(14px)
+        setTimeout(() => {
+          phraseEl.style.opacity = '1';
+          phraseEl.style.transform = 'translateY(0)';
+        }, 50);
+      });
+    }, 400); // Wait for fade out
   }
 
-  function spawnParticles(count) {
-    particles = Array.from({ length: count }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      z: Math.random() * 1 + 0.2,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      r: Math.random() * 1.6 + 0.3,
-      a: Math.random() * 0.4 + 0.2,
-    }));
-  }
-
-  resize();
-  spawnParticles(Math.min(250, Math.floor((canvas.width * canvas.height) / 3000)));
-
-  function tick() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (const p of particles) {
-      p.x += p.vx * p.z;
-      p.y += p.vy * p.z;
-      if (p.x < 0) p.x = canvas.width;
-      if (p.x > canvas.width) p.x = 0;
-      if (p.y < 0) p.y = canvas.height;
-      if (p.y > canvas.height) p.y = 0;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#0ea5e9';
-      const r = parseInt(accent.slice(1, 3), 16);
-      const g = parseInt(accent.slice(3, 5), 16);
-      const b = parseInt(accent.slice(5, 7), 16);
-      ctx.fillStyle = `rgba(${r},${g},${b},${p.a})`;
-      ctx.fill();
-    }
-    requestAnimationFrame(tick);
-  }
-
-  tick();
-
-  window.addEventListener('resize', () => {
-    resize();
-    spawnParticles(Math.min(250, Math.floor((canvas.width * canvas.height) / 3000)));
-  });
+  updatePhrase();
+  setInterval(() => {
+    headlineIndex = (headlineIndex + 1) % HERO_PHRASES.length;
+    updatePhrase();
+  }, 5000); // 5 sec per phrase
 }
 
 // Smooth scrolling and active nav
 function initSmoothScroll() {
   const EXTRA_GAP_PX = 10;
+  const navIndicator = document.getElementById('navIndicator');
+  const navLinksWrap = document.getElementById('navLinksWrap');
 
   function findAnchorTarget(hash) {
     const el = document.querySelector(hash);
@@ -103,20 +69,48 @@ function initSmoothScroll() {
     window.scrollTo({ top, behavior: 'smooth' });
   }
 
+  function updateIndicator(activeLink) {
+    if (!navIndicator || !navLinksWrap || !activeLink) {
+      if (navIndicator) navIndicator.style.opacity = '0';
+      return;
+    }
+    const wrapRect = navLinksWrap.getBoundingClientRect();
+    const linkRect = activeLink.getBoundingClientRect();
+    navIndicator.style.left = `${linkRect.left - wrapRect.left}px`;
+    navIndicator.style.width = `${linkRect.width}px`;
+    navIndicator.style.opacity = '1';
+  }
+
   function setActiveNav(hash) {
     activeNav = hash;
-    document.querySelectorAll('.nav-link').forEach(link => {
+    let foundLink = null;
+    document.querySelectorAll('.nav-links-wrap a').forEach(link => {
       link.classList.remove('active');
-      if (link.getAttribute('data-section') === hash.slice(1)) {
+      if (link.getAttribute('href') === hash) {
         link.classList.add('active');
+        foundLink = link;
       }
     });
+    updateIndicator(foundLink);
   }
 
   function handleAnchorClick(e) {
     const anchor = e.currentTarget;
     const href = anchor.getAttribute('href');
     if (!href || href === '#') return;
+    
+    // Close mobile menu if open
+    const nav = document.getElementById('siteNav');
+    const backdrop = document.getElementById('mobileMenuBackdrop');
+    const hamburger = document.querySelector('.hamburger');
+    
+    if (nav.classList.contains('mobile-open')) {
+      nav.classList.remove('mobile-open');
+      backdrop.style.display = 'none';
+      hamburger.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+    
     if (href === '#hero') {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -126,30 +120,32 @@ function initSmoothScroll() {
     const targetEl = findAnchorTarget(href);
     if (!targetEl) return;
     e.preventDefault();
-    const header = document.querySelector('.site-header');
-    const headerHeight = header ? header.offsetHeight : 0;
-    const top = targetEl.getBoundingClientRect().top + window.pageYOffset - headerHeight - EXTRA_GAP_PX;
-    window.scrollTo({ top, behavior: 'smooth' });
+    scrollToHash(href);
     setActiveNav(href);
   }
 
-  const anchors = document.querySelectorAll('a[href^="#"]');
+  const anchors = document.querySelectorAll('.nav-links-wrap a[href^="#"]');
   anchors.forEach((anchor) => {
     anchor.addEventListener('click', handleAnchorClick);
   });
 
   // IntersectionObserver for active nav
-  const sections = document.querySelectorAll('main section[id]');
+  const sections = document.querySelectorAll('main section[id], #hero, #contact');
   const sectionObserver = new IntersectionObserver(
     (entries) => {
+      let intersecting = [];
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          const id = '#' + entry.target.id;
-          setActiveNav(id);
+          intersecting.push(entry);
         }
       });
+      // Sort by topmost if multiple intersecting, or pick the single one
+      if (intersecting.length > 0) {
+        const id = '#' + intersecting[0].target.id;
+        setActiveNav(id);
+      }
     },
-    { rootMargin: '-40% 0px -50% 0px', threshold: 0.01 }
+    { rootMargin: '-40% 0px -50% 0px', threshold: 0.05 }
   );
   sections.forEach((sec) => sectionObserver.observe(sec));
 
@@ -160,6 +156,8 @@ function initSmoothScroll() {
       scrollToHash(initialHash);
       setActiveNav(initialHash);
     });
+  } else {
+      setActiveNav('#hero');
   }
 
   window.addEventListener('hashchange', () => {
@@ -168,18 +166,40 @@ function initSmoothScroll() {
       setActiveNav(window.location.hash);
     }
   });
+  
+  window.addEventListener('resize', () => {
+    const active = document.querySelector('.nav-links-wrap a.active');
+    updateIndicator(active);
+  });
 }
 
-// Contact form handler
-function initContactForm() {
-  const form = document.getElementById('contactForm');
-  if (!form) return;
+// Mobile Menu
+function initMobileMenu() {
+  const toggle = document.getElementById('mobileMenuToggle');
+  const nav = document.getElementById('siteNav');
+  const backdrop = document.getElementById('mobileMenuBackdrop');
+  const hamburger = document.querySelector('.hamburger');
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
-    alert('Thank you for your message! We will get back to you soon.');
-    form.reset();
+  function openMenu() {
+    nav.classList.add('mobile-open');
+    backdrop.style.display = 'block';
+    hamburger.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeMenu() {
+    nav.classList.remove('mobile-open');
+    backdrop.style.display = 'none';
+    hamburger.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  toggle.addEventListener('click', () => {
+    if (nav.classList.contains('mobile-open')) closeMenu();
+    else openMenu();
   });
+
+  backdrop.addEventListener('click', closeMenu);
 }
 
 // Set copyright year
@@ -194,9 +214,7 @@ function setCopyright() {
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   initHeadlineRotation();
-  initParticles();
+  initMobileMenu();
   initSmoothScroll();
-  initContactForm();
   setCopyright();
 });
-
