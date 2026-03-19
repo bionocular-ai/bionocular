@@ -23,32 +23,10 @@
   
   <!-- FontAwesome for fallback or specific icons like social media -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  
-  <!-- Tailwind Play CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Tailwind Config -->
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              primary: '#1B4F65',
-              'primary-hover': '#16404F',
-              accent: '#7AC1A2',
-              'accent-light': '#DAF0E6',
-              bg: '#F7FAF9',
-              surface: '#FFFFFF',
-              text: '#102B36',
-              'text-muted': '#4A6B77',
-              border: '#C8E0D8'
-            }
-          }
-        }
-      }
-    }
-  </script>
+
+  <!-- Tailwind (precompiled) -->
+  <link rel="preload" href="tailwind.generated.css" as="style">
+  <link rel="stylesheet" href="tailwind.generated.css">
   
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
