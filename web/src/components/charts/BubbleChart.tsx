@@ -783,34 +783,33 @@ export default function BubbleChart({
       return [domainMin, domainMax];
     }
     
-    const padding = Math.max((max - min) * 0.1, 1); // At least 1 unit padding
-    const rawMin = Math.max(0, min - padding);
-    let rawMax = max + padding;
-    
+    let rawMax = max + Math.max((max - min) * 0.1, 1);
+
     // For zParam, don't cap at 100
     if (metricType !== 'zParam') {
       rawMax = Math.min(100, rawMax);
     }
-    
+
     // Round to nice whole numbers
     let roundedMin: number, roundedMax: number;
     if (metricType === 'zParam') {
       // For Z-axis values, use larger rounding intervals
       const interval = rawMax > 1000 ? 100 : rawMax > 100 ? 50 : 10;
-      roundedMin = Math.floor(rawMin / interval) * interval;
+      roundedMin = Math.floor(min / interval) * interval;
       roundedMax = Math.ceil(rawMax / interval) * interval;
     } else {
-      // For percentage values, round to 10s
-      roundedMin = Math.floor(rawMin / 10) * 10;
+      // For percentage metrics (efficacy, safety) always start at 0 so the
+      // axis never floats to 30 or 40 when data happens to cluster there.
+      roundedMin = 0;
       roundedMax = Math.ceil(rawMax / 10) * 10;
     }
-    
+
     // Ensure we have a valid range
     if (roundedMin >= roundedMax) {
       const adjustment = metricType === 'zParam' ? 100 : 10;
       return [Math.max(0, roundedMin - adjustment), roundedMax + adjustment];
     }
-    
+
     return [roundedMin, roundedMax];
   }, []);
 

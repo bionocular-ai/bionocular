@@ -10,7 +10,7 @@ interface CancerTypeBubblesProps {
 
 // Mapping of category names to slugs for consistent URL generation
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'Cutaneous/Metastasis Melanoma': 'cutaneous-melanoma',
+  'Cutaneous/Metastatic Melanoma': 'cutaneous-melanoma',
   'Cutaneous Melanoma with Brain/CNS Metastasis': 'cutaneous-melanoma-with-brain-cns-metastasis',
   'Uveal Melanoma': 'uveal-melanoma',
   'Mucosal Melanoma': 'mucosal-melanoma',

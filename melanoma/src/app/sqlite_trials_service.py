@@ -23,6 +23,11 @@ logger = logging.getLogger(__name__)
 class SQLiteTrialsService:
     """Service for reading trial data from SQLite database."""
 
+    # Process-level cache: db_path -> loaded abstracts list.
+    # Abstracts only change on deployment (DB rebuild), so we cache for the
+    # process lifetime. This avoids repeated full-table scans on every request.
+    _abstracts_cache: dict[str, list[dict]] = {}
+
     def __init__(self, db_path: str | Path | None = None):
         """Initialize the SQLite trials service.
 
@@ -61,8 +66,8 @@ class SQLiteTrialsService:
     def _load_json_files(self) -> list[dict[str, Any]]:
         """Load all abstracts/publications from SQLite database.
 
-        This method provides the same interface as JSONTrialsService._load_json_files()
-        but reads from SQLite instead of JSON files.
+        Results are cached at the class level for the process lifetime since
+        abstract data only changes when the DB is rebuilt on deployment.
 
         Returns:
             List of abstract/publication dictionaries
@@ -72,6 +77,10 @@ class SQLiteTrialsService:
                 f"Database not found at {self.db_path}, returning empty list"
             )
             return []
+
+        cache_key = str(self.db_path)
+        if cache_key in SQLiteTrialsService._abstracts_cache:
+            return SQLiteTrialsService._abstracts_cache[cache_key]
 
         conn = self._get_connection()
         try:
@@ -128,6 +137,7 @@ class SQLiteTrialsService:
             logger.info(
                 f"Loaded {len(abstracts)} abstracts/publications from SQLite database"
             )
+            SQLiteTrialsService._abstracts_cache[cache_key] = abstracts
             return abstracts
 
         finally:

@@ -5,6 +5,11 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '@/components/Logo';
+import {
+  Clock, LineChart, BrainCircuit, Filter, Database,
+  HelpCircle, ClipboardList, Unplug, ArrowRight,
+  FileX, Table, FileText, Network, LayoutDashboard, Brain, RefreshCw
+} from 'lucide-react';
 
 const HERO_PHRASES: { strong: string; rest: string }[] = [
   {
@@ -83,11 +88,8 @@ export default function Home() {
   const { data: session } = useSession();
   const [activeNav, setActiveNav] = useState('');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [roleSelectValue, setRoleSelectValue] = useState('');
-  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const navLinksRef = useRef<HTMLDivElement>(null);
   const indicatorRef = useRef<HTMLSpanElement>(null);
-  const roleDropdownRef = useRef<HTMLDivElement>(null);
 
   // Position sliding indicator on active nav link (smooth when skipping sections)
   useEffect(() => {
@@ -140,18 +142,6 @@ export default function Home() {
       document.body.style.overflow = '';
     };
   }, [mobileMenuOpen]);
-
-  // Close role dropdown when clicking outside
-  useEffect(() => {
-    if (!roleDropdownOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
-        setRoleDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [roleDropdownOpen]);
 
   // Close mobile menu on Escape key
   useEffect(() => {
@@ -269,21 +259,6 @@ export default function Home() {
     };
   }, []);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    alert('Thank you for your message! We will get back to you soon.');
-    e.currentTarget.reset();
-    setRoleSelectValue('');
-  };
-
-  const ROLE_OPTIONS = [
-    { value: 'researcher', label: 'Researcher' },
-    { value: 'healthcare', label: 'Healthcare Professional' },
-    { value: 'patient', label: 'Patient/Advocate' },
-    { value: 'other', label: 'Other' },
-  ];
-  const rolePlaceholder = 'Select Your Role';
-
   const currentYear = new Date().getFullYear();
 
   return (
@@ -363,18 +338,80 @@ export default function Home() {
       <section
         className="hero hero-split min-h-[92vh] pt-[62px] md:min-h-[92vh] relative"
         id="hero"
+        aria-labelledby="heroHeadline"
       >
-        {/* Full-bleed atmospheric background: radial mesh gradient + noise */}
+        {/* Full-bleed brand teal atmospheric background */}
         <div className="hero-atmosphere absolute inset-0 pointer-events-none" aria-hidden="true" />
+
         <div className="hero-split-grid grid grid-cols-1 md:grid-cols-[2fr_3fr] min-h-[calc(92vh-62px)] relative z-0">
-          {/* Left: text with soft-fade mask and glass divider */}
-          <div className="hero-text-column flex flex-col justify-center py-12 md:py-16 text-left">
-            <h1 id="heroHeadline" className="hero-split-title w-full max-w-xl">
+
+          {/* Left: text column */}
+          <div className="hero-text-column flex flex-col justify-center gap-8 py-12 md:py-16 text-left">
+
+            {/* Eyebrow badge */}
+            <div className="inline-flex items-center gap-2 self-start">
+              <span
+                className="text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full"
+                style={{
+                  background: 'rgba(122,193,162,0.18)',
+                  color: '#7AC1A2',
+                  border: '1px solid rgba(122,193,162,0.35)',
+                }}
+              >
+                Oncology Intelligence Platform
+              </span>
+            </div>
+
+            {/* H1 rotator */}
+            <h1 id="heroHeadline" className="hero-split-title w-full max-w-xl m-0">
               <HeroTextRotator />
             </h1>
+
+            {/* Sub-headline */}
+            <p
+              className="text-base md:text-lg max-w-md leading-relaxed m-0"
+              style={{ color: 'rgba(218,240,230,0.8)' }}
+            >
+              Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.
+            </p>
+
+            {/* CTA buttons */}
+            <div className="hero-split-ctas flex mt-6">
+              <a
+                href="#platform"
+                className="btn flex items-center justify-center"
+                style={{
+                  background: 'var(--brand-accent)',
+                  color: '#0E3547',
+                  border: 'none',
+                  borderRadius: '9999px',
+                  padding: '16px 36px',
+                  fontWeight: 700,
+                  fontSize: '1.05rem',
+                  letterSpacing: '0.01em',
+                  transition: 'background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.background = '#5EADA8';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(122,193,162,0.45)';
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.background = 'var(--brand-accent)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                }}
+              >
+                See How It Works
+                <ArrowRight className="w-5 h-5 ml-2" strokeWidth={2.5} />
+              </a>
+            </div>
+
             <div className="hero-glass-divider hidden md:block" aria-hidden="true" />
           </div>
-          {/* Right: video with 10% dark overlay */}
+
+          {/* Right: video with brand teal overlay */}
           <div className="hero-video-column relative min-h-[50vh] md:min-h-[calc(92vh-62px)] w-full overflow-hidden">
             <video
               className="absolute inset-0 w-full h-full object-cover object-center"
@@ -387,145 +424,226 @@ export default function Home() {
             />
             <div className="hero-video-overlay absolute inset-0 pointer-events-none" aria-hidden="true" />
           </div>
+
         </div>
       </section>
 
       <main>
-        <section className="section section-problem" id="platform">
-          <div className="container">
-            <h2 className="section-title center">Comprehensive Research Intelligence</h2>
-            <div className="card-grid">
-              <article className="card feature-card">
-                <i className="fas fa-microscope"></i>
-                <h3>Research Aggregation</h3>
-                <p>
-                  Access consolidated oncology research findings from major medical congresses and
-                  pharmaceutical companies.
-                </p>
-              </article>
-              <article className="card feature-card">
-                <i className="fas fa-chart-line"></i>
-                <h3>Treatment Insights</h3>
-                <p>
-                  Track emerging approaches, drug developments, and clinical trial outcomes across
-                  oncology treatment.
-                </p>
-              </article>
-              <article className="card feature-card">
-                <i className="fas fa-brain"></i>
-                <h3>AI‑Powered Analysis</h3>
-                <p>
-                  Leverage analytics to identify trends and patterns—surfacing the signals that
-                  matter and suppressing noise.
-                </p>
-              </article>
+        {/* SECTION 1: COMPARISON */}
+        <section className="section py-20" id="platform" style={{ background: 'var(--brand-bg)' }}>
+          <div className="container max-w-6xl mx-auto px-4">
+            <div className="text-center mb-16">
+              <span
+                className="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
+                style={{ background: 'var(--brand-accent-light)', color: 'var(--brand-primary)' }}
+              >
+                Why Bionocular
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'var(--brand-text)' }}>
+                The New Standard in{' '}
+                <span style={{ color: 'var(--brand-primary)' }}>Oncology Intelligence</span>
+              </h2>
+              <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--brand-text-muted)' }}>
+                Discover why leading research and medical teams are leaving static databases behind for dynamic, AI-driven insights.
+              </p>
             </div>
-          </div>
-        </section>
 
-        <section className="section section-about" id="about">
-          <div className="container">
-            <h2 className="section-title center">Why Choose Bionocular</h2>
-            <div className="card-grid">
-              <article className="card">
-                <h3>Comprehensive Coverage</h3>
-                <p>
-                  Aggregate research from major oncology conferences, pharma pipelines, and advocacy
-                  organizations.
-                </p>
-              </article>
-              <article className="card">
-                <h3>Specialized Focus</h3>
-                <p>
-                  Oncology‑tuned extraction and verification deliver clinically relevant, low‑noise
-                  insights.
-                </p>
-              </article>
-              <article className="card">
-                <h3>Time‑Saving</h3>
-                <p>
-                  Eliminate manual sifting with organized, analyst‑verified briefs, alerts, and
-                  datasets.
-                </p>
-              </article>
-            </div>
-          </div>
-        </section>
+            <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+              {/* VS Badge */}
+              <div
+                className="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center font-bold shadow-lg z-10 border-4"
+                style={{ background: 'var(--brand-primary)', color: '#fff', borderColor: 'var(--brand-bg)' }}
+              >
+                VS
+              </div>
 
-        <section className="section section-contact" id="contact">
-          <div className="container contact-wrap">
-            <h2 className="section-title center">Get in Touch</h2>
-            <div className="contact-form">
-              <form onSubmit={handleSubmit}>
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Name"
-                  required
-                  aria-label="Name"
-                />
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Email"
-                  required
-                  aria-label="Email"
-                />
-                <div className="contact-form-role-wrap" ref={roleDropdownRef}>
-                  <input type="hidden" name="role" value={roleSelectValue} required />
-                  <button
-                    type="button"
-                    onClick={() => setRoleDropdownOpen((o) => !o)}
-                    aria-haspopup="listbox"
-                    aria-expanded={roleDropdownOpen}
-                    aria-label="Role"
-                    className="contact-form-role-trigger"
-                  >
-                    <span>{roleSelectValue ? ROLE_OPTIONS.find((o) => o.value === roleSelectValue)?.label : rolePlaceholder}</span>
-                    <svg className="contact-form-role-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m6 9 6 6 6-6" /></svg>
-                  </button>
-                  {roleDropdownOpen && (
-                    <ul
-                      role="listbox"
-                      className="contact-form-role-dropdown"
-                      aria-label="Role"
-                    >
-                      {ROLE_OPTIONS.map((opt) => (
-                        <li
-                          key={opt.value}
-                          role="option"
-                          aria-selected={roleSelectValue === opt.value}
-                          onClick={() => {
-                            setRoleSelectValue(opt.value);
-                            setRoleDropdownOpen(false);
-                          }}
-                          className="contact-form-role-option"
-                        >
-                          {opt.label}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+              {/* Left: bionocularAI */}
+              <div
+                className="rounded-2xl shadow-xl p-8 relative overflow-hidden"
+                style={{ background: '#fff', border: '1.5px solid var(--brand-border)' }}
+              >
+                {/* Top accent stripe */}
+                <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-accent))' }} />
+                <h3 className="text-2xl font-bold mb-1" style={{ color: 'var(--brand-primary)' }}>
+                  With bi<span style={{ textDecoration: 'underline', textDecorationColor: 'var(--brand-accent)', textDecorationThickness: '2px', textUnderlineOffset: '4px' }}>o</span>nocularAI
+                </h3>
+                <p className="font-medium mb-8" style={{ color: 'var(--brand-accent)' }}>Dynamic, AI-Driven Intelligence</p>
+
+                <div className="space-y-6">
+                  {[
+                    { Icon: Clock, text: 'Offers real-time trial and treatment landscape changes in specific cancers' },
+                    { Icon: LineChart, text: 'Instantly plots 100+ endpoints on dynamic 2D & 3D analytical models' },
+                    { Icon: BrainCircuit, text: 'Disease-Specific AI Agent, Active Reasoning Partner' },
+                    { Icon: Filter, text: 'The full ecosystem is connected with innovative filters to streamline data and is very user-friendly' },
+                  ].map(({ Icon, text }) => (
+                    <div key={text} className="flex gap-4">
+                      <div
+                        className="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
+                        style={{ background: 'var(--brand-accent-light)', color: 'var(--brand-primary)' }}
+                      >
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div className="flex items-center">
+                        <p className="font-medium" style={{ color: 'var(--brand-text)' }}>{text}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <textarea
-                  name="message"
-                  placeholder="Message"
-                  required
-                  aria-label="Message"
-                ></textarea>
-                <button type="submit" className="btn btn-primary">
-                  Request Access
-                </button>
-              </form>
+              </div>
+
+              {/* Right: Others */}
+              <div
+                className="rounded-2xl p-8"
+                style={{ background: 'var(--brand-bg)', border: '1.5px solid var(--brand-border)' }}
+              >
+                <h3 className="text-2xl font-bold mb-1" style={{ color: 'var(--brand-text)' }}>Others</h3>
+                <p className="font-medium mb-8" style={{ color: 'var(--brand-text-muted)' }}>Static, Passive Data</p>
+
+                <div className="space-y-6">
+                  {[
+                    { Icon: Database, text: 'Siloed Oncology Vendors & Flat Clinical Scrapers', sub: '"Give you a login to a database"' },
+                    { Icon: HelpCircle, text: 'Generic LLMs lacking disease-specific context or specialized oncology training.', sub: '' },
+                    { Icon: ClipboardList, text: 'Static Data Aggregators', sub: '"Just dump lists of trial updates"' },
+                    { Icon: Unplug, text: 'Data is highly fragmented and segregated', sub: '' },
+                  ].map(({ Icon, text, sub }) => (
+                    <div key={text} className="flex gap-4 opacity-75">
+                      <div
+                        className="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
+                        style={{ background: '#E8EFF2', color: '#8AAAB5' }}
+                      >
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      <div className="flex items-center">
+                        <p style={{ color: 'var(--brand-text-muted)' }}>
+                          {text}{sub && <><br /><span className="italic text-sm">{sub}</span></>}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
+
+        {/* SECTION 2: PIPELINE FLOW */}
+        <section className="section py-20" id="about" style={{ background: '#fff' }}>
+          <div className="container max-w-6xl mx-auto px-4">
+            <div className="text-center mb-16">
+              <span
+                className="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4"
+                style={{ background: 'var(--brand-accent-light)', color: 'var(--brand-primary)' }}
+              >
+                How It Works
+              </span>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: 'var(--brand-text)' }}>
+                The Clinical Clarity Pipeline
+              </h2>
+              <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--brand-text-muted)' }}>
+                From data noise to clinical clarity: The bi
+                <span style={{ textDecoration: 'underline', textDecorationColor: 'var(--brand-accent)', textDecorationThickness: '2px', textUnderlineOffset: '4px' }}>o</span>
+                nocular AI Advantage
+              </p>
+            </div>
+
+            {/* 3-Step Flow */}
+            <div className="flex flex-col md:flex-row items-stretch gap-4 md:gap-2 lg:gap-4 relative w-full">
+
+              {/* Step 1: Challenge */}
+              <div
+                className="flex-1 flex flex-col items-center text-center p-6 rounded-xl"
+                style={{ background: 'var(--brand-bg)', border: '1.5px solid var(--brand-border)' }}
+              >
+                <h4 className="font-bold mb-1" style={{ color: 'var(--brand-text)' }}>The Challenge:</h4>
+                <p className="text-sm mb-6" style={{ color: 'var(--brand-text-muted)' }}>Fragmented Data &amp; Noise</p>
+
+                <div className="relative w-32 h-32 mb-6 flex items-center justify-center opacity-60">
+                  <div className="absolute grid grid-cols-2 gap-2">
+                    <FileX className="w-8 h-8" style={{ color: '#E57373' }} strokeWidth={1.5} />
+                    <Table className="w-8 h-8" style={{ color: 'var(--brand-text-muted)' }} strokeWidth={1.5} />
+                    <FileText className="w-8 h-8" style={{ color: 'var(--brand-accent)' }} strokeWidth={1.5} />
+                    <FileX className="w-8 h-8" style={{ color: 'var(--brand-text-muted)' }} strokeWidth={1.5} />
+                  </div>
+                </div>
+
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text-muted)' }}>
+                  Voluminous, unstructured data across disparate sources makes manual analysis slow and incomplete.
+                </p>
+              </div>
+
+              {/* Arrow 1 */}
+              <div className="hidden md:flex items-center justify-center px-1 lg:px-2 shrink-0" style={{ color: 'var(--brand-border)' }}>
+                <ArrowRight className="w-8 h-8 lg:w-10 lg:h-10" strokeWidth={1.5} />
+              </div>
+
+              {/* Step 2: Solution */}
+              <div
+                className="flex-1 flex flex-col items-center text-center p-6 rounded-xl"
+                style={{ background: 'var(--brand-accent-light)', border: '1.5px solid var(--brand-accent)' }}
+              >
+                <h4 className="font-bold mb-1" style={{ color: 'var(--brand-primary)' }}>The Solution:</h4>
+                <p className="text-sm mb-6" style={{ color: 'var(--brand-primary)' }}>Intelligent Synthesis &amp; Structure</p>
+
+                <div className="relative w-32 h-32 mb-6 flex flex-col items-center justify-center">
+                  <Filter className="w-16 h-16 mb-2" style={{ color: 'var(--brand-primary)' }} strokeWidth={1.5} />
+                  <div
+                    className="text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded"
+                    style={{ background: 'var(--brand-primary)', color: '#fff' }}
+                  >
+                    AI + Human Engine
+                  </div>
+                  <Network className="w-8 h-8 mt-2" style={{ color: 'var(--brand-accent)' }} strokeWidth={1.5} />
+                </div>
+
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--brand-text)' }}>
+                  Real-time aggregation and structuring of trials, publications, and news using advanced NLP and machine learning.
+                </p>
+              </div>
+
+              {/* Arrow 2 */}
+              <div className="hidden md:flex items-center justify-center px-1 lg:px-2 shrink-0" style={{ color: 'var(--brand-accent)' }}>
+                <ArrowRight className="w-8 h-8 lg:w-10 lg:h-10" strokeWidth={1.5} />
+              </div>
+
+              {/* Step 3: Edge */}
+              <div
+                className="flex-1 flex flex-col items-center text-left p-6 rounded-xl"
+                style={{ background: 'var(--brand-primary)', border: '1.5px solid var(--brand-primary)' }}
+              >
+                <h4 className="font-bold mb-1 text-center w-full" style={{ color: '#fff' }}>The Unique Edge:</h4>
+                <p className="text-sm mb-6 text-center w-full" style={{ color: 'var(--brand-accent)' }}>Expert-Curated Visualization</p>
+
+                <div className="flex gap-4 mb-6 w-full justify-center" style={{ color: 'var(--brand-accent)' }}>
+                  <LayoutDashboard className="w-8 h-8" strokeWidth={1.5} />
+                  <Brain className="w-8 h-8" strokeWidth={1.5} />
+                  <RefreshCw className="w-8 h-8" strokeWidth={1.5} />
+                </div>
+
+                <ul className="text-sm space-y-2 list-disc pl-4" style={{ color: 'rgba(218,240,230,0.9)' }}>
+                  <li>Real-time trial updates and live news</li>
+                  <li>Trial landscape with treatment cards and critical filters</li>
+                  <li>All trial outcome data with user friendly analytics</li>
+                  <li>Cancer specific AI agent</li>
+                  <li>Regulatory timeline analytics</li>
+                </ul>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
       </main>
 
-      <footer className="site-footer">
+      <footer className="site-footer" id="contact">
         <div className="container footer-content">
           <div className="footer-section">
-            <h4>Bionocular.ai</h4>
+            {/* Brand lockup */}
+            <div className="flex items-center gap-2 mb-2">
+              <Logo height={28} />
+              <span style={{ fontWeight: 700, fontSize: '1.25rem', color: '#fff', fontFamily: "'IBM Plex Sans', Inter, system-ui, sans-serif", letterSpacing: '0.2px' }}>
+                bi<span className="brand-o">o</span>nocular
+              </span>
+            </div>
             <p>Human‑verified oncology intelligence for research and medical teams.</p>
           </div>
           <div className="footer-section">

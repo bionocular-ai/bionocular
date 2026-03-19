@@ -1239,7 +1239,7 @@ def _normalize_cancer_type(cancer_type: str | None) -> str | None:
     if (
         normalized == "Resected Cutaneous Melanoma"
         or normalized == "Unresectable Cutaneous Melanoma"
-        or normalized == "Cutaneous/Metastasis Melanoma"
+        or normalized == "Cutaneous/Metastatic Melanoma"
     ):
         return "Cutaneous melanoma"
 

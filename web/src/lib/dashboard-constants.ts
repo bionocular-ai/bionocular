@@ -1,6 +1,6 @@
 /** Cancer type options for dashboard dropdown (slug + display label). */
 export const DASHBOARD_CANCER_TYPES = [
-  { value: 'cutaneous-melanoma', label: 'Cutaneous/Metastasis Melanoma' },
+  { value: 'cutaneous-melanoma', label: 'Cutaneous/Metastatic Melanoma' },
   { value: 'acral-melanoma', label: 'Acral Melanoma' },
   { value: 'mucosal-melanoma', label: 'Mucosal Melanoma' },
   { value: 'uveal-melanoma', label: 'Uveal Melanoma' },

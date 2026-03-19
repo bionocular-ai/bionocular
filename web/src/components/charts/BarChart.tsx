@@ -459,12 +459,18 @@ export default function BarChart({
       : (sorted[mid - 1] + sorted[mid]) / 2;
   }, [data, referenceValue]);
 
-  // Calculate Y domain to include all individual values
+  // Calculate Y domain to include all individual values with a smart lower bound
   const yDomain = useMemo((): [number, number] => {
     const allValues = data.flatMap((d: HeadToHeadDataPoint) => [...d.trials.map((t: TrialDataPoint) => t.value), d.averageValue]);
     if (allValues.length === 0) return [0, 100];
     const maxValue = Math.max(...allValues);
-    return [0, Math.ceil(maxValue * 1.15)];
+    const minValue = Math.min(...allValues);
+    // Zoom in when values are clustered above 30 — start axis at a rounded floor
+    // so bar height differences are clearly visible instead of all looking equal.
+    const smartFloor = minValue > 30
+      ? Math.max(0, Math.floor((minValue * 0.85) / 10) * 10)
+      : 0;
+    return [smartFloor, Math.min(100, Math.ceil(maxValue * 1.15))];
   }, [data]);
 
   const margin = compact

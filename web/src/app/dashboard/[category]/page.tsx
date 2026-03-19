@@ -29,7 +29,7 @@ import BarChart from '@/components/charts/BarChart';
 
 // Mapping of slugs to category names
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
+  'cutaneous-melanoma': 'Cutaneous/Metastatic Melanoma',
   'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
   'uveal-melanoma': 'Uveal Melanoma',
   'mucosal-melanoma': 'Mucosal Melanoma',
@@ -71,20 +71,20 @@ function SnapshotModule({ title, href, children, onNavigate, headerRight, dark =
 
   const headerBg = dark
     ? (flatDarkHeader ? "bg-transparent" : "bg-gradient-to-r from-white/10 to-transparent")
-    : "bg-slate-50 border-b border-slate-100";
+    : "bg-[var(--brand-bg)] border-b border-[var(--brand-border)]";
 
   return (
-    <Card className={`flex flex-col overflow-hidden h-full bg-white border border-slate-200 shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${className}`}>
+    <Card className={`flex flex-col overflow-hidden h-full bg-white border border-[var(--brand-border)] shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${className}`}>
       <CardHeader className={`flex flex-row items-center justify-between h-[52px] py-0 px-5 shrink-0 ${headerBg}`}>
-        <CardTitle className={`text-[13px] font-bold tracking-[0.1em] uppercase flex items-center gap-2 min-w-0 truncate ${dark ? "text-slate-200" : "text-slate-700"}`}>
-           <div className="w-1.5 h-4 shrink-0 bg-blue-500 rounded-full" />
+        <CardTitle className={`text-[13px] font-bold tracking-[0.1em] uppercase flex items-center gap-2 min-w-0 truncate ${dark ? "text-slate-200" : "text-[var(--brand-text)]"}`}>
+           <div className="w-1.5 h-4 shrink-0 bg-[var(--brand-primary)] rounded-full" />
            <span className="truncate">{title}</span>
         </CardTitle>
         {headerRight ?? ((href || onNavigate) && (
           <button
             type="button"
             onClick={handleNav}
-            className={`p-1.5 rounded-full transition-all active:scale-95 ${dark ? "text-slate-400 hover:text-blue-400 hover:bg-white/10" : "text-slate-400 hover:text-blue-600 hover:bg-blue-50"}`}
+            className={`p-1.5 rounded-full transition-all active:scale-95 ${dark ? "text-slate-400 hover:text-[var(--brand-accent)] hover:bg-white/10" : "text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-accent-light)]"}`}
             aria-label={`Open ${title}`}
           >
             <ArrowUpRight className="h-4 w-4" />
@@ -101,6 +101,7 @@ function SnapshotModule({ title, href, children, onNavigate, headerRight, dark =
 export default function CancerDashboardSnapshot() {
   const { data: session } = useSession();
   const params = useParams();
+  const router = useRouter();
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
 
@@ -217,10 +218,17 @@ export default function CancerDashboardSnapshot() {
       safetyMetric: 'GRADE_3_PLUS_TRAE',
       minTrialCount: 1,
     });
+    if (points.length === 0) return [];
+
+    // Take the first 5 treatments in the natural data order.
+    const slice = points.slice(0, 5).filter(Boolean);
+    if (slice.length >= 3) return slice;
+
+    // Fallback: not enough data in that range — use a spread across the dataset
     if (points.length <= 5) return points;
-    if (points.length <= 10) return points.slice(5, 10);
-    if (points.length <= 15) return points.slice(10, 15);
-    return points.slice(15, 20);
+    const start = Math.max(2, Math.floor(points.length * 0.2));
+    const step = Math.max(1, Math.floor((points.length - start) / 5));
+    return Array.from({ length: 5 }, (_, i) => points[Math.min(start + i * step, points.length - 1)]).filter(Boolean);
   }, [trialData]);
 
   const efficacySafetyBarData = React.useMemo<HeadToHeadDataPoint[]>(() => {
@@ -234,16 +242,23 @@ export default function CancerDashboardSnapshot() {
     return data.slice(6, 12);
   }, [trialData]);
 
-  /** Pipeline Health: phase distribution. Prefer Industry-only; fallback to overall only after Industry request has settled (avoids flashing overall then Industry). */
+  /** Pipeline Health: phase distribution. Prefer Industry-only; fallback to overall when Industry stats are all zero or unavailable. */
   const pipelinePhaseBars = React.useMemo(() => {
     const pipelinePhase = pipelineStats?.phase;
     const landscapePhase = landscapeStats?.phase;
-    const phase =
-      pipelinePhase && !pipelineStatsError
-        ? pipelinePhase
-        : !pipelineStatsLoading && landscapePhase
-          ? landscapePhase
-          : undefined;
+
+    // Industry stats are considered valid only if they have non-zero data
+    const industryTotal = pipelinePhase
+      ? Object.values(pipelinePhase).reduce((a, b) => a + b, 0)
+      : 0;
+    const hasValidIndustryStats = !pipelineStatsError && !pipelineStatsLoading && industryTotal > 0;
+
+    const phase = hasValidIndustryStats
+      ? pipelinePhase
+      : !pipelineStatsLoading && landscapePhase
+        ? landscapePhase
+        : undefined;
+
     if (!phase) return [];
     const shortLabels: Record<string, string> = {
       'Early Phase 1': 'Early Phase 1',
@@ -271,8 +286,9 @@ export default function CancerDashboardSnapshot() {
   }, [pipelineStats?.phase, pipelineStatsError, pipelineStatsLoading, landscapeStats?.phase]);
 
   const pipelineHealthIsIndustryOnly =
-    Boolean(pipelineStats?.phase && !pipelineStatsError) &&
-    Object.keys(pipelineStats?.phase ?? {}).length > 0;
+    !pipelineStatsError &&
+    Boolean(pipelineStats?.phase) &&
+    Object.values(pipelineStats?.phase ?? {}).reduce((a, b) => a + b, 0) > 0;
 
   // Regulatory Timeline sizing state (avoid Recharts width/height -1 warnings)
   const regulatoryContainerRef = React.useRef<HTMLDivElement | null>(null);
@@ -285,32 +301,43 @@ export default function CancerDashboardSnapshot() {
   React.useEffect(() => {
     const node = regulatoryContainerRef.current;
     if (!node || typeof window === 'undefined') return;
-
     const measure = () => {
       const rect = node.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
-      const ok = width > 0 && height > 0;
-      if (ok) {
-        setRegulatoryDims({ width, height });
-      }
+      const ok = rect.width > 0 && rect.height > 0;
+      if (ok) setRegulatoryDims({ width: rect.width, height: rect.height });
       setRegulatoryReady(ok);
     };
-
     measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
 
-    const resizeObserver = new ResizeObserver(() => {
-      measure();
-    });
-    resizeObserver.observe(node);
+  // Pipeline Health sizing state
+  const pipelineContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [pipelineReady, setPipelineReady] = React.useState(false);
+  const [pipelineDims, setPipelineDims] = React.useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
 
-    return () => {
-      resizeObserver.disconnect();
+  React.useEffect(() => {
+    const node = pipelineContainerRef.current;
+    if (!node || typeof window === 'undefined') return;
+    const measure = () => {
+      const rect = node.getBoundingClientRect();
+      const ok = rect.width > 0 && rect.height > 0;
+      if (ok) setPipelineDims({ width: rect.width, height: rect.height });
+      setPipelineReady(ok);
     };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    return () => ro.disconnect();
   }, []);
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-50 overflow-hidden relative selection:bg-blue-100 selection:text-blue-900">
+    <div className="flex flex-col h-screen w-full bg-[var(--brand-bg)] overflow-hidden relative selection:bg-[var(--brand-accent-light)] selection:text-[var(--brand-primary)]">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 shrink-0 z-50 sticky top-0 shadow-sm">
         <div className="w-full px-10 sm:px-12 lg:px-16 xl:px-20 2xl:px-24">
@@ -337,8 +364,8 @@ export default function CancerDashboardSnapshot() {
 
       {/* Page Title Context */}
       <div className="px-10 sm:px-12 lg:px-16 xl:px-20 2xl:px-24 py-6 sm:py-8 shrink-0 flex flex-col items-center justify-center z-10 relative text-center">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-slate-800 tracking-tight flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-          {categoryName} bionocular
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[var(--brand-text)] tracking-tight flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+          {categoryName} <span style={{ color: 'var(--brand-primary)' }}>bi<span className="brand-o">o</span>nocular</span>
         </h1>
       </div>
 
@@ -633,61 +660,84 @@ export default function CancerDashboardSnapshot() {
                 title="Pipeline Health"
                 href={`/dashboard/${categorySlug}/landscape?sponsor_type=Industry`}
               >
-                <style>{`.pipeline-module .lucide-arrow-up-right { color: #64748b; } .pipeline-module button:hover .lucide-arrow-up-right { color: #2563eb; } .pipeline-module button:hover { background-color: rgba(37,99,235,0.08); }`}</style>
+                <style>{`.pipeline-module .lucide-arrow-up-right { color: #64748b; } .pipeline-module button:hover .lucide-arrow-up-right { color: #2563eb; } .pipeline-module button:hover { background-color: rgba(37,99,235,0.08); } .pipeline-module *:focus { outline: none; }`}</style>
                 <div className="h-full flex flex-col relative pipeline-module min-h-0">
                   <div className="flex w-full justify-between items-center mb-3 relative z-10 pt-1">
-                    <div className="text-slate-600 text-xs font-medium">
+                    <div className="text-[var(--brand-text-muted)] text-xs font-medium">
                     {pipelineHealthIsIndustryOnly
                       ? 'Trials by phase (Industry-sponsored)'
                       : 'Trials by phase'}
                   </div>
                     <div className="flex gap-2">
-                      <span className="bg-slate-100 border border-slate-200 text-[9px] font-bold tracking-widest px-2 py-1 rounded text-slate-700 uppercase shadow-sm">Industry</span>
-                      <span className="bg-transparent border border-slate-200 text-[9px] font-bold tracking-widest px-2 py-1 rounded text-slate-500 uppercase">Non-Industry</span>
+                      <span className="bg-[var(--brand-accent-light)] border border-[var(--brand-border)] text-[9px] font-bold tracking-widest px-2 py-1 rounded text-[var(--brand-primary)] uppercase shadow-sm">Industry</span>
+                      <span className="bg-transparent border border-[var(--brand-border)] text-[9px] font-bold tracking-widest px-2 py-1 rounded text-[var(--brand-text-muted)] uppercase">Non-Industry</span>
                     </div>
                   </div>
-                  <div className="flex-1 min-h-[80px] w-full flex items-end justify-between px-2 pb-2 border-b border-slate-200 gap-1.5 sm:gap-2 relative z-10">
+                  <div className="flex-1 min-h-[120px] w-full z-10" ref={pipelineContainerRef}>
                     {(() => {
                       const showLoading = (statsLoading && pipelineStatsLoading) || pipelinePhaseBars.length === 0;
-                      return showLoading ? (
-                      <div className="flex-1 flex items-center justify-center text-[10px] text-slate-400">Loading…</div>
-                    ) : (
-                      pipelinePhaseBars.map((bar) => {
-                        const params = new URLSearchParams({ sponsor_type: 'Industry', phase: bar.label });
-                        const landscapeHref = `/dashboard/${categorySlug}/landscape?${params.toString()}`;
-                        const isNa = bar.label === 'Not applicable';
-                        return (
-                          <Link
-                            key={bar.label}
-                            href={landscapeHref}
-                            className="w-full flex flex-col items-center group min-w-0"
-                            title={`${bar.label}: ${bar.count} trials`}
+                      if (showLoading) {
+                        return <div className="flex items-center justify-center text-[10px] text-slate-400 h-full">Loading…</div>;
+                      }
+                      const chartData = pipelinePhaseBars.map((bar) => ({
+                        label: bar.shortLabel,
+                        fullLabel: bar.label,
+                        count: bar.count,
+                        href: `/dashboard/${categorySlug}/landscape?${new URLSearchParams({ sponsor_type: 'Industry', phase: bar.label }).toString()}`,
+                        isNa: bar.label === 'Not applicable',
+                      }));
+                      const maxCount = Math.max(...chartData.map((d) => d.count), 1);
+                      const yMax = Math.ceil(maxCount * 1.15);
+                      if (!pipelineReady) return null;
+                      return (
+                        <ResponsiveContainer
+                          width={pipelineDims.width || '100%'}
+                          height={pipelineDims.height || 180}
+                          minWidth={0}
+                          minHeight={120}
+                        >
+                          <RechartsBarChart
+                            data={chartData}
+                            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                            barCategoryGap="25%"
                           >
-                            <div
-                              className="w-full rounded-t transition-all cursor-pointer relative"
-                              style={{ height: `${bar.heightPx}px`, minHeight: 8 }}
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                            <XAxis
+                              dataKey="label"
+                              tick={{ fontSize: 9, fill: '#64748b', fontWeight: 700 }}
+                              axisLine={{ stroke: '#e2e8f0' }}
+                              tickLine={false}
+                              interval={0}
+                            />
+                            <YAxis
+                              domain={[0, yMax]}
+                              tick={{ fontSize: 9, fill: '#64748b' }}
+                              axisLine={false}
+                              tickLine={false}
+                              width={28}
+                              allowDecimals={false}
+                            />
+                            <Bar
+                              dataKey="count"
+                              radius={[4, 4, 0, 0]}
+                              isAnimationActive={true}
+                              cursor="pointer"
+                              onClick={(entry) => {
+                                if (entry?.href) router.push(entry.href);
+                              }}
                             >
-                              <div
-                                className={`absolute inset-0 rounded-t transition-colors group-hover:opacity-90 ${isNa ? 'bg-slate-400 opacity-70' : 'bg-blue-500'}`}
-                              />
-                              <div className="absolute inset-0 bg-transparent group-hover:bg-black/5 transition-colors rounded-t" />
-                            </div>
-                          </Link>
-                        );
-                      })
-                    );
+                              {chartData.map((entry, i) => (
+                                <Cell
+                                  key={i}
+                                  fill={entry.isNa ? 'var(--brand-border)' : 'var(--brand-primary)'}
+                                  fillOpacity={entry.isNa ? 0.5 : 1}
+                                />
+                              ))}
+                            </Bar>
+                          </RechartsBarChart>
+                        </ResponsiveContainer>
+                      );
                     })()}
-                  </div>
-                  <div className="flex w-full justify-between mt-3 text-[9px] font-bold text-slate-500 uppercase tracking-widest relative z-10 px-2 pb-1 gap-1.5 sm:gap-2 shrink-0">
-                    {pipelinePhaseBars.length === 0 ? (
-                      <span>—</span>
-                    ) : (
-                      pipelinePhaseBars.map((bar) => (
-                        <span key={bar.label} className="truncate min-w-0 flex-1 text-center" title={bar.label}>
-                          {bar.shortLabel}
-                        </span>
-                      ))
-                    )}
                   </div>
                 </div>
               </SnapshotModule>
@@ -696,7 +746,7 @@ export default function CancerDashboardSnapshot() {
             <div className="flex-1 min-h-[200px]">
               <SnapshotModule title="Regulatory Timeline" href={`/dashboard/${categorySlug}/regulatory-timeline`}>
                 <div className="flex flex-col h-full min-h-0 -m-5 -mb-8 mt-1 pb-0">
-                  <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-5 pt-1.5 pb-0.5">Final Study Completion</p>
+                  <p className="text-[11px] font-semibold text-[var(--brand-text-muted)] uppercase tracking-wider px-5 pt-1.5 pb-0.5">Final Study Completion</p>
                   <div
                     className="flex-1 min-h-[160px] px-2"
                     ref={regulatoryContainerRef}
@@ -758,17 +808,17 @@ export default function CancerDashboardSnapshot() {
             <div className="h-56 shrink-0">
               <SnapshotModule title={`${categoryName} AI`}>
                 <div className="h-full flex flex-col justify-end relative overflow-hidden mt-1">
-                  <div className="flex items-stretch bg-slate-50 border border-slate-200 rounded-lg p-2 pl-3 min-h-[4.5rem] focus-within:ring-2 focus-within:ring-blue-500/30 focus-within:border-blue-400/50 transition-all z-10">
+                  <div className="flex items-stretch bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-lg p-2 pl-3 min-h-[4.5rem] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]/50 transition-all z-10">
                     <textarea
                       rows={3}
-                      className="bg-transparent flex-1 outline-none text-slate-800 text-sm placeholder:text-slate-500 font-medium resize-none py-1.5"
+                      className="bg-transparent flex-1 outline-none text-[var(--brand-text)] text-sm placeholder:text-[var(--brand-text-muted)] font-medium resize-none py-1.5"
                       placeholder="Ask Bionocular AI..."
                     />
-                    <button className="h-9 w-9 self-end rounded-md bg-blue-600 flex items-center justify-center text-white ml-2 hover:bg-blue-500 hover:shadow-md transition-all active:scale-95 shrink-0">
+                    <button className="h-9 w-9 self-end rounded-md bg-[var(--brand-primary)] flex items-center justify-center text-white ml-2 hover:bg-[var(--brand-primary-hover)] hover:shadow-md transition-all active:scale-95 shrink-0">
                       <Send className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="text-center mt-2.5 text-[9px] font-medium text-slate-500 uppercase tracking-wider">
+                  <div className="text-center mt-2.5 text-[9px] font-medium text-[var(--brand-text-muted)] uppercase tracking-wider">
                     Validate insights with primary sources
                   </div>
                 </div>

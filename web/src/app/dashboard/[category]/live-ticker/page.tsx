@@ -15,7 +15,7 @@ import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
+  'cutaneous-melanoma': 'Cutaneous/Metastatic Melanoma',
   'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
   'uveal-melanoma': 'Uveal Melanoma',
   'mucosal-melanoma': 'Mucosal Melanoma',
