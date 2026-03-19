@@ -320,33 +320,39 @@ function DashboardContent() {
   });
 
   const skip = (page - 1) * pageSize;
-  const isGroupView = true; // all group-by options use column layout
-  const effectiveSkip = isGroupView ? 0 : skip;
-  const effectiveLimit = isGroupView ? GROUP_VIEW_PAGE_SIZE : pageSize;
-
   const isCustomGroupBy = groupBy !== 'modality';
+
   const { data: trialsData, isLoading: trialsLoading, error: trialsError } = useQuery({
-    queryKey: ['dashboard-trials', cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter, effectiveSkip, effectiveLimit, groupBy],
-    queryFn: () =>
-      trialsApi.getDashboardTrials(cancerTypeSlug, {
+    queryKey: ['dashboard-trials', cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter, skip, pageSize, groupBy],
+    queryFn: () => {
+      const baseFilters = {
         phase: phaseFilter.length > 0 ? phaseFilter : undefined,
         has_abstracts: hasAbstractsOnly || undefined,
         status: statusFilter.length > 0 ? statusFilter : undefined,
         sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
-        skip: effectiveSkip,
-        limit: effectiveLimit,
-        ...(groupBy === 'modality'
-          ? {
-              balance_by_modality: true,
-              per_group: CARDS_PER_GROUP_FETCH_MODALITY,
-            }
-          : isCustomGroupBy
-            ? {
-                balance_by_group: groupBy,
-                per_group: CARDS_PER_GROUP_FETCH_MODALITY,
-              }
-            : { skip: 0, limit: GROUP_VIEW_PAGE_SIZE }),
-      }),
+      };
+      if (groupBy === 'modality') {
+        // Server controls cardinality via per_group — do NOT add a top-level limit
+        return trialsApi.getDashboardTrials(cancerTypeSlug, {
+          ...baseFilters,
+          balance_by_modality: true,
+          per_group: CARDS_PER_GROUP_FETCH_MODALITY,
+        });
+      }
+      if (isCustomGroupBy) {
+        return trialsApi.getDashboardTrials(cancerTypeSlug, {
+          ...baseFilters,
+          balance_by_group: groupBy,
+          per_group: CARDS_PER_GROUP_FETCH_MODALITY,
+        });
+      }
+      // Flat paginated view fallback
+      return trialsApi.getDashboardTrials(cancerTypeSlug, {
+        ...baseFilters,
+        skip: (page - 1) * pageSize,
+        limit: pageSize,
+      });
+    },
     retry: false,
     refetchOnWindowFocus: false,
     enabled: !!cancerTypeSlug,
@@ -1158,7 +1164,7 @@ function DashboardContent() {
               </div>
 
               {/* When grouped by modality/target: show note instead of pagination */}
-              {!trialsLoading && trialsTotal > 0 && isGroupView && groupBy === 'modality' && (
+              {!trialsLoading && trialsTotal > 0 && groupBy === 'modality' && (
                 <div className="pt-1 mt-0 border-t border-slate-100 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
                   <div className="flex flex-col items-center gap-2 py-2">
                     {modalitiesWithMore.length > 0 && (
@@ -1190,7 +1196,7 @@ function DashboardContent() {
               )}
 
               {/* Pagination at bottom — industry standard: First / Prev / numbered pages / Next / Last (hidden when grouped by modality/target) */}
-              {!trialsLoading && trialsTotal > 0 && !isGroupView && (
+              {!trialsLoading && trialsTotal > 0 && false && (
                 <nav
                   className="flex flex-wrap items-center justify-between gap-4 py-4 mt-auto border-t border-slate-200 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8"
                   aria-label="Trials pagination"

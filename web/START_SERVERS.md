@@ -1,5 +1,20 @@
 # Quick Start Guide - View Data on Frontend
 
+## Shortcut (start both servers)
+
+From the repo root:
+
+```bash
+chmod +x start_servers.sh   # first time only
+./start_servers.sh          # or: ./start_servers.sh start
+```
+
+To stop the servers (from any terminal):
+
+```bash
+./start_servers.sh stop
+```
+
 ## Step 1: Start the Backend Server
 
 Open a terminal and run:

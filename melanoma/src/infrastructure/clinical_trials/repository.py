@@ -4,6 +4,7 @@ import json
 import logging
 import re as _re
 import sqlite3
+from collections import OrderedDict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -21,6 +22,10 @@ from ..config import (
 from .cancer_type_mapping import is_active_status
 
 logger = logging.getLogger(__name__)
+
+# Max number of parsed trial JSON objects to keep in the per-instance LRU cache.
+# Each entry is typically 20-80 KB of Python dict. 600 entries ~= 30-50 MB.
+_TRIAL_JSON_CACHE_SIZE = 600
 
 # Cache expiration: refresh data after 7 days
 CACHE_EXPIRATION_DAYS = 7
@@ -227,6 +232,8 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         """
         self.db_path = db_path
         self.parser = parser
+        # LRU cache: nct_number -> parsed dict. OrderedDict gives O(1) move-to-end.
+        self._json_lru: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
         self._init_database()
 
     def _init_database(self) -> None:
@@ -349,8 +356,6 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                         nct_number TEXT PRIMARY KEY,
                         cancer_type TEXT,
                         modality TEXT,
-                        target TEXT,
-                        trial_name TEXT,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                     """
@@ -364,6 +369,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                     if "duplicate column name" not in str(e).lower():
                         raise
                 for col in (
+                    "modality",
                     "treatment_name",
                     "biomarker",
                     "stage",
@@ -386,9 +392,6 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                     _recreate_trial_categorization_column_order(cursor, conn)
                 cursor.execute(
                     "CREATE INDEX IF NOT EXISTS idx_trial_categorization_modality ON trial_categorization(modality)"
-                )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_trial_categorization_target ON trial_categorization(target)"
                 )
                 cursor.execute(
                     "CREATE INDEX IF NOT EXISTS idx_trial_categorization_cancer_type ON trial_categorization(cancer_type)"
@@ -885,9 +888,17 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             return None
 
     def _get_cached_api_json_ignore_expiry(self, nct_number: str) -> Optional[dict]:
-        """Get raw API JSON from cache without expiration check (for dashboard display)."""
+        """Get raw API JSON from cache without expiration check (for dashboard display).
+
+        Checks the in-process LRU cache before hitting SQLite.
+        """
         if not self.db_path:
             return None
+        # LRU hit
+        cached = self._json_lru.get(nct_number)
+        if cached is not None:
+            self._json_lru.move_to_end(nct_number)
+            return cached
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -898,7 +909,13 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 row = cursor.fetchone()
                 if not row:
                     return None
-                return json.loads(row[0])
+                parsed = json.loads(row[0])
+                # Populate LRU
+                self._json_lru[nct_number] = parsed
+                self._json_lru.move_to_end(nct_number)
+                if len(self._json_lru) > _TRIAL_JSON_CACHE_SIZE:
+                    self._json_lru.popitem(last=False)
+                return parsed
         except (sqlite3.Error, json.JSONDecodeError) as e:
             logger.warning(f"Error reading cached JSON for {nct_number}: {e}")
             return None
@@ -906,28 +923,53 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
     def _get_cached_api_json_batch(
         self, nct_numbers: list[str]
     ) -> dict[str, dict[str, Any]]:
-        """Get raw API JSON for many NCTs in one query. Returns dict nct_number -> parsed JSON."""
+        """Get raw API JSON for many NCTs in one query, with LRU cache.
+
+        Hits the in-process LRU first; only queries SQLite for cache misses.
+        Newly loaded entries are inserted into the LRU (evicting oldest if full).
+        """
         if not self.db_path or not nct_numbers:
             return {}
+
         out: dict[str, dict[str, Any]] = {}
-        # SQLite limits bound params; chunk to stay safe
+        misses: list[str] = []
+
+        # LRU read pass — O(1) per hit
+        for nct in nct_numbers:
+            cached = self._json_lru.get(nct)
+            if cached is not None:
+                self._json_lru.move_to_end(nct)  # mark recently used
+                out[nct] = cached
+            else:
+                misses.append(nct)
+
+        if not misses:
+            return out
+
+        # SQLite fetch for misses only
         chunk_size = 500
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                for i in range(0, len(nct_numbers), chunk_size):
-                    chunk = nct_numbers[i : i + chunk_size]
+                for i in range(0, len(misses), chunk_size):
+                    chunk = misses[i : i + chunk_size]
                     placeholders = ",".join("?" * len(chunk))
                     cursor.execute(
                         f"SELECT nct_number, api_response_json FROM clinical_trials_cache WHERE nct_number IN ({placeholders})",
                         chunk,
                     )
                     for row in cursor.fetchall():
-                        nct_number = row[0]
+                        nct_number, raw_json = row[0], row[1]
                         try:
-                            out[nct_number] = json.loads(row[1])
+                            parsed = json.loads(raw_json)
                         except json.JSONDecodeError:
-                            pass
+                            continue
+                        out[nct_number] = parsed
+                        # Insert into LRU, evict oldest if over capacity
+                        self._json_lru[nct_number] = parsed
+                        self._json_lru.move_to_end(nct_number)
+                        if len(self._json_lru) > _TRIAL_JSON_CACHE_SIZE:
+                            self._json_lru.popitem(last=False)
         except sqlite3.Error as e:
             logger.warning(f"Error batch reading cached JSON: {e}")
         return out
@@ -1923,7 +1965,10 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         cancer_type_tag: str,
         sponsor_type_filter: list[str] | None = None,
     ) -> dict[str, Any]:
-        """Get disease landscape statistics for a specific cancer type.
+        """Get disease landscape statistics using a single SQL query via json_extract.
+
+        Replaces the previous N+1 per-NCT Python loop with a single JOIN + GROUP BY
+        query so we never load full JSON blobs into Python memory for stats.
 
         Args:
             cancer_type_tag: Normalized cancer type tag
@@ -1933,47 +1978,78 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         Returns:
             Dictionary with status, phase, and funder_type counts
         """
+        _empty = {
+            "status": {},
+            "phase": {},
+            "funder_type": {"Industry": 0, "Non-Industry": 0},
+        }
         if not self.db_path or not self.parser:
-            return {
-                "status": {},
-                "phase": {},
-                "funder_type": {"Industry": 0, "Non-Industry": 0},
-            }
+            return _empty
 
         try:
             with sqlite3.connect(self.db_path) as conn:
                 conn.row_factory = sqlite3.Row
                 cursor = conn.cursor()
 
-                # Get all NCT numbers for this cancer type
+                # ── Count extracted trials ──────────────────────────────────────
                 cursor.execute(
                     """
-                    SELECT DISTINCT nct_number
-                    FROM api_discovery
-                    WHERE cancer_type_tag = ?
-                    """,
-                    (cancer_type_tag,),
-                )
-
-                nct_rows = cursor.fetchall()
-                nct_numbers = [row["nct_number"] for row in nct_rows]
-
-                # Count distinct extracted NCT numbers for this cancer type
-                cursor.execute(
-                    """
-                    SELECT COUNT(DISTINCT ep.nct_number) as extracted_count
+                    SELECT COUNT(DISTINCT ep.nct_number) AS extracted_count
                     FROM extraction_provenance ep
                     INNER JOIN api_discovery ad ON ep.nct_number = ad.nct_number
                     WHERE ad.cancer_type_tag = ?
                     """,
                     (cancer_type_tag,),
                 )
-                extracted_count_row = cursor.fetchone()
-                extracted_count = (
-                    extracted_count_row["extracted_count"] if extracted_count_row else 0
-                )
+                row = cursor.fetchone()
+                extracted_count = row["extracted_count"] if row else 0
 
-                # Initialize counters
+                # ── Single-pass stats query using json_extract ──────────────────
+                # Pull only the 3 scalar fields we actually need from each JSON blob;
+                # SQLite parses the JSON server-side so Python never allocates the
+                # full object tree for every trial.
+                cursor.execute(
+                    """
+                    SELECT
+                        json_extract(c.api_response_json,
+                            '$.protocolSection.statusModule.overallStatus') AS raw_status,
+                        json_extract(c.api_response_json,
+                            '$.protocolSection.designModule.phases[0]')     AS raw_phase,
+                        upper(ifnull(
+                            json_extract(c.api_response_json,
+                                '$.protocolSection.sponsorCollaboratorsModule.leadSponsor.class'),
+                            '')) AS sponsor_class
+                    FROM clinical_trials_cache c
+                    INNER JOIN api_discovery ad ON ad.nct_number = c.nct_number
+                    WHERE ad.cancer_type_tag = ?
+                    """,
+                    (cancer_type_tag,),
+                )
+                rows = cursor.fetchall()
+
+                # ── Map API constants → display keys ───────────────────────────
+                _STATUS_MAP: dict[str, str] = {
+                    "NOT_YET_RECRUITING": "NOT_YET_RECRUITING",
+                    "RECRUITING": "RECRUITING",
+                    "ACTIVE_NOT_RECRUITING": "ACTIVE_NOT_RECRUITING",
+                    "COMPLETED": "COMPLETED",
+                    "TERMINATED": "TERMINATED",
+                    "ENROLLING_BY_INVITATION": "ENROLLING_BY_INVITATION",
+                    "SUSPENDED": "SUSPENDED",
+                    "WITHDRAWN": "WITHDRAWN",
+                    # common variants stored in older cache rows
+                    "NOT YET RECRUITING": "NOT_YET_RECRUITING",
+                    "ACTIVE, NOT RECRUITING": "ACTIVE_NOT_RECRUITING",
+                    "ACTIVE NOT RECRUITING": "ACTIVE_NOT_RECRUITING",
+                }
+                _PHASE_MAP: dict[str, str] = {
+                    "EARLY_PHASE1": "Early Phase 1",
+                    "PHASE1": "Phase 1",
+                    "PHASE2": "Phase 2",
+                    "PHASE3": "Phase 3",
+                    "PHASE4": "Phase 4",
+                }
+
                 status_counts: dict[str, int] = {
                     "NOT_YET_RECRUITING": 0,
                     "RECRUITING": 0,
@@ -1985,7 +2061,6 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                     "WITHDRAWN": 0,
                     "UNKNOWN": 0,
                 }
-
                 phase_counts: dict[str, int] = {
                     "Early Phase 1": 0,
                     "Phase 1": 0,
@@ -1994,103 +2069,35 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                     "Phase 4": 0,
                     "Not applicable": 0,
                 }
+                funder_type_counts: dict[str, int] = {"Industry": 0, "Non-Industry": 0}
 
-                funder_type_counts: dict[str, int] = {
-                    "Industry": 0,
-                    "Non-Industry": 0,
-                }
+                for row in rows:
+                    sponsor_class: str = row["sponsor_class"] or ""
+                    is_industry = sponsor_class == "INDUSTRY"
+                    trial_funder = "Industry" if is_industry else "Non-Industry"
 
-                # Process each NCT number
-                for nct_number in nct_numbers:
-                    api_json = self.get_cached_api_json(nct_number)
-                    if not api_json:
+                    # Apply sponsor_type_filter without loading the full JSON
+                    if sponsor_type_filter and trial_funder not in sponsor_type_filter:
                         continue
 
-                    # Optionally filter by sponsor type (align with landscape filter)
-                    if sponsor_type_filter is not None:
-                        sponsor_module = api_json.get("protocolSection", {}).get(
-                            "sponsorCollaboratorsModule", {}
-                        )
-                        lead_sponsor = sponsor_module.get("leadSponsor", {})
-                        sponsor_class = (
-                            (lead_sponsor.get("class") or "").strip().upper()
-                        )
-                        if sponsor_class == "INDUSTRY":
-                            trial_funder = "Industry"
-                        else:
-                            trial_funder = "Non-Industry"
-                        if trial_funder not in sponsor_type_filter:
-                            continue
-
-                    # Extract status
-                    status = self.parser.extract_status_from_api_json(api_json)
-                    # Normalize status to match expected keys
-                    # The API returns statuses like "NOT_YET_RECRUITING", "RECRUITING", etc.
-                    status_upper = status.upper().strip()
-                    # Map API status values to our keys
-                    status_mapping = {
-                        "NOT_YET_RECRUITING": "NOT_YET_RECRUITING",
-                        "RECRUITING": "RECRUITING",
-                        "ACTIVE_NOT_RECRUITING": "ACTIVE_NOT_RECRUITING",
-                        "COMPLETED": "COMPLETED",
-                        "TERMINATED": "TERMINATED",
-                        "ENROLLING_BY_INVITATION": "ENROLLING_BY_INVITATION",
-                        "SUSPENDED": "SUSPENDED",
-                        "WITHDRAWN": "WITHDRAWN",
-                        # Handle variations
-                        "NOT YET RECRUITING": "NOT_YET_RECRUITING",
-                        "ACTIVE, NOT RECRUITING": "ACTIVE_NOT_RECRUITING",
-                        "ACTIVE NOT RECRUITING": "ACTIVE_NOT_RECRUITING",
-                    }
-
-                    # Try direct match first
-                    matched_status = status_mapping.get(status_upper)
-                    if not matched_status:
-                        # Try normalized version (replace spaces and commas with underscores)
-                        status_normalized = (
-                            status_upper.replace(" ", "_")
+                    # Status
+                    raw_status: str = (row["raw_status"] or "").upper().strip()
+                    mapped = _STATUS_MAP.get(raw_status)
+                    if not mapped:
+                        norm = (
+                            raw_status.replace(" ", "_")
                             .replace(",", "")
                             .replace("-", "_")
                         )
-                        matched_status = status_mapping.get(status_normalized)
+                        mapped = _STATUS_MAP.get(norm)
+                    status_counts[mapped if mapped else "UNKNOWN"] += 1
 
-                    if matched_status and matched_status in status_counts:
-                        status_counts[matched_status] += 1
-                    else:
-                        status_counts["UNKNOWN"] += 1
+                    # Phase
+                    raw_phase: str = (row["raw_phase"] or "").upper().strip()
+                    phase_counts[_PHASE_MAP.get(raw_phase, "Not applicable")] += 1
 
-                    # Extract phase
-                    protocol = api_json.get("protocolSection", {})
-                    design_module = protocol.get("designModule", {})
-                    phases = design_module.get("phases", [])
-                    if phases:
-                        # Use first phase if multiple
-                        phase = phases[0]
-                        # Normalize phase names
-                        if phase == "EARLY_PHASE1":
-                            phase_counts["Early Phase 1"] += 1
-                        elif phase == "PHASE1":
-                            phase_counts["Phase 1"] += 1
-                        elif phase == "PHASE2":
-                            phase_counts["Phase 2"] += 1
-                        elif phase == "PHASE3":
-                            phase_counts["Phase 3"] += 1
-                        elif phase == "PHASE4":
-                            phase_counts["Phase 4"] += 1
-                        else:
-                            phase_counts["Not applicable"] += 1
-                    else:
-                        phase_counts["Not applicable"] += 1
-
-                    # Extract funder type
-                    sponsor_module = protocol.get("sponsorCollaboratorsModule", {})
-                    lead_sponsor = sponsor_module.get("leadSponsor", {})
-                    sponsor_class = lead_sponsor.get("class", "").upper()
-                    if sponsor_class == "INDUSTRY":
-                        funder_type_counts["Industry"] += 1
-                    else:
-                        # Everything else is Non-Industry
-                        funder_type_counts["Non-Industry"] += 1
+                    # Funder
+                    funder_type_counts[trial_funder] += 1
 
                 return {
                     "status": status_counts,
@@ -2099,13 +2106,9 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                     "extracted_count": extracted_count,
                 }
 
-        except (sqlite3.Error, Exception) as e:
+        except sqlite3.Error as e:
             logger.error(f"Error getting disease landscape stats: {e}")
-            return {
-                "status": {},
-                "phase": {},
-                "funder_type": {"Industry": 0, "Non-Industry": 0},
-            }
+            return _empty
 
     def get_disease_landscape_stats_from_json(
         self, cancer_type_tag: str

@@ -47,7 +47,7 @@ import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHea
 // ============================================================================
 
 const CATEGORY_SLUG_MAP: Record<string, string> = {
-  'cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
+  'cutaneous-melanoma': 'Cutaneous/Metastatic Melanoma',
   'cutaneous-melanoma-with-brain-cns-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
   'uveal-melanoma': 'Uveal Melanoma',
   'mucosal-melanoma': 'Mucosal Melanoma',
@@ -56,8 +56,8 @@ const CATEGORY_SLUG_MAP: Record<string, string> = {
   'merkel-cell-carcinoma': 'Merkel Cell Carcinoma',
   'cutaneous-squamous-cell-carcinoma': 'Cutaneous Squamous Cell Carcinoma',
   // Legacy slugs for backward compatibility
-  'resected-cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
-  'unresectable-cutaneous-melanoma': 'Cutaneous/Metastasis Melanoma',
+  'resected-cutaneous-melanoma': 'Cutaneous/Metastatic Melanoma',
+  'unresectable-cutaneous-melanoma': 'Cutaneous/Metastatic Melanoma',
   'cutaneous-melanoma-with-brain-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
   'cutaneous-melanoma-with-cns-metastasis': 'Cutaneous Melanoma with Brain/CNS Metastasis',
 };
@@ -69,7 +69,7 @@ function normalizeCancerType(cancerType: string | null | undefined): string | nu
 
   // Map old names to new names
   if (normalized === 'Resected Cutaneous Melanoma' || normalized === 'Unresectable Cutaneous Melanoma') {
-    return 'Cutaneous/Metastasis Melanoma';
+    return 'Cutaneous/Metastatic Melanoma';
   }
   if (normalized === 'Cutaneous Melanoma with Brain metastasis' ||
     normalized === 'Cutaneous Melanoma with CNS metastasis' ||
@@ -424,15 +424,15 @@ function FilterSelect({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-[13px] font-medium text-indigo-900">{label}</label>
+      <label className="text-[13px] font-medium text-[var(--brand-text)]">{label}</label>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex h-10 w-full items-center justify-between rounded-md border-2 border-indigo-100 bg-white px-3 text-sm text-gray-700 transition-all hover:border-indigo-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+          <button className="flex h-10 w-full items-center justify-between rounded-md border-2 border-[var(--brand-border)] bg-white px-3 text-sm text-gray-700 transition-all hover:border-[var(--brand-accent)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20">
             <span className="flex items-center gap-2 truncate">
-              {icon && <span className="text-indigo-500">{icon}</span>}
+              {icon && <span className="text-[var(--brand-primary)]">{icon}</span>}
               {selectedOption?.label || 'Select...'}
             </span>
-            <ChevronDown className="h-4 w-4 text-indigo-400 flex-shrink-0" />
+            <ChevronDown className="h-4 w-4 text-[var(--brand-primary)]/60 flex-shrink-0" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
@@ -443,7 +443,7 @@ function FilterSelect({
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]"
               />
             </div>
           )}
@@ -453,7 +453,7 @@ function FilterSelect({
             filteredOptions.map(option => (
               <DropdownMenuItem
                 key={option.value}
-                className={`text-sm cursor-pointer ${value === option.value ? 'bg-indigo-50 text-indigo-700 font-medium' : ''}`}
+                className={`text-sm cursor-pointer ${value === option.value ? 'bg-[var(--brand-accent-light)] text-[var(--brand-primary)] font-medium' : ''}`}
                 onClick={() => {
                   onChange(option.value);
                   setSearchTerm('');
@@ -461,7 +461,7 @@ function FilterSelect({
               >
                 <div className="flex items-center justify-between w-full">
                   <span>{option.label}</span>
-                  {value === option.value && <Check className="h-4 w-4 text-indigo-600" />}
+                  {value === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}
                 </div>
               </DropdownMenuItem>
             ))
@@ -499,23 +499,23 @@ function TherapyMultiSelect({ label, maxLabel, options, selected, onChange, maxS
   return (
     <div className="space-y-1.5">
       <div className="flex items-baseline justify-between gap-1">
-        <label className="text-[13px] font-medium text-indigo-900">{label}</label>
-        <span className="text-[10px] text-indigo-400 font-medium whitespace-nowrap">({maxLabel})</span>
+        <label className="text-[13px] font-medium text-[var(--brand-text)]">{label}</label>
+        <span className="text-[10px] text-[var(--brand-primary)]/60 font-medium whitespace-nowrap">({maxLabel})</span>
       </div>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
-          <button className="flex h-10 w-full items-center justify-between rounded-md border-2 border-indigo-100 bg-white px-3 text-sm text-gray-700 transition-all hover:border-indigo-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20">
+          <button className="flex h-10 w-full items-center justify-between rounded-md border-2 border-[var(--brand-border)] bg-white px-3 text-sm text-gray-700 transition-all hover:border-[var(--brand-accent)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20">
             <span className="truncate">
               {selected.length === 0 ? 'All' : `${selected.length} selected`}
             </span>
-            <ChevronDown className="h-4 w-4 text-indigo-400 flex-shrink-0" />
+            <ChevronDown className="h-4 w-4 text-[var(--brand-primary)]/60 flex-shrink-0" />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] p-2 max-h-64 overflow-y-auto">
           {selected.length > 0 && (
             <button
               onClick={() => onChange([])}
-              className="w-full text-left text-xs text-indigo-600 hover:text-indigo-800 mb-2 flex items-center gap-1"
+              className="w-full text-left text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] mb-2 flex items-center gap-1"
             >
               <X className="h-3 w-3" /> Clear selection
             </button>
@@ -524,7 +524,7 @@ function TherapyMultiSelect({ label, maxLabel, options, selected, onChange, maxS
             <label
               key={option}
               className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${selected.includes(option)
-                  ? 'bg-indigo-50 text-indigo-700'
+                  ? 'bg-[var(--brand-accent-light)] text-[var(--brand-primary)]'
                   : 'hover:bg-gray-50 text-gray-700'
                 } ${!selected.includes(option) && selected.length >= maxSelect ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
@@ -533,7 +533,7 @@ function TherapyMultiSelect({ label, maxLabel, options, selected, onChange, maxS
                 checked={selected.includes(option)}
                 onChange={() => toggleTherapy(option)}
                 disabled={!selected.includes(option) && selected.length >= maxSelect}
-                className="rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                className="rounded border-[var(--brand-border)] text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
               />
               <span className="truncate">{option}</span>
             </label>
@@ -1128,7 +1128,7 @@ export default function CategoryAnalyticsPage() {
 
       {/* Mode Banner with Parameter Selection - Compact, professional design */}
       {mode === 'all' && (
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50">
+        <div className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-primary-hover)] border-b border-[var(--brand-primary)]/40">
           <div className="px-4 md:px-6 py-2.5">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
@@ -1158,7 +1158,7 @@ export default function CategoryAnalyticsPage() {
                   </Link>
                 </nav>
                 <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
-                <p className="text-blue-100 text-xs hidden sm:block">Comparative analysis</p>
+                <p className="text-[var(--brand-accent)] text-xs hidden sm:block">Comparative analysis</p>
               </div>
               <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
                 {chartType === 'bubble' && (['x', 'y', 'z'] as const).map((axis) => (
@@ -1176,7 +1176,7 @@ export default function CategoryAnalyticsPage() {
                             <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 border-b">Assign to Axis</div>
                             {(['x', 'y', 'z'] as const).map((a) => (
                               <DropdownMenuItem key={a} className={`text-sm cursor-pointer ${efficacyAxis === a ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => handleAxisChange('efficacy', a)}>
-                                <div className="flex items-center justify-between w-full"><span className="font-mono font-medium">{a.toUpperCase()}-axis</span>{efficacyAxis === a && <Check className="h-4 w-4 text-blue-600" />}</div>
+                                <div className="flex items-center justify-between w-full"><span className="font-mono font-medium">{a.toUpperCase()}-axis</span>{efficacyAxis === a && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
@@ -1190,11 +1190,11 @@ export default function CategoryAnalyticsPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
                             <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
-                              <input type="text" value={efficacySearch} placeholder="Search efficacy metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setEfficacySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                              <input type="text" value={efficacySearch} placeholder="Search efficacy metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]" onChange={(e) => setEfficacySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                             </div>
                             {EFFICACY_OPTIONS_NO_HR.filter(option => option.value !== 'none' && option.label.toLowerCase().includes(efficacySearch.toLowerCase())).map(option => (
                               <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setEfficacyParamWithMode(option.value); setEfficacySearch(''); }}>
-                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{efficacyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{efficacyParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
@@ -1214,7 +1214,7 @@ export default function CategoryAnalyticsPage() {
                             <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 border-b">Assign to Axis</div>
                             {(['x', 'y', 'z'] as const).map((a) => (
                               <DropdownMenuItem key={a} className={`text-sm cursor-pointer ${safetyAxis === a ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => handleAxisChange('safety', a)}>
-                                <div className="flex items-center justify-between w-full"><span className="font-mono font-medium">{a.toUpperCase()}-axis</span>{safetyAxis === a && <Check className="h-4 w-4 text-blue-600" />}</div>
+                                <div className="flex items-center justify-between w-full"><span className="font-mono font-medium">{a.toUpperCase()}-axis</span>{safetyAxis === a && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
@@ -1228,11 +1228,11 @@ export default function CategoryAnalyticsPage() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
                             <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
-                              <input type="text" value={safetySearch} placeholder="Search safety metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setSafetySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                              <input type="text" value={safetySearch} placeholder="Search safety metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]" onChange={(e) => setSafetySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                             </div>
                             {SAFETY_OPTIONS.filter(option => option.value !== 'none' && option.label.toLowerCase().includes(safetySearch.toLowerCase())).map(option => (
                               <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setSafetyParamWithMode(option.value); setSafetySearch(''); }}>
-                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{safetyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{safetyParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
@@ -1252,7 +1252,7 @@ export default function CategoryAnalyticsPage() {
                             <div className="px-2 py-1.5 text-xs font-semibold text-slate-500 border-b">Assign to Axis</div>
                             {(['x', 'y', 'z'] as const).map((a) => (
                               <DropdownMenuItem key={a} className={`text-sm cursor-pointer ${zParamAxis === a ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => handleAxisChange('zParam', a)}>
-                                <div className="flex items-center justify-between w-full"><span className="font-mono font-medium">{a.toUpperCase()}-axis</span>{zParamAxis === a && <Check className="h-4 w-4 text-blue-600" />}</div>
+                                <div className="flex items-center justify-between w-full"><span className="font-mono font-medium">{a.toUpperCase()}-axis</span>{zParamAxis === a && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
@@ -1267,7 +1267,7 @@ export default function CategoryAnalyticsPage() {
                           <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
                             {Z_AXIS_OPTIONS.map((option) => (
                               <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${zAxisParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => setZAxisParam(option.value)}>
-                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{zAxisParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{zAxisParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                               </DropdownMenuItem>
                             ))}
                           </DropdownMenuContent>
@@ -1288,11 +1288,11 @@ export default function CategoryAnalyticsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
                           <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
-                            <input type="text" value={efficacySearch} placeholder="Search efficacy metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setEfficacySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                            <input type="text" value={efficacySearch} placeholder="Search efficacy metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]" onChange={(e) => setEfficacySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                           </div>
                           {EFFICACY_OPTIONS.filter(option => (chartType === 'diverging' || chartType === 'bar' ? option.value !== 'none' : true) && option.label.toLowerCase().includes(efficacySearch.toLowerCase())).map(option => (
                               <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${efficacyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setEfficacyParamWithMode(option.value); setEfficacySearch(''); }}>
-                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{efficacyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                                <div className="flex items-center justify-between w-full"><span>{option.label}</span>{efficacyParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                               </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
@@ -1308,11 +1308,11 @@ export default function CategoryAnalyticsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
                           <div className="px-3 py-2 sticky top-0 bg-white border-b z-10">
-                            <input type="text" value={safetySearch} placeholder="Search safety metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" onChange={(e) => setSafetySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
+                            <input type="text" value={safetySearch} placeholder="Search safety metrics..." className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]" onChange={(e) => setSafetySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                           </div>
                           {SAFETY_OPTIONS.filter(option => (chartType === 'diverging' || chartType === 'bar' ? option.value !== 'none' : true) && option.label.toLowerCase().includes(safetySearch.toLowerCase())).map(option => (
                             <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${safetyParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => { setSafetyParamWithMode(option.value); setSafetySearch(''); }}>
-                              <div className="flex items-center justify-between w-full"><span>{option.label}</span>{safetyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                              <div className="flex items-center justify-between w-full"><span>{option.label}</span>{safetyParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                             </DropdownMenuItem>
                           ))}
                         </DropdownMenuContent>
@@ -1326,7 +1326,7 @@ export default function CategoryAnalyticsPage() {
         </div>
       )}
       {mode === 'efficacy' && (
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50">
+        <div className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-primary-hover)] border-b border-[var(--brand-primary)]/40">
           <div className="px-4 md:px-6 py-2.5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
@@ -1356,7 +1356,7 @@ export default function CategoryAnalyticsPage() {
                   </Link>
                 </nav>
                 <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
-                <p className="text-blue-100 text-xs hidden sm:block">
+                <p className="text-[var(--brand-accent)] text-xs hidden sm:block">
                   Clinical trial efficacy parameters
                 </p>
               </div>
@@ -1378,7 +1378,7 @@ export default function CategoryAnalyticsPage() {
                           type="text"
                           value={efficacySearch}
                           placeholder="Search efficacy metrics..."
-                          className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]"
                           onChange={(e) => setEfficacySearch(e.target.value)}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -1402,7 +1402,7 @@ export default function CategoryAnalyticsPage() {
                         >
                           <div className="flex items-center justify-between w-full">
                             <span>{option.label}</span>
-                            {efficacyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                            {efficacyParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}
                           </div>
                         </DropdownMenuItem>
                       ))}
@@ -1434,7 +1434,7 @@ export default function CategoryAnalyticsPage() {
                           >
                             <div className="flex items-center justify-between w-full">
                               <span>{option.label}</span>
-                              {efficacyParamY === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                              {efficacyParamY === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}
                             </div>
                           </DropdownMenuItem>
                         ))}
@@ -1457,7 +1457,7 @@ export default function CategoryAnalyticsPage() {
                       <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
                         {Z_AXIS_OPTIONS.map((option) => (
                           <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${zAxisParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => setZAxisParam(option.value)}>
-                            <div className="flex items-center justify-between w-full"><span>{option.label}</span>{zAxisParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                            <div className="flex items-center justify-between w-full"><span>{option.label}</span>{zAxisParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
@@ -1470,7 +1470,7 @@ export default function CategoryAnalyticsPage() {
         </div>
       )}
       {mode === 'safety' && (
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50">
+        <div className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-primary-hover)] border-b border-[var(--brand-primary)]/40">
           <div className="px-4 md:px-6 py-2.5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
@@ -1500,7 +1500,7 @@ export default function CategoryAnalyticsPage() {
                   </Link>
                 </nav>
                 <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
-                <p className="text-blue-100 text-xs hidden sm:block">
+                <p className="text-[var(--brand-accent)] text-xs hidden sm:block">
                   Clinical trial safety parameters
                 </p>
               </div>
@@ -1522,7 +1522,7 @@ export default function CategoryAnalyticsPage() {
                           type="text"
                           value={safetySearch}
                           placeholder="Search safety metrics..."
-                          className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]"
                           onChange={(e) => setSafetySearch(e.target.value)}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -1546,7 +1546,7 @@ export default function CategoryAnalyticsPage() {
                         >
                           <div className="flex items-center justify-between w-full">
                             <span>{option.label}</span>
-                            {safetyParam === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                            {safetyParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}
                           </div>
                         </DropdownMenuItem>
                       ))}
@@ -1578,7 +1578,7 @@ export default function CategoryAnalyticsPage() {
                           >
                             <div className="flex items-center justify-between w-full">
                               <span>{option.label}</span>
-                              {safetyParamY === option.value && <Check className="h-4 w-4 text-blue-600" />}
+                              {safetyParamY === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}
                             </div>
                           </DropdownMenuItem>
                         ))}
@@ -1601,7 +1601,7 @@ export default function CategoryAnalyticsPage() {
                       <DropdownMenuContent align="end" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
                         {Z_AXIS_OPTIONS_SAFETY.map((option) => (
                           <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${zAxisParam === option.value ? 'bg-blue-50 text-blue-700 font-medium' : ''}`} onClick={() => setZAxisParam(option.value)}>
-                            <div className="flex items-center justify-between w-full"><span>{option.label}</span>{zAxisParam === option.value && <Check className="h-4 w-4 text-blue-600" />}</div>
+                            <div className="flex items-center justify-between w-full"><span>{option.label}</span>{zAxisParam === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}</div>
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
@@ -1619,9 +1619,9 @@ export default function CategoryAnalyticsPage() {
         {/* Left Panel - Filters */}
         <aside className="w-[480px] border-r border-slate-200 bg-white p-4 overflow-y-auto flex-shrink-0">
           {/* Cancer Type Badge */}
-          <div className="mb-4 p-2.5 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-100">
-            <div className="text-[11px] font-medium text-indigo-600 uppercase tracking-wider mb-0.5">Cancer Type</div>
-            <div className="text-sm font-semibold text-indigo-900">{categoryName}</div>
+          <div className="mb-4 p-2.5 bg-[var(--brand-accent-light)] rounded-lg border border-[var(--brand-border)]">
+            <div className="text-[11px] font-medium text-[var(--brand-primary)] uppercase tracking-wider mb-0.5">Cancer Type</div>
+            <div className="text-sm font-semibold text-[var(--brand-text)]">{categoryName}</div>
           </div>
 
           {/* 2-Column Filter Grid */}
@@ -1685,7 +1685,7 @@ export default function CategoryAnalyticsPage() {
 
           {/* Advanced filters (same dimensions as Landscape page, separate filters) */}
           <div className="mt-4 space-y-3">
-            <div className="text-[11px] font-medium text-indigo-600 uppercase tracking-wider">
+            <div className="text-[11px] font-medium text-[var(--brand-primary)] uppercase tracking-wider">
               Advanced filters
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -1729,7 +1729,7 @@ export default function CategoryAnalyticsPage() {
           <div className="flex gap-2">
             <Button
               variant="outline"
-              className="flex-1 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+              className="flex-1 border-[var(--brand-border)] text-[var(--brand-primary)] hover:bg-[var(--brand-accent-light)]"
               onClick={() => {
                 setCompany('all');
                 setTherapyType('all');
@@ -1760,7 +1760,7 @@ export default function CategoryAnalyticsPage() {
             >
               Reset Filters
             </Button>
-            <Button className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Button className="flex-1 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white">
               Apply Filters
             </Button>
           </div>
@@ -1779,9 +1779,9 @@ export default function CategoryAnalyticsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="group h-10 pl-3 pr-3.5 gap-2.5 rounded-xl border border-slate-200/80 bg-white text-slate-700 font-medium shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-700 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-300"
+                      className="group h-10 pl-3 pr-3.5 gap-2.5 rounded-xl border border-slate-200/80 bg-white text-slate-700 font-medium shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-[var(--brand-border)] hover:text-[var(--brand-primary)] hover:shadow-md focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/20 focus-visible:border-[var(--brand-border)]"
                     >
-                      <span className="flex h-7 w-7 items-center justify-center text-indigo-600">
+                      <span className="flex h-7 w-7 items-center justify-center text-[var(--brand-primary)]">
                         {chartType === 'bar' && <BarChart3 className="h-4 w-4" />}
                         {chartType === 'diverging' && <TrendingUp className="h-4 w-4" />}
                         {chartType === 'bubble' && <CircleDot className="h-4 w-4" />}
@@ -1796,36 +1796,36 @@ export default function CategoryAnalyticsPage() {
                   <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200/90 bg-white p-1.5 shadow-lg">
                     <DropdownMenuItem
                       onClick={() => setChartType('bar')}
-                      className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                      className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
                     >
                       <BarChart3 className="h-4 w-4 text-slate-500" />
                       <span>Bar Chart</span>
-                      {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                      {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setChartType('diverging')}
-                      className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                      className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
                     >
                       <TrendingUp className="h-4 w-4 text-slate-500" />
                       <span>Diverging Chart</span>
-                      {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                      {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => setChartType('bubble')}
-                      className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                      className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
                     >
                       <CircleDot className="h-4 w-4 text-slate-500" />
                       <span>Bubble Chart</span>
-                      {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                      {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                     </DropdownMenuItem>
                     {mode === 'efficacy' && (
                       <DropdownMenuItem
                         onClick={() => setChartType('dumbbell')}
-                        className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                        className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
                       >
                         <Minus className="h-4 w-4 text-slate-500" />
                         <span>Dumbbell Chart</span>
-                        {chartType === 'dumbbell' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                        {chartType === 'dumbbell' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -1836,7 +1836,7 @@ export default function CategoryAnalyticsPage() {
             <Button
               variant="outline"
               size="sm"
-              className="h-10 w-10 rounded-xl border border-slate-200/80 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-600 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/20"
+              className="h-10 w-10 rounded-xl border border-slate-200/80 bg-white text-slate-600 shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-[var(--brand-border)] hover:text-[var(--brand-primary)] hover:shadow-md focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/20"
               title="Full Screen"
               onClick={() => setIsFullscreen(true)}
             >
@@ -1850,7 +1850,7 @@ export default function CategoryAnalyticsPage() {
               <div className="absolute inset-0 w-full h-full">
                 {isLoading ? (
                   <div className="flex flex-col items-center justify-center h-full gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+                    <Loader2 className="h-8 w-8 animate-spin text-[var(--brand-primary)]" />
                     <p className="text-sm text-slate-500">Loading analytics data...</p>
                   </div>
                 ) : error ? (
@@ -2009,9 +2009,9 @@ export default function CategoryAnalyticsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="group h-10 pl-3.5 pr-4 gap-2.5 rounded-xl border border-slate-200/80 bg-white text-slate-700 font-medium shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-700 hover:shadow-md focus-visible:ring-2 focus-visible:ring-indigo-500/20 focus-visible:border-indigo-300"
+                          className="group h-10 pl-3.5 pr-4 gap-2.5 rounded-xl border border-slate-200/80 bg-white text-slate-700 font-medium shadow-sm transition-all duration-200 hover:bg-slate-50 hover:border-[var(--brand-border)] hover:text-[var(--brand-primary)] hover:shadow-md focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/20 focus-visible:border-[var(--brand-border)]"
                         >
-                          <span className="flex h-7 w-7 items-center justify-center text-indigo-600">
+                          <span className="flex h-7 w-7 items-center justify-center text-[var(--brand-primary)]">
                             {chartType === 'bar' && <BarChart3 className="h-4 w-4" />}
                             {chartType === 'diverging' && <TrendingUp className="h-4 w-4" />}
                             {chartType === 'bubble' && <CircleDot className="h-4 w-4" />}
@@ -2026,36 +2026,36 @@ export default function CategoryAnalyticsPage() {
                       <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200/90 bg-white p-1.5 shadow-lg">
                         <DropdownMenuItem
                           onClick={() => setChartType('bar')}
-                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
                         >
                           <BarChart3 className="h-4 w-4 text-slate-500" />
                           <span>Bar Chart</span>
-                          {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                          {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => setChartType('diverging')}
-                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
                         >
                           <TrendingUp className="h-4 w-4 text-slate-500" />
                           <span>Diverging Chart</span>
-                          {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                          {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => setChartType('bubble')}
-                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
                         >
                           <CircleDot className="h-4 w-4 text-slate-500" />
                           <span>Bubble Chart</span>
-                          {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                          {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                         </DropdownMenuItem>
                         {mode === 'efficacy' && (
                           <DropdownMenuItem
                             onClick={() => setChartType('dumbbell')}
-                            className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-indigo-50 focus:text-indigo-700"
+                            className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
                           >
                             <Minus className="h-4 w-4 text-slate-500" />
                             <span>Dumbbell Chart</span>
-                            {chartType === 'dumbbell' && <Check className="h-4 w-4 ml-auto text-indigo-600" />}
+                            {chartType === 'dumbbell' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
@@ -2077,7 +2077,7 @@ export default function CategoryAnalyticsPage() {
 
           {/* Mode Banner in Fullscreen - Compact design */}
           {mode === 'all' && (
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
+            <div className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-primary-hover)] border-b border-[var(--brand-primary)]/40 px-6 py-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
                   <TrendingUp className="h-3.5 w-3.5 text-white" />
@@ -2090,14 +2090,14 @@ export default function CategoryAnalyticsPage() {
                   <span className="px-1.5 py-0.5 rounded text-xs font-semibold text-white bg-white/20">Head to Head Efficacy : Safety</span>
                 </nav>
                 <span className="w-px h-3 bg-white/30 mx-1" />
-                <span className="text-blue-100 text-xs">Efficacy: {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}</span>
+                <span className="text-[var(--brand-accent)] text-xs">Efficacy: {EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}</span>
                 <span className="w-px h-3 bg-white/30 mx-1" />
-                <span className="text-blue-100 text-xs">Safety: {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label}</span>
+                <span className="text-[var(--brand-accent)] text-xs">Safety: {SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label}</span>
               </div>
             </div>
           )}
           {mode === 'efficacy' && (
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
+            <div className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-primary-hover)] border-b border-[var(--brand-primary)]/40 px-6 py-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
                   <TrendingUp className="h-3.5 w-3.5 text-white" />
@@ -2110,7 +2110,7 @@ export default function CategoryAnalyticsPage() {
                   <Link href={`/dashboard/${categorySlug}/analytics`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy : Safety</Link>
                 </nav>
                 <span className="w-px h-3 bg-white/30 mx-1" />
-                <span className="text-blue-100 text-xs">
+                <span className="text-[var(--brand-accent)] text-xs">
                   {(chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell') && efficacyParamY !== 'none'
                     ? `${EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label} vs ${EFFICACY_OPTIONS.find(o => o.value === efficacyParamY)?.label}`
                     : EFFICACY_OPTIONS.find(o => o.value === efficacyParam)?.label}
@@ -2119,7 +2119,7 @@ export default function CategoryAnalyticsPage() {
             </div>
           )}
           {mode === 'safety' && (
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 border-b border-blue-700/50 px-6 py-2">
+            <div className="bg-gradient-to-r from-[var(--brand-primary)] to-[var(--brand-primary-hover)] border-b border-[var(--brand-primary)]/40 px-6 py-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center justify-center w-6 h-6 bg-white/20 rounded">
                   <AlertCircle className="h-3.5 w-3.5 text-white" />
@@ -2132,7 +2132,7 @@ export default function CategoryAnalyticsPage() {
                   <Link href={`/dashboard/${categorySlug}/analytics`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy : Safety</Link>
                 </nav>
                 <span className="w-px h-3 bg-white/30 mx-1" />
-                <span className="text-blue-100 text-xs">
+                <span className="text-[var(--brand-accent)] text-xs">
                   {(chartType === 'diverging' || chartType === 'bubble') && safetyParamY !== 'none'
                     ? `${SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label} vs ${SAFETY_OPTIONS.find(o => o.value === safetyParamY)?.label}`
                     : SAFETY_OPTIONS.find(o => o.value === safetyParam)?.label}
@@ -2146,7 +2146,7 @@ export default function CategoryAnalyticsPage() {
             <div className={`flex-1 flex flex-col min-h-0 w-full overflow-hidden ${chartType === 'diverging' ? 'p-2' : 'p-4'}`}>
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-full gap-3">
-                  <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
+                  <Loader2 className="h-10 w-10 animate-spin text-[var(--brand-primary)]" />
                   <p className="text-base text-slate-500">Loading analytics data...</p>
                 </div>
               ) : (() => {
