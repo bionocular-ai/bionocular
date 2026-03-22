@@ -477,7 +477,7 @@ export const analyticsApi = {
     if (filters.limit !== undefined) {
       params.append('limit', filters.limit.toString());
     } else {
-      params.append('limit', '2000'); // Default limit
+      params.append('limit', '200'); // Default limit
     }
     if (filters.resource_type && filters.resource_type !== 'all') {
       params.append('resource_type', filters.resource_type);
@@ -501,5 +501,41 @@ export const analyticsApi = {
     const response = await apiClient.get<AnalyticsDataResponse>(`/api/analytics/data?${params.toString()}`);
     return response.data;
   },
+
+  getSnapshot: async (cancer_type: string, resource_type = 'all', bubbleLimit = 8, barLimit = 8): Promise<SnapshotResponse> => {
+    const params = new URLSearchParams({
+      cancer_type,
+      resource_type,
+      bubble_limit: String(bubbleLimit),
+      bar_limit: String(barLimit),
+    });
+    const response = await apiClient.get<SnapshotResponse>(`/api/analytics/snapshot?${params.toString()}`);
+    return response.data;
+  },
 };
+
+/** Pre-aggregated bubble data point (ORR + TRAE) returned by /api/analytics/snapshot */
+export interface SnapshotBubblePoint {
+  treatmentName: string;
+  approvalStatus: 'Approved' | 'Investigational';
+  efficacy: number;       // avg ORR
+  safety: number;         // avg Grade 3+ TRAE
+  numberOfPatients: number | null;
+  trialCount: number;
+}
+
+/** Pre-aggregated bar data point (ORR) returned by /api/analytics/snapshot */
+export interface SnapshotBarPoint {
+  treatmentName: string;
+  approvalStatus: 'Approved' | 'Investigational';
+  averageValue: number;   // avg ORR
+  trialCount: number;
+}
+
+export interface SnapshotResponse {
+  bubble: SnapshotBubblePoint[];
+  bar: SnapshotBarPoint[];
+  totalAbstracts: number;
+}
+
 

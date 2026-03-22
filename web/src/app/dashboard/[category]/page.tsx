@@ -18,12 +18,11 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { ArrowUpRight, Loader2, Bell, Send, Newspaper, BarChart3, Clock, Activity, Zap, Lightbulb, ChevronDown, Maximize2 } from 'lucide-react';
+import { ArrowUpRight, Loader2, Bell, Send, Newspaper, Zap, Lightbulb, ChevronDown, Maximize2 } from 'lucide-react';
 import { trialsApi, analyticsApi, type LiveTickerArticle, type LiveTickerResult } from '@/lib/api';
 import { PHASE_OPTIONS } from '@/lib/dashboard-constants';
 import { TrialCard } from '@/components/dashboard/TrialCard';
-import { transformBubbleChartData, transformHeadToHeadData } from '@/lib/chart-transformers';
-import type { TrialDataFile, BubbleChartDataPoint, ChartMetric, HeadToHeadDataPoint } from '@/types/analytics';
+import type { BubbleChartDataPoint, HeadToHeadDataPoint } from '@/types/analytics';
 import BubbleChart from '@/components/charts/BubbleChart';
 import BarChart from '@/components/charts/BarChart';
 
@@ -192,55 +191,41 @@ export default function CancerDashboardSnapshot() {
     return combined.slice(0, 5);
   }, [liveTickerData]);
 
-  const { data: analyticsData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['analytics-data', categorySlug, categoryName],
-    queryFn: () => analyticsApi.getData({ cancer_type: categoryName, limit: 500 }),
+  const { data: snapshotData, isLoading: analyticsLoading } = useQuery({
+    queryKey: ['analytics-snapshot', categorySlug, categoryName],
+    queryFn: () => analyticsApi.getSnapshot(categoryName, 'all', 5, 5),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  const trialData = React.useMemo<TrialDataFile | null>(() => {
-    if (!analyticsData?.abstracts) return null;
-    const allTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
-    return {
-      total_abstracts: analyticsData.total_abstracts,
-      total_arms: analyticsData.total_arms,
-      total_attributes_extracted: analyticsData.total_attributes_extracted,
-      average_confidence: analyticsData.average_confidence,
-      abstracts: allTrials,
-    };
-  }, [analyticsData]);
-
+  // Map snapshot bubble data directly to BubbleChartDataPoint[]
   const efficacySafetyBubbleData = React.useMemo<BubbleChartDataPoint[]>(() => {
-    if (!trialData) return [];
-    const points = transformBubbleChartData(trialData, {
-      efficacyMetric: 'OBJECTIVE_RESPONSE_RATE',
-      safetyMetric: 'GRADE_3_PLUS_TRAE',
-      minTrialCount: 1,
-    });
-    if (points.length === 0) return [];
+    if (!snapshotData?.bubble?.length) return [];
+    return snapshotData.bubble.map((p) => ({
+      treatmentName: p.treatmentName,
+      approvalStatus: p.approvalStatus,
+      efficacy: p.efficacy,
+      safety: p.safety,
+      numberOfPatients: p.numberOfPatients ?? 0,
+      trialCount: p.trialCount,
+    }));
+  }, [snapshotData]);
 
-    // Take the first 5 treatments in the natural data order.
-    const slice = points.slice(0, 5).filter(Boolean);
-    if (slice.length >= 3) return slice;
-
-    // Fallback: not enough data in that range — use a spread across the dataset
-    if (points.length <= 5) return points;
-    const start = Math.max(2, Math.floor(points.length * 0.2));
-    const step = Math.max(1, Math.floor((points.length - start) / 5));
-    return Array.from({ length: 5 }, (_, i) => points[Math.min(start + i * step, points.length - 1)]).filter(Boolean);
-  }, [trialData]);
-
+  // Map snapshot bar data directly to HeadToHeadDataPoint[]
   const efficacySafetyBarData = React.useMemo<HeadToHeadDataPoint[]>(() => {
-    if (!trialData) return [];
-    const data = transformHeadToHeadData(trialData, {
-      targetMetric: 'OBJECTIVE_RESPONSE_RATE' as ChartMetric,
-      minTrialCount: 1,
-    });
-    data.sort((a, b) => b.averageValue - a.averageValue);
-    // Use treatments 7–12 by ORR so bar chart shows a different set from the top-ranked ones
-    return data.slice(6, 12);
-  }, [trialData]);
+    if (!snapshotData?.bar?.length) return [];
+    return snapshotData.bar.map((p) => ({
+      treatmentName: p.treatmentName,
+      approvalStatus: p.approvalStatus,
+      averageValue: p.averageValue,
+      medianValue: p.averageValue,
+      minValue: p.averageValue,
+      maxValue: p.averageValue,
+      trialCount: p.trialCount,
+      totalPatients: 0,
+      trials: [],
+    }));
+  }, [snapshotData]);
 
   /** Pipeline Health: phase distribution. Prefer Industry-only; fallback to overall when Industry stats are all zero or unavailable. */
   const pipelinePhaseBars = React.useMemo(() => {
@@ -596,13 +581,13 @@ export default function CancerDashboardSnapshot() {
                       <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                     </div>
                   )}
-                  {!analyticsLoading && !trialData && (
+                  {!analyticsLoading && !snapshotData && (
                     <div className="flex flex-col items-center justify-center flex-1 min-h-[200px] text-center px-4">
                       <p className="text-sm text-slate-500">No efficacy & safety data yet</p>
                       <p className="text-xs text-slate-400 mt-1">View analytics for more.</p>
                     </div>
                   )}
-                  {!analyticsLoading && trialData && (
+                  {!analyticsLoading && snapshotData && (
                     <div className="flex flex-col gap-0 h-full min-h-0 flex-1">
                       {/* Bubble: Efficacy vs Safety (top, half) */}
                       <div className="min-h-0 flex-1 flex flex-col min-w-0" style={{ minHeight: 140 }}>

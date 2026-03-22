@@ -80,9 +80,18 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 p-4 relative overflow-hidden">
-      {/* Wave pattern background */}
-      <div className="absolute inset-0 opacity-30">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: '#0E3547' }}>
+      {/* Brand teal mesh gradient background */}
+      <div className="absolute inset-0" style={{
+        background: `
+          radial-gradient(ellipse 130% 90% at 15% 50%, rgba(27,79,101,0.92) 0%, transparent 55%),
+          radial-gradient(ellipse 80% 70% at 60% 30%, rgba(122,193,162,0.18) 0%, transparent 50%),
+          radial-gradient(ellipse 100% 100% at 80% 80%, rgba(27,79,101,0.5) 0%, transparent 60%),
+          #0E3547
+        `
+      }} />
+      {/* Subtle wave pattern overlay */}
+      <div className="absolute inset-0 opacity-20">
         <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 1200 800" preserveAspectRatio="none">
           <path
             d="M0,200 Q300,150 600,200 T1200,200 L1200,800 L0,800 Z"
@@ -96,8 +105,8 @@ function LoginForm() {
           />
           <defs>
             <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#1A73E8" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="#1A73E8" stopOpacity="0.1" />
+              <stop offset="0%" stopColor="#7AC1A2" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#1B4F65" stopOpacity="0.1" />
             </linearGradient>
           </defs>
         </svg>
@@ -111,12 +120,13 @@ function LoginForm() {
                 src="/logo.png"
                 alt="Bionocular Logo"
                 fill
+                sizes="128px"
                 className="object-contain"
                 priority
               />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-center -mt-1" style={{ color: '#1A73E8' }}>
+          <h1 className="text-3xl font-bold text-center -mt-1" style={{ color: '#1B4F65' }}>
             Welcome Back
           </h1>
         </CardHeader>
@@ -129,7 +139,7 @@ function LoginForm() {
             )}
             
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#1A73E8' }}>
+              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#1B4F65' }}>
                 <Mail className="h-5 w-5" />
               </div>
               <Input
@@ -141,12 +151,12 @@ function LoginForm() {
                 required
                 disabled={isLoading}
                 autoComplete="email"
-                className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1A73E8] focus:ring-[#1A73E8]"
+                className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1B4F65] focus:ring-[#1B4F65]"
               />
             </div>
             
             <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#1A73E8' }}>
+              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#1B4F65' }}>
                 <Lock className="h-5 w-5" />
               </div>
               <Input
@@ -158,14 +168,16 @@ function LoginForm() {
                 required
                 disabled={isLoading}
                 autoComplete="current-password"
-                className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1A73E8] focus:ring-[#1A73E8]"
+                className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1B4F65] focus:ring-[#1B4F65]"
               />
             </div>
 
             <Button
               type="submit"
-              className="w-full h-12 text-base font-semibold rounded-lg text-white shadow-md hover:shadow-lg transition-all hover:opacity-90"
-              style={{ backgroundColor: '#1A73E8' }}
+              className="w-full h-12 text-base font-semibold rounded-lg text-white shadow-md hover:shadow-lg transition-all"
+              style={{ backgroundColor: '#1B4F65' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#16404F')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#1B4F65')}
               disabled={isLoading}
             >
               {isLoading ? (
@@ -183,7 +195,7 @@ function LoginForm() {
             <Link
               href="/forgot-password"
               className="text-sm hover:underline block hover:opacity-80 transition-opacity"
-              style={{ color: '#1A73E8' }}
+              style={{ color: '#1B4F65' }}
             >
               Forgot Password?
             </Link>
@@ -192,7 +204,7 @@ function LoginForm() {
               <Link
                 href="/signup"
                 className="font-semibold hover:underline hover:opacity-80 transition-opacity"
-                style={{ color: '#1A73E8' }}
+                style={{ color: '#1B4F65' }}
               >
                 Sign Up
               </Link>
@@ -200,9 +212,9 @@ function LoginForm() {
           </div>
 
           {process.env.NODE_ENV === 'development' && (
-            <div className="mt-6 p-3 rounded-lg border" style={{ backgroundColor: 'rgba(26, 115, 232, 0.05)', borderColor: 'rgba(26, 115, 232, 0.2)' }}>
+            <div className="mt-6 p-3 rounded-lg border" style={{ backgroundColor: 'rgba(27, 79, 101, 0.05)', borderColor: 'rgba(27, 79, 101, 0.2)' }}>
               <p className="text-xs text-gray-600 text-center">
-                <strong className="font-semibold" style={{ color: '#1A73E8' }}>Demo credentials (development only):</strong>
+                <strong className="font-semibold" style={{ color: '#1B4F65' }}>Demo credentials (development only):</strong>
                 <br />
                 Check your .env.local file for demo credentials
               </p>
@@ -217,11 +229,11 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0E3547' }}>
         <Card className="w-full max-w-md shadow-2xl border-0 bg-white rounded-2xl">
           <CardContent className="p-8">
             <div className="flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#1A73E8' }} />
+              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#1B4F65' }} />
             </div>
           </CardContent>
         </Card>

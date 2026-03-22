@@ -1458,8 +1458,57 @@ async def get_analytics_data(
         data_source = get_trials_data_source()
 
         if data_source in ("json", "sqlite"):
-            # Use JSON file or SQLite database as data source
             trials_service = get_trials_service()
+
+            if data_source == "sqlite" and (
+                therapy_type == "all"
+                and funding_type == "all"
+                and line_of_treatment == "all"
+                and not has_metric
+            ):
+                # Fast path: push cancer_type + resource_type filtering down to SQL.
+                # Only deserialises matching rows — avoids loading the full 199 MB DB.
+                from .sqlite_trials_service import SQLiteTrialsService
+
+                assert isinstance(trials_service, SQLiteTrialsService)
+                (
+                    paginated_abstracts,
+                    total_filtered,
+                ) = trials_service.get_analytics_filtered(
+                    cancer_type=cancer_type,
+                    resource_type=resource_type,
+                    skip=max(0, skip),
+                    limit=limit,
+                )
+
+                total_arms = sum(
+                    len(a.get("arm_results", {})) for a in paginated_abstracts
+                )
+                total_attributes = sum(
+                    a.get("total_attributes_extracted", 0) for a in paginated_abstracts
+                )
+                confidences = [
+                    a.get("overall_confidence", 0)
+                    for a in paginated_abstracts
+                    if a.get("overall_confidence")
+                ]
+                avg_confidence = (
+                    sum(confidences) / len(confidences) if confidences else 0
+                )
+
+                return {
+                    "total_abstracts": total_filtered,
+                    "total_arms": total_arms,
+                    "total_attributes_extracted": total_attributes,
+                    "average_confidence": avg_confidence,
+                    "abstracts": paginated_abstracts,
+                    "skip": max(0, skip),
+                    "limit": limit,
+                    "has_more": (max(0, skip) + limit) < total_filtered,
+                }
+
+            # Fallback path (JSON source, or SQLite with extra Python-side filters):
+            # Load all records into memory, then filter in Python.
             all_abstracts = trials_service._load_json_files()
 
             # Apply filters before calculating stats and pagination
@@ -1564,20 +1613,38 @@ async def get_analytics_chart_data(
                 },
             }
 
-        # Get filtered data
         trials_service = get_trials_service()
-        all_abstracts = trials_service._load_json_files()
 
-        # Apply filters
-        filtered_abstracts = _filter_analytics_data(
-            all_abstracts,
-            resource_type=resource_type,
-            cancer_type=cancer_type,
-            therapy_type=therapy_type,
-            funding_type=funding_type,
-            line_of_treatment=line_of_treatment,
-            has_metric=has_metric,
-        )
+        if data_source == "sqlite" and (
+            therapy_type == "all"
+            and funding_type == "all"
+            and line_of_treatment == "all"
+            and not has_metric
+        ):
+            # Fast path: push cancer_type + resource_type filtering down to SQL.
+            from .sqlite_trials_service import SQLiteTrialsService
+
+            assert isinstance(trials_service, SQLiteTrialsService)
+            # Fetch a generous slice for chart aggregation (no pagination needed here
+            # since chart-data aggregates all matching rows, not a paginated subset).
+            filtered_abstracts, _total = trials_service.get_analytics_filtered(
+                cancer_type=cancer_type,
+                resource_type=resource_type,
+                skip=0,
+                limit=2000,
+            )
+        else:
+            # Fallback: full in-memory load + Python filtering
+            all_abstracts = trials_service._load_json_files()
+            filtered_abstracts = _filter_analytics_data(
+                all_abstracts,
+                resource_type=resource_type,
+                cancer_type=cancer_type,
+                therapy_type=therapy_type,
+                funding_type=funding_type,
+                line_of_treatment=line_of_treatment,
+                has_metric=has_metric,
+            )
 
         # Aggregate by treatment name
         treatment_groups: dict[str, dict] = {}
@@ -1726,6 +1793,181 @@ async def get_analytics_chart_data(
 
     except Exception as e:
         logger.error(f"Error fetching chart data: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Internal server error: {str(e)}"
+        ) from e
+
+
+@app.get("/api/analytics/snapshot")
+async def get_analytics_snapshot(
+    cancer_type: str | None = None,
+    resource_type: str = "all",
+    bubble_limit: int = 8,
+    bar_limit: int = 8,
+) -> dict:
+    """Return pre-aggregated bubble + bar chart data for the dashboard snapshot.
+
+    This replaces the expensive GET /api/analytics/data?limit=500 call:
+    instead of shipping hundreds of raw abstract records to the client,
+    the server aggregates all matching rows and returns only the final
+    treatment-group statistics needed for the two mini charts.
+
+    Args:
+        cancer_type: Canonical cancer type (e.g. \"Cutaneous melanoma\").
+        resource_type: \"all\", \"conference\", or \"publication\".
+        bubble_limit: Max treatment groups to include in bubble data.
+        bar_limit: Max treatment groups to include in bar data.
+
+    Returns:
+        {
+          "bubble": [...],   # ORR+TRAE per treatment (for BubbleChart)
+          "bar":    [...],   # ORR per treatment, sorted descending (for BarChart)
+          "totalAbstracts": int,
+        }
+    """
+    try:
+        data_source = get_trials_data_source()
+        if data_source not in ("json", "sqlite"):
+            return {"bubble": [], "bar": [], "totalAbstracts": 0}
+
+        trials_service = get_trials_service()
+
+        if data_source == "sqlite":
+            from .sqlite_trials_service import SQLiteTrialsService
+
+            assert isinstance(trials_service, SQLiteTrialsService)
+            abstracts, total = trials_service.get_analytics_filtered(
+                cancer_type=cancer_type,
+                resource_type=resource_type,
+                skip=0,
+                limit=5000,  # fetch all matching rows – but only THIS cancer type
+            )
+        else:
+            all_abstracts = trials_service._load_json_files()
+            abstracts = _filter_analytics_data(
+                all_abstracts,
+                resource_type=resource_type,
+                cancer_type=cancer_type,
+            )
+            total = len(abstracts)
+
+        # ── Aggregate per-treatment for ORR and TRAE ──────────────────────────
+        orr_key = "AttributeType.OBJECTIVE_RESPONSE_RATE"
+        trae_key = "AttributeType.GRADE_3_PLUS_TRAE"
+
+        # treatment_name -> {orr: [values], trae: [values], patients: [values]}
+        groups: dict[str, dict] = {}
+
+        approved_set = {
+            "pembrolizumab",
+            "nivolumab",
+            "ipilimumab",
+            "dabrafenib",
+            "trametinib",
+            "vemurafenib",
+            "cobimetinib",
+            "encorafenib",
+            "binimetinib",
+            "atezolizumab",
+            "talimogene laherparepvec",
+            "t-vec",
+            "lifileucel",
+        }
+
+        for abstract in abstracts:
+            for arm in abstract.get("arm_results", {}).values():
+                arm_name = arm.get("arm_name", "")
+                if not arm_name:
+                    continue
+
+                # Normalize: sort combination parts alphabetically
+                parts = sorted(
+                    [p.strip() for p in arm_name.replace("+", "/").split("/")],
+                    key=str.lower,
+                )
+                treatment = " + ".join(parts)
+
+                attributes = arm.get("attributes", {})
+
+                orr = _extract_numeric_value(
+                    attributes.get(orr_key) or attributes.get("objective_response_rate")
+                )
+                trae = _extract_numeric_value(
+                    attributes.get(trae_key) or attributes.get("grade_3_plus_trae")
+                )
+                patients = _extract_numeric_value(
+                    attributes.get("AttributeType.NUMBER_OF_PATIENTS")
+                    or attributes.get("number_of_patients")
+                )
+
+                if treatment not in groups:
+                    is_approved = any(a in treatment.lower() for a in approved_set)
+                    groups[treatment] = {
+                        "orr": [],
+                        "trae": [],
+                        "patients": [],
+                        "approvalStatus": "Approved"
+                        if is_approved
+                        else "Investigational",
+                    }
+
+                g = groups[treatment]
+                if orr is not None:
+                    g["orr"].append(orr)
+                if trae is not None:
+                    g["trae"].append(trae)
+                if patients is not None:
+                    g["patients"].append(patients)
+
+        # ── Build bubble list (treatments with BOTH ORR and TRAE) ─────────────
+        bubble_candidates = []
+        for treatment, g in groups.items():
+            if not g["orr"] or not g["trae"]:
+                continue
+            avg_orr = sum(g["orr"]) / len(g["orr"])
+            avg_trae = sum(g["trae"]) / len(g["trae"])
+            total_patients = sum(g["patients"]) if g["patients"] else 0
+            bubble_candidates.append(
+                {
+                    "treatmentName": treatment,
+                    "approvalStatus": g["approvalStatus"],
+                    "efficacy": round(avg_orr, 2),
+                    "safety": round(avg_trae, 2),
+                    "numberOfPatients": total_patients or None,
+                    "trialCount": max(len(g["orr"]), len(g["trae"])),
+                }
+            )
+
+        # Sort by efficacy desc, take top bubble_limit
+        bubble_candidates.sort(key=lambda x: x["efficacy"], reverse=True)
+        bubble_data = bubble_candidates[:bubble_limit]
+
+        # ── Build bar list (treatments with ORR, sorted desc) ─────────────────
+        bar_candidates = []
+        for treatment, g in groups.items():
+            if not g["orr"]:
+                continue
+            avg_orr = sum(g["orr"]) / len(g["orr"])
+            bar_candidates.append(
+                {
+                    "treatmentName": treatment,
+                    "approvalStatus": g["approvalStatus"],
+                    "averageValue": round(avg_orr, 2),
+                    "trialCount": len(g["orr"]),
+                }
+            )
+
+        bar_candidates.sort(key=lambda x: x["averageValue"], reverse=True)
+        bar_data = bar_candidates[:bar_limit]
+
+        return {
+            "bubble": bubble_data,
+            "bar": bar_data,
+            "totalAbstracts": total,
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching analytics snapshot: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Internal server error: {str(e)}"
         ) from e
