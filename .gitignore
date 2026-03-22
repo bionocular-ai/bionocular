@@ -176,6 +176,10 @@ cython_debug/
 # VS Code
 .vscode/
 
+# Cursor — Antigravity skills (local only)
+.cursor/skills/
+.cursor/antigravity-skills.md
+
 # macOS
 .DS_Store
 .AppleDouble

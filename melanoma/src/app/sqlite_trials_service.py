@@ -19,14 +19,52 @@ from ..domain.cancer_type_normalizer import (
 
 logger = logging.getLogger(__name__)
 
+# Reverse mapping: canonical cancer type → list of raw values stored in arm_results JSON.
+# Used to build SQL LIKE patterns so the DB does the filtering instead of Python.
+# Add any new aliases here whenever _normalize_cancer_type() in api.py is updated.
+_CANONICAL_TO_RAW_VALUES: dict[str, list[str]] = {
+    # Canonical key used in the database JSON values
+    "Cutaneous melanoma": [
+        "Resected Cutaneous Melanoma",
+        "Unresectable Cutaneous Melanoma",
+        "Cutaneous/Metastatic Melanoma",
+        "Cutaneous Melanoma",
+        "Advanced Cutaneous Melanoma",
+        "advanced melanoma",
+        "Cutaneous melanoma",
+    ],
+    # Alias: sent by the frontend slug map for the cutaneous-melanoma route
+    "Cutaneous/Metastatic Melanoma": [
+        "Resected Cutaneous Melanoma",
+        "Unresectable Cutaneous Melanoma",
+        "Cutaneous/Metastatic Melanoma",
+        "Cutaneous Melanoma",
+        "Advanced Cutaneous Melanoma",
+        "advanced melanoma",
+        "Cutaneous melanoma",
+    ],
+    "Cutaneous melanoma with Brain/CNS metastasis": [
+        "Cutaneous melanoma with Brain metastasis",
+        "Cutaneous Melanoma with CNS metastasis",
+        "Cutaneous melanoma with Brain/CNS metastasis",
+    ],
+    # Alias sent by frontend
+    "Cutaneous Melanoma with Brain/CNS Metastasis": [
+        "Cutaneous melanoma with Brain metastasis",
+        "Cutaneous Melanoma with CNS metastasis",
+        "Cutaneous melanoma with Brain/CNS metastasis",
+    ],
+    "Uveal Melanoma": ["Uveal Melanoma", "Uveal melanoma"],
+    "Mucosal Melanoma": ["Mucosal Melanoma", "Mucosal melanoma"],
+    "Acral Melanoma": ["Acral Melanoma", "Acral melanoma"],
+    "Basal Cell Carcinoma": ["Basal Cell Carcinoma"],
+    "Merkel Cell Carcinoma": ["Merkel Cell Carcinoma"],
+    "Cutaneous Squamous Cell Carcinoma": ["Cutaneous Squamous Cell Carcinoma"],
+}
+
 
 class SQLiteTrialsService:
     """Service for reading trial data from SQLite database."""
-
-    # Process-level cache: db_path -> loaded abstracts list.
-    # Abstracts only change on deployment (DB rebuild), so we cache for the
-    # process lifetime. This avoids repeated full-table scans on every request.
-    _abstracts_cache: dict[str, list[dict]] = {}
 
     def __init__(self, db_path: str | Path | None = None):
         """Initialize the SQLite trials service.
@@ -63,11 +101,46 @@ class SQLiteTrialsService:
         conn.row_factory = sqlite3.Row  # Enable column access by name
         return conn
 
+    def _row_to_abstract(self, row: sqlite3.Row) -> dict[str, Any]:
+        """Convert a database row to an abstract dict.
+
+        Args:
+            row: SQLite row from the abstracts table
+
+        Returns:
+            Abstract dictionary
+        """
+        errors = json.loads(row["errors"]) if row["errors"] else []
+        warnings = json.loads(row["warnings"]) if row["warnings"] else []
+        arm_results = json.loads(row["arm_results"]) if row["arm_results"] else {}
+
+        abstract: dict[str, Any] = {
+            "abstract_id": row["abstract_id"],
+            "publication_id": row["publication_id"],
+            "file": row["file"],
+            "total_arms": row["total_arms"],
+            "total_attributes_extracted": row["total_attributes_extracted"],
+            "overall_confidence": row["overall_confidence"],
+            "processing_time_ms": row["processing_time_ms"],
+            "errors": errors,
+            "warnings": warnings,
+            "arm_results": arm_results,
+        }
+
+        if row["source_url"]:
+            abstract["source_url"] = row["source_url"]
+
+        if row["created_at"]:
+            abstract["created_at"] = row["created_at"]
+
+        return abstract
+
     def _load_json_files(self) -> list[dict[str, Any]]:
         """Load all abstracts/publications from SQLite database.
 
-        Results are cached at the class level for the process lifetime since
-        abstract data only changes when the DB is rebuilt on deployment.
+        NOTE: This loads the entire database into memory. Use
+        get_analytics_filtered() instead for analytics endpoints where a
+        cancer_type filter is provided — it is far more memory efficient.
 
         Returns:
             List of abstract/publication dictionaries
@@ -77,10 +150,6 @@ class SQLiteTrialsService:
                 f"Database not found at {self.db_path}, returning empty list"
             )
             return []
-
-        cache_key = str(self.db_path)
-        if cache_key in SQLiteTrialsService._abstracts_cache:
-            return SQLiteTrialsService._abstracts_cache[cache_key]
 
         conn = self._get_connection()
         try:
@@ -104,41 +173,128 @@ class SQLiteTrialsService:
             """
             )
 
-            abstracts = []
-            for row in cursor.fetchall():
-                # Parse JSON fields
-                errors = json.loads(row["errors"]) if row["errors"] else []
-                warnings = json.loads(row["warnings"]) if row["warnings"] else []
-                arm_results = (
-                    json.loads(row["arm_results"]) if row["arm_results"] else {}
-                )
-
-                abstract = {
-                    "abstract_id": row["abstract_id"],
-                    "publication_id": row["publication_id"],
-                    "file": row["file"],
-                    "total_arms": row["total_arms"],
-                    "total_attributes_extracted": row["total_attributes_extracted"],
-                    "overall_confidence": row["overall_confidence"],
-                    "processing_time_ms": row["processing_time_ms"],
-                    "errors": errors,
-                    "warnings": warnings,
-                    "arm_results": arm_results,
-                }
-
-                if row["source_url"]:
-                    abstract["source_url"] = row["source_url"]
-
-                if row["created_at"]:
-                    abstract["created_at"] = row["created_at"]
-
-                abstracts.append(abstract)
+            abstracts = [self._row_to_abstract(row) for row in cursor.fetchall()]
 
             logger.info(
                 f"Loaded {len(abstracts)} abstracts/publications from SQLite database"
             )
-            SQLiteTrialsService._abstracts_cache[cache_key] = abstracts
             return abstracts
+
+        finally:
+            conn.close()
+
+    def get_analytics_filtered(
+        self,
+        cancer_type: str | None = None,
+        resource_type: str = "all",
+        skip: int = 0,
+        limit: int = 200,
+    ) -> tuple[list[dict[str, Any]], int]:
+        """Return abstracts filtered by cancer type using a SQL WHERE clause.
+
+        This avoids loading the full database into memory. Filtering is
+        performed inside SQLite via LIKE patterns on arm_results JSON text,
+        so only matching rows are deserialised.
+
+        Args:
+            cancer_type: Canonical cancer type name (e.g. "Cutaneous melanoma").
+                         If None or "all", returns all rows (paginated).
+            resource_type: "all", "conference", or "publication".
+            skip: Offset for pagination.
+            limit: Maximum rows to return.
+
+        Returns:
+            Tuple of (list of abstract dicts, total matching count before pagination).
+        """
+        if not self.db_path.exists():
+            return [], 0
+
+        conn = self._get_connection()
+        try:
+            # Build WHERE clause fragments
+            where_clauses: list[str] = []
+            params: list[Any] = []
+
+            # Cancer type filtering via LIKE on arm_results JSON text
+            if cancer_type and cancer_type.lower() != "all":
+                # Find the canonical name (case-insensitive match)
+                matched_raw_values: list[str] | None = None
+                for canonical, raw_values in _CANONICAL_TO_RAW_VALUES.items():
+                    if canonical.lower() == cancer_type.lower():
+                        matched_raw_values = raw_values
+                        break
+
+                if matched_raw_values:
+                    # Build OR'd LIKE patterns matching both compact and spaced JSON:
+                    #   compact: "value":"Foo"
+                    #   spaced:  "value": "Foo"  (SQLite json() serialises with a space)
+                    like_clauses = []
+                    for raw_value in matched_raw_values:
+                        for pattern in (
+                            f'%"value":"{raw_value}"%',
+                            f'%"value": "{raw_value}"%',
+                        ):
+                            like_clauses.append("arm_results LIKE ?")
+                            params.append(pattern)
+                    where_clauses.append(f"({' OR '.join(like_clauses)})")
+                else:
+                    # Unknown canonical name — fall back to a simple substring search
+                    where_clauses.append("arm_results LIKE ?")
+                    params.append(f"%{cancer_type}%")
+
+            # Resource type filtering via presence of abstract_id / publication_id
+            if resource_type == "conference":
+                where_clauses.append(
+                    "(abstract_id IS NOT NULL AND abstract_id != '' AND "
+                    "(publication_id IS NULL OR publication_id = ''))"
+                )
+            elif resource_type == "publication":
+                where_clauses.append(
+                    "(publication_id IS NOT NULL AND publication_id != '' AND "
+                    "(abstract_id IS NULL OR abstract_id = ''))"
+                )
+
+            where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+            # Count total matching rows (cheap since no JSON parsing)
+            count_row = conn.execute(
+                f"SELECT COUNT(*) FROM abstracts {where_sql}", params
+            ).fetchone()
+            total = count_row[0] if count_row else 0
+
+            # Fetch the paginated slice
+            skip = max(0, skip)
+            data_params = list(params) + [limit, skip]
+            cursor = conn.execute(
+                f"""
+                SELECT
+                    abstract_id,
+                    publication_id,
+                    file,
+                    source_url,
+                    total_arms,
+                    total_attributes_extracted,
+                    overall_confidence,
+                    processing_time_ms,
+                    errors,
+                    warnings,
+                    arm_results,
+                    created_at
+                FROM abstracts
+                {where_sql}
+                ORDER BY abstract_id, publication_id
+                LIMIT ? OFFSET ?
+                """,
+                data_params,
+            )
+
+            abstracts = [self._row_to_abstract(row) for row in cursor.fetchall()]
+            logger.info(
+                f"get_analytics_filtered: returned {len(abstracts)}/{total} rows "
+                f"(cancer_type={cancer_type!r}, resource_type={resource_type!r}, "
+                f"skip={skip}, limit={limit})"
+            )
+            return abstracts, total
 
         finally:
             conn.close()

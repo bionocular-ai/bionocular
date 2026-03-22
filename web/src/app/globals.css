@@ -193,7 +193,8 @@ body{
 .site-header{position:fixed; inset-block-start:0; inset-inline:0; backdrop-filter:saturate(140%) blur(12px); background:color-mix(in oklab, var(--brand-bg) 90%, transparent); border-block-end:1px solid var(--brand-border); z-index:20}
 .header-inner{display:flex; align-items:center; justify-content:space-between; padding:8px 0; position:relative}
 .site-header-placeholder{height:60px}
-.brand{display:flex; gap:clamp(6px, 1.5vw, 8px); align-items:center; color:var(--brand-text); text-decoration:none; z-index:21}
+.brand{display:flex; gap:clamp(6px, 1.5vw, 8px); align-items:center; color:var(--brand-text); text-decoration:none; z-index:21; outline:none}
+.brand:focus-visible{outline:none}
 .brand-mark{height:28px; width:auto}
 .brand-text{font-weight:700; font-family:'IBM Plex Sans', Inter, system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; font-size:clamp(24px, 4vw, 36px); letter-spacing:0.2px; color:var(--brand-primary)}
 .brand-o{text-decoration:underline; text-decoration-color:var(--brand-accent); text-decoration-thickness:2px; text-underline-offset:3px}

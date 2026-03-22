@@ -158,9 +158,6 @@ const CARDS_PER_GROUP_LOAD_MORE = 15;
 /** When grouping by modality, fetch this many per category so "Load more" has more to reveal. */
 const CARDS_PER_GROUP_FETCH_MODALITY = 45;
 
-/** When grouping by modality/target, fetch this many trials (target view). For non-modality group-bys we load essentially all trials so columns see the full dataset. */
-const GROUP_VIEW_PAGE_SIZE = 4000;
-
 type GroupByOption = 'modality' | 'stage' | 'biomarker' | 'line_of_therapy' | 'previous_treatment';
 
 const GROUP_BY_OPTIONS: { value: GroupByOption; label: string }[] = [
