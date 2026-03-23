@@ -191,22 +191,56 @@ def _recreate_trial_categorization_column_order(
     cursor: sqlite3.Cursor, conn: sqlite3.Connection
 ) -> None:
     """Recreate trial_categorization so cancer_type is the second column (after nct_number)."""
+    cursor.execute("PRAGMA table_info(trial_categorization)")
+    existing_cols = {r[1] for r in cursor.fetchall()}
+
+    # Desired post-migration schema (target/trial_name intentionally removed).
+    desired_cols = [
+        "nct_number",
+        "cancer_type",
+        "modality",
+        "treatment_name",
+        "biomarker",
+        "stage",
+        "line_of_therapy",
+        "previous_treatment_criteria",
+        "extraction_status",
+        "error_message",
+        "updated_at",
+    ]
+
     cursor.execute(
         """
         CREATE TABLE trial_categorization_new (
             nct_number TEXT PRIMARY KEY,
             cancer_type TEXT,
             modality TEXT,
-            target TEXT,
-            trial_name TEXT,
+            treatment_name TEXT,
+            biomarker TEXT,
+            stage TEXT,
+            line_of_therapy TEXT,
+            previous_treatment_criteria TEXT,
+            extraction_status TEXT,
+            error_message TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
+
+    # Build an INSERT ... SELECT that preserves all columns available in the old schema.
+    select_exprs: list[str] = []
+    insert_cols: list[str] = []
+    for col in desired_cols:
+        insert_cols.append(col)
+        if col in existing_cols:
+            select_exprs.append(col)
+        else:
+            select_exprs.append("NULL")
+
     cursor.execute(
-        """
-        INSERT INTO trial_categorization_new (nct_number, cancer_type, modality, target, trial_name, updated_at)
-        SELECT nct_number, cancer_type, modality, target, trial_name, updated_at
+        f"""
+        INSERT INTO trial_categorization_new ({','.join(insert_cols)})
+        SELECT {','.join(select_exprs)}
         FROM trial_categorization
         """
     )
