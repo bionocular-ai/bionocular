@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Load trial_categorizer.txt (NCT, Modality, Target, Trial_Name) into trial_categorization table.
+"""Load trial_categorizer.txt (NCT, Modality) into trial_categorization table.
 
 The table lives in the same SQLite DB as clinical_trials_cache and api_discovery
 (trials.db). Creates the table if missing.
@@ -41,8 +41,13 @@ def ensure_table(conn: sqlite3.Connection) -> None:
             nct_number TEXT PRIMARY KEY,
             cancer_type TEXT,
             modality TEXT,
-            target TEXT,
-            trial_name TEXT,
+            treatment_name TEXT,
+            biomarker TEXT,
+            stage TEXT,
+            line_of_therapy TEXT,
+            previous_treatment_criteria TEXT,
+            extraction_status TEXT,
+            error_message TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
@@ -62,31 +67,59 @@ def ensure_table(conn: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_trial_categorization_modality ON trial_categorization(modality)"
     )
     conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_trial_categorization_target ON trial_categorization(target)"
-    )
-    conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_trial_categorization_cancer_type ON trial_categorization(cancer_type)"
     )
 
 
 def _recreate_trial_categorization_column_order(conn: sqlite3.Connection) -> None:
     """Recreate trial_categorization so cancer_type is the second column (after nct_number)."""
+    cur = conn.execute("PRAGMA table_info(trial_categorization)")
+    existing_cols = {r[1] for r in cur.fetchall()}
+
+    desired_cols = [
+        "nct_number",
+        "cancer_type",
+        "modality",
+        "treatment_name",
+        "biomarker",
+        "stage",
+        "line_of_therapy",
+        "previous_treatment_criteria",
+        "extraction_status",
+        "error_message",
+        "updated_at",
+    ]
+
     conn.execute(
         """
         CREATE TABLE trial_categorization_new (
             nct_number TEXT PRIMARY KEY,
             cancer_type TEXT,
             modality TEXT,
-            target TEXT,
-            trial_name TEXT,
+            treatment_name TEXT,
+            biomarker TEXT,
+            stage TEXT,
+            line_of_therapy TEXT,
+            previous_treatment_criteria TEXT,
+            extraction_status TEXT,
+            error_message TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
+
+    insert_cols = ",".join(desired_cols)
+    select_exprs: list[str] = []
+    for col in desired_cols:
+        if col in existing_cols:
+            select_exprs.append(col)
+        else:
+            select_exprs.append("NULL")
+
     conn.execute(
-        """
-        INSERT INTO trial_categorization_new (nct_number, cancer_type, modality, target, trial_name, updated_at)
-        SELECT nct_number, cancer_type, modality, target, trial_name, updated_at
+        f"""
+        INSERT INTO trial_categorization_new ({insert_cols})
+        SELECT {','.join(select_exprs)}
         FROM trial_categorization
         """
     )
@@ -116,8 +149,8 @@ def _backfill_cancer_type_from_api_discovery(conn: sqlite3.Connection) -> None:
     )
 
 
-def _parse_categorizer_file(input_path: Path) -> list[tuple[str, str | None, str | None, str | None]]:
-    rows: list[tuple[str, str | None, str | None, str | None]] = []
+def _parse_categorizer_file(input_path: Path) -> list[tuple[str, str | None]]:
+    rows: list[tuple[str, str | None]] = []
     with open(input_path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f, fieldnames=("NCT", "Modality", "Target", "Trial_Name"))
         for rec in reader:
@@ -125,9 +158,7 @@ def _parse_categorizer_file(input_path: Path) -> list[tuple[str, str | None, str
             if not nct or nct.upper() == "NCT":
                 continue
             modality = (rec.get("Modality") or "").strip().strip('"') or None
-            target = (rec.get("Target") or "").strip().strip('"') or None
-            trial_name = (rec.get("Trial_Name") or "").strip().strip('"') or None
-            rows.append((nct, modality, target, trial_name))
+            rows.append((nct, modality))
     return rows
 
 
@@ -173,7 +204,7 @@ def main() -> int:
     if args.export_seed:
         args.seed_out.parent.mkdir(parents=True, exist_ok=True)
         seed_data = [
-            {"nct_number": r[0], "modality": r[1], "target": r[2], "trial_name": r[3]}
+            {"nct_number": r[0], "modality": r[1]}
             for r in rows
         ]
         with open(args.seed_out, "w", encoding="utf-8") as f:
@@ -189,8 +220,8 @@ def main() -> int:
         conn.execute("DELETE FROM trial_categorization")
         conn.executemany(
             """
-            INSERT INTO trial_categorization (nct_number, modality, target, trial_name)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO trial_categorization (nct_number, modality)
+            VALUES (?, ?)
             """,
             rows,
         )

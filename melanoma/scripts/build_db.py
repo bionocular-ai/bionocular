@@ -138,8 +138,13 @@ def create_database(db_path: Path) -> sqlite3.Connection:
             nct_number TEXT PRIMARY KEY,
             cancer_type TEXT,
             modality TEXT,
-            target TEXT,
-            trial_name TEXT,
+            treatment_name TEXT,
+            biomarker TEXT,
+            stage TEXT,
+            line_of_therapy TEXT,
+            previous_treatment_criteria TEXT,
+            extraction_status TEXT,
+            error_message TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
         """
@@ -152,9 +157,6 @@ def create_database(db_path: Path) -> sqlite3.Connection:
             raise
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_trial_categorization_modality ON trial_categorization(modality)"
-    )
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_trial_categorization_target ON trial_categorization(target)"
     )
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_trial_categorization_cancer_type ON trial_categorization(cancer_type)"
@@ -564,24 +566,33 @@ def build_database(
                     cat_list = json.load(f)
                 if cat_list:
                     conn.execute("DELETE FROM trial_categorization")
-                    cat_rows = [
-                        (
-                            row.get("nct_number"),
-                            row.get("modality"),
-                            row.get("target"),
-                            row.get("trial_name"),
-                            row.get("cancer_type"),
-                        )
-                        for row in cat_list
-                    ]
-                    conn.executemany(
-                        """
-                        INSERT OR REPLACE INTO trial_categorization
-                        (nct_number, modality, target, trial_name, cancer_type)
-                        VALUES (?, ?, ?, ?, ?)
-                        """,
-                        cat_rows,
+                    cursor = conn.cursor()
+                    cursor.execute(
+                        "PRAGMA table_info(trial_categorization)"
                     )
+                    table_cols = [r[1] for r in cursor.fetchall()]
+
+                    # Insert using the intersection of:
+                    #   (a) columns that exist in the destination table
+                    #   (b) keys present in the exported JSON seed
+                    sample = cat_list[0] if cat_list else {}
+                    insert_cols = [c for c in table_cols if c in sample]
+                    if "nct_number" not in insert_cols:
+                        raise ValueError(
+                            "trial_categorization_seed.json is missing nct_number"
+                        )
+
+                    placeholders = ",".join("?" * len(insert_cols))
+                    insert_sql = (
+                        f"INSERT OR REPLACE INTO trial_categorization "
+                        f"({','.join(insert_cols)}) VALUES ({placeholders})"
+                    )
+
+                    cat_rows = [
+                        tuple(row.get(c) for c in insert_cols) for row in cat_list
+                    ]
+                    cursor.executemany(insert_sql, cat_rows)
+                    conn.commit()
                     # Backfill cancer_type from api_discovery for any row missing it (all tags per NCT, comma-separated)
                     conn.execute(
                         """
