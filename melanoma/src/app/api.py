@@ -1836,12 +1836,14 @@ async def get_analytics_snapshot(
             from .sqlite_trials_service import SQLiteTrialsService
 
             assert isinstance(trials_service, SQLiteTrialsService)
-            abstracts, total = trials_service.get_analytics_filtered(
+            abstracts_iter, total = trials_service.iter_analytics_filtered(
                 cancer_type=cancer_type,
                 resource_type=resource_type,
                 skip=0,
-                limit=5000,  # fetch all matching rows – but only THIS cancer type
+                limit=None,  # stream all matching rows – but only THIS cancer type
+                fetch_batch_size=200,
             )
+            assert abstracts_iter is not None
         else:
             all_abstracts = trials_service._load_json_files()
             abstracts = _filter_analytics_data(
@@ -1855,7 +1857,8 @@ async def get_analytics_snapshot(
         orr_key = "AttributeType.OBJECTIVE_RESPONSE_RATE"
         trae_key = "AttributeType.GRADE_3_PLUS_TRAE"
 
-        # treatment_name -> {orr: [values], trae: [values], patients: [values]}
+        # treatment_name -> running aggregates (memory-safe)
+        # { orr_sum, orr_count, trae_sum, trae_count, patients_sum, approvalStatus }
         groups: dict[str, dict] = {}
 
         approved_set = {
@@ -1874,7 +1877,7 @@ async def get_analytics_snapshot(
             "lifileucel",
         }
 
-        for abstract in abstracts:
+        for abstract in abstracts_iter if data_source == "sqlite" else abstracts:
             for arm in abstract.get("arm_results", {}).values():
                 arm_name = arm.get("arm_name", "")
                 if not arm_name:
@@ -1903,9 +1906,11 @@ async def get_analytics_snapshot(
                 if treatment not in groups:
                     is_approved = any(a in treatment.lower() for a in approved_set)
                     groups[treatment] = {
-                        "orr": [],
-                        "trae": [],
-                        "patients": [],
+                        "orr_sum": 0.0,
+                        "orr_count": 0,
+                        "trae_sum": 0.0,
+                        "trae_count": 0,
+                        "patients_sum": 0.0,
                         "approvalStatus": "Approved"
                         if is_approved
                         else "Investigational",
@@ -1913,20 +1918,22 @@ async def get_analytics_snapshot(
 
                 g = groups[treatment]
                 if orr is not None:
-                    g["orr"].append(orr)
+                    g["orr_sum"] += orr
+                    g["orr_count"] += 1
                 if trae is not None:
-                    g["trae"].append(trae)
+                    g["trae_sum"] += trae
+                    g["trae_count"] += 1
                 if patients is not None:
-                    g["patients"].append(patients)
+                    g["patients_sum"] += patients
 
         # ── Build bubble list (treatments with BOTH ORR and TRAE) ─────────────
         bubble_candidates = []
         for treatment, g in groups.items():
-            if not g["orr"] or not g["trae"]:
+            if g["orr_count"] == 0 or g["trae_count"] == 0:
                 continue
-            avg_orr = sum(g["orr"]) / len(g["orr"])
-            avg_trae = sum(g["trae"]) / len(g["trae"])
-            total_patients = sum(g["patients"]) if g["patients"] else 0
+            avg_orr = g["orr_sum"] / g["orr_count"]
+            avg_trae = g["trae_sum"] / g["trae_count"]
+            total_patients = g["patients_sum"] if g["patients_sum"] else 0
             bubble_candidates.append(
                 {
                     "treatmentName": treatment,
@@ -1934,7 +1941,7 @@ async def get_analytics_snapshot(
                     "efficacy": round(avg_orr, 2),
                     "safety": round(avg_trae, 2),
                     "numberOfPatients": total_patients or None,
-                    "trialCount": max(len(g["orr"]), len(g["trae"])),
+                    "trialCount": max(g["orr_count"], g["trae_count"]),
                 }
             )
 
@@ -1942,18 +1949,38 @@ async def get_analytics_snapshot(
         bubble_candidates.sort(key=lambda x: x["efficacy"], reverse=True)
         bubble_data = bubble_candidates[:bubble_limit]
 
+        # For Cutaneous/Metastatic Melanoma dashboard: show a different set of 5
+        # (deterministic "next 5" treatment groups by efficacy).
+        if (cancer_type or "").strip().lower() == "cutaneous/metastatic melanoma":
+            # Intended for bubble_limit=5 on the dashboard.
+            start = bubble_limit
+            end = bubble_limit * 2
+            if len(bubble_candidates) >= start:
+                next_slice = bubble_candidates[start:end]
+                if len(next_slice) < bubble_limit:
+                    # Pad deterministically from the beginning (avoid duplicates by treatmentName).
+                    used = {d.get("treatmentName") for d in next_slice}
+                    fill_needed = bubble_limit - len(next_slice)
+                    pad = [
+                        d
+                        for d in bubble_candidates[:start]
+                        if d.get("treatmentName") not in used
+                    ][:fill_needed]
+                    next_slice = next_slice + pad
+                bubble_data = next_slice
+
         # ── Build bar list (treatments with ORR, sorted desc) ─────────────────
         bar_candidates = []
         for treatment, g in groups.items():
-            if not g["orr"]:
+            if g["orr_count"] == 0:
                 continue
-            avg_orr = sum(g["orr"]) / len(g["orr"])
+            avg_orr = g["orr_sum"] / g["orr_count"]
             bar_candidates.append(
                 {
                     "treatmentName": treatment,
                     "approvalStatus": g["approvalStatus"],
                     "averageValue": round(avg_orr, 2),
-                    "trialCount": len(g["orr"]),
+                    "trialCount": g["orr_count"],
                 }
             )
 

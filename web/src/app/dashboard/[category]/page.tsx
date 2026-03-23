@@ -73,10 +73,10 @@ function SnapshotModule({ title, href, children, onNavigate, headerRight, dark =
     : "bg-[var(--brand-bg)] border-b border-[var(--brand-border)]";
 
   return (
-    <Card className={`flex flex-col overflow-hidden h-full bg-white border border-[var(--brand-border)] shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ${className}`}>
-      <CardHeader className={`flex flex-row items-center justify-between h-[52px] py-0 px-5 shrink-0 ${headerBg}`}>
-        <CardTitle className={`text-[13px] font-bold tracking-[0.1em] uppercase flex items-center gap-2 min-w-0 truncate ${dark ? "text-slate-200" : "text-[var(--brand-text)]"}`}>
-           <div className="w-1.5 h-4 shrink-0 bg-[var(--brand-primary)] rounded-full" />
+    <Card className={`flex flex-col overflow-hidden h-full bg-white border border-[var(--brand-border)] shadow-md ${className}`}>
+      <CardHeader className={`flex flex-row items-center justify-between h-[clamp(38px,3.6vh,46px)] py-0 px-4 shrink-0 ${headerBg}`}>
+        <CardTitle className={`text-[12px] font-bold tracking-[0.08em] uppercase flex items-center gap-2 min-w-0 truncate ${dark ? "text-slate-200" : "text-[var(--brand-text)]"}`}>
+           <div className="w-1.5 h-3.5 shrink-0 bg-[var(--brand-primary)] rounded-full" />
            <span className="truncate">{title}</span>
         </CardTitle>
         {headerRight ?? ((href || onNavigate) && (
@@ -90,7 +90,7 @@ function SnapshotModule({ title, href, children, onNavigate, headerRight, dark =
           </button>
         ))}
       </CardHeader>
-      <CardContent className="p-5 flex-1 flex flex-col min-h-0 overflow-y-auto">
+      <CardContent className="p-[clamp(12px,1.6vw,20px)] flex-1 flex flex-col min-h-0 overflow-hidden">
         {children}
       </CardContent>
     </Card>
@@ -360,8 +360,8 @@ export default function CancerDashboardSnapshot() {
         <div className="flex-1 min-h-0 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-5 lg:gap-6 items-stretch overflow-hidden">
 
           {/* LEFT COLUMN: Data/Abstract, News, Alerts */}
-          <div className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
-            <div className="flex flex-col gap-0 flex-1 min-h-[160px]">
+          <div className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-hidden">
+            <div className="flex flex-col gap-0 flex-1 min-h-0">
               {landscapeStats?.status?.["Overall Status"] != null && (
                 <div className="shrink-0 px-4 py-2.5 bg-slate-50 border border-slate-200 border-b-slate-200 rounded-t-lg flex items-center justify-center">
                   <span className="text-sm font-semibold text-slate-700">
@@ -389,37 +389,37 @@ export default function CancerDashboardSnapshot() {
                   </div>
                 }
               >
-                <div className="flex flex-col h-full gap-2 min-h-0 -mt-2 -mx-2">
+                <div className="flex flex-col h-full gap-2 min-h-0 -mt-1 -mx-1">
                   {/* Summary cards */}
                   <div className="flex w-full gap-2 shrink-0">
-                    <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg py-2 px-2.5 min-w-0">
-                      <div className="flex-shrink-0 w-7 h-7 rounded-md bg-amber-50 flex items-center justify-center">
-                        <Zap className="h-3.5 w-3.5 text-amber-600" />
+                    <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg py-1.5 px-2 min-w-0">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-md bg-amber-50 flex items-center justify-center">
+                        <Zap className="h-3 w-3 text-amber-600" />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-base font-bold text-slate-800 tabular-nums">
+                        <div className="text-sm font-bold text-slate-800 tabular-nums">
                           {trialUpdatesCount == null ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : (trialUpdatesCount.new_records_added.toLocaleString() ?? "0")}
                         </div>
                         <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">New Records Added</div>
-                        <div className="text-[8px] text-slate-400 mt-0.5">Past 30 days</div>
+                        <div className="text-[7px] text-slate-400 mt-0.5">Past 30 days</div>
                       </div>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg py-2 px-2.5 min-w-0">
-                      <div className="flex-shrink-0 w-7 h-7 rounded-md bg-blue-50 flex items-center justify-center">
-                        <Lightbulb className="h-3.5 w-3.5 text-blue-600" />
+                    <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg py-1.5 px-2 min-w-0">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center">
+                        <Lightbulb className="h-3 w-3 text-blue-600" />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-base font-bold text-slate-800 tabular-nums">
+                        <div className="text-sm font-bold text-slate-800 tabular-nums">
                           {trialUpdatesCount == null ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : (trialUpdatesCount.updates.toLocaleString() ?? "0")}
                         </div>
                         <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Updates</div>
-                        <div className="text-[8px] text-slate-400 mt-0.5">Past 30 days</div>
+                        <div className="text-[7px] text-slate-400 mt-0.5">Past 30 days</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Data table: 4 columns so "Update Message" and icon have space; label and values align in col 3 */}
-                  <div className="flex-1 flex flex-col min-h-0 border border-slate-200 rounded-xl overflow-hidden bg-white -mb-4">
+                  <div className="flex-1 flex flex-col min-h-0 border border-slate-200 rounded-xl overflow-hidden bg-white -mb-2">
                     <div className="grid grid-cols-[5rem_1fr_minmax(5rem,auto)_2.25rem] gap-2 px-3 py-2.5 bg-slate-100 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600 shrink-0 items-center">
                       <span>Date</span>
                       <span>Record Name</span>
@@ -428,7 +428,7 @@ export default function CancerDashboardSnapshot() {
                         <Link href={`/dashboard/${categorySlug}/trial-updates`} className="p-1 rounded hover:bg-slate-200 text-slate-500" aria-label="Full view"><Maximize2 className="h-3.5 w-3" /></Link>
                       </span>
                     </div>
-                    <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar">
+                    <div className="flex-1 min-h-0 overflow-hidden">
                       {latestUpdatesLoading ? (
                         <div className="flex items-center justify-center py-8">
                           <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
@@ -467,7 +467,7 @@ export default function CancerDashboardSnapshot() {
               </div>
             </div>
 
-            <div className="flex-1 min-h-[160px]">
+            <div className="flex-1 min-h-0">
               <SnapshotModule title="Latest News" href={`/dashboard/${categorySlug}/live-ticker`}>
                 <div className="space-y-2 pt-1 -mx-2 -mt-3 -mb-2">
                   {liveTickerLoading && (
@@ -535,7 +535,7 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="h-56 shrink-0">
+            <div className="h-[clamp(160px,20vh,230px)] shrink-0">
               <SnapshotModule title="Alerts">
                 <div className="flex flex-col items-center justify-center h-full text-center px-4 gap-3 text-slate-500">
                   <div className="h-12 w-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mb-1">
@@ -550,8 +550,8 @@ export default function CancerDashboardSnapshot() {
           </div>
 
           {/* MIDDLE COLUMN: Trial Cards, Results */}
-          <div className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
-            <div className="flex-1 flex flex-col min-h-[220px]">
+          <div className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0">
               <SnapshotModule title="Trial Landscape" href={`/dashboard/${categorySlug}/landscape`}>
                 <div className="flex flex-col gap-3 h-full min-h-0">
                   {trialsLoading && (
@@ -559,13 +559,13 @@ export default function CancerDashboardSnapshot() {
                       <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                     </div>
                   )}
-                  <div className="grid grid-cols-3 gap-2 min-h-0 flex-1 overflow-y-auto custom-scrollbar">
+                  <div className="grid grid-cols-3 gap-2 min-h-0 flex-1 overflow-hidden">
                     {trialsData?.trials.slice(0, 9).map((trial) => (
                       <TrialCard
                         key={trial.nct_id}
                         trial={trial}
                         category={categorySlug}
-                        className="min-w-0 min-h-[120px]"
+                        className="min-w-0 min-h-[110px]"
                       />
                     ))}
                   </div>
@@ -573,16 +573,16 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="flex-1 min-h-[220px]">
+            <div className="flex-1 min-h-0">
               <SnapshotModule title="Trial Efficacy / Safety" href={`/dashboard/${categorySlug}/analytics`}>
                 <div className="flex flex-col h-full min-h-0 flex-1 -m-5">
                   {analyticsLoading && (
-                    <div className="flex items-center justify-center flex-1 min-h-[200px]">
+                    <div className="flex items-center justify-center flex-1 min-h-[110px]">
                       <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                     </div>
                   )}
                   {!analyticsLoading && !snapshotData && (
-                    <div className="flex flex-col items-center justify-center flex-1 min-h-[200px] text-center px-4">
+                    <div className="flex flex-col items-center justify-center flex-1 min-h-[110px] text-center px-4">
                       <p className="text-sm text-slate-500">No efficacy & safety data yet</p>
                       <p className="text-xs text-slate-400 mt-1">View analytics for more.</p>
                     </div>
@@ -590,11 +590,14 @@ export default function CancerDashboardSnapshot() {
                   {!analyticsLoading && snapshotData && (
                     <div className="flex flex-col gap-0 h-full min-h-0 flex-1">
                       {/* Bubble: Efficacy vs Safety (top, half) */}
-                      <div className="min-h-0 flex-1 flex flex-col min-w-0" style={{ minHeight: 140 }}>
+                      <div
+                        className="min-h-0 flex-1 flex flex-col min-w-0"
+                        style={{ minHeight: 'clamp(90px,10vh,110px)' }}
+                      >
                         {efficacySafetyBubbleData.length > 0 ? (
                           <BubbleChart
                             data={efficacySafetyBubbleData}
-                            height={140}
+                            height={110}
                             compact={true}
                             fillHeight={false}
                             isCompact={true}
@@ -608,18 +611,21 @@ export default function CancerDashboardSnapshot() {
                             showTooltip={false}
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-[140px] text-[10px] text-slate-400">No bubble data</div>
+                          <div className="flex items-center justify-center h-[110px] text-[10px] text-slate-400">No bubble data</div>
                         )}
                       </div>
                       {/* Simple bar: ORR by treatment (bottom, half) */}
-                      <div className="min-h-0 flex-1 flex flex-col min-w-0" style={{ minHeight: 140 }}>
+                      <div
+                        className="min-h-0 flex-1 flex flex-col min-w-0"
+                        style={{ minHeight: 'clamp(90px,10vh,110px)' }}
+                      >
                         {efficacySafetyBarData.length > 0 ? (
                           <BarChart
                             data={efficacySafetyBarData}
                             metric="OBJECTIVE_RESPONSE_RATE"
                             title=""
                             description=""
-                            height={140}
+                            height={110}
                             showReferenceLine={false}
                             showLegend={false}
                             compact={true}
@@ -628,7 +634,7 @@ export default function CancerDashboardSnapshot() {
                             showTooltip={false}
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-[140px] text-[10px] text-slate-400">No bar data</div>
+                          <div className="flex items-center justify-center h-[110px] text-[10px] text-slate-400">No bar data</div>
                         )}
                       </div>
                     </div>
@@ -639,8 +645,8 @@ export default function CancerDashboardSnapshot() {
           </div>
 
           {/* RIGHT COLUMN: Pipeline, Regulatory, AI — full width on md when 2-col */}
-          <div className="md:col-span-2 lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
-            <div className="flex-1 min-h-[200px]">
+          <div className="md:col-span-2 lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0">
               <SnapshotModule
                 title="Pipeline Health"
                 href={`/dashboard/${categorySlug}/landscape?sponsor_type=Industry`}
@@ -658,7 +664,7 @@ export default function CancerDashboardSnapshot() {
                       <span className="bg-transparent border border-[var(--brand-border)] text-[9px] font-bold tracking-widest px-2 py-1 rounded text-[var(--brand-text-muted)] uppercase">Non-Industry</span>
                     </div>
                   </div>
-                  <div className="flex-1 min-h-[120px] w-full z-10" ref={pipelineContainerRef}>
+                  <div className="flex-1 min-h-[90px] w-full z-10" ref={pipelineContainerRef}>
                     {(() => {
                       const showLoading = (statsLoading && pipelineStatsLoading) || pipelinePhaseBars.length === 0;
                       if (showLoading) {
@@ -672,14 +678,47 @@ export default function CancerDashboardSnapshot() {
                         isNa: bar.label === 'Not applicable',
                       }));
                       const maxCount = Math.max(...chartData.map((d) => d.count), 1);
-                      const yMax = Math.ceil(maxCount * 1.15);
+                      const yMaxRaw = Math.ceil(maxCount * 1.15);
+                      // Pick 4–6 equal divisions based on data so tick labels are consistent
+                      // with "2 more lines" of horizontal grid/ticks.
+                      // Enforce "even whole numbers" for ticks (step is an even integer).
+                      const nCandidates = [6, 5, 4] as const;
+                      let bestN = 4;
+                      let bestStep = 2;
+                      let bestDiff = Number.POSITIVE_INFINITY;
+                      let bestTickMax = yMaxRaw;
+
+                      // Special-case tiny domains so we still get clean even ticks.
+                      if (yMaxRaw <= 2) {
+                        bestN = 1;
+                        bestStep = 2;
+                        bestTickMax = 2;
+                      } else {
+                        for (const n of nCandidates) {
+                          if (yMaxRaw < n) continue;
+                          const stepRaw = Math.floor(yMaxRaw / n);
+                          // Largest even integer <= stepRaw (so tickMax stays close and avoids decimals).
+                          const stepEven = stepRaw % 2 === 0 ? stepRaw : stepRaw - (stepRaw % 2);
+                          if (stepEven < 2) continue; // keep ticks strictly even: 0,2,4...
+                          const tickMax = stepEven * n;
+                          const diff = Math.abs(yMaxRaw - tickMax);
+                          if (diff < bestDiff || (diff === bestDiff && n > bestN)) {
+                            bestDiff = diff;
+                            bestN = n;
+                            bestStep = stepEven;
+                            bestTickMax = tickMax;
+                          }
+                        }
+                      }
+
+                      const yTicks = Array.from({ length: bestN + 1 }, (_, i) => i * bestStep);
                       if (!pipelineReady) return null;
                       return (
                         <ResponsiveContainer
                           width={pipelineDims.width || '100%'}
-                          height={pipelineDims.height || 180}
+                          height={pipelineDims.height || 150}
                           minWidth={0}
-                          minHeight={120}
+                          minHeight={90}
                         >
                           <RechartsBarChart
                             data={chartData}
@@ -695,7 +734,8 @@ export default function CancerDashboardSnapshot() {
                               interval={0}
                             />
                             <YAxis
-                              domain={[0, yMax]}
+                              domain={[0, bestTickMax]}
+                              ticks={yTicks}
                               tick={{ fontSize: 9, fill: '#64748b' }}
                               axisLine={false}
                               tickLine={false}
@@ -728,25 +768,25 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="flex-1 min-h-[200px]">
+            <div className="flex-1 min-h-0">
               <SnapshotModule title="Regulatory Timeline" href={`/dashboard/${categorySlug}/regulatory-timeline`}>
                 <div className="flex flex-col h-full min-h-0 -m-5 -mb-8 mt-1 pb-0">
                   <p className="text-[11px] font-semibold text-[var(--brand-text-muted)] uppercase tracking-wider px-5 pt-1.5 pb-0.5">Final Study Completion</p>
                   <div
-                    className="flex-1 min-h-[160px] px-2"
+                    className="flex-1 min-h-[120px] px-2"
                     ref={regulatoryContainerRef}
                   >
                     {regulatoryReady ? (
                       <ResponsiveContainer
                         width={regulatoryDims.width || '100%'}
-                        height={regulatoryDims.height || 160}
+                        height={regulatoryDims.height || 130}
                         minWidth={0}
-                        minHeight={160}
+                        minHeight={120}
                       >
                         <RechartsBarChart
                           data={REGULATORY_TIMELINE_DATA}
                           layout="vertical"
-                          margin={{ top: 4, right: 8, left: 4, bottom: 20 }}
+                          margin={{ top: 4, right: 18, left: 4, bottom: 20 }}
                         >
                           <CartesianGrid
                             strokeDasharray="2 2"
@@ -790,20 +830,20 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="h-56 shrink-0">
-              <SnapshotModule title={`${categoryName} AI`}>
+            <div className="h-[clamp(160px,20vh,230px)] shrink-0">
+              <SnapshotModule title={`${categoryName} AI Agent`}>
                 <div className="h-full flex flex-col justify-end relative overflow-hidden mt-1">
-                  <div className="flex items-stretch bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-lg p-2 pl-3 min-h-[4.5rem] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]/50 transition-all z-10">
+                  <div className="flex items-stretch bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-lg p-2 pl-3 min-h-[5rem] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]/50 transition-all z-10">
                     <textarea
-                      rows={3}
+                      rows={2}
                       className="bg-transparent flex-1 outline-none text-[var(--brand-text)] text-sm placeholder:text-[var(--brand-text-muted)] font-medium resize-none py-1.5"
-                      placeholder="Ask Bionocular AI..."
+                      placeholder="Ask Bionocular AI Agent..."
                     />
                     <button className="h-9 w-9 self-end rounded-md bg-[var(--brand-primary)] flex items-center justify-center text-white ml-2 hover:bg-[var(--brand-primary-hover)] hover:shadow-md transition-all active:scale-95 shrink-0">
                       <Send className="h-4 w-4" />
                     </button>
                   </div>
-                  <div className="text-center mt-2.5 text-[9px] font-medium text-[var(--brand-text-muted)] uppercase tracking-wider">
+                  <div className="text-center mt-2 text-[9px] font-medium text-[var(--brand-text-muted)] uppercase tracking-wider">
                     Validate insights with primary sources
                   </div>
                 </div>

@@ -58,9 +58,7 @@ export function TrialCard({ trial, className, category }: TrialCardProps) {
         'group relative rounded-xl overflow-hidden',
         'bg-[#1e3a5f]',
         'border border-[#2d4a6f]/80',
-        'shadow-sm hover:shadow-md',
-        'transition-all duration-200 ease-out',
-        'hover:-translate-y-0.5',
+        'shadow-sm',
         'flex flex-col min-h-[152px] min-w-[320px]',
         className
       )}

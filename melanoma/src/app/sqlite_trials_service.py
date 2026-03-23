@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -298,6 +299,137 @@ class SQLiteTrialsService:
 
         finally:
             conn.close()
+
+    def iter_analytics_filtered(
+        self,
+        cancer_type: str | None = None,
+        resource_type: str = "all",
+        skip: int = 0,
+        limit: int | None = None,
+        *,
+        fetch_batch_size: int = 200,
+    ) -> tuple[Iterator[dict[str, Any]], int]:
+        """Stream abstracts filtered by cancer type using SQL.
+
+        This is memory-safe for analytics endpoints because it avoids building
+        a full `list[abstract]` in Python.
+
+        Returns:
+          (iterator, total_matching_rows)
+        """
+        if not self.db_path.exists():
+            return iter([]), 0
+
+        conn = self._get_connection()
+
+        # Build WHERE clause fragments (duplicated from get_analytics_filtered to keep
+        # SQL behavior identical, but without materializing the full result set).
+        where_clauses: list[str] = []
+        params: list[Any] = []
+
+        if cancer_type and cancer_type.lower() != "all":
+            matched_raw_values: list[str] | None = None
+            for canonical, raw_values in _CANONICAL_TO_RAW_VALUES.items():
+                if canonical.lower() == cancer_type.lower():
+                    matched_raw_values = raw_values
+                    break
+
+            if matched_raw_values:
+                like_clauses = []
+                for raw_value in matched_raw_values:
+                    for pattern in (
+                        f'%"value":"{raw_value}"%',
+                        f'%"value": "{raw_value}"%',
+                    ):
+                        like_clauses.append("arm_results LIKE ?")
+                        params.append(pattern)
+                where_clauses.append(f"({' OR '.join(like_clauses)})")
+            else:
+                where_clauses.append("arm_results LIKE ?")
+                params.append(f"%{cancer_type}%")
+
+        if resource_type == "conference":
+            where_clauses.append(
+                "(abstract_id IS NOT NULL AND abstract_id != '' AND "
+                "(publication_id IS NULL OR publication_id = ''))"
+            )
+        elif resource_type == "publication":
+            where_clauses.append(
+                "(publication_id IS NOT NULL AND publication_id != '' AND "
+                "(abstract_id IS NULL OR abstract_id = ''))"
+            )
+
+        where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+        # Count total matching rows (cheap: no JSON parsing)
+        count_row = conn.execute(
+            f"SELECT COUNT(*) FROM abstracts {where_sql}", params
+        ).fetchone()
+        total = count_row[0] if count_row else 0
+
+        skip = max(0, skip)
+        if limit is not None:
+            limit = max(0, limit)
+
+        def gen() -> Iterator[dict[str, Any]]:
+            try:
+                if limit is None:
+                    cursor = conn.execute(
+                        f"""
+                        SELECT
+                            abstract_id,
+                            publication_id,
+                            file,
+                            source_url,
+                            total_arms,
+                            total_attributes_extracted,
+                            overall_confidence,
+                            processing_time_ms,
+                            errors,
+                            warnings,
+                            arm_results,
+                            created_at
+                        FROM abstracts
+                        {where_sql}
+                        ORDER BY abstract_id, publication_id
+                        """,
+                        params,
+                    )
+                else:
+                    data_params = list(params) + [limit, skip]
+                    cursor = conn.execute(
+                        f"""
+                        SELECT
+                            abstract_id,
+                            publication_id,
+                            file,
+                            source_url,
+                            total_arms,
+                            total_attributes_extracted,
+                            overall_confidence,
+                            processing_time_ms,
+                            errors,
+                            warnings,
+                            arm_results,
+                            created_at
+                        FROM abstracts
+                        {where_sql}
+                        ORDER BY abstract_id, publication_id
+                        LIMIT ? OFFSET ?
+                        """,
+                        data_params,
+                    )
+
+                while True:
+                    rows = cursor.fetchmany(fetch_batch_size)
+                    if not rows:
+                        break
+                    for row in rows:
+                        yield self._row_to_abstract(row)
+            finally:
+                conn.close()
+
+        return gen(), total
 
     def _extract_attribute_value(
         self, attributes: dict[str, Any], attribute_key: str
