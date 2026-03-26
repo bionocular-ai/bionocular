@@ -2,75 +2,260 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import { useSession } from 'next-auth/react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import {
-  Bar,
-  BarChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Cell,
-  Tooltip,
-} from 'recharts';
-import { UserMenu } from '@/components/user-menu';
 import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
-import { Loader2, Calendar } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DEFAULT_CANCER_TYPE_SLUG } from '@/lib/dashboard-constants';
 
-const MIN_YEAR = 2023;
-const MAX_YEAR = 2042;
-const YEAR_RANGE = MAX_YEAR - MIN_YEAR;
-
-/** Treatment timeline data: Final Study Completion. Professional palette: distinct, muted, report-ready. */
-const TREATMENT_TIMELINES = [
-  {
-    treatment: 'IO102-IO103 + Pembrolizumab',
-    startYear: 2023.5,
-    endYear: 2028.5,
-    color: '#1e40af', // deep blue
-  },
-  {
-    treatment: 'Lifileucel + Pembrolizumab',
-    startYear: 2026,
-    endYear: 2030.5,
-    color: '#0d9488', // teal
-  },
-  {
-    treatment: 'OBX-115',
-    startYear: 2024,
-    endYear: 2028.5,
-    color: '#5b21b6', // indigo
-  },
-  {
-    treatment: 'EIK1001 + Pembrolizumab',
-    startYear: 2025.5,
-    endYear: 2040.5,
-    color: '#b45309', // amber
-  },
-  {
-    treatment: '[225Ac]Ac-A9-3408',
-    startYear: 2026,
-    endYear: 2028.5,
-    color: '#0369a1', // sky
-  },
-] as const;
-
-/** Chart data: _start = years from MIN_YEAR to bar start, _duration = bar length in years (for stacked horizontal bar). */
-function buildChartData() {
-  return TREATMENT_TIMELINES.map((t) => ({
-    ...t,
-    _start: t.startYear - MIN_YEAR,
-    _duration: t.endYear - t.startYear,
-  }));
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface Trial {
+  label: string;       // Multi-line label (name + NCT)
+  nct: string;
+  start: Date;
+  end: Date;
+  color: string;
 }
 
+// ─── Data ─────────────────────────────────────────────────────────────────────
+/** Merkel Cell Carcinoma — Phase 2 & 3 trials (from ClinicalTrials.gov) */
+const MCC_TRIALS: Trial[] = [
+  {
+    label: 'Pembrolizumab (STAMP)',
+    nct: 'NCT03712605',
+    start: new Date('2018-11-01'),
+    end: new Date('2026-12-01'),
+    color: '#1d6fa4',
+  },
+  {
+    label: 'Avelumab (I-MAT)',
+    nct: 'NCT04291885',
+    start: new Date('2020-10-01'),
+    end: new Date('2030-04-01'),
+    color: '#6a9e77',
+  },
+  {
+    label: 'Vidutolimod + Cemiplimab',
+    nct: 'NCT04916002',
+    start: new Date('2021-06-01'),
+    end: new Date('2024-10-01'),
+    color: '#d97141',
+  },
+  {
+    label: 'Neoadjuvant PD-1 Blockade',
+    nct: 'NCT05496036',
+    start: new Date('2023-02-01'),
+    end: new Date('2027-09-01'),
+    color: '#7059a6',
+  },
+  {
+    label: 'Nivolumab + Relatlimab',
+    nct: 'NCT06151236',
+    start: new Date('2024-03-01'),
+    end: new Date('2034-04-01'),
+    color: '#b94040',
+  },
+];
+
+const GANTT_BY_SLUG: Record<string, Trial[]> = {
+  'merkel-cell-carcinoma': MCC_TRIALS,
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function formatDate(d: Date): string {
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
+function yearFraction(d: Date): number {
+  return d.getFullYear() + d.getMonth() / 12;
+}
+
+function durationYears(start: Date, end: Date): string {
+  const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+  const yr = Math.floor(months / 12);
+  const mo = months % 12;
+  return yr > 0 ? (mo > 0 ? `${yr}y ${mo}mo` : `${yr}y`) : `${mo}mo`;
+}
+
+// ─── Gantt Component ──────────────────────────────────────────────────────────
+function GanttChart({ trials }: { trials: Trial[] }) {
+  const LABEL_W = 220; // px reserved for Y-axis labels
+  const BAR_H   = 28;
+  const ROW_H   = 52;
+  const PAD_TOP = 48; // space for x-axis ticks at top
+  const PAD_BOT = 32;
+  const CHART_H = PAD_TOP + trials.length * ROW_H + PAD_BOT;
+
+  const [tooltip, setTooltip] = React.useState<{
+    trial: Trial; x: number; y: number;
+  } | null>(null);
+
+  // Compute global min/max from trial dates
+  const allYears = trials.flatMap(t => [yearFraction(t.start), yearFraction(t.end)]);
+  const minYear = Math.floor(Math.min(...allYears)) - 0.25;
+  const maxYear = Math.ceil(Math.max(...allYears))  + 0.5;
+  const yearSpan = maxYear - minYear;
+
+  function toX(year: number, chartW: number) {
+    return ((year - minYear) / yearSpan) * chartW;
+  }
+
+  // Generate year ticks (every year from floor to ceil)
+  const ticks: number[] = [];
+  for (let y = Math.ceil(minYear); y <= Math.floor(maxYear); y++) ticks.push(y);
+
+  const [containerW, setContainerW] = React.useState(800);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(entries => {
+      setContainerW(entries[0].contentRect.width);
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  const chartW = Math.max(containerW - LABEL_W - 32, 300);
+
+  return (
+    <div ref={containerRef} className="relative select-none font-sans" style={{ minHeight: CHART_H }}>
+      {/* Date range labels */}
+      <div style={{ marginLeft: LABEL_W }} className="flex justify-between px-0.5 pb-1">
+        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Trial Start Date</span>
+        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Est. Completion Date</span>
+      </div>
+
+      {/* Scrollable SVG */}
+      <div style={{ marginLeft: LABEL_W }}>
+        <svg width={chartW} height={CHART_H} style={{ overflow: 'visible' }}>
+          {/* Vertical Grid Lines */}
+          {ticks.map(y => {
+            const x = toX(y, chartW);
+            const isDecade = y % 5 === 0;
+            return (
+              <line
+                key={y}
+                x1={x} y1={0} x2={x} y2={CHART_H - 25}
+                stroke={isDecade ? '#cbd5e1' : '#f1f5f9'}
+                strokeWidth={isDecade ? 1.5 : 1}
+              />
+            );
+          })}
+
+          {/* Source label */}
+          <text x={chartW} y={14} textAnchor="end" fontSize={10} fill="#94a3b8">
+            Data from ClinicalTrials.gov
+          </text>
+
+          {/* Bars */}
+          {trials.map((trial, i) => {
+            const rowY = PAD_TOP + i * ROW_H;
+            const barY = rowY + (ROW_H - BAR_H) / 2;
+            const xStart = toX(yearFraction(trial.start), chartW);
+            const xEnd   = toX(yearFraction(trial.end),   chartW);
+            const barW   = Math.max(xEnd - xStart, 4);
+
+            return (
+              <g key={trial.nct}
+                onMouseEnter={() => {
+                  setTooltip({ trial, x: xEnd + LABEL_W + 8, y: barY });
+                }}
+                onMouseLeave={() => setTooltip(null)}
+                style={{ cursor: 'pointer' }}
+              >
+                {/* Bar */}
+                <rect
+                  x={xStart} y={barY}
+                  width={barW} height={BAR_H}
+                  rx={3} fill={trial.color}
+                  opacity={0.9}
+                />
+                {/* Diamond marker at completion */}
+                <polygon
+                  points={`${xEnd},${barY + BAR_H / 2 - 6} ${xEnd + 6},${barY + BAR_H / 2} ${xEnd},${barY + BAR_H / 2 + 6} ${xEnd - 6},${barY + BAR_H / 2}`}
+                  fill="#94a3b8" stroke="#fff" strokeWidth={1}
+                />
+              </g>
+            );
+          })}
+          {/* X-Axis Labels (Bottom) */}
+          {ticks.map(y => {
+            const x = toX(y, chartW);
+            return (
+              <text
+                key={y}
+                x={x} y={CHART_H - 8}
+                textAnchor="middle"
+                fontSize={11}
+                fill="#94a3b8"
+                fontWeight={500}
+              >
+                {y}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+
+      {/* Y-axis labels (absolute positioned to the left) */}
+      <div
+        className="absolute top-0 left-0 flex flex-col"
+        style={{ width: LABEL_W, paddingTop: PAD_TOP }}
+      >
+        {trials.map((trial) => (
+          <div
+            key={trial.nct}
+            style={{ height: ROW_H }}
+            className="flex flex-col justify-center pr-3"
+          >
+            <span className="text-[12px] font-semibold text-slate-700 leading-tight">{trial.label}</span>
+            <span className="text-[10px] text-slate-400 leading-tight">({trial.nct})</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Tooltip */}
+      {tooltip && (
+        <div
+          className="pointer-events-none absolute z-50 rounded-lg bg-white border border-slate-200 shadow-xl px-3 py-2.5 text-xs min-w-[180px]"
+          style={{ left: Math.min(tooltip.x, containerW - 200), top: tooltip.y - 4 }}
+        >
+          <p className="font-semibold text-slate-800 mb-1.5">{tooltip.trial.label}</p>
+          <p className="text-slate-500 text-[10px] mb-2">{tooltip.trial.nct}</p>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+            <dt className="text-slate-500">Start</dt>
+            <dd className="text-slate-700 font-medium">{formatDate(tooltip.trial.start)}</dd>
+            <dt className="text-slate-500">Est. Completion</dt>
+            <dd className="text-slate-700 font-medium">{formatDate(tooltip.trial.end)}</dd>
+            <dt className="text-slate-500">Duration</dt>
+            <dd className="text-slate-700 font-medium">{durationYears(tooltip.trial.start, tooltip.trial.end)}</dd>
+          </dl>
+        </div>
+      )}
+
+      {/* Legend */}
+      <div className="flex items-center gap-3 mt-4 pl-1 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <div className="w-8 h-3 rounded-sm bg-slate-400 opacity-80" />
+          <span className="text-[11px] text-slate-500">Trial duration</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <svg width={14} height={14}>
+            <polygon points="7,1 13,7 7,13 1,7" fill="#94a3b8" />
+          </svg>
+          <span className="text-[11px] text-slate-500">Estimated completion</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Page Content ──────────────────────────────────────────────────────────────
 function RegulatoryTimelineContent() {
-  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const params = useParams();
   const router = useRouter();
@@ -81,23 +266,18 @@ function RegulatoryTimelineContent() {
     DEFAULT_CANCER_TYPE_SLUG;
 
   const setCancerType = React.useCallback(
-    (slug: string) => {
-      router.push(`/dashboard/${slug}/regulatory-timeline`);
-    },
+    (slug: string) => router.push(`/dashboard/${slug}/regulatory-timeline`),
     [router]
   );
 
-  const chartData = React.useMemo(() => buildChartData(), []);
+  const trials = GANTT_BY_SLUG[cancerTypeSlug];
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden">
       <header className="bg-white border-b border-slate-200 shrink-0 z-50">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-14 gap-3">
-            <Link
-              href="/"
-              className="brand flex-shrink-0 hover:opacity-80 transition-opacity"
-            >
+            <Link href="/" className="brand flex-shrink-0 hover:opacity-80 transition-opacity">
               <Logo height={32} />
               <span className="brand-text dashboard-brand-text">
                 bi<span className="brand-o">o</span>nocular
@@ -105,13 +285,6 @@ function RegulatoryTimelineContent() {
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               <DashboardNavLink />
-              {session?.user && (
-                <UserMenu
-                  email={session.user.email || null}
-                  name={session.user.name || null}
-                  image={undefined}
-                />
-              )}
             </div>
           </div>
         </div>
@@ -125,130 +298,24 @@ function RegulatoryTimelineContent() {
           />
         </div>
 
-        {/* Regulatory Timeline section — same layout pattern as Landscape */}
-        <div className="w-full bg-white rounded-lg shadow min-h-0 min-w-0">
-          <section className="bg-white min-h-0">
-            <div className="px-4 sm:px-6 lg:px-8 pt-3 pb-2 flex flex-col min-h-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0 mb-2">
-                <div>
-                  <h2 className="text-2xl font-medium tracking-wide text-sky-700">
-                    Regulatory Timeline
-                  </h2>
-                  <p className="text-sm text-slate-500 mt-0.5">
-                    Key regulatory milestones and approval pathway for this indication.
-                  </p>
-                </div>
-              </div>
+        <div className="w-full bg-white rounded-lg shadow px-6 py-6">
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold text-slate-800 tracking-tight">
+              Clinical Trial Gantt Chart
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Phase 2 &amp; 3 trials · Start and estimated completion dates · Hover for details
+            </p>
+          </div>
 
-              <div className="flex flex-wrap items-center gap-4 py-2 shrink-0 border-y border-slate-100 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-4">
-                <div className="flex items-center gap-2 text-slate-600">
-                  <Calendar className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm font-medium">Final Study Completion</span>
-                </div>
-              </div>
-
-              {/* Clinical trial timelines — horizontal bar chart */}
-              <div className="pb-6 min-h-[340px]">
-                <h3 className="text-base font-semibold text-slate-700 mb-1">
-                  Clinical Trial Timelines for Metastatic Melanoma (Final Study Completion)
-                </h3>
-                <p className="text-xs text-slate-500 mb-4">Hover a bar for start and end years.</p>
-                <div className="w-full h-[300px] min-h-[260px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={chartData}
-                      layout="vertical"
-                      margin={{ top: 12, right: 16, left: 12, bottom: 28 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="#e2e8f0"
-                        horizontal={false}
-                        vertical={true}
-                      />
-                      <XAxis
-                        type="number"
-                        domain={[0, YEAR_RANGE]}
-                        ticks={[0, 2, 4, 6, 8, 10, 12, 14, 16, 18]}
-                        tick={{ fontSize: 11, fill: '#64748b' }}
-                        tickFormatter={(v) => String(MIN_YEAR + Math.round(v))}
-                        axisLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
-                        tickLine={{ stroke: '#cbd5e1' }}
-                        label={{
-                          value: 'Year',
-                          position: 'insideBottom',
-                          offset: -8,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          fill: '#64748b',
-                        }}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="treatment"
-                        width={240}
-                        tick={{ fontSize: 11, fill: '#334155', fontWeight: 500 }}
-                        axisLine={{ stroke: '#94a3b8', strokeWidth: 1 }}
-                        tickLine={false}
-                        reversed
-                        label={{
-                          value: 'Treatment',
-                          angle: -90,
-                          position: 'insideLeft',
-                          fill: '#64748b',
-                          fontSize: 12,
-                        }}
-                      />
-                      <Tooltip
-                        cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
-                        content={({ active, payload }) => {
-                          if (!active || !payload?.length) return null;
-                          const p = payload[0]?.payload as (typeof chartData)[number];
-                          if (!p) return null;
-                          const duration = (p.endYear - p.startYear).toFixed(1);
-                          return (
-                            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 shadow-lg ring-1 ring-slate-900/5">
-                              <p className="font-semibold text-slate-800 text-sm">{p.treatment}</p>
-                              <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
-                                <dt className="text-slate-500">Start</dt>
-                                <dd className="tabular-nums text-slate-700">{p.startYear}</dd>
-                                <dt className="text-slate-500">End</dt>
-                                <dd className="tabular-nums text-slate-700">{p.endYear}</dd>
-                                <dt className="text-slate-500">Duration</dt>
-                                <dd className="tabular-nums text-slate-700">{duration} years</dd>
-                              </dl>
-                            </div>
-                          );
-                        }}
-                      />
-                      <Bar
-                        dataKey="_start"
-                        stackId="timeline"
-                        fill="transparent"
-                        barSize={28}
-                        radius={0}
-                        isAnimationActive={false}
-                      />
-                      <Bar
-                        dataKey="_duration"
-                        stackId="timeline"
-                        barSize={28}
-                        radius={0}
-                        stroke="#1e293b"
-                        strokeWidth={1}
-                        isAnimationActive={true}
-                        animationDuration={500}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+          {trials ? (
+            <GanttChart trials={trials} />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <p className="text-base font-medium">No timeline data available for this indication.</p>
+              <p className="text-sm mt-1">Timeline data is currently available for Merkel Cell Carcinoma.</p>
             </div>
-          </section>
+          )}
         </div>
       </main>
     </div>

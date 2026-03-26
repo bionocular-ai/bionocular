@@ -179,6 +179,7 @@ cython_debug/
 # Cursor — Antigravity skills (local only)
 .cursor/skills/
 .cursor/antigravity-skills.md
+.agents/
 
 # macOS
 .DS_Store
