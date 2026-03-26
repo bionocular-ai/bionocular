@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, IBM_Plex_Sans } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
-import { SessionProvider } from "@/components/providers/session-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -41,9 +40,7 @@ export default function RootLayout({
         style={{ fontFamily: "var(--font-inter)" }}
         suppressHydrationWarning
       >
-        <SessionProvider>
-          <QueryProvider>{children}</QueryProvider>
-        </SessionProvider>
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );

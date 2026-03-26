@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

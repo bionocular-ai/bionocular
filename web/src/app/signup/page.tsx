@@ -2,7 +2,7 @@
 
 import { useState, useTransition, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -11,27 +11,21 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Mail, Lock } from 'lucide-react';
 import { isValidEmail, validatePassword } from '@/lib/auth-utils';
 
-function LoginForm() {
+function SignupForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
   const [, startTransition] = useTransition();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Validate callback URL to prevent open redirects
-  const safeCallbackUrl = callbackUrl.startsWith('/') && !callbackUrl.startsWith('//')
-    ? callbackUrl
-    : '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     
-    // Client-side validation
     if (!email || !password) {
       setError('Please enter both email and password');
       return;
@@ -52,24 +46,25 @@ function LoginForm() {
 
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       });
 
       if (error) {
-        // generic error message map
-        setError('Invalid email or password');
+        setError(error.message);
         setIsLoading(false);
       } else if (data.session) {
-        // Use startTransition for navigation to avoid blocking
         startTransition(() => {
-          router.push(safeCallbackUrl);
+          router.push('/dashboard');
           router.refresh();
         });
+      } else if (data.user) {
+        setSuccessMsg('Account created! If you have "Confirm email" enabled in Supabase, please check your email.');
+        setIsLoading(false);
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Signup error:', err);
       setError('An error occurred. Please try again.');
       setIsLoading(false);
     }
@@ -77,7 +72,6 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: '#0E3547' }}>
-      {/* Brand teal mesh gradient background */}
       <div className="absolute inset-0" style={{
         background: `
           radial-gradient(ellipse 130% 90% at 15% 50%, rgba(27,79,101,0.92) 0%, transparent 55%),
@@ -86,19 +80,10 @@ function LoginForm() {
           #0E3547
         `
       }} />
-      {/* Subtle wave pattern overlay */}
       <div className="absolute inset-0 opacity-20">
         <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 1200 800" preserveAspectRatio="none">
-          <path
-            d="M0,200 Q300,150 600,200 T1200,200 L1200,800 L0,800 Z"
-            fill="url(#wave-gradient)"
-            className="opacity-50"
-          />
-          <path
-            d="M0,300 Q400,250 800,300 T1200,300 L1200,800 L0,800 Z"
-            fill="url(#wave-gradient)"
-            className="opacity-30"
-          />
+          <path d="M0,200 Q300,150 600,200 T1200,200 L1200,800 L0,800 Z" fill="url(#wave-gradient)" className="opacity-50" />
+          <path d="M0,300 Q400,250 800,300 T1200,300 L1200,800 L0,800 Z" fill="url(#wave-gradient)" className="opacity-30" />
           <defs>
             <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#7AC1A2" stopOpacity="0.4" />
@@ -112,18 +97,11 @@ function LoginForm() {
         <CardHeader className="pb-8 pt-10">
           <div className="flex justify-center mb-1">
             <div className="relative w-32 h-32">
-              <Image
-                src="/logo.png"
-                alt="Bionocular Logo"
-                fill
-                sizes="128px"
-                className="object-contain"
-                priority
-              />
+              <Image src="/logo.png" alt="Bionocular Logo" fill sizes="128px" className="object-contain" priority />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-center -mt-1" style={{ color: '#1B4F65' }}>
-            Welcome Back
+            Create Account
           </h1>
         </CardHeader>
         <CardContent className="px-8 pb-8">
@@ -131,6 +109,11 @@ function LoginForm() {
             {error && (
               <div className="p-3.5 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
                 {error}
+              </div>
+            )}
+            {successMsg && (
+              <div className="p-3.5 text-sm text-[#1B4F65] bg-[#7AC1A2]/20 border border-[#7AC1A2]/40 rounded-lg">
+                {successMsg}
               </div>
             )}
             
@@ -163,7 +146,7 @@ function LoginForm() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                autoComplete="current-password"
+                autoComplete="new-password"
                 className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1B4F65] focus:ring-[#1B4F65]"
               />
             </div>
@@ -179,42 +162,29 @@ function LoginForm() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Signing in...
+                  Creating account...
                 </>
               ) : (
-                'Login'
+                'Sign Up'
               )}
             </Button>
           </form>
 
           <div className="mt-6 space-y-4 text-center">
-            <Link
-              href="/forgot-password"
-              className="text-sm hover:underline block hover:opacity-80 transition-opacity"
-              style={{ color: '#1B4F65' }}
-            >
-              Forgot Password?
-            </Link>
             <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{' '}
-              <Link
-                href="/signup"
-                className="font-semibold hover:underline hover:opacity-80 transition-opacity"
-                style={{ color: '#1B4F65' }}
-              >
-                Sign Up
+              Already have an account?{' '}
+              <Link href="/login" className="font-semibold hover:underline hover:opacity-80 transition-opacity" style={{ color: '#1B4F65' }}>
+                Login
               </Link>
             </p>
           </div>
-
-          {/* Hidden DEV demo credentials box - users must create real accounts now */}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0E3547' }}>
@@ -227,8 +197,7 @@ export default function LoginPage() {
         </Card>
       </div>
     }>
-      <LoginForm />
+      <SignupForm />
     </Suspense>
   );
 }
-

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';

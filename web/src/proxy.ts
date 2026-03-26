@@ -1,44 +1,59 @@
-import { auth } from "@/auth"
-import { NextResponse } from "next/server"
-import { ROUTES, PUBLIC_ROUTES } from "@/lib/constants"
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-// Next.js 16 proxy pattern - using auth as proxy
-export default auth((req) => {
-  const { pathname } = req.nextUrl
-  const isLoggedIn = !!req.auth
+export async function proxy(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  })
 
-  // Check if route is public
-  const isPublicRoute = PUBLIC_ROUTES.includes(pathname as typeof PUBLIC_ROUTES[number])
-
-  // If user is not logged in and trying to access protected route
-  if (!isLoggedIn && !isPublicRoute) {
-    const loginUrl = new URL(ROUTES.LOGIN, req.url)
-    // Validate callbackUrl to prevent open redirects
-    if (pathname.startsWith('/') && !pathname.startsWith('//')) {
-      loginUrl.searchParams.set("callbackUrl", pathname)
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
     }
-    return NextResponse.redirect(loginUrl)
+  )
+
+  // refresh session if expired
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup')
+
+  if (user && isAuthRoute) {
+    // Redirect authenticated users away from login
+    return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // If user is logged in and trying to access login page, redirect to dashboard
-  if (isLoggedIn && pathname === ROUTES.LOGIN) {
-    return NextResponse.redirect(new URL(ROUTES.DASHBOARD, req.url))
+  if (!user && !isAuthRoute && request.nextUrl.pathname.startsWith('/dashboard')) {
+    // Redirect unauthenticated users away from protected routes
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/login'
+    redirectUrl.searchParams.set('callbackUrl', request.nextUrl.pathname)
+    return NextResponse.redirect(redirectUrl)
   }
 
-  return NextResponse.next()
-})
+  return supabaseResponse
+}
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - static media files (images, videos, etc.)
-     */
-    "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|webm|mov|avi|ico)$).*)",
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
-

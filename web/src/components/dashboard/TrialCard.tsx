@@ -50,7 +50,7 @@ export function TrialCard({ trial, className, category }: TrialCardProps) {
   const href = category
     ? `/trial/nct/${trial.nct_id}?category=${category}`
     : `/trial/nct/${trial.nct_id}`;
-  const hasAbstractsOrPublications = !!trial.abstract_id || !!(trial.conference ?? trial.published_year);
+  const hasOutcomes = !!trial.has_outcomes;
 
   return (
     <div
@@ -114,7 +114,7 @@ export function TrialCard({ trial, className, category }: TrialCardProps) {
             {trial.study_status || '—'}
           </span>
         </div>
-        {hasAbstractsOrPublications && (
+        {hasOutcomes && (
           <Link
             href={href}
             onClick={(e) => e.stopPropagation()}

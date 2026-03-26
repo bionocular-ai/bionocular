@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { useParams } from 'next/navigation';
 import { TrialDataTable } from '@/components/dashboard/TrialDataTable';
 import { TrialDetailView } from '@/components/trial/TrialDetailView';

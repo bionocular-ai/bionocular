@@ -1,6 +1,6 @@
 "use client"
 
-import { signOut } from "next-auth/react"
+import { signOut } from "@/lib/supabase/hooks";
 import { Avatar } from "@/components/ui/avatar"
 import {
   DropdownMenu,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '@/components/Logo';

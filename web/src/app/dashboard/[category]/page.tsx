@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
