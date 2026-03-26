@@ -45,22 +45,37 @@ function slugToCategory(slug: string): string {
     .join(' ');
 }
 
-/** Treatment timeline data for Regulatory Timeline (Final Study Completion). */
-/** Professional palette: distinct, muted, report-ready. */
-const REGULATORY_TIMELINE_DATA = [
-  { treatment: 'IO102-IO103 + Pembro', startYear: 2023.5, endYear: 2028.5, color: '#1e40af' },
-  { treatment: 'Lifileucel + Pembro', startYear: 2026, endYear: 2030.5, color: '#0d9488' },
-  { treatment: 'OBX-115', startYear: 2024, endYear: 2028.5, color: '#5b21b6' },
-  { treatment: 'EIK1001 + Pembro', startYear: 2025.5, endYear: 2040.5, color: '#b45309' },
-  { treatment: '[225Ac]Ac-A9-3408', startYear: 2026, endYear: 2028.5, color: '#0369a1' },
-].map((t) => ({
-  ...t,
-  _start: t.startYear - 2023,
-  _duration: t.endYear - t.startYear,
-}));
+/** Merkel Cell Carcinoma — Phase 2 & 3 trials (from ClinicalTrials.gov) */
+const MCC_REGULATORY_TRIALS = [
+  { label: 'Pembro (STAMP)', nct: 'NCT03712605', start: 2018.8, end: 2026.9, color: '#1d6fa4' },
+  { label: 'Avelumab (I-MAT)', nct: 'NCT04291885', start: 2020.8, end: 2030.3, color: '#6a9e77' },
+  { label: 'Vidutolimod + Cemipl.', nct: 'NCT04916002', start: 2021.5, end: 2024.8, color: '#d97141' },
+  { label: 'Neoadjuv. PD-1', nct: 'NCT05496036', start: 2023.1, end: 2027.7, color: '#7059a6' },
+  { label: 'Nivolumab + Relatlimab', nct: 'NCT06151236', start: 2024.2, end: 2034.3, color: '#b94040' },
+];
 
 // Reusable Module Wrapper with modern styling
-function SnapshotModule({ title, href, children, onNavigate, headerRight, dark = false, flatDarkHeader = false, className = "" }: { title: string; href?: string; children: React.ReactNode; onNavigate?: () => void; headerRight?: React.ReactNode; dark?: boolean; flatDarkHeader?: boolean; className?: string }) {
+function SnapshotModule({
+  title,
+  href,
+  children,
+  onNavigate,
+  headerRight,
+  hideNav = false,
+  dark = false,
+  flatDarkHeader = false,
+  className = "",
+}: {
+  title: React.ReactNode;
+  href?: string;
+  children: React.ReactNode;
+  onNavigate?: () => void;
+  headerRight?: React.ReactNode;
+  hideNav?: boolean;
+  dark?: boolean;
+  flatDarkHeader?: boolean;
+  className?: string;
+}) {
   const router = useRouter();
 
   const handleNav = () => {
@@ -79,7 +94,7 @@ function SnapshotModule({ title, href, children, onNavigate, headerRight, dark =
            <div className="w-1.5 h-3.5 shrink-0 bg-[var(--brand-primary)] rounded-full" />
            <span className="truncate">{title}</span>
         </CardTitle>
-        {headerRight ?? ((href || onNavigate) && (
+        {headerRight ?? (!hideNav && (href || onNavigate) && (
           <button
             type="button"
             onClick={handleNav}
@@ -277,11 +292,13 @@ export default function CancerDashboardSnapshot() {
 
   // Regulatory Timeline sizing state (avoid Recharts width/height -1 warnings)
   const regulatoryContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const regulatoryChartAreaRef = React.useRef<HTMLDivElement | null>(null);
   const [regulatoryReady, setRegulatoryReady] = React.useState(false);
   const [regulatoryDims, setRegulatoryDims] = React.useState<{ width: number; height: number }>({
     width: 0,
     height: 0,
   });
+  const [regulatoryChartW, setRegulatoryChartW] = React.useState(0);
 
   React.useEffect(() => {
     const node = regulatoryContainerRef.current;
@@ -291,10 +308,18 @@ export default function CancerDashboardSnapshot() {
       const ok = rect.width > 0 && rect.height > 0;
       if (ok) setRegulatoryDims({ width: rect.width, height: rect.height });
       setRegulatoryReady(ok);
+
+      const chartEl = regulatoryChartAreaRef.current;
+      if (chartEl) {
+        const chartRect = chartEl.getBoundingClientRect();
+        if (chartRect.width > 0) setRegulatoryChartW(chartRect.width);
+      }
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(node);
+    const chartEl = regulatoryChartAreaRef.current;
+    if (chartEl) ro.observe(chartEl);
     return () => ro.disconnect();
   }, []);
 
@@ -769,69 +794,177 @@ export default function CancerDashboardSnapshot() {
             </div>
 
             <div className="flex-1 min-h-0">
-              <SnapshotModule title="Regulatory Timeline" href={`/dashboard/${categorySlug}/regulatory-timeline`}>
+              <SnapshotModule
+                title="Regulatory Timeline"
+                href={`/dashboard/${categorySlug}/regulatory-timeline`}
+                hideNav
+              >
                 <div className="flex flex-col h-full min-h-0 -m-5 -mb-8 mt-1 pb-0">
-                  <p className="text-[11px] font-semibold text-[var(--brand-text-muted)] uppercase tracking-wider px-5 pt-1.5 pb-0.5">Final Study Completion</p>
+                  <div className="flex px-5 pt-1.5 pb-0.5">
+                    <div style={{ width: '105px' }} aria-hidden />
+                    <div className="flex-1 relative ml-1 h-4">
+                      <span
+                        className="absolute top-0 text-[10px] font-semibold text-[var(--brand-text-muted)] tracking-wide"
+                        style={{ left: 12 }}
+                      >
+                        Trial Start Date
+                      </span>
+                      <span
+                        className="absolute top-0 text-[10px] font-semibold text-[var(--brand-text-muted)] tracking-wide"
+                        style={{ right: 12 }}
+                      >
+                        Est. Completion Date
+                      </span>
+                    </div>
+                  </div>
                   <div
                     className="flex-1 min-h-[120px] px-2"
                     ref={regulatoryContainerRef}
                   >
-                    {regulatoryReady ? (
-                      <ResponsiveContainer
-                        width={regulatoryDims.width || '100%'}
-                        height={regulatoryDims.height || 130}
-                        minWidth={0}
-                        minHeight={120}
-                      >
-                        <RechartsBarChart
-                          data={REGULATORY_TIMELINE_DATA}
-                          layout="vertical"
-                          margin={{ top: 4, right: 18, left: 4, bottom: 20 }}
-                        >
-                          <CartesianGrid
-                            strokeDasharray="2 2"
-                            stroke="#e2e8f0"
-                            horizontal={false}
-                            vertical={true}
-                          />
-                          <XAxis
-                            type="number"
-                            domain={[0, 19]}
-                            ticks={[0, 4, 8, 12, 16]}
-                            tick={{ fontSize: 9, fill: '#64748b' }}
-                            tickFormatter={(v) => String(2023 + Math.round(v))}
-                            axisLine={{ stroke: '#94a3b8' }}
-                            tickLine={{ stroke: '#cbd5e1' }}
-                          />
-                          <YAxis
-                            type="category"
-                            dataKey="treatment"
-                            width={108}
-                            tick={{ fontSize: 9, fill: '#334155', fontWeight: 500 }}
-                            axisLine={{ stroke: '#94a3b8' }}
-                            tickLine={false}
-                            reversed
-                          />
-                          <Bar dataKey="_start" stackId="rt" fill="transparent" barSize={16} isAnimationActive={false} />
-                          <Bar dataKey="_duration" stackId="rt" barSize={16} radius={0} stroke="#1e293b" strokeWidth={0.5} isAnimationActive={true}>
-                            {REGULATORY_TIMELINE_DATA.map((entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            ))}
-                          </Bar>
-                        </RechartsBarChart>
-                      </ResponsiveContainer>
+                    {regulatoryReady && (categorySlug === 'merkel-cell-carcinoma' ? (
+                      <div className="w-full h-full flex flex-row">
+                        {/* Y-Axis Labels */}
+                        <div className="flex flex-col justify-between py-1 pr-2 pl-2" style={{ width: '105px', height: regulatoryDims.height - 20 }}>
+                          {MCC_REGULATORY_TRIALS.map((trial) => (
+                            <div key={trial.nct} className="py-0.5">
+                              <div className="text-[9px] font-semibold text-slate-700 leading-tight break-words">
+                                {trial.label}
+                              </div>
+                              <div className="text-[8px] text-slate-400 leading-tight font-mono">
+                                {trial.nct}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        {/* Chart Area */}
+                        <div ref={regulatoryChartAreaRef} className="flex-1 relative ml-1">
+                          {(() => {
+                            const domainStart = 2018;
+                            const domainEnd = 2034;
+                            const domainSpan = domainEnd - domainStart;
+                            const padX = 12; // keep end labels centered without clipping
+                            const chartW = Math.max(regulatoryChartW || 0, 0);
+                            const innerW = Math.max(chartW - padX * 2, 1);
+                            const toX = (year: number) => padX + ((year - domainStart) / domainSpan) * innerW;
+                            const tickYears = [2018, 2022, 2026, 2030, 2034] as const;
+                            const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+                            const formatYearFrac = (yf: number) => {
+                              const year = Math.floor(yf);
+                              const monthIndex = clamp(Math.round((yf - year) * 12), 0, 11);
+                              const d = new Date(Date.UTC(year, monthIndex, 1));
+                              return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+                            };
+
+                            return (
+                              <svg width={chartW || '100%'} height={regulatoryDims.height} style={{ overflow: 'visible' }}>
+                            {/* Grid lines */}
+                            {tickYears.map((year) => {
+                              const x = toX(year);
+                              return (
+                                <line
+                                  key={year}
+                                  x1={x}
+                                  y1={0}
+                                  x2={x}
+                                  y2={regulatoryDims.height - 22}
+                                  stroke="#e2e8f0"
+                                  strokeWidth={1.25}
+                                />
+                              );
+                            })}
+
+                            {/* X-axis baseline */}
+                            <line
+                              x1={Math.max(padX - 10, 0)}
+                              y1={regulatoryDims.height - 22}
+                              x2={padX + innerW + 10}
+                              y2={regulatoryDims.height - 22}
+                              stroke="#e2e8f0"
+                              strokeWidth={1.25}
+                            />
+                            
+                            {MCC_REGULATORY_TRIALS.map((trial, i) => {
+                              const rowH = (regulatoryDims.height - 22) / MCC_REGULATORY_TRIALS.length;
+                              const barH = 10;
+                              const y = i * rowH + (rowH - barH) / 2;
+                              const xStart = toX(trial.start);
+                              const xEnd = toX(trial.end);
+                              const barW = Math.max(xEnd - xStart, 4);
+                              const labelY = Math.max(y - 3, 8);
+                              
+                              return (
+                                <g key={trial.nct}>
+                                  {/* Start/Completion labels */}
+                                  <text
+                                    x={clamp(xStart, padX, padX + innerW)}
+                                    y={labelY}
+                                    textAnchor="start"
+                                    fontSize="7"
+                                    fill="#64748b"
+                                    fontWeight="600"
+                                  >
+                                    {formatYearFrac(trial.start)}
+                                  </text>
+                                  <text
+                                    x={clamp(xEnd, padX, padX + innerW)}
+                                    y={labelY}
+                                    textAnchor="end"
+                                    fontSize="7"
+                                    fill="#64748b"
+                                    fontWeight="600"
+                                  >
+                                    {formatYearFrac(trial.end)}
+                                  </text>
+                                  <rect x={xStart} y={y} width={barW} height={barH} rx={1.5} fill={trial.color} opacity={0.8} />
+                                  <polygon
+                                    points={`${xEnd},${y + barH / 2 - 3.5} ${xEnd + 3.5},${y + barH / 2} ${xEnd},${y + barH / 2 + 3.5} ${xEnd - 3.5},${y + barH / 2}`}
+                                    fill="#94a3b8" stroke="#fff" strokeWidth={0.5}
+                                  />
+                                </g>
+                              );
+                            })}
+                            
+                            {/* X-Axis Labels */}
+                            {tickYears.map((year) => {
+                              const x = toX(year);
+                              return (
+                                <text
+                                  key={year}
+                                  x={x}
+                                  y={regulatoryDims.height - 8}
+                                  textAnchor="middle"
+                                  fontSize="9"
+                                  fill="#64748b"
+                                  fontWeight="600"
+                                >
+                                  {year}
+                                </text>
+                              );
+                            })}
+                              </svg>
+                            );
+                          })()}
+                        </div>
+                      </div>
                     ) : (
                       <div className="flex items-center justify-center h-full text-[10px] text-slate-400">
-                        Loading chart…
+                        No timeline data available
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
               </SnapshotModule>
             </div>
 
             <div className="h-[clamp(160px,20vh,230px)] shrink-0">
-              <SnapshotModule title={`${categoryName} AI Agent`}>
+              <SnapshotModule
+                title={
+                  <>
+                    {categoryName} AI Agent <span className="text-slate-400">(Upcoming)</span>
+                  </>
+                }
+              >
                 <div className="h-full flex flex-col justify-end relative overflow-hidden mt-1">
                   <div className="flex items-stretch bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-lg p-2 pl-3 min-h-[5rem] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]/50 transition-all z-10">
                     <textarea

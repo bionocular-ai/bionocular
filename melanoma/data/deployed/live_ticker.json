@@ -528,6 +528,30 @@
   "merkel-cell-carcinoma": {
     "articles": [
       {
+        "title": "MacroGenics Reports 2025 Financial Results and Highlights Upcoming Planned Data Disclosures",
+        "date": "March 9, 2026",
+        "url": "https://www.biospace.com/press-releases/macrogenics-reports-2025-financial-results-and-highlights-upcoming-planned-data-disclosures",
+        "nct_id": null
+      },
+      {
+        "title": "Incyte's Lung Cancer Expansion Bid Thwarted by Issues at Novo's Catalent-Acquired Site",
+        "date": "March 9, 2026",
+        "url": "https://www.biospace.com/fda/incytes-lung-cancer-expansion-bid-thwarted-by-issues-at-novos-catalent-acquired-site",
+        "nct_id": null
+      },
+      {
+        "title": "Phio Announces Safety Monitoring Committee's (SMC) Positive Wrap-up on Lead Clinical Candidate PH-762 in Skin Cancer Trial",
+        "date": "February 10, 2026",
+        "url": "https://www.biospace.com/press-releases/phio-announces-safety-monitoring-committees-smc-positive-wrap-up-on-lead-clinical-candidate-ph-762-in-skin-cancer-trial",
+        "nct_id": "NCT06014086"
+      },
+      {
+        "title": "Frontline Retifanlimab Approaches EU Approval for Advanced Squamous Cell Carcinoma of the Anal Canal",
+        "date": "February 6, 2026",
+        "url": "https://www.onclive.com/view/frontline-retifanlimab-approaches-eu-approval-for-advanced-squamous-cell-carcinoma-of-the-anal-canal",
+        "nct_id": null
+      },
+      {
         "title": "Novel Cancer Vaccine Receives FDA Orphan Drug Designation in Cutaneous Melanoma",
         "date": "February 2, 2026",
         "url": "https://www.cancernetwork.com/view/novel-cancer-vaccine-receives-fda-orphan-drug-designation-in-cutaneous-melanoma",
@@ -538,12 +562,6 @@
         "date": "February 2, 2026",
         "url": "https://www.targetedonc.com/view/fda-grants-orphan-drug-designation-to-ifx-2-0-for-advanced-melanoma",
         "nct_id": "NCT03655756, NCT06947928"
-      },
-      {
-        "title": "Frontline Retifanlimab Approaches EU Approval for Advanced Squamous Cell Carcinoma of the Anal Canal",
-        "date": "February 6, 2026",
-        "url": "https://www.onclive.com/view/frontline-retifanlimab-approaches-eu-approval-for-advanced-squamous-cell-carcinoma-of-the-anal-canal",
-        "nct_id": null
       },
       {
         "title": "Phio Pharmaceuticals Announces Participation in Third Annual DealFlow Discovery Conference",
@@ -565,6 +583,26 @@
       }
     ],
     "results": [
+      {
+        "title": "MacroGenics Reports 2025 Financial Results and Highlights Upcoming Planned Data Disclosures",
+        "date": "March 9, 2026",
+        "url": "https://www.biospace.com/press-releases/macrogenics-reports-2025-financial-results-and-highlights-upcoming-planned-data-disclosures",
+        "efficacy_or_safety_data": {
+          "metric": "Interstitial lung disease rates and general safety profile",
+          "value": "Demonstrated acceptable safety profiles to date, with no observations of interstitial lung disease, as well as encouraging early evidence of anti-tumor activity by Response Evaluation Criteria in Solid Tumors (RECIST)."
+        },
+        "nct_id": null
+      },
+      {
+        "title": "Incyte's Lung Cancer Expansion Bid Thwarted by Issues at Novo's Catalent-Acquired Site",
+        "date": "March 9, 2026",
+        "url": "https://www.biospace.com/fda/incytes-lung-cancer-expansion-bid-thwarted-by-issues-at-novos-catalent-acquired-site",
+        "efficacy_or_safety_data": {
+          "metric": "Overall survival improvement",
+          "value": "Patients given the Zynyz regimen saw a 25% improvement in overall survival, resulting in a statistically significant treatment effect. The regimen also met key secondary endpoints, including progression-free survival and overall response rate."
+        },
+        "nct_id": null
+      },
       {
         "title": "Novel Cancer Vaccine Receives FDA Orphan Drug Designation in Cutaneous Melanoma",
         "date": "February 2, 2026",
