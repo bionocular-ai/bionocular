@@ -36,6 +36,12 @@ const MODALITY_HEADERS = [
 const MODALITY_OTHER = 'Other';
 
 const UNSPECIFIED_LABEL = 'Unspecified';
+const OPEN_STUDY_STATUSES = new Set([
+  'open',
+  'not yet recruiting',
+  'recruiting',
+  'active, not recruiting',
+]);
 
 /** Canonical group-by category values (match trials_extraction_prompts.py). Column order follows these lists. */
 const BIOMARKER_VALUES = [
@@ -94,6 +100,19 @@ function parseModalityValues(raw: string | null | undefined): string[] {
   const normalized = parts.map((p) => normalizeModality(p));
   const unique = Array.from(new Set(normalized));
   return unique.length > 0 ? unique : [MODALITY_OTHER];
+}
+
+function isOpenStudyStatus(status: string | null | undefined): boolean {
+  return OPEN_STUDY_STATUSES.has((status ?? '').trim().toLowerCase());
+}
+
+function sortTrialsOpenStatusFirst(trials: DashboardTrialCard[]): DashboardTrialCard[] {
+  return [...trials].sort((a, b) => {
+    const aIsOpen = isOpenStudyStatus(a.study_status);
+    const bIsOpen = isOpenStudyStatus(b.study_status);
+    if (aIsOpen === bIsOpen) return 0;
+    return aIsOpen ? -1 : 1;
+  });
 }
 
 /** Stable empty list for useMemo when no trials data yet. */
@@ -433,6 +452,9 @@ function DashboardContent() {
         else map[MODALITY_OTHER].push(t);
       });
     });
+    Object.keys(map).forEach((key) => {
+      map[key] = sortTrialsOpenStatusFirst(map[key] ?? []);
+    });
     const order = [...allHeaders].sort((a, b) => {
       if (a === MODALITY_OTHER) return 1;
       if (b === MODALITY_OTHER) return -1;
@@ -483,6 +505,9 @@ function DashboardContent() {
         seenByKey[key]!.add(t.nct_id);
         map[key].push(t);
       });
+    });
+    Object.keys(map).forEach((key) => {
+      map[key] = sortTrialsOpenStatusFirst(map[key] ?? []);
     });
     const canonical = getCanonicalOrderForGroupBy(groupBy);
     const order = [
