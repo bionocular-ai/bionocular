@@ -233,7 +233,7 @@ export default function LiveTickerPage() {
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
-                  name={session.user.name || null}
+                  name={(session.user.user_metadata?.full_name || session.user.user_metadata?.name || null) as string | null}
                   image={undefined}
                 />
               )}

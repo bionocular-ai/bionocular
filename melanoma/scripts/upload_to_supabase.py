@@ -23,8 +23,8 @@ CANCER_TYPE_MAP = {
     # Melanoma Variants
     "cutaneous-melanoma": "Cutaneous Melanoma",
     "cutaneous melanoma": "Cutaneous Melanoma",
-    "cutaneous-melanoma-with-brain-cns-metastasis": "Cutaneous Melanoma (Brain/CNS Metastases)",
-    "cutaneous melanoma with brain/cns metastasis": "Cutaneous Melanoma (Brain/CNS Metastases)",
+    "cutaneous-melanoma-with-brain-cns-metastasis": "Cutaneous Melanoma with Brain/CNS Metastasis",
+    "cutaneous melanoma with brain/cns metastasis": "Cutaneous Melanoma with Brain/CNS Metastasis",
     "uveal-melanoma": "Uveal Melanoma",
     "uveal melanoma": "Uveal Melanoma",
     "acral-melanoma": "Acral Melanoma",
@@ -33,15 +33,15 @@ CANCER_TYPE_MAP = {
     "mucosal melanoma": "Mucosal Melanoma",
     
     # Non-Melanoma Skin Cancer (NMSC)
-    "cutaneous-squamous-cell-carcinoma": "Cutaneous Squamous Cell Carcinoma (cSCC)",
-    "cutaneous squamous cell carcinoma": "Cutaneous Squamous Cell Carcinoma (cSCC)",
-    "cscc": "Cutaneous Squamous Cell Carcinoma (cSCC)",
-    "basal-cell-carcinoma": "Basal Cell Carcinoma (BCC)",
-    "basal cell carcinoma": "Basal Cell Carcinoma (BCC)",
-    "bcc": "Basal Cell Carcinoma (BCC)",
-    "merkel-cell-carcinoma": "Merkel Cell Carcinoma (MCC)",
-    "merkel cell carcinoma": "Merkel Cell Carcinoma (MCC)",
-    "mcc": "Merkel Cell Carcinoma (MCC)"
+    "cutaneous-squamous-cell-carcinoma": "Cutaneous Squamous Cell Carcinoma",
+    "cutaneous squamous cell carcinoma": "Cutaneous Squamous Cell Carcinoma",
+    "cscc": "Cutaneous Squamous Cell Carcinoma",
+    "basal-cell-carcinoma": "Basal Cell Carcinoma",
+    "basal cell carcinoma": "Basal Cell Carcinoma",
+    "bcc": "Basal Cell Carcinoma",
+    "merkel-cell-carcinoma": "Merkel Cell Carcinoma",
+    "merkel cell carcinoma": "Merkel Cell Carcinoma",
+    "mcc": "Merkel Cell Carcinoma"
 }
 
 # Multi-indication trials that map to multiple canonical cancer types
@@ -258,6 +258,17 @@ def upload_trial_landscape():
     
     with open(path, 'r') as f:
         data = json.load(f)
+
+    # Normalize cancer_type: split semicolon-separated string into text[]
+    # e.g. "Cutaneous melanoma; Uveal Melanoma" → ["Cutaneous Melanoma", "Uveal Melanoma"]
+    for record in data:
+        raw_ct = record.get('cancer_type', '')
+        if isinstance(raw_ct, str):
+            parts = [p.strip() for p in raw_ct.split(';') if p.strip()]
+            record['cancer_type'] = [normalize_cancer_type(p)[0] for p in parts
+                                     if normalize_cancer_type(p)]
+        elif not isinstance(raw_ct, list):
+            record['cancer_type'] = []
         
     batch_size = 500
     for i in range(0, len(data), batch_size):
@@ -622,8 +633,9 @@ def upload_news_feed():
         
     mapped_data = []
     for raw_cancer_type, content in data.items():
-        # Standardize the cancer type name using the global map
-        cancer_type = normalize_cancer_type(raw_cancer_type)
+        # normalize_cancer_type returns a list; news_feed.cancer_type is text — take first element
+        normalized = normalize_cancer_type(raw_cancer_type)
+        cancer_type = normalized[0] if normalized else raw_cancer_type
         
         articles = content.get('articles', []) if isinstance(content, dict) else content
         if not isinstance(articles, list): continue

@@ -24,14 +24,31 @@ function phaseToShort(phase: string): string {
   return phase.slice(0, 6);
 }
 
+function statusDisplayLabel(status: string): string {
+  const s = (status || '').toLowerCase().trim();
+  // Map ClinicalTrials.gov normalized values → simplified 5-bucket labels
+  if (s === 'recruiting' || s === 'not yet recruiting' || s === 'active, not recruiting') return 'Open';
+  if (s === 'completed' || s === 'terminated' || s === 'withdrawn') return 'Closed';
+  if (s === 'suspended') return 'Suspended';
+  if (s === 'enrolling by invitation') return 'Enrolling by invitation';
+  // Legacy raw API v2 enum values (in case normalizeStatus wasn't applied)
+  if (s === 'recruiting' || s === 'not_yet_recruiting' || s === 'active_not_recruiting') return 'Open';
+  if (s === 'completed' || s === 'terminated' || s === 'withdrawn') return 'Closed';
+  if (s === 'suspended') return 'Suspended';
+  if (s === 'enrolling_by_invitation') return 'Enrolling by invitation';
+  // Already a simplified label
+  if (s === 'open') return 'Open';
+  if (s === 'closed') return 'Closed';
+  return 'Unknown';
+}
+
 function studyStatusVariant(status: string): string {
-  const s = (status || '').toLowerCase();
-  // Minimalistic solid color palette
-  if (s === 'open') return 'bg-emerald-500 text-white';
-  if (s === 'closed') return 'bg-slate-500 text-white';
-  if (s === 'registrational') return 'bg-cyan-500 text-white';
-  if (s === 'suspended') return 'bg-amber-500 text-white';
-  return 'bg-slate-400 text-white';
+  const label = statusDisplayLabel(status);
+  if (label === 'Open') return 'bg-emerald-500 text-white';
+  if (label === 'Closed') return 'bg-slate-500 text-white';
+  if (label === 'Suspended') return 'bg-amber-500 text-white';
+  if (label === 'Enrolling by invitation') return 'bg-cyan-500 text-white';
+  return 'bg-slate-400 text-white'; // Unknown
 }
 
 function phaseTagVariant(phase: string): string {
@@ -111,7 +128,7 @@ export function TrialCard({ trial, className, category }: TrialCardProps) {
               studyStatusVariant(trial.study_status)
             )}
           >
-            {trial.study_status || '—'}
+            {statusDisplayLabel(trial.study_status) || '—'}
           </span>
         </div>
         {hasOutcomes && (

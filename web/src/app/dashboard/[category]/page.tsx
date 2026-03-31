@@ -207,8 +207,10 @@ export default function CancerDashboardSnapshot() {
   }, [liveTickerData]);
 
   const { data: snapshotData, isLoading: analyticsLoading } = useQuery({
-    queryKey: ['analytics-snapshot', categorySlug, categoryName],
-    queryFn: () => analyticsApi.getSnapshot(categoryName, 'all', 5, 5),
+    queryKey: ['analytics-snapshot', categorySlug],
+    // Pass the URL slug, not the display name — getDbCancerType() maps slugs to DB values.
+    // e.g. 'cutaneous-melanoma' → 'Cutaneous Melanoma' (not 'Cutaneous/Metastatic Melanoma')
+    queryFn: () => analyticsApi.getSnapshot(categorySlug, 'all', 5, 5),
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
@@ -363,7 +365,7 @@ export default function CancerDashboardSnapshot() {
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
-                  name={session.user.name || null}
+                  name={(session.user.user_metadata?.full_name as string) || null}
                   image={undefined}
                 />
               )}
@@ -466,7 +468,11 @@ export default function CancerDashboardSnapshot() {
                             key={trial.nct_id}
                             className={`grid grid-cols-[5rem_1fr_minmax(5rem,auto)_2.25rem] gap-2 px-3 py-2.5 border-b border-slate-100 text-xs items-center ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/80"}`}
                           >
-                            <span className="text-slate-500 font-medium">{trial.date_iso}</span>
+                            <span className="text-slate-500 font-medium">
+                              {trial.date_iso
+                                ? new Date(trial.date_iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : '—'}
+                            </span>
                             <div className="min-w-0">
                               <Link
                                 href={`/trial/nct/${trial.nct_id}?category=${categorySlug}`}

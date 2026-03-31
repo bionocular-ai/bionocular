@@ -171,6 +171,11 @@ data/api_response_sample.json
 # Uncompressed clinical trials seed (commit .json.gz instead to stay under GitHub limit)
 data/deployed/clinical_trials_api_seed.json
 
+# Deployed JSON artifacts (legacy; Supabase is now source-of-truth)
+# NOTE: This only affects *new* files. Existing tracked files require
+# `git rm --cached melanoma/data/deployed/...` to stop tracking.
+data/deployed/**
+
 # Environment variables and secrets
 .env
 .env.local

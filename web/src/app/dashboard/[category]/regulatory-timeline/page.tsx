@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import { useSession } from "@/lib/supabase/hooks";
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
 import { Loader2 } from 'lucide-react';

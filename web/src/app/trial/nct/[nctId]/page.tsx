@@ -67,7 +67,7 @@ export default function NCTTrialsPage() {
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
-                  name={session.user.name || null}
+                  name={(session.user.user_metadata?.full_name as string) || null}
                   image={undefined}
                 />
               )}

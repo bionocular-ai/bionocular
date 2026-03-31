@@ -723,7 +723,9 @@ export default function CategoryAnalyticsPage() {
   const apiFilters = useMemo(() => {
     const filters: Parameters<typeof analyticsApi.getData>[0] = {
       resource_type: resourceType as 'all' | 'conference' | 'publication',
-      cancer_type: categoryName || undefined,
+      // Pass the URL slug, not the display name — getDbCancerType() maps slugs to DB values.
+      // e.g. 'cutaneous-melanoma' → 'Cutaneous Melanoma' (not 'Cutaneous/Metastatic Melanoma')
+      cancer_type: categorySlug || undefined,
       therapy_type: therapyType,
       funding_type: fundingType as 'all' | 'industry' | 'non-industry',
       limit: 2000, // Request all matching records
@@ -735,7 +737,7 @@ export default function CategoryAnalyticsPage() {
     }
 
     return filters;
-  }, [resourceType, categoryName, therapyType, fundingType, safetyParam, efficacyParam]);
+  }, [resourceType, categorySlug, therapyType, fundingType, safetyParam, efficacyParam]);
 
   // Fetch analytics data from backend with filters
   const { data: analyticsData, isLoading, error } = useQuery({
@@ -751,13 +753,10 @@ export default function CategoryAnalyticsPage() {
   // Handle chart type changes - ensure proper filter states
   useEffect(() => {
     if (mode === 'all') {
-      if (chartType === 'bar') {
-        if (efficacyParam !== 'none' && safetyParam !== 'none') {
-          setSafetyParam('none');
-        } else if (efficacyParam === 'none' && safetyParam === 'none') {
-          setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
-        }
-      } else if (chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell') {
+      if (chartType === 'bar' || chartType === 'dumbbell') {
+        const nextChartType = chartType === 'dumbbell' ? 'diverging' : 'bubble';
+        setChartType(nextChartType);
+      } else if (chartType === 'diverging' || chartType === 'bubble') {
         if (chartType === 'bubble' && efficacyParam.startsWith('HR_')) {
           setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
         }
@@ -1109,7 +1108,7 @@ export default function CategoryAnalyticsPage() {
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
-                  name={session.user.name || null}
+                  name={(session.user.user_metadata?.full_name as string) || null}
                   image={undefined}
                 />
               )}
@@ -1794,14 +1793,16 @@ export default function CategoryAnalyticsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200/90 bg-white p-1.5 shadow-lg">
-                    <DropdownMenuItem
-                      onClick={() => setChartType('bar')}
-                      className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
-                    >
-                      <BarChart3 className="h-4 w-4 text-slate-500" />
-                      <span>Bar Chart</span>
-                      {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
-                    </DropdownMenuItem>
+                    {mode !== 'all' && (
+                      <DropdownMenuItem
+                        onClick={() => setChartType('bar')}
+                        className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
+                      >
+                        <BarChart3 className="h-4 w-4 text-slate-500" />
+                        <span>Bar Chart</span>
+                        {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                       onClick={() => setChartType('diverging')}
                       className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
@@ -2024,14 +2025,16 @@ export default function CategoryAnalyticsPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52 rounded-xl border-slate-200/90 bg-white p-1.5 shadow-lg">
-                        <DropdownMenuItem
-                          onClick={() => setChartType('bar')}
-                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
-                        >
-                          <BarChart3 className="h-4 w-4 text-slate-500" />
-                          <span>Bar Chart</span>
-                          {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
-                        </DropdownMenuItem>
+                        {mode !== 'all' && (
+                          <DropdownMenuItem
+                            onClick={() => setChartType('bar')}
+                            className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
+                          >
+                            <BarChart3 className="h-4 w-4 text-slate-500" />
+                            <span>Bar Chart</span>
+                            {chartType === 'bar' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuItem
                           onClick={() => setChartType('diverging')}
                           className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
