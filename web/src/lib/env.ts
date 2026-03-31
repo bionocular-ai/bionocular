@@ -8,8 +8,17 @@ function getOptionalEnvVar(key: string, defaultValue?: string): string | undefin
   return process.env[key] || defaultValue;
 }
 
-function getRequiredEnvVar(key: string): string {
-  const value = process.env[key];
+/**
+ * IMPORTANT (Next.js): For browser bundles, `NEXT_PUBLIC_*` vars are replaced at build time.
+ * Dynamic access like `process.env[key]` won't be inlined and will be `undefined` in the client.
+ * Use direct property access for any env var that must work in the browser.
+ */
+function getRequiredPublicEnvVar(key: 'NEXT_PUBLIC_SUPABASE_URL' | 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'): string {
+  const value =
+    key === 'NEXT_PUBLIC_SUPABASE_URL'
+      ? process.env.NEXT_PUBLIC_SUPABASE_URL
+      : process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
   if (value) return value;
   throw new Error(`Missing required environment variable: ${key}`);
 }
@@ -24,8 +33,8 @@ export const env = {
 
   // Supabase (public; safe to expose to browser because of NEXT_PUBLIC_)
   supabase: {
-    url: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
-    publishableKey: getRequiredEnvVar('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
+    url: getRequiredPublicEnvVar('NEXT_PUBLIC_SUPABASE_URL'),
+    publishableKey: getRequiredPublicEnvVar('NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY'),
   },
 } as const;
 
