@@ -116,26 +116,27 @@ const MIN_RADIUS = 3;
 const MAX_RADIUS = 60;
 
 const Z_AXIS_MIN_AREA = Math.PI * Math.pow(MIN_RADIUS, 2);
-const Z_AXIS_MAX_AREA = Math.PI * Math.pow(MAX_RADIUS, 2);
 
 /**
  * Radius in px from linear area scale (matches Recharts: domain [min,max] -> area range, radius = sqrt(area/π)).
- * Ensures highest value maps to MAX_RADIUS and bubbles scale truly proportionally from near-zero to max.
+ * Ensures highest value maps to maxRadius and bubbles scale truly proportionally from near-zero to max.
  */
 function radiusFromLinearArea(
   value: number,
   dataMin: number,
-  dataMax: number
+  dataMax: number,
+  maxRadius = MAX_RADIUS
 ): number {
+  const customMaxArea = Math.PI * Math.pow(maxRadius, 2);
   // Only use MIN_RADIUS for zero or negative values
   if (value <= 0 || dataMax <= 0) return MIN_RADIUS;
-  if (dataMax <= dataMin) return value >= dataMin ? MAX_RADIUS : MIN_RADIUS;
+  if (dataMax <= dataMin) return value >= dataMin ? maxRadius : MIN_RADIUS;
   // Proportional scaling: normalize value to [0, 1] range
   const t = (value - dataMin) / (dataMax - dataMin);
-  const area = Z_AXIS_MIN_AREA + t * (Z_AXIS_MAX_AREA - Z_AXIS_MIN_AREA);
+  const area = Z_AXIS_MIN_AREA + t * (customMaxArea - Z_AXIS_MIN_AREA);
   const radius = Math.sqrt(Math.max(0, area) / Math.PI);
-  // Cap at MAX_RADIUS but allow truly proportional small sizes (no MIN_RADIUS clamping for positive values)
-  return Math.min(MAX_RADIUS, radius);
+  // Cap at maxRadius but allow truly proportional small sizes (no MIN_RADIUS clamping for positive values)
+  return Math.min(maxRadius, radius);
 }
 
 // ============================================================================
@@ -496,6 +497,7 @@ export default function BubbleChart({
   showTooltip = true,
 }: BubbleChartProps) {
   const chartHeight = Math.max(height || 600, 100);
+  const currentMaxRadius = compact || isCompact ? 30 : MAX_RADIUS;
   const [isPinned, setIsPinned] = useState(false);
   const [pinnedBubbleId, setPinnedBubbleId] = useState<string | null>(null);
   const [pinnedAxisConfig, setPinnedAxisConfig] = useState<number | null>(null);
@@ -652,10 +654,10 @@ export default function BubbleChart({
   }, [normalizedAxisConfig]);
 
   // Fixed bubble radius range (px) for scaleSqrt and CustomLabel
-  // Z-axis range as area so Recharts radius = sqrt(area/π). Highest value maps to MAX_RADIUS.
+  // Z-axis range as area so Recharts radius = sqrt(area/π). Highest value maps to currentMaxRadius.
   const zAxisRange: [number, number] = useMemo(
-    () => [Math.PI * Math.pow(MIN_RADIUS, 2), Math.PI * Math.pow(MAX_RADIUS, 2)],
-    []
+    () => [Math.PI * Math.pow(MIN_RADIUS, 2), Math.PI * Math.pow(currentMaxRadius, 2)],
+    [currentMaxRadius]
   );
 
   // Transform data: z = raw value (patient count etc.). Domain [min, max] so max maps to MAX_RADIUS.
@@ -737,7 +739,7 @@ export default function BubbleChart({
     const chartDataOut = rows.map((row) => {
       const { item, efficacy, safety, numberOfPatients, x, y, rawZValue } = row;
       const z = rawZValue;
-      const radiusPx = radiusFromLinearArea(rawZValue, dataMin, dataMax);
+      const radiusPx = radiusFromLinearArea(rawZValue, dataMin, dataMax, currentMaxRadius);
       return {
         ...item,
         efficacy,
@@ -752,7 +754,7 @@ export default function BubbleChart({
     });
 
     return { chartData: chartDataOut, transformedZDomain: domain };
-  }, [data, trialIndices, invertSafetyAxis, normalizedAxisConfig, getZAxisValue]);
+  }, [data, trialIndices, invertSafetyAxis, normalizedAxisConfig, getZAxisValue, currentMaxRadius]);
 
   // Helper function to calculate domain for a given metric type
   const calculateDomainForMetric = useCallback((metricType: 'efficacy' | 'safety' | 'zParam', values: number[]): [number, number] => {
@@ -813,18 +815,28 @@ export default function BubbleChart({
     return [roundedMin, roundedMax];
   }, []);
 
-  // Calculate domains with nice whole number boundaries
-  // Handle edge cases: empty data, single value, all same values, etc.
-  const xDomain = useMemo(() => {
-    const values = chartData.map((d) => d.x).filter((v): v is number => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
+  // Calculate domains with nice whole number boundaries.
+  // For percentage axes (efficacy/safety): auto-scale to data so bubbles spread across the chart,
+  // but clamp within [0, 100] so the inverted safety formatter never produces negative labels.
+  const xDomain = useMemo((): [number, number] => {
     const { xMetric } = getAxisMetrics();
-    return calculateDomainForMetric(xMetric, values);
+    const values = chartData.map((d) => d.x).filter((v): v is number => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
+    const [lo, hi] = calculateDomainForMetric(xMetric, values);
+    // Clamp safety/efficacy to [0, 100] to prevent negative formatter output
+    if (xMetric === 'safety' || xMetric === 'efficacy') {
+      return [Math.max(0, lo), Math.min(100, hi)];
+    }
+    return [lo, hi];
   }, [chartData, getAxisMetrics, calculateDomainForMetric]);
 
-  const yDomain = useMemo(() => {
-    const values = chartData.map((d) => d.y).filter((v): v is number => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
+  const yDomain = useMemo((): [number, number] => {
     const { yMetric } = getAxisMetrics();
-    return calculateDomainForMetric(yMetric, values);
+    const values = chartData.map((d) => d.y).filter((v): v is number => v !== null && v !== undefined && !isNaN(v) && isFinite(v));
+    const [lo, hi] = calculateDomainForMetric(yMetric, values);
+    if (yMetric === 'safety' || yMetric === 'efficacy') {
+      return [Math.max(0, lo), Math.min(100, hi)];
+    }
+    return [lo, hi];
   }, [chartData, getAxisMetrics, calculateDomainForMetric]);
 
   // Helper function to calculate ticks for an axis based on domain and metric type
@@ -905,15 +917,15 @@ export default function BubbleChart({
 
   // Use light mode colors for both compact and non-compact modes
   const colors = COLORS;
-  // Padding so MAX_RADIUS (60px) bubbles are not clipped at chart edges
-  const axisPadding = MAX_RADIUS + 15;
-  const margin = compact
-    ? { top: axisPadding, right: axisPadding, bottom: 60 + axisPadding, left: 60 + axisPadding }
-    : { top: axisPadding, right: axisPadding, bottom: 80 + axisPadding, left: 80 + axisPadding };
+  // Padding so bubbles are not clipped at chart edges
+  const axisPadding = currentMaxRadius + 15;
+  const margin = compact || isCompact
+    ? { top: currentMaxRadius + 8, right: currentMaxRadius + 8, bottom: 60 + axisPadding, left: 60 + axisPadding }
+    : { top: currentMaxRadius + 8, right: currentMaxRadius + 8, bottom: 80 + axisPadding, left: 80 + axisPadding };
   // Tighter margins when fillHeight so the plot occupies all area (like DivergingBarChart)
   const marginFillHeight = {
-    top: MAX_RADIUS + 8,
-    right: MAX_RADIUS + 8,
+    top: currentMaxRadius + 8,
+    right: currentMaxRadius + 8,
     bottom: 50,
     left: 70,
   };

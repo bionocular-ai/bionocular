@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, Suspense } from 'react';
-import { signIn } from 'next-auth/react';
+import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -51,28 +51,24 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
-        redirect: false,
       });
 
-      if (result?.error) {
-        // Generic error message to prevent user enumeration
+      if (error) {
+        // generic error message map
         setError('Invalid email or password');
         setIsLoading(false);
-      } else if (result?.ok) {
+      } else if (data.session) {
         // Use startTransition for navigation to avoid blocking
         startTransition(() => {
           router.push(safeCallbackUrl);
           router.refresh();
         });
-      } else {
-        setError('An unexpected error occurred. Please try again.');
-        setIsLoading(false);
       }
     } catch (err) {
-      // Log error but show generic message to user
       console.error('Login error:', err);
       setError('An error occurred. Please try again.');
       setIsLoading(false);
@@ -211,15 +207,7 @@ function LoginForm() {
             </p>
           </div>
 
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-6 p-3 rounded-lg border" style={{ backgroundColor: 'rgba(27, 79, 101, 0.05)', borderColor: 'rgba(27, 79, 101, 0.2)' }}>
-              <p className="text-xs text-gray-600 text-center">
-                <strong className="font-semibold" style={{ color: '#1B4F65' }}>Demo credentials (development only):</strong>
-                <br />
-                Check your .env.local file for demo credentials
-              </p>
-            </div>
-          )}
+          {/* Hidden DEV demo credentials box - users must create real accounts now */}
         </CardContent>
       </Card>
     </div>

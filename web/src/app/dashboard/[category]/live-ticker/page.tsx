@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { UserMenu } from '@/components/user-menu';
@@ -233,7 +233,7 @@ export default function LiveTickerPage() {
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
-                  name={session.user.name || null}
+                  name={(session.user.user_metadata?.full_name || session.user.user_metadata?.name || null) as string | null}
                   image={undefined}
                 />
               )}

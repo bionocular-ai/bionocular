@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { UserMenu } from '@/components/user-menu';
@@ -49,12 +49,12 @@ export default function TrialUpdatesPage() {
   );
 
   const { data: landscapeStats } = useQuery({
-    queryKey: ['landscape-stats', categorySlug],
-    queryFn: () => trialsApi.getLandscapeStats(categorySlug),
+    queryKey: ['disease-stats', categorySlug],
+    queryFn: () => trialsApi.getDiseaseLandscapeStats(categorySlug),
     staleTime: 5 * 60 * 1000,
   });
 
-  const totalTrialsExamined = landscapeStats?.selected_type_stats?.clinical_trials ?? null;
+  const totalTrialsExamined = landscapeStats?.status?.["Overall Status"] ?? null;
 
   const days = parseInt(timeRange, 10) || 30;
   const { data: updatesCount } = useQuery({
@@ -65,8 +65,8 @@ export default function TrialUpdatesPage() {
   });
 
   const { data: updatesData, isLoading, error, refetch } = useQuery({
-    queryKey: ['latest-trial-updates', categorySlug, 200],
-    queryFn: () => trialsApi.getLatestTrialUpdates(categorySlug, 200),
+    queryKey: ['latest-trial-updates', categorySlug, 200, days],
+    queryFn: () => trialsApi.getLatestTrialUpdates(categorySlug, 200, days),
     enabled: Boolean(categorySlug),
     staleTime: 5 * 60 * 1000,
   });
@@ -89,7 +89,7 @@ export default function TrialUpdatesPage() {
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
-                  name={session.user.name || null}
+                  name={session.user.user_metadata?.full_name || null}
                   image={undefined}
                 />
               )}
@@ -216,7 +216,9 @@ export default function TrialUpdatesPage() {
                             className="grid grid-cols-[90px_1fr_auto] items-start sm:items-center gap-4 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
                           >
                             <span className="shrink-0 text-xs font-medium text-slate-500 tabular-nums pt-0.5 sm:pt-0">
-                              {item.date_iso}
+                              {item.date_iso
+                                ? new Date(item.date_iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                : 'Unknown'}
                             </span>
                             <div className="min-w-0 py-1 sm:py-0">
                               <span className="text-sm font-medium text-blue-600 underline decoration-blue-600/40 underline-offset-2 group-hover:decoration-blue-600 line-clamp-2">

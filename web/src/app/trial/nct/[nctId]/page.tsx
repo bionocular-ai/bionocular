@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { useParams } from 'next/navigation';
 import { TrialDataTable } from '@/components/dashboard/TrialDataTable';
 import { TrialDetailView } from '@/components/trial/TrialDetailView';
@@ -67,7 +67,7 @@ export default function NCTTrialsPage() {
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
-                  name={session.user.name || null}
+                  name={(session.user.user_metadata?.full_name as string) || null}
                   image={undefined}
                 />
               )}

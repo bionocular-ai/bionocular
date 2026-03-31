@@ -2,21 +2,21 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useSession } from "@/lib/supabase/hooks";
 import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/user-menu';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { Search, Activity, ArrowRight } from 'lucide-react';
 
 const CANCER_TYPES = [
-  { name: 'Cutaneous/Metastatic Melanoma', slug: 'cutaneous-melanoma' },
-  { name: 'Cutaneous Squamous Cell Carcinoma', slug: 'cutaneous-squamous-cell-carcinoma' },
-  { name: 'Cutaneous Melanoma with Brain/CNS Metastasis', slug: 'cutaneous-melanoma-with-brain-cns-metastasis' },
+  { name: 'Cutaneous Melanoma', slug: 'cutaneous-melanoma' },
+  { name: 'Cutaneous Squamous Cell Carcinoma (cSCC)', slug: 'cutaneous-squamous-cell-carcinoma' },
+  { name: 'Cutaneous Melanoma (Brain/CNS Metastases)', slug: 'cutaneous-melanoma-with-brain-cns-metastasis' },
   { name: 'Uveal Melanoma', slug: 'uveal-melanoma' },
   { name: 'Acral Melanoma', slug: 'acral-melanoma' },
   { name: 'Mucosal Melanoma', slug: 'mucosal-melanoma' },
-  { name: 'Basal Cell Carcinoma', slug: 'basal-cell-carcinoma' },
-  { name: 'Merkel Cell Carcinoma', slug: 'merkel-cell-carcinoma' },
+  { name: 'Basal Cell Carcinoma (BCC)', slug: 'basal-cell-carcinoma' },
+  { name: 'Merkel Cell Carcinoma (MCC)', slug: 'merkel-cell-carcinoma' },
 ];
 
 export default function MainDashboardPage() {
@@ -43,7 +43,7 @@ export default function MainDashboardPage() {
               {session?.user && (
                 <UserMenu
                   email={session.user.email || null}
-                  name={session.user.name || null}
+                  name={session.user.user_metadata?.full_name || null}
                   image={undefined}
                 />
               )}

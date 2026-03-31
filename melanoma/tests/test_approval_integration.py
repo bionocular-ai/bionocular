@@ -4,6 +4,8 @@
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add parent to path
 parent_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(parent_dir / "src"))
@@ -11,9 +13,26 @@ sys.path.insert(0, str(parent_dir))
 
 from src.app.json_trials_service import JSONTrialsService  # noqa: E402
 
+ASCO_2020_PATH = parent_dir / "data" / "deployed" / "ASCO_2020.json"
+
+
+def _require_local_json_fixture() -> None:
+    """JSON-based integration tests require local deployed JSON fixtures.
+
+    In CI and after the Supabase migration, these fixtures are intentionally
+    not present/tracked. When absent, skip rather than fail.
+    """
+
+    if not ASCO_2020_PATH.exists():
+        pytest.skip(
+            f"Missing JSON fixture: {ASCO_2020_PATH}. "
+            "These integration tests are only relevant when running with local JSON fixtures."
+        )
+
 
 def test_approval_status_enrichment():
     """Test that trial data is enriched with approval status."""
+    _require_local_json_fixture()
 
     # Initialize service with approval status enabled (default)
     service = JSONTrialsService(
@@ -52,6 +71,7 @@ def test_approval_status_enrichment():
 
 def test_approval_status_in_trial_list():
     """Test that get_all_trials includes approval status in arms."""
+    _require_local_json_fixture()
 
     service = JSONTrialsService(
         json_file_paths=["data/deployed/ASCO_2020.json"], enable_approval_status=True
@@ -118,6 +138,7 @@ def test_specific_classification_accuracy():
 
 def test_disable_approval_status():
     """Test that approval status enrichment can be disabled."""
+    _require_local_json_fixture()
 
     service = JSONTrialsService(
         json_file_paths=["data/deployed/ASCO_2020.json"],
@@ -125,6 +146,7 @@ def test_disable_approval_status():
     )
 
     abstract = service.get_full_abstract_by_id("ASCO_2020_10000")
+    assert abstract is not None, "Abstract not found"
 
     # Should not have approval_status when disabled
     for _arm_key, arm_data in abstract["arm_results"].items():
