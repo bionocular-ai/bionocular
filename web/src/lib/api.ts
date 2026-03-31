@@ -105,8 +105,8 @@ export const trialsApi = {
     return { trials, total: count || 0, skip, limit };
   },
 
-  getById: async (): Promise<Document> => {
-    throw new Error("Documents obsolete");
+  getById: async (id: string): Promise<Document> => {
+    throw new Error(`Documents obsolete: ${id}`);
   },
 
   getByNctId: async (nctId: string, skip = 0, limit = 100): Promise<TrialsResponse> => {

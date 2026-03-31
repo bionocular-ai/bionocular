@@ -31,6 +31,9 @@ export default function NCTTrialsPage() {
     }
   }, []);
 
+  const backHref = category ? `/dashboard/${encodeURIComponent(category)}/landscape` : '/dashboard';
+  const backLabel = category ? 'Back to landscape' : 'Back to dashboard';
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['trials', 'nct', nctId],
     queryFn: () => trialsApi.getByNctId(nctId, 0, 1000), // Fetch up to 1000 trials
@@ -80,7 +83,7 @@ export default function NCTTrialsPage() {
       <div className="border-b border-gray-200 bg-gray-50 px-3 sm:px-4 md:px-6 py-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-4 min-w-0">
-            <BackNav href="/dashboard" label="Back to dashboard" />
+            <BackNav href={backHref} label={backLabel} />
             <div className="min-w-0">
               <div className="flex items-center gap-3">
                 <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
