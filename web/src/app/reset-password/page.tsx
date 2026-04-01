@@ -2,44 +2,35 @@
 
 import { useState, useTransition, Suspense } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Mail, Lock } from 'lucide-react';
-import { isValidEmail } from '@/lib/auth-utils';
+import { Loader2, Lock } from 'lucide-react';
+import { validatePassword } from '@/lib/auth-utils';
 
-function LoginForm() {
+function ResetPasswordForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
-  const urlError = searchParams.get('error');
   const [, startTransition] = useTransition();
 
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(urlError === 'auth_callback_failed' ? 'Email confirmation failed. Please try again or contact support.' : '');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  // Validate callback URL to prevent open redirects
-  const safeCallbackUrl = callbackUrl.startsWith('/') && !callbackUrl.startsWith('//')
-    ? callbackUrl
-    : '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
-    
-    // Client-side validation
-    if (!email || !password) {
-      setError('Please enter both email and password');
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      setError(passwordValidation.error || 'Invalid password');
       return;
     }
 
-    if (!isValidEmail(email)) {
-      setError('Please enter a valid email address');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -47,27 +38,18 @@ function LoginForm() {
 
     try {
       const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        if (error.code === 'email_not_confirmed') {
-          setError('Please confirm your email address before signing in. Check your inbox.');
-        } else {
-          setError('Invalid email or password');
-        }
+        setError(error.message);
         setIsLoading(false);
-      } else if (data.session) {
-        // Use startTransition for navigation to avoid blocking
+      } else {
         startTransition(() => {
-          router.push(safeCallbackUrl);
+          router.push('/dashboard');
           router.refresh();
         });
       }
-    } catch (err) {
-      console.error('Login error:', err);
+    } catch {
       setError('An error occurred. Please try again.');
       setIsLoading(false);
     }
@@ -75,7 +57,6 @@ function LoginForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: '#0E3547' }}>
-      {/* Brand teal mesh gradient background */}
       <div className="absolute inset-0" style={{
         background: `
           radial-gradient(ellipse 130% 90% at 15% 50%, rgba(27,79,101,0.92) 0%, transparent 55%),
@@ -84,19 +65,10 @@ function LoginForm() {
           #0E3547
         `
       }} />
-      {/* Subtle wave pattern overlay */}
       <div className="absolute inset-0 opacity-20">
         <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 1200 800" preserveAspectRatio="none">
-          <path
-            d="M0,200 Q300,150 600,200 T1200,200 L1200,800 L0,800 Z"
-            fill="url(#wave-gradient)"
-            className="opacity-50"
-          />
-          <path
-            d="M0,300 Q400,250 800,300 T1200,300 L1200,800 L0,800 Z"
-            fill="url(#wave-gradient)"
-            className="opacity-30"
-          />
+          <path d="M0,200 Q300,150 600,200 T1200,200 L1200,800 L0,800 Z" fill="url(#wave-gradient)" className="opacity-50" />
+          <path d="M0,300 Q400,250 800,300 T1200,300 L1200,800 L0,800 Z" fill="url(#wave-gradient)" className="opacity-30" />
           <defs>
             <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%" stopColor="#7AC1A2" stopOpacity="0.4" />
@@ -110,18 +82,11 @@ function LoginForm() {
         <CardHeader className="pb-8 pt-10">
           <div className="flex justify-center mb-1">
             <div className="relative w-32 h-32">
-              <Image
-                src="/logo.png"
-                alt="Bionocular Logo"
-                fill
-                sizes="128px"
-                className="object-contain"
-                priority
-              />
+              <Image src="/logo.png" alt="Bionocular Logo" fill sizes="128px" className="object-contain" priority />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-center -mt-1" style={{ color: '#1B4F65' }}>
-            Welcome Back
+            New Password
           </h1>
         </CardHeader>
         <CardContent className="px-8 pb-8">
@@ -131,24 +96,7 @@ function LoginForm() {
                 {error}
               </div>
             )}
-            
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#1B4F65' }}>
-                <Mail className="h-5 w-5" />
-              </div>
-              <Input
-                id="email"
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isLoading}
-                autoComplete="email"
-                className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1B4F65] focus:ring-[#1B4F65]"
-              />
-            </div>
-            
+
             <div className="relative">
               <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#1B4F65' }}>
                 <Lock className="h-5 w-5" />
@@ -156,12 +104,29 @@ function LoginForm() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Password"
+                placeholder="New password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={isLoading}
-                autoComplete="current-password"
+                autoComplete="new-password"
+                className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1B4F65] focus:ring-[#1B4F65]"
+              />
+            </div>
+
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#1B4F65' }}>
+                <Lock className="h-5 w-5" />
+              </div>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={isLoading}
+                autoComplete="new-password"
                 className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1B4F65] focus:ring-[#1B4F65]"
               />
             </div>
@@ -177,42 +142,20 @@ function LoginForm() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Signing in...
+                  Updating...
                 </>
               ) : (
-                'Login'
+                'Update Password'
               )}
             </Button>
           </form>
-
-          <div className="mt-6 space-y-4 text-center">
-            <Link
-              href="/forgot-password"
-              className="text-sm hover:underline block hover:opacity-80 transition-opacity"
-              style={{ color: '#1B4F65' }}
-            >
-              Forgot Password?
-            </Link>
-            <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{' '}
-              <Link
-                href="/signup"
-                className="font-semibold hover:underline hover:opacity-80 transition-opacity"
-                style={{ color: '#1B4F65' }}
-              >
-                Sign Up
-              </Link>
-            </p>
-          </div>
-
-          {/* Hidden DEV demo credentials box - users must create real accounts now */}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-export default function LoginPage() {
+export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0E3547' }}>
@@ -225,8 +168,7 @@ export default function LoginPage() {
         </Card>
       </div>
     }>
-      <LoginForm />
+      <ResetPasswordForm />
     </Suspense>
   );
 }
-

@@ -32,7 +32,12 @@ export async function proxy(request: NextRequest) {
   // refresh session if expired
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup')
+  const isAuthRoute =
+    request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname.startsWith('/signup') ||
+    request.nextUrl.pathname.startsWith('/forgot-password') ||
+    request.nextUrl.pathname.startsWith('/reset-password') ||
+    request.nextUrl.pathname.startsWith('/auth')
 
   if (user && isAuthRoute) {
     // Redirect authenticated users away from login
