@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prepare": "cd .. && git config core.hooksPath web/.husky"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": ["eslint --max-warnings=0"]
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -35,6 +39,8 @@
     "baseline-browser-mapping": "^2.8.33",
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

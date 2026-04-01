@@ -36,10 +36,6 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Local dev server script and PIDs
-start_servers.sh
-.servers.pid
-
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -176,10 +172,10 @@ cython_debug/
 # VS Code
 .vscode/
 
-# Cursor — Antigravity skills (local only)
+# Agent Skills (local only)
 .cursor/skills/
-.cursor/antigravity-skills.md
-.agents/
+.agents/skills/
+.claude/CLAUDE.md
 
 # macOS
 .DS_Store
