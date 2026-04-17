@@ -67,6 +67,13 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
         AttributeType.SECONDARY_ENDPOINT,
         AttributeType.PUBLICATION_NAME,
         AttributeType.PUBLICATION_YEAR,
+        # CI ranges are "lower-upper" strings, not single numbers
+        AttributeType.CI_HR_PFS,
+        AttributeType.CI_HR_OS,
+        AttributeType.CI_HR_EFS,
+        AttributeType.CI_HR_RFS,
+        AttributeType.CI_HR_MFS,
+        AttributeType.CI_HR_TTP,
     ]
     if attribute_type in string_attributes:
         return None
@@ -341,11 +348,13 @@ class LLMAttributeExtractor(AttributeExtractor):
         """
         try:
             # Use LLMService interface method
+            import os
+
             return await self.llm_service.generate_response(
                 prompt=prompt,
                 temperature=0.1,
                 max_tokens=500,
-                model_name="gpt-4o",
+                model_name=os.getenv("EXTRACTION_MODEL", "gpt-4o"),
             )
         except Exception as e:
             error_msg = str(e)
@@ -426,11 +435,20 @@ class LLMAttributeExtractor(AttributeExtractor):
                     AttributeType.SECONDARY_ENDPOINT,
                     AttributeType.PUBLICATION_NAME,
                     AttributeType.PUBLICATION_YEAR,
+                    # CI ranges are "lower-upper" strings, not single numbers
+                    AttributeType.CI_HR_PFS,
+                    AttributeType.CI_HR_OS,
+                    AttributeType.CI_HR_EFS,
+                    AttributeType.CI_HR_RFS,
+                    AttributeType.CI_HR_MFS,
+                    AttributeType.CI_HR_TTP,
                 ]
 
                 # If it's a string-based attribute, return as-is without numeric cleaning
+                from ..domain.extraction_models import ValueKind
+
                 if attribute_type in string_based_attributes or (
-                    config and str(config.value_kind) == "STRING"
+                    config and config.value_kind == ValueKind.STRING
                 ):
                     # Handle empty or invalid responses
                     if (

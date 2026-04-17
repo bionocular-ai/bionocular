@@ -20,8 +20,8 @@ import re
 import sys
 from pathlib import Path
 
-DEFAULT_EXPORT_DIR = Path(__file__).resolve().parent / "data" / "trials_db" / "trial_api_exports"
-DEFAULT_MERGED_DIR = Path(__file__).resolve().parent / "data" / "trials_db" / "trial_api_merged"
+DEFAULT_EXPORT_DIR = Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_exports"
+DEFAULT_MERGED_DIR = Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_merged"
 NCT_PATTERN = re.compile(r"^NCT\d+$", re.IGNORECASE)
 
 

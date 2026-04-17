@@ -97,7 +97,7 @@ def convert_to_csv(input_path: Path, output_path: Path) -> None:
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parent.parent
     default_input = root / "data" / "output" / "trials_extraction" / "results.json"
     default_output = root / "data" / "output" / "trials_extraction" / "results.csv"
 

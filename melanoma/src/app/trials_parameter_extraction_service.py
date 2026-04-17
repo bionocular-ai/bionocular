@@ -31,9 +31,7 @@ from ..domain.trial_parameter_models import (
     TrialParameterResult,
     TrialText,
 )
-from ..infrastructure.cost_calculator import CostCalculator
-from ..infrastructure.openrouter_service import OpenRouterLLMService
-from ..infrastructure.trials_extraction_prompts import (
+from ..domain.trials_extraction_prompts import (
     BIOMARKER_VALUES,
     LINE_OF_THERAPY_VALUES,
     MODALITY_VALUES,
@@ -41,6 +39,8 @@ from ..infrastructure.trials_extraction_prompts import (
     STAGE_VALUES,
     build_extraction_prompt,
 )
+from ..infrastructure.cost_calculator import CostCalculator
+from ..infrastructure.openrouter_service import OpenRouterLLMService
 
 _MODALITY_SET = set(MODALITY_VALUES)
 _BIOMARKER_SET = set(BIOMARKER_VALUES)

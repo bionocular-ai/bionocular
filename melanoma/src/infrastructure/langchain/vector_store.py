@@ -316,7 +316,9 @@ class LangChainVectorStore(VectorStoreInterface):
 
     def __init__(
         self,
-        persist_directory: str = VectorStoreDefaults.DEFAULT_PERSIST_DIRECTORY,
+        persist_directory: Optional[
+            str
+        ] = VectorStoreDefaults.DEFAULT_PERSIST_DIRECTORY,
         collection_name: str = VectorStoreDefaults.DEFAULT_COLLECTION_NAME,
         embedding_function: Optional[Any] = None,
         embedding_service: Optional[Any] = None,
@@ -348,6 +350,14 @@ class LangChainVectorStore(VectorStoreInterface):
         logger.info(
             f"LangChain vector store initialized for collection: {collection_name}"
         )
+
+    def close(self) -> None:
+        """Release the ChromaDB connection and close all file handles."""
+        import gc
+
+        self._vectorstore = None
+        gc.collect()
+        logger.info("Vector store connection closed")
 
     async def _ensure_vectorstore_initialized(self) -> Chroma:
         """Ensure the vector store is initialized.

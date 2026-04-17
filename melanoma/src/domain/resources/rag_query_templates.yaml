@@ -16,10 +16,13 @@
 # NOTE: comments uses fixed section: full_text_reference - no RAG queries needed
 
 trial_name:
-  # Simple pattern matching: Look for Keynote, Checkmate, or Masterkey patterns
-  - "Keynote"
-  - "Checkmate"
-  - "Masterkey"
+  # Simple pattern matching: Look for Keynote, Checkmate, Masterkey, or other common acronyms
+  - "Keynote Checkmate Masterkey COMBI RELATIVITY PIVOTAL EBIN DESTINY"
+  # Common semantic patterns in Title, Methods and Conclusions where trial names appear
+  - "trial name study name protocol"
+  - "phase 3 study phase 2 study phase 1 trial"
+  - "the trial the study NCT"
+  - "multicenter randomized controlled trial"
 
 cancer_type:
   # Resected Cutaneous Melanoma
@@ -479,12 +482,15 @@ pfs_rate_48m:
 # ============================================================================
 
 median_os:
-  - "median OS overall survival months mo mths" # Added mths
+  - "median OS overall survival months mo mths"
   - "mOS value months mo mths duration"
   - "OS was value months mo mths"
   - "median overall survival value mo months mths"
   - "OS not reached NR value"
+  - "median overall survival was months group arm"
   - "OS value mo months mths 95% CI"
+  - "median overall survival in group was months confidence interval" # matches results text: "median overall survival in the [arm] group was X months (95% CI...)"
+  - "overall survival months compared group hazard ratio death" # matches: "as compared with 6.4 months...hazard ratio for death"
 
 median_followup_os:
   - "median follow-up OS months mo mths" # Added mths
@@ -520,29 +526,38 @@ os_rate_12m:
   - "1-year 1-y 1y OS value %" # Added variations
   - "OS at 12 months value %"
   - "12-mo OS percentage % rate"
+  - "survival 1 yr percent estimate" # Table format: "1 yr | 47.3"
+  - "OS rate 1 yr table value"
 
 os_rate_18m:
   - "18-month OS rate percentage %" # Added %
   - "OS at 18 months value %"
   - "18-mo OS percentage % rate"
+  - "survival 18 mo percent estimate" # Table format
 
 os_rate_24m:
   - "24-month OS rate percentage %" # Added %
   - "2-year 2-y 2y OS value %" # Added variations
   - "OS at 24 months value %"
   - "24-mo OS percentage % rate"
+  - "survival 2 yr percent estimate" # Table format: "2 yr | 28.5"
+  - "OS rate 2 yr table value"
 
 os_rate_36m:
   - "36-month OS rate percentage %" # Added %
   - "3-year 3-y 3y OS value %" # Added variations
   - "OS at 36 months value %"
   - "36-mo OS percentage % rate"
+  - "survival 3 yr percent estimate" # Table format: "3 yr | 20.8"
+  - "OS rate 3 yr table value"
 
 os_rate_48m:
   - "48-month OS rate percentage %" # Added %
   - "4-year 4-y 4y OS value %" # Added variations
   - "OS at 48 months value %"
   - "48-mo OS percentage % rate"
+  - "survival 4 yr percent estimate" # Table format: "4 yr | X"
+  - "OS rate 4 yr table value"
 
 # ============================================================================
 # EFFICACY - OTHER SURVIVAL METRICS
@@ -1034,6 +1049,13 @@ hazard_ratio:
   - "relative risk hazard ratio HR value"
   - "HR value 95% CI reported"
 
+ci_hr_os:
+  - "hazard ratio 95% CI overall survival OS (lower-upper) value"
+  - "HR OS 95% CI confidence interval brackets value"
+  - "overall survival hazard ratio CI range"
+  - "HR CI OS value confidence interval"
+  - "OS hazard ratio CI lower upper bound brackets" # Table format: "0.72 (0.59–0.87)"
+
 # ============================================================================
 # PUBLICATION METADATA (Optimized for Headers/Citations)
 # ============================================================================
@@ -1175,6 +1197,8 @@ grade_3_plus_ae_pneumonitis:
 grade_3_plus_ae_alanine_aminotransferase:
   - "alanine aminotransferase increased ALT increased grade 3 grade 4 grade 3-4"
   - "ALT increase grade 3-5 severe"
+  - "hepatic alanine aminotransferase ALT liver enzyme grade 3 grade 4 table"
+  - "increase in alanine aminotransferase hepatic adverse event safety"
 
 grade_3_plus_ae_wbc_decreased:
   - "white blood cell WBC decreased leukopenia grade 3 grade 4 grade 3-4"
@@ -1284,6 +1308,8 @@ grade_3_plus_trae_alanine_aminotransferase:
   - "treatment-related alanine aminotransferase ALT increased grade 3 grade 4"
   - "drug-related ALT increase grade 3-4 grade 3-5"
   - "attributed to study drug ALT increased severe"
+  - "hepatic alanine aminotransferase ALT liver enzyme grade 3 grade 4 table"
+  - "increase in alanine aminotransferase hepatic adverse event safety"
 
 grade_3_plus_trae_wbc_decreased:
   - "treatment-related white blood cell WBC decreased grade 3 grade 4"
@@ -1390,6 +1416,8 @@ grade_3_plus_teae_alanine_aminotransferase:
   - "treatment-emergent alanine aminotransferase ALT increased grade 3 grade 4"
   - "ALT increased regardless of cause grade 3-4 grade 3-5"
   - "any adverse event ALT increased severe"
+  - "hepatic alanine aminotransferase ALT liver enzyme grade 3 grade 4 table"
+  - "increase in alanine aminotransferase hepatic adverse event safety"
 
 grade_3_plus_teae_wbc_decreased:
   - "treatment-emergent white blood cell WBC decreased grade 3 grade 4"

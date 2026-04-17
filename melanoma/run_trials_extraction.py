@@ -8,31 +8,31 @@ output to data/output/trials_extraction/.
 Usage
 -----
 # Test run — 50 trials (default)
-poetry run python scripts/run_trials_extraction.py
+poetry run python run_trials_extraction.py
 
 # Custom limit
-poetry run python scripts/run_trials_extraction.py --limit 100
+poetry run python run_trials_extraction.py --limit 100
 
 # Full run (all trials)
-poetry run python scripts/run_trials_extraction.py --no-limit
+poetry run python run_trials_extraction.py --no-limit
 
 # Last 50 trials (instead of first 50)
-poetry run python scripts/run_trials_extraction.py --limit 50 --last
+poetry run python run_trials_extraction.py --limit 50 --last
 
 # Next 50 latest trials (positions 51-100 from end)
-poetry run python scripts/run_trials_extraction.py --limit 50 --last --offset 50
+poetry run python run_trials_extraction.py --limit 50 --last --offset 50
 
 # Use a different model
-poetry run python scripts/run_trials_extraction.py --model gemini-2.5-flash
+poetry run python run_trials_extraction.py --model gemini-2.5-flash
 
 # Resume a previous run (skip already completed trials)
-poetry run python scripts/run_trials_extraction.py --resume
+poetry run python run_trials_extraction.py --resume
 
 # Dry run — validate inputs, no LLM calls
-poetry run python scripts/run_trials_extraction.py --dry-run
+poetry run python run_trials_extraction.py --dry-run
 
 # Filter to a specific cancer type
-poetry run python scripts/run_trials_extraction.py --cancer-type "Uveal Melanoma"
+poetry run python run_trials_extraction.py --cancer-type "Uveal Melanoma"
 """
 
 import argparse
@@ -48,12 +48,7 @@ from dotenv import load_dotenv
 # Path setup — allow running from the melanoma/ root
 # ---------------------------------------------------------------------------
 
-_SCRIPT_DIR = Path(__file__).resolve().parent
-_MELANOMA_ROOT = _SCRIPT_DIR.parent
-
-# Add melanoma/ to sys.path so that `src` package is importable
-if str(_MELANOMA_ROOT) not in sys.path:
-    sys.path.insert(0, str(_MELANOMA_ROOT))
+_MELANOMA_ROOT = Path(__file__).resolve().parent
 
 # Load .env from melanoma/
 load_dotenv(_MELANOMA_ROOT / ".env")

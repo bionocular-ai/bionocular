@@ -53,6 +53,7 @@ class EnhancedExtractionService:
         llm_service: LLMService,
         clinical_trials_api_service: Optional[ClinicalTrialsAPIService] = None,
         enable_cost_tracking: bool = True,
+        max_concurrent_attributes: int = 20,
     ):
         """Initialize enhanced extraction service.
 
@@ -63,11 +64,13 @@ class EnhancedExtractionService:
             llm_service: LLM service for text generation
             clinical_trials_api_service: Service for Clinical Trials API data
             enable_cost_tracking: Whether to enable cost tracking
+            max_concurrent_attributes: Max simultaneous LLM attribute requests
         """
         self.treatment_arm_separator = treatment_arm_separator
         self.arm_aware_rag_provider = arm_aware_rag_provider
         self.attribute_extractor = attribute_extractor
         self.clinical_trials_api_service = clinical_trials_api_service
+        self.max_concurrent_attributes = max_concurrent_attributes
 
         # Set up cost tracking if enabled
         if enable_cost_tracking:
@@ -758,6 +761,20 @@ class EnhancedExtractionService:
                 arm_result: dict[str, Any] = {
                     "arm_id": arm.arm_id,
                     "arm_name": arm.arm_name,
+                    "generic_name": arm.generic_name,
+                    "brand_name": arm.brand_name,
+                    "dose": arm.dose,
+                    "dosing_schedule": arm.dosing_schedule,
+                    "patient_count": arm.patient_count,
+                    "line_of_treatment": arm.line_of_treatment.value
+                    if hasattr(arm.line_of_treatment, "value")
+                    else arm.line_of_treatment,
+                    "arm_type": arm.arm_type.value
+                    if hasattr(arm.arm_type, "value")
+                    else arm.arm_type,
+                    "combination_drugs": arm.combination_drugs,
+                    "confidence_score": arm.confidence_score,
+                    "source_text": arm.source_text,
                     "attributes": {},
                     "errors": [],
                     "warnings": [],
@@ -1574,84 +1591,59 @@ class EnhancedExtractionService:
             f"Starting per-attribute extraction with 3-tier RAG for {len(attributes)} attributes across {len(arms)} arms"
         )
 
-        results = {}
+        is_publication = bool(file_path and "Publications" in file_path)
+        extraction_source = (
+            "publication_llm_extraction"
+            if is_publication
+            else "abstract_llm_extraction"
+        )
+        metadata_filters = {"filename": file_path} if file_path else None
 
-        # Process ONE attribute at a time with its own RAG retrieval
-        for attr_idx, attribute in enumerate(attributes):
-            progress = (attr_idx + 1) / len(attributes) * 100
-            logger.info(
-                f"Processing attribute {attr_idx + 1}/{len(attributes)} ({progress:.1f}%): {attribute.value}"
-            )
+        sem = asyncio.Semaphore(self.max_concurrent_attributes)
 
-            try:
-                # 🎯 OPTIMIZATION: Retrieve chunks ONCE per attribute, not per arm
-                # Most attributes (e.g., "Pembrolizumab PFS: 12mo vs Placebo: 8mo")
-                # appear in the same chunk, so we share context across arms
-
-                # Get attribute-specific context (shared across arms)
-                # Returns list[str] of chunk contents with 3-tier filtering applied
-                # Pass file_path as metadata_filters for publication detection (needed for NCT_NUMBER)
-                metadata_filters = None
-                if file_path:
-                    metadata_filters = {"filename": file_path}
-
-                context_texts = (
-                    await self.arm_aware_rag_provider.get_context_for_attribute(
-                        document_id=abstract_id,
+        async def _process_attribute(
+            attribute: AttributeType,
+        ) -> tuple[AttributeType, dict[str, ExtractedAttribute]]:
+            async with sem:
+                not_found = {
+                    arm.arm_id: ExtractedAttribute(
                         attribute_type=attribute,
-                        context_chunks=3,  # Limit to 3 chunks for precision
-                        similarity_threshold=similarity_threshold,
-                        metadata_filters=metadata_filters,
+                        value="Not found",
+                        confidence=0.0,
+                        source=extraction_source,
                     )
-                )
-
-                # 💰 COST OPTIMIZATION: Skip LLM call if no chunks retrieved
-                # If 3-tier filtering removed all chunks, return "Not found" immediately
-                if not context_texts:
-                    logger.debug(
-                        f"No chunks retrieved for {attribute.value} after 3-tier filtering - skipping LLM call"
-                    )
-                    attribute_results = {}
-                    for arm in arms:
-                        attribute_results[arm.arm_id] = ExtractedAttribute(
+                    for arm in arms
+                }
+                try:
+                    context_texts = (
+                        await self.arm_aware_rag_provider.get_context_for_attribute(
+                            document_id=abstract_id,
                             attribute_type=attribute,
-                            value="Not found",
-                            confidence=0.0,
-                            source="abstract_llm_extraction",
+                            context_chunks=3,
+                            similarity_threshold=similarity_threshold,
+                            metadata_filters=metadata_filters,
                         )
-                    results[attribute] = attribute_results
-                    continue
-
-                # 🎯 USE BATCH EXTRACTOR: Extract for all arms in ONE LLM call
-                # This is 2x more efficient than separate calls per arm
-                single_attr_results = (
-                    await self.batch_extractor._extract_single_attribute_for_all_arms(
+                    )
+                    if not context_texts:
+                        logger.debug(
+                            f"No chunks retrieved for {attribute.value} after 3-tier filtering - skipping LLM call"
+                        )
+                        return (attribute, not_found)
+                    single_attr_results = await self.batch_extractor._extract_single_attribute_for_all_arms(
                         arms=arms,
                         attribute=attribute,
                         context=context_texts,
                         document_id=abstract_id,
+                        source=extraction_source,
                     )
-                )
+                    return (attribute, single_attr_results)
+                except Exception as e:
+                    logger.error(f"Failed to process attribute {attribute.value}: {e}")
+                    return (attribute, not_found)
 
-                results[attribute] = single_attr_results
-
-                # Small delay between attributes (rate limiting handled by batch_extractor)
-                if attr_idx < len(attributes) - 1:
-                    await asyncio.sleep(0.1)
-
-            except Exception as e:
-                logger.error(f"Failed to process attribute {attribute.value}: {e}")
-                # Create "Not found" results for all arms for this attribute
-                attribute_results = {}
-                for arm in arms:
-                    attribute_results[arm.arm_id] = ExtractedAttribute(
-                        attribute_type=attribute,
-                        value="Not found",
-                        confidence=0.0,
-                        source="abstract_llm_extraction",
-                    )
-                results[attribute] = attribute_results
-                continue
+        tasks = [_process_attribute(attr) for attr in attributes]
+        attribute_pairs = await asyncio.gather(*tasks)
+        results = dict(attribute_pairs)
 
         logger.info(
             f"Per-attribute extraction completed: {len(results)} attribute types processed"
