@@ -127,33 +127,41 @@ CRITICAL REQUIREMENTS:
 3. Different doses of the same drug are separate arms ONLY if explicitly compared
 4. Combination therapies are single arms with "+" notation
 5. Be conservative - avoid over-segmentation
+6. Non-drug comparison groups ARE valid arms: surgery, observation (OBS), watchful waiting,
+   radiotherapy, CLND, registry cohorts, etc. Use arm_type="unknown" and set
+   generic_name to the procedure name (e.g., "Observation", "Surgery", "Radiotherapy", "CLND").
 
-TREATMENT ARM RULES:
 - Single drug: "Drug Name" (e.g., "Nivolumab")
 - Combination: "Drug A + Drug B" (e.g., "Nivolumab + Ipilimumab")
-- Placebo/Control: Mark as control arm with generic_name="Placebo"
+- Placebo/Control: Mark as control arm with generic_name="Placebo" or "Observation" (OBS)
+- Non-pharmacological arm: use arm_type="unknown", generic_name = procedure name
 - Different doses: Only if explicitly mentioned as separate comparison groups
 
 CONSERVATIVE APPROACH:
-- Most clinical trials have 2-3 arms maximum
+- Most clinical trials have 2-3 arms; multi-cohort or platform trials may have up to 5
 - If unsure, err on the side of fewer arms
 - Focus on the main treatment comparison
 - Avoid creating arms for adjuvant therapies, supportive care, or exploratory treatments
+- Non-pharmacological arms (Observation, Surgery, Radiotherapy, CLND) are valid — include them
+
+FIELD DEFINITIONS:
+- arm_name: The primary drug or treatment name(s) for this arm, exactly as referred to in the text (e.g., "Dabrafenib + Trametinib", "Nivolumab", "Placebo", "CLND", "Observation"). If the abstract uses a cohort label (e.g., "Cohort A"), append the drug name: "Cohort A (Nivolumab)". Prefer drug/treatment names over generic labels like "Arm 1", "Treatment arm", or "Experimental arm".
+- generic_name: The strict pharmacological/generic name of the active drug(s) without "arm" or dosages (e.g., "Nivolumab", "Dabrafenib + Trametinib", "Placebo").
+- combination_drugs: For combination arms (arm_type="combination"), list each drug separately (e.g., ["Nivolumab", "Ipilimumab"]). Leave [] for monotherapy, placebo, or non-drug arms.
+- arm_type: Must be one of ["monotherapy", "combination", "placebo", "control", "dose_variation", "unknown"].
 
 OUTPUT FORMAT (JSON):
 {
   "treatment_arms": [
     {
       "arm_id": "arm_1",
-      "arm_name": "Treatment Name",
-      "generic_name": "Drug Name",
-      "brand_name": "",
+      "arm_name": "Nivolumab + Ipilimumab",
+      "generic_name": "Nivolumab + Ipilimumab",
       "dose": "Dose if specified",
       "dosing_schedule": "Schedule if specified",
       "patient_count": 0,
-      "line_of_treatment": "first_line",
-      "arm_type": "monotherapy",
-      "combination_drugs": [],
+      "arm_type": "combination",
+      "combination_drugs": ["Nivolumab", "Ipilimumab"],
       "confidence_score": 0.95,
       "source_text": "Relevant text from abstract",
       "nct_number": ""
@@ -166,7 +174,7 @@ ABSTRACT TEXT:
 
 STRICT RESPONSE RULES:
 - Return ONLY valid JSON
-- Maximum 3 arms (most trials have 1-2)
+- Maximum 5 arms (most trials have 1-2, but substudies may have more)
 - Focus on primary treatment comparisons
 - Do NOT include explanations or markdown
 - Each arm must have distinct treatment regimen
@@ -190,11 +198,13 @@ STRICT RESPONSE RULES:
         """Call LLM with retry logic for handling temporary failures."""
         try:
             # Use the LLMService interface method
+            import os
+
             return await self.llm_service.generate_response(
                 prompt=prompt,
                 temperature=0.1,
                 max_tokens=2000,
-                model_name="gpt-4o",
+                model_name=os.getenv("EXTRACTION_MODEL", "gpt-4o"),
             )
         except Exception as e:
             error_msg = str(e)
@@ -293,24 +303,8 @@ STRICT RESPONSE RULES:
                 )
                 arms_data = []
 
-            # Normalization helpers
-            lot_map = {
-                "neoadjuvant": "first_line",
-                "adjuvant": "first_line",
-                "first line": "first_line",
-                "second line": "second_line",
-                "third line+": "third_line",
-            }
-
             for i, arm_data in enumerate(arms_data):
                 try:
-                    # Normalize line_of_treatment before enum conversion
-                    raw_lot = arm_data.get("line_of_treatment", "unknown")
-                    if isinstance(raw_lot, str):
-                        normalized_lot = lot_map.get(raw_lot.strip().lower(), raw_lot)
-                    else:
-                        normalized_lot = raw_lot
-
                     # Skip arms with empty generic names (except placebo/control arms)
                     generic_name = arm_data.get("generic_name", "").strip()
                     arm_type = arm_data.get("arm_type", "").strip().lower()
@@ -327,6 +321,23 @@ STRICT RESPONSE RULES:
                             f"Setting generic name to '{generic_name}' for {arm_type} arm"
                         )
 
+                    # Safe enum construction — fall back to UNKNOWN instead of dropping the arm
+                    try:
+                        atype = ArmType(arm_data.get("arm_type", "unknown"))
+                    except ValueError:
+                        logger.warning(
+                            f"Unknown arm_type '{arm_data.get('arm_type')}' for arm {i+1}, "
+                            "defaulting to unknown"
+                        )
+                        atype = ArmType.UNKNOWN
+
+                    try:
+                        lot = LineOfTreatment(
+                            arm_data.get("line_of_treatment", "unknown")
+                        )
+                    except ValueError:
+                        lot = LineOfTreatment.UNKNOWN
+
                     # Create treatment arm
                     arm = TreatmentArm(
                         arm_id=arm_data.get("arm_id", f"arm_{i+1}"),
@@ -336,8 +347,8 @@ STRICT RESPONSE RULES:
                         dose=arm_data.get("dose"),
                         dosing_schedule=arm_data.get("dosing_schedule"),
                         patient_count=arm_data.get("patient_count"),
-                        line_of_treatment=LineOfTreatment(normalized_lot),
-                        arm_type=ArmType(arm_data.get("arm_type", "unknown")),
+                        line_of_treatment=lot,
+                        arm_type=atype,
                         combination_drugs=arm_data.get("combination_drugs", []),
                         confidence_score=arm_data.get("confidence_score", 0.0),
                         source_text=arm_data.get("source_text"),
@@ -383,34 +394,32 @@ STRICT RESPONSE RULES:
             add_error("No treatment arms identified")
             return validation_result
 
-        # CRITICAL: Limit number of arms to prevent over-segmentation
-        max_arms = 3
+        # Limit number of arms to prevent over-segmentation
+        max_arms = 5
         if len(treatment_arms) > max_arms:
             add_warning(
                 f"Too many arms identified ({len(treatment_arms)}), limiting to {max_arms} "
                 f"highest confidence arms"
             )
-            # Sort by confidence score and keep only the top 3
             treatment_arms.sort(key=lambda x: x.confidence_score, reverse=True)
-            treatment_arms = treatment_arms[:max_arms]
+            del treatment_arms[max_arms:]
 
         # Calculate confidence based on various factors
         confidence_factors = []
 
-        # Factor 1: Number of arms (expect 1-3 arms typically, max 3)
+        # Factor 1: Number of arms
         arm_count = len(treatment_arms)
         if arm_count == 0:
             confidence_factors.append(0.0)
-        elif 1 <= arm_count <= 2:
-            confidence_factors.append(0.9)  # Most trials have 1-2 arms
-        elif arm_count == 3:
-            confidence_factors.append(0.8)  # 3 arms is acceptable but less common
+        elif 1 <= arm_count <= 3:
+            confidence_factors.append(0.9)  # Most trials have 1-3 arms
+        elif arm_count <= 5:
+            confidence_factors.append(0.8)  # Valid for multi-cohort/platform trials
         else:
-            # More than 3 arms - likely over-segmentation
             confidence_factors.append(0.3)
             add_warning(
                 f"Too many arms identified ({arm_count}), likely over-segmentation. "
-                f"Most clinical trials have 1-3 arms maximum."
+                f"Most clinical trials have 1-5 arms maximum."
             )
 
         # Factor 2: Arm completeness

@@ -26,9 +26,11 @@ class RAGConfigLoader:
                         If None, uses default path.
         """
         if config_path is None:
-            # Use default path relative to this file
+            # YAML lives in domain/resources — domain owns the query vocabulary
             base_dir = Path(__file__).parent.parent.parent
-            config_path = base_dir / "resources" / "rag_query_templates.yaml"
+            config_path = (
+                base_dir / "src" / "domain" / "resources" / "rag_query_templates.yaml"
+            )
 
         self.config_path = Path(config_path)
         self._query_templates: dict[AttributeType, list[str]] = {}

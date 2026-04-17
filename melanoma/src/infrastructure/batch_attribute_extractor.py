@@ -117,6 +117,7 @@ class BatchAttributeExtractor:
         attribute: AttributeType,
         context: list[str],
         document_id: str,
+        source: str = "abstract_llm_extraction",
     ) -> dict[str, ExtractedAttribute]:
         """Extract a single attribute for all arms in one LLM call.
 
@@ -125,6 +126,7 @@ class BatchAttributeExtractor:
             attribute: Single attribute to extract
             context: Context chunks for extraction
             document_id: Document identifier
+            source: Source label for the extracted attribute
 
         Returns:
             Dictionary mapping arm IDs to extracted attribute results
@@ -137,7 +139,7 @@ class BatchAttributeExtractor:
 
         # Parse response to extract values for each arm
         return self._parse_single_attribute_response(
-            response, arms, attribute, context, document_id
+            response, arms, attribute, context, document_id, source=source
         )
 
     def _create_single_attribute_prompt(
@@ -389,6 +391,7 @@ CONTEXT:
         attribute: AttributeType,
         context: list[str],
         document_id: str,
+        source: str = "abstract_llm_extraction",
     ) -> dict[str, ExtractedAttribute]:
         """Parse single attribute LLM response to extract values for each arm.
 
@@ -419,7 +422,7 @@ CONTEXT:
 
                 # Create ExtractedAttribute object
                 extracted_attr = self._create_extracted_attribute(
-                    attribute, value, context, document_id, arm
+                    attribute, value, context, document_id, arm, source=source
                 )
 
                 results[arm.arm_id] = extracted_attr
@@ -432,7 +435,7 @@ CONTEXT:
             # Fallback: create "Not found" results for all arms
             for arm in arms:
                 extracted_attr = self._create_extracted_attribute(
-                    attribute, "Not found", context, document_id, arm
+                    attribute, "Not found", context, document_id, arm, source=source
                 )
                 results[arm.arm_id] = extracted_attr
 
@@ -444,7 +447,7 @@ CONTEXT:
             # Fallback: create "Not found" results for all arms
             for arm in arms:
                 extracted_attr = self._create_extracted_attribute(
-                    attribute, "Not found", context, document_id, arm
+                    attribute, "Not found", context, document_id, arm, source=source
                 )
                 results[arm.arm_id] = extracted_attr
 
@@ -457,6 +460,7 @@ CONTEXT:
         context: list[str],
         document_id: str,
         arm: TreatmentArm,
+        source: str = "abstract_llm_extraction",
     ) -> ExtractedAttribute:
         """Create an ExtractedAttribute object.
 
@@ -466,6 +470,7 @@ CONTEXT:
             context: Context chunks
             document_id: Document identifier
             arm: Treatment arm
+            source: Source label for the extracted attribute
 
         Returns:
             ExtractedAttribute object
@@ -620,14 +625,15 @@ CONTEXT:
                         AttributeType.TTF,
                     ]:
                         # Normalize variations of "not reached" to "NR"
-                        clean_value_lower = clean_value.lower()
-                        if clean_value_lower in [
-                            "not reached",
-                            "not-reached",
-                            "not_reached",
-                            "nr",
-                        ]:
-                            clean_value = "NR"
+                        if isinstance(clean_value, str):
+                            clean_value_lower = clean_value.lower()
+                            if clean_value_lower in [
+                                "not reached",
+                                "not-reached",
+                                "not_reached",
+                                "nr",
+                            ]:
+                                clean_value = "NR"
 
                     confidence = 0.8  # High confidence for batch extraction
 
@@ -643,6 +649,7 @@ CONTEXT:
             attribute_type=attribute_type,
             value=clean_value,
             confidence=confidence,
+            source=source,
             source_chunks=source_chunks,
             validation_status=ValidationStatus.PENDING,
             validation_errors=[],

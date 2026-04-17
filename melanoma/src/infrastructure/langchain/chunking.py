@@ -23,6 +23,10 @@ except ImportError as e:
         "Install with: poetry install --with processing"
     ) from e
 
+from ...domain.document_section_patterns import (
+    PUBLICATION_SECTION_KEYWORDS,
+    SECTION_PATTERNS,
+)
 from ...domain.interfaces import ChunkingStrategyInterface
 from ...domain.models import (
     Chunk,
@@ -181,25 +185,8 @@ class ChunkTypeClassifier:
     single responsibility and make the classification logic testable.
     """
 
-    # Section header patterns for classification
-    SECTION_PATTERNS = {
-        ChunkType.BACKGROUND: ["background", "#### background:"],
-        ChunkType.METHODS: ["method", "#### methods:"],
-        ChunkType.TRIAL_DESIGN: ["trial design", "#### trial design:"],
-        ChunkType.RESULTS: ["result", "#### results:"],
-        ChunkType.CONCLUSIONS: ["conclusion", "#### conclusions:"],
-        ChunkType.TABLE: ["table", "#### table:"],
-        ChunkType.CLINICAL_TRIAL: [
-            "clinical trial",
-            "#### clinical trial",
-            "#### clinical trial information:",
-            "#### clinical trial identification:",
-        ],
-        ChunkType.SPONSOR: ["sponsor", "#### research sponsor:"],
-        ChunkType.FUNDING: ["funding", "#### funding:"],
-        ChunkType.DOI: ["doi", "#### doi:"],
-        ChunkType.FULL_TEXT_REFERENCE: ["full text", "#### full text reference:"],
-    }
+    # Section header patterns — defined in domain.document_section_patterns
+    SECTION_PATTERNS = SECTION_PATTERNS
 
     def classify_chunk_type(self, content: str, headers: dict[str, str]) -> ChunkType:
         """Classify the chunk type based on content and headers.
@@ -225,47 +212,14 @@ class ChunkTypeClassifier:
             return ChunkType.TITLE
 
         # Check publication-style headers (Main Section, Subsection)
+        # Keywords defined in domain.document_section_patterns.PUBLICATION_SECTION_KEYWORDS
         if main_section or subsection:
-            # Check for Results section (includes main Results, subsections, Findings, Clinical Activity, Results in Summary)
-            # Note: "summary" is included to catch "Results" subsections within "Summary" sections
-            if any(
-                keyword in main_section or keyword in subsection
-                for keyword in [
-                    "result",
-                    "finding",
-                    "clinical activity",
-                    "efficacy",
-                    "safety",
-                    "adverse",
-                    "demographic",
-                    "response",
-                    "survival",
-                    "outcome",
-                    "summary",
-                ]
-            ):
-                return ChunkType.RESULTS
-
-            # Check for Methods section
-            if any(
-                keyword in main_section or keyword in subsection
-                for keyword in ["method", "patient", "trial design", "eligibility"]
-            ):
-                return ChunkType.METHODS
-
-            # Check for Background/Introduction
-            if any(
-                keyword in main_section or keyword in subsection
-                for keyword in ["background", "introduction"]
-            ):
-                return ChunkType.BACKGROUND
-
-            # Check for Conclusions
-            if any(
-                keyword in main_section or keyword in subsection
-                for keyword in ["conclusion", "discussion"]
-            ):
-                return ChunkType.CONCLUSIONS
+            for chunk_type, keywords in PUBLICATION_SECTION_KEYWORDS:
+                if any(
+                    keyword in main_section or keyword in subsection
+                    for keyword in keywords
+                ):
+                    return chunk_type
 
         # Section-based detection (for abstract-style headers)
         for chunk_type, patterns in self.SECTION_PATTERNS.items():
@@ -1567,6 +1521,15 @@ class LangChainChunkingService(ChunkingStrategyInterface):
 
         return chunks
 
+    @staticmethod
+    def _normalize_html_in_table_text(text: str) -> str:
+        """Replace HTML artifacts from PDF→Markdown conversion in table content."""
+        text = re.sub(r"<br\s*/?>", " ", text, flags=re.IGNORECASE)
+        text = re.sub(r"<sup>.*?</sup>", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r"<sub>.*?</sub>", "", text, flags=re.IGNORECASE | re.DOTALL)
+        text = re.sub(r" {2,}", " ", text)
+        return text.strip()
+
     def _create_table_chunk(
         self,
         table_data: dict[str, Any],
@@ -1595,28 +1558,31 @@ class LangChainChunkingService(ChunkingStrategyInterface):
         # Build chunk content with context
         content_parts = []
 
+        def _norm(s: str) -> str:
+            return self._normalize_html_in_table_text(s) if s else s
+
         # Add header if present
         if table_data.get("header"):
-            content_parts.append(table_data["header"])
+            content_parts.append(_norm(table_data["header"]))
             content_parts.append("")
 
         # Add preceding context
         if table_data.get("preceding_context"):
-            content_parts.append(table_data["preceding_context"])
+            content_parts.append(_norm(table_data["preceding_context"]))
             content_parts.append("")
 
         # Add table content
-        content_parts.append(table_data["table_content"])
+        content_parts.append(_norm(table_data["table_content"]))
 
         # Add footnotes (if not already in table_content from split)
         if table_data.get("footnotes") and not table_data.get("is_split_chunk"):
             content_parts.append("")
-            content_parts.append(table_data["footnotes"])
+            content_parts.append(_norm(table_data["footnotes"]))
 
         # Add following context (if not footnotes)
         if table_data.get("following_context") and not table_data.get("footnotes"):
             content_parts.append("")
-            content_parts.append(table_data["following_context"])
+            content_parts.append(_norm(table_data["following_context"]))
 
         content = "\n".join(content_parts)
 

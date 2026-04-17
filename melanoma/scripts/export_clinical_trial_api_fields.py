@@ -35,8 +35,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent / "data" / "trials_db" / "trials.db"
-DEFAULT_OUT_DIR = Path(__file__).resolve().parent / "data" / "trials_db" / "trial_api_exports"
+DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trials.db"
+DEFAULT_OUT_DIR = Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_exports"
 
 NCT_PATTERN = re.compile(r"^NCT\d+$", re.IGNORECASE)
 

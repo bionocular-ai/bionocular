@@ -86,12 +86,14 @@ class AttributeType(str, Enum):
     MEDIAN_FOLLOWUP_PFS = "median_followup_pfs"
     P_VALUE_PFS = "p_value_pfs"
     HR_PFS = "hr_pfs"
+    CI_HR_PFS = "ci_hr_pfs"
 
     # Efficacy - Survival Metrics (OS)
     MEDIAN_OS = "median_os"
     MEDIAN_FOLLOWUP_OS = "median_followup_os"
     P_VALUE_OS = "p_value_os"
     HR_OS = "hr_os"
+    CI_HR_OS = "ci_hr_os"
 
     # Efficacy - Response Rates
     OBJECTIVE_RESPONSE_RATE = "objective_response_rate"
@@ -125,21 +127,26 @@ class AttributeType(str, Enum):
     EFS = "efs"
     P_VALUE_EFS = "p_value_efs"
     HR_EFS = "hr_efs"
+    CI_HR_EFS = "ci_hr_efs"
 
     # Efficacy - Other Survival Metrics (RFS)
     RFS = "rfs"
     P_VALUE_RFS = "p_value_rfs"
     LENGTH_RFS = "length_rfs"
     HR_RFS = "hr_rfs"
+    CI_HR_RFS = "ci_hr_rfs"
 
     # Efficacy - Other Survival Metrics (MFS)
     MFS = "mfs"
     LENGTH_MFS = "length_mfs"
     HR_MFS = "hr_mfs"
+    CI_HR_MFS = "ci_hr_mfs"
 
     # Efficacy - Time-to Metrics
     TTR = "ttr"
     TTP = "ttp"
+    HR_TTP = "hr_ttp"
+    CI_HR_TTP = "ci_hr_ttp"
     TTNT = "ttnt"
     TTF = "ttf"
 
@@ -151,6 +158,9 @@ class AttributeType(str, Enum):
     IMMUNE_RELATED_AE = "immune_related_ae"
     SERIOUS_IMMUNE_RELATED_AE = "serious_immune_related_ae"
     AE_LEADING_TO_DEATH = "ae_leading_to_death"
+    AE_LEADING_TO_DOSE_REDUCTION = "ae_leading_to_dose_reduction"
+    AE_LEADING_TO_DOSE_INTERRUPTION = "ae_leading_to_dose_interruption"
+    AE_REQUIRING_HOSPITALIZATION = "ae_requiring_hospitalization"
 
     # Safety - Treatment-Emergent Adverse Events (TEAE)
     TEAE = "teae"
@@ -162,6 +172,9 @@ class AttributeType(str, Enum):
     TEAE_LEADING_TO_DEATH = "teae_leading_to_death"
     SERIOUS_TEAE = "serious_teae"
     TEAE_IMMUNE_RELATED = "teae_immune_related"
+    TEAE_LEADING_TO_DOSE_REDUCTION = "teae_leading_to_dose_reduction"
+    TEAE_LEADING_TO_DOSE_INTERRUPTION = "teae_leading_to_dose_interruption"
+    TEAE_REQUIRING_HOSPITALIZATION = "teae_requiring_hospitalization"
 
     # Safety - Treatment-Related Adverse Events (TRAE)
     TRAE = "trae"
@@ -173,9 +186,13 @@ class AttributeType(str, Enum):
     TRAE_LEADING_TO_DEATH = "trae_leading_to_death"
     TRAE_IMMUNE_RELATED = "trae_immune_related"
     SERIOUS_TRAE = "serious_trae"
+    TRAE_LEADING_TO_DOSE_REDUCTION = "trae_leading_to_dose_reduction"
+    TRAE_LEADING_TO_DOSE_INTERRUPTION = "trae_leading_to_dose_interruption"
+    TRAE_REQUIRING_HOSPITALIZATION = "trae_requiring_hospitalization"
 
     # Safety - Specific Adverse Events
     CRS = "crs"
+    IRR = "irr"
     WBC_DECREASED = "wbc_decreased"
 
     # Safety - Grade 3+ AE Specific Adverse Events
@@ -206,6 +223,12 @@ class AttributeType(str, Enum):
     )
     GRADE_3_PLUS_AE_WBC_DECREASED = "grade_3_plus_ae_wbc_decreased"
     GRADE_3_PLUS_AE_IMMUNE_RELATED = "grade_3_plus_ae_immune_related"
+    GRADE_3_PLUS_AE_IRR = "grade_3_plus_ae_irr"
+    GRADE_3_PLUS_AE_FATIGUE = "grade_3_plus_ae_fatigue"
+    GRADE_3_PLUS_AE_HYPOTHYROIDISM = "grade_3_plus_ae_hypothyroidism"
+    GRADE_3_PLUS_AE_HYPERTHYROIDISM = "grade_3_plus_ae_hyperthyroidism"
+    GRADE_3_PLUS_AE_AST_INCREASED = "grade_3_plus_ae_ast_increased"
+    GRADE_3_PLUS_AE_VOMITING = "grade_3_plus_ae_vomiting"
 
     # Safety - Grade 3+ TRAE Specific Adverse Events
     GRADE_3_PLUS_TRAE_IMMUNE_RELATED = "grade_3_plus_trae_immune_related"
@@ -235,6 +258,12 @@ class AttributeType(str, Enum):
         "grade_3_plus_trae_alanine_aminotransferase"
     )
     GRADE_3_PLUS_TRAE_WBC_DECREASED = "grade_3_plus_trae_wbc_decreased"
+    GRADE_3_PLUS_TRAE_IRR = "grade_3_plus_trae_irr"
+    GRADE_3_PLUS_TRAE_FATIGUE = "grade_3_plus_trae_fatigue"
+    GRADE_3_PLUS_TRAE_HYPOTHYROIDISM = "grade_3_plus_trae_hypothyroidism"
+    GRADE_3_PLUS_TRAE_HYPERTHYROIDISM = "grade_3_plus_trae_hyperthyroidism"
+    GRADE_3_PLUS_TRAE_AST_INCREASED = "grade_3_plus_trae_ast_increased"
+    GRADE_3_PLUS_TRAE_VOMITING = "grade_3_plus_trae_vomiting"
 
     # Safety - Grade 3+ TEAE Specific Adverse Events
     GRADE_3_PLUS_TEAE_IMMUNE_RELATED = "grade_3_plus_teae_immune_related"
@@ -264,6 +293,12 @@ class AttributeType(str, Enum):
         "grade_3_plus_teae_alanine_aminotransferase"
     )
     GRADE_3_PLUS_TEAE_WBC_DECREASED = "grade_3_plus_teae_wbc_decreased"
+    GRADE_3_PLUS_TEAE_IRR = "grade_3_plus_teae_irr"
+    GRADE_3_PLUS_TEAE_FATIGUE = "grade_3_plus_teae_fatigue"
+    GRADE_3_PLUS_TEAE_HYPOTHYROIDISM = "grade_3_plus_teae_hypothyroidism"
+    GRADE_3_PLUS_TEAE_HYPERTHYROIDISM = "grade_3_plus_teae_hyperthyroidism"
+    GRADE_3_PLUS_TEAE_AST_INCREASED = "grade_3_plus_teae_ast_increased"
+    GRADE_3_PLUS_TEAE_VOMITING = "grade_3_plus_teae_vomiting"
 
     # Metadata (for internal use)
     CONFERENCE = "conference"
@@ -498,23 +533,21 @@ class AttributeConfigurationFactory:
                     "No Name",
                 ],
                 extraction_priority=1,
-                api_source=True,  # Source from Clinical Trials API
+                api_source=False,  # Extract from abstract text
             ),
             AttributeType.CANCER_TYPE: AttributeConfiguration(
                 attribute_type=AttributeType.CANCER_TYPE,
                 value_kind=ValueKind.CANCER_TYPE,
                 required=True,
                 controlled_vocabulary=[
-                    "Resected Cutaneous Melanoma",
-                    "Unresectable Cutaneous Melanoma",
-                    "Cutaneous melanoma with Brain metastasis",
-                    "Cutaneous Melanoma with CNS metastasis",
+                    "Cutaneous Melanoma",
+                    "Cutaneous Squamous Cell Carcinoma",
+                    "Cutaneous Melanoma with Brain/CNS Metastasis",
                     "Uveal Melanoma",
-                    "Mucosal Melanoma",
                     "Acral Melanoma",
+                    "Mucosal Melanoma",
                     "Basal Cell Carcinoma",
                     "Merkel Cell Carcinoma",
-                    "Cutaneous Squamous Cell Carcinoma",
                 ],
                 extraction_priority=1,
                 api_source=False,  # Extract from abstract
@@ -703,6 +736,13 @@ class AttributeConfigurationFactory:
                 extraction_priority=2,
                 api_source=False,
             ),
+            AttributeType.CI_HR_PFS: AttributeConfiguration(
+                attribute_type=AttributeType.CI_HR_PFS,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=2,
+                api_source=False,
+            ),
             AttributeType.MEDIAN_OS: AttributeConfiguration(
                 attribute_type=AttributeType.MEDIAN_OS,
                 value_kind=ValueKind.MONTHS,
@@ -723,6 +763,13 @@ class AttributeConfigurationFactory:
                 value_kind=ValueKind.HAZARD_RATIO,
                 required=False,
                 validation_range=(0, 10),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.CI_HR_OS: AttributeConfiguration(
+                attribute_type=AttributeType.CI_HR_OS,
+                value_kind=ValueKind.STRING,
+                required=False,
                 extraction_priority=2,
                 api_source=False,
             ),
@@ -1446,6 +1493,175 @@ class AttributeConfigurationFactory:
                 extraction_priority=2,
                 api_source=False,
             ),
+            # Efficacy - CI and additional HR configs for new attributes
+            AttributeType.CI_HR_EFS: AttributeConfiguration(
+                attribute_type=AttributeType.CI_HR_EFS,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.CI_HR_RFS: AttributeConfiguration(
+                attribute_type=AttributeType.CI_HR_RFS,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.CI_HR_MFS: AttributeConfiguration(
+                attribute_type=AttributeType.CI_HR_MFS,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.HR_TTP: AttributeConfiguration(
+                attribute_type=AttributeType.HR_TTP,
+                value_kind=ValueKind.HAZARD_RATIO,
+                required=False,
+                validation_range=(0, 10),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.CI_HR_TTP: AttributeConfiguration(
+                attribute_type=AttributeType.CI_HR_TTP,
+                value_kind=ValueKind.STRING,
+                required=False,
+                extraction_priority=2,
+                api_source=False,
+            ),
+            # Safety - New AE dose/hospitalization attributes
+            AttributeType.AE_LEADING_TO_DOSE_REDUCTION: AttributeConfiguration(
+                attribute_type=AttributeType.AE_LEADING_TO_DOSE_REDUCTION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.AE_LEADING_TO_DOSE_INTERRUPTION: AttributeConfiguration(
+                attribute_type=AttributeType.AE_LEADING_TO_DOSE_INTERRUPTION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.AE_REQUIRING_HOSPITALIZATION: AttributeConfiguration(
+                attribute_type=AttributeType.AE_REQUIRING_HOSPITALIZATION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.IRR: AttributeConfiguration(
+                attribute_type=AttributeType.IRR,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            # Safety - New TEAE dose/hospitalization attributes
+            AttributeType.TEAE_LEADING_TO_DOSE_REDUCTION: AttributeConfiguration(
+                attribute_type=AttributeType.TEAE_LEADING_TO_DOSE_REDUCTION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.TEAE_LEADING_TO_DOSE_INTERRUPTION: AttributeConfiguration(
+                attribute_type=AttributeType.TEAE_LEADING_TO_DOSE_INTERRUPTION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.TEAE_REQUIRING_HOSPITALIZATION: AttributeConfiguration(
+                attribute_type=AttributeType.TEAE_REQUIRING_HOSPITALIZATION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            # Safety - New TRAE dose/hospitalization attributes
+            AttributeType.TRAE_LEADING_TO_DOSE_REDUCTION: AttributeConfiguration(
+                attribute_type=AttributeType.TRAE_LEADING_TO_DOSE_REDUCTION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.TRAE_LEADING_TO_DOSE_INTERRUPTION: AttributeConfiguration(
+                attribute_type=AttributeType.TRAE_LEADING_TO_DOSE_INTERRUPTION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.TRAE_REQUIRING_HOSPITALIZATION: AttributeConfiguration(
+                attribute_type=AttributeType.TRAE_REQUIRING_HOSPITALIZATION,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            # Safety - Grade 3+ IRR and Fatigue for AE/TRAE/TEAE
+            AttributeType.GRADE_3_PLUS_AE_IRR: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_IRR,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_AE_FATIGUE: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_AE_FATIGUE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_IRR: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_IRR,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TRAE_FATIGUE: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TRAE_FATIGUE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_IRR: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_IRR,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
+            AttributeType.GRADE_3_PLUS_TEAE_FATIGUE: AttributeConfiguration(
+                attribute_type=AttributeType.GRADE_3_PLUS_TEAE_FATIGUE,
+                value_kind=ValueKind.PERCENTAGE,
+                required=False,
+                validation_range=(0, 100),
+                extraction_priority=2,
+                api_source=False,
+            ),
             # Publication-level metadata
             AttributeType.PUBLICATION_NAME: AttributeConfiguration(
                 attribute_type=AttributeType.PUBLICATION_NAME,
@@ -2157,3 +2373,344 @@ class ValidationRule(BaseModel):
     max_value: Optional[float] = None
     allowed_values: Optional[list[str]] = None
     custom_validator: Optional[str] = None  # Function name for custom validation
+
+
+# The set of attributes extracted from full journal publications.
+# Abstracts extract a smaller subset; the pipeline script imports this
+# constant rather than defining its own list.
+PUBLICATION_ATTRIBUTES: list[AttributeType] = [
+    # Publication identification
+    AttributeType.PUBLICATION_NAME,
+    AttributeType.PUBLICATION_YEAR,
+    AttributeType.PDF_NUMBER,
+    AttributeType.TRIAL_NAME,
+    AttributeType.CANCER_TYPE,
+    AttributeType.NCT_NUMBER,
+    AttributeType.NUMBER_OF_PATIENTS,
+    # Efficacy - Response Rates
+    AttributeType.OBJECTIVE_RESPONSE_RATE,
+    AttributeType.COMPLETE_RESPONSE,
+    AttributeType.PATHOLOGICAL_COMPLETE_RESPONSE,
+    AttributeType.COMPLETE_METABOLIC_RESPONSE,
+    AttributeType.DISEASE_CONTROL_RATE,
+    AttributeType.CLINICAL_BENEFIT_RATE,
+    AttributeType.MEDIAN_DOR,
+    AttributeType.DOR_RATE,
+    # Efficacy - Survival Metrics (PFS Family)
+    AttributeType.MEDIAN_PFS,
+    AttributeType.MEDIAN_FOLLOWUP_PFS,
+    AttributeType.P_VALUE_PFS,
+    AttributeType.HR_PFS,
+    AttributeType.CI_HR_PFS,
+    # Efficacy - OS Family
+    AttributeType.MEDIAN_OS,
+    AttributeType.MEDIAN_FOLLOWUP_OS,
+    AttributeType.P_VALUE_OS,
+    AttributeType.HR_OS,
+    AttributeType.CI_HR_OS,
+    # Efficacy - PFS Rate Timepoints
+    AttributeType.PFS_RATE_6M,
+    AttributeType.PFS_RATE_9M,
+    AttributeType.PFS_RATE_12M,
+    AttributeType.PFS_RATE_18M,
+    AttributeType.PFS_RATE_24M,
+    AttributeType.PFS_RATE_36M,
+    AttributeType.PFS_RATE_48M,
+    # Efficacy - OS Rate Timepoints
+    AttributeType.OS_RATE_6M,
+    AttributeType.OS_RATE_9M,
+    AttributeType.OS_RATE_12M,
+    AttributeType.OS_RATE_18M,
+    AttributeType.OS_RATE_24M,
+    AttributeType.OS_RATE_36M,
+    AttributeType.OS_RATE_48M,
+    # Efficacy - EFS Family (Event-Free Survival)
+    AttributeType.EFS,
+    AttributeType.P_VALUE_EFS,
+    AttributeType.HR_EFS,
+    AttributeType.CI_HR_EFS,
+    # Efficacy - RFS Family (Recurrence-Free Survival / Relapse-Free Survival)
+    AttributeType.RFS,
+    AttributeType.P_VALUE_RFS,
+    AttributeType.LENGTH_RFS,
+    AttributeType.HR_RFS,
+    AttributeType.CI_HR_RFS,
+    # Efficacy - MFS Family (Metastasis-Free Survival)
+    AttributeType.MFS,
+    AttributeType.LENGTH_MFS,
+    AttributeType.HR_MFS,
+    AttributeType.CI_HR_MFS,
+    # Efficacy - Time-to Metrics
+    AttributeType.TTR,
+    AttributeType.TTP,
+    AttributeType.HR_TTP,
+    AttributeType.CI_HR_TTP,
+    AttributeType.TTNT,
+    AttributeType.TTF,
+    # Safety — AE
+    AttributeType.AE,
+    AttributeType.GRADE_3_PLUS_AE,
+    AttributeType.AE_LEADING_TO_DISCONTINUATION,
+    AttributeType.SERIOUS_AE,
+    AttributeType.IMMUNE_RELATED_AE,
+    AttributeType.SERIOUS_IMMUNE_RELATED_AE,
+    AttributeType.AE_LEADING_TO_DEATH,
+    AttributeType.AE_LEADING_TO_DOSE_REDUCTION,
+    AttributeType.AE_LEADING_TO_DOSE_INTERRUPTION,
+    AttributeType.AE_REQUIRING_HOSPITALIZATION,
+    # Safety — Specific AEs
+    AttributeType.CRS,
+    AttributeType.IRR,
+    # Safety — Grade 3+ AE specific
+    AttributeType.GRADE_3_PLUS_AE_IMMUNE_RELATED,
+    AttributeType.GRADE_3_PLUS_AE_IRR,
+    AttributeType.GRADE_3_PLUS_AE_CRS,
+    AttributeType.GRADE_3_PLUS_AE_COLITIS,
+    AttributeType.GRADE_3_PLUS_AE_THROMBOCYTOPENIA,
+    AttributeType.GRADE_3_PLUS_AE_NEUTROPENIA,
+    AttributeType.GRADE_3_PLUS_AE_LEUKOPENIA,
+    AttributeType.GRADE_3_PLUS_AE_FATIGUE,
+    AttributeType.GRADE_3_PLUS_AE_NAUSEA,
+    AttributeType.GRADE_3_PLUS_AE_ANEMIA,
+    AttributeType.GRADE_3_PLUS_AE_DIARRHEA,
+    AttributeType.GRADE_3_PLUS_AE_HYPERGLYCEMIA,
+    AttributeType.GRADE_3_PLUS_AE_DYSPNEA,
+    AttributeType.GRADE_3_PLUS_AE_PYREXIA,
+    AttributeType.GRADE_3_PLUS_AE_BLEEDING,
+    AttributeType.GRADE_3_PLUS_AE_PRURITUS,
+    AttributeType.GRADE_3_PLUS_AE_RASH,
+    AttributeType.GRADE_3_PLUS_AE_PNEUMONIA,
+    AttributeType.GRADE_3_PLUS_AE_THYROIDITIS,
+    AttributeType.GRADE_3_PLUS_AE_HYPOPHYSITIS,
+    AttributeType.GRADE_3_PLUS_AE_HEPATITIS,
+    AttributeType.GRADE_3_PLUS_AE_PNEUMONITIS,
+    AttributeType.GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE,
+    AttributeType.GRADE_3_PLUS_AE_HYPOTHYROIDISM,
+    AttributeType.GRADE_3_PLUS_AE_HYPERTHYROIDISM,
+    AttributeType.GRADE_3_PLUS_AE_AST_INCREASED,
+    AttributeType.GRADE_3_PLUS_AE_VOMITING,
+    # Safety — TEAE
+    AttributeType.TEAE,
+    AttributeType.GRADE_3_PLUS_TEAE,
+    AttributeType.GRADE_3_TEAE,
+    AttributeType.GRADE_4_TEAE,
+    AttributeType.GRADE_5_TEAE,
+    AttributeType.TEAE_LEADING_TO_DISCONTINUATION,
+    AttributeType.TEAE_LEADING_TO_DEATH,
+    AttributeType.SERIOUS_TEAE,
+    AttributeType.TEAE_IMMUNE_RELATED,
+    AttributeType.TEAE_LEADING_TO_DOSE_REDUCTION,
+    AttributeType.TEAE_LEADING_TO_DOSE_INTERRUPTION,
+    AttributeType.TEAE_REQUIRING_HOSPITALIZATION,
+    # Safety — Grade 3+ TEAE specific
+    AttributeType.GRADE_3_PLUS_TEAE_IMMUNE_RELATED,
+    AttributeType.GRADE_3_PLUS_TEAE_IRR,
+    AttributeType.GRADE_3_PLUS_TEAE_CRS,
+    AttributeType.GRADE_3_PLUS_TEAE_COLITIS,
+    AttributeType.GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA,
+    AttributeType.GRADE_3_PLUS_TEAE_NEUTROPENIA,
+    AttributeType.GRADE_3_PLUS_TEAE_LEUKOPENIA,
+    AttributeType.GRADE_3_PLUS_TEAE_FATIGUE,
+    AttributeType.GRADE_3_PLUS_TEAE_NAUSEA,
+    AttributeType.GRADE_3_PLUS_TEAE_ANEMIA,
+    AttributeType.GRADE_3_PLUS_TEAE_DIARRHEA,
+    AttributeType.GRADE_3_PLUS_TEAE_HYPERGLYCEMIA,
+    AttributeType.GRADE_3_PLUS_TEAE_DYSPNEA,
+    AttributeType.GRADE_3_PLUS_TEAE_PYREXIA,
+    AttributeType.GRADE_3_PLUS_TEAE_BLEEDING,
+    AttributeType.GRADE_3_PLUS_TEAE_PRURITUS,
+    AttributeType.GRADE_3_PLUS_TEAE_RASH,
+    AttributeType.GRADE_3_PLUS_TEAE_PNEUMONIA,
+    AttributeType.GRADE_3_PLUS_TEAE_THYROIDITIS,
+    AttributeType.GRADE_3_PLUS_TEAE_HYPOPHYSITIS,
+    AttributeType.GRADE_3_PLUS_TEAE_HEPATITIS,
+    AttributeType.GRADE_3_PLUS_TEAE_PNEUMONITIS,
+    AttributeType.GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE,
+    AttributeType.GRADE_3_PLUS_TEAE_HYPOTHYROIDISM,
+    AttributeType.GRADE_3_PLUS_TEAE_HYPERTHYROIDISM,
+    AttributeType.GRADE_3_PLUS_TEAE_AST_INCREASED,
+    AttributeType.GRADE_3_PLUS_TEAE_VOMITING,
+    # Safety — TRAE
+    AttributeType.TRAE,
+    AttributeType.GRADE_3_PLUS_TRAE,
+    AttributeType.GRADE_3_TRAE,
+    AttributeType.GRADE_4_TRAE,
+    AttributeType.GRADE_5_TRAE,
+    AttributeType.TRAE_LEADING_TO_DISCONTINUATION,
+    AttributeType.TRAE_LEADING_TO_DEATH,
+    AttributeType.SERIOUS_TRAE,
+    AttributeType.TRAE_IMMUNE_RELATED,
+    AttributeType.TRAE_LEADING_TO_DOSE_REDUCTION,
+    AttributeType.TRAE_LEADING_TO_DOSE_INTERRUPTION,
+    AttributeType.TRAE_REQUIRING_HOSPITALIZATION,
+    # Safety — Grade 3+ TRAE specific
+    AttributeType.GRADE_3_PLUS_TRAE_IMMUNE_RELATED,
+    AttributeType.GRADE_3_PLUS_TRAE_IRR,
+    AttributeType.GRADE_3_PLUS_TRAE_CRS,
+    AttributeType.GRADE_3_PLUS_TRAE_COLITIS,
+    AttributeType.GRADE_3_PLUS_TRAE_THROMBOCYTOPENIA,
+    AttributeType.GRADE_3_PLUS_TRAE_NEUTROPENIA,
+    AttributeType.GRADE_3_PLUS_TRAE_LEUKOPENIA,
+    AttributeType.GRADE_3_PLUS_TRAE_FATIGUE,
+    AttributeType.GRADE_3_PLUS_TRAE_NAUSEA,
+    AttributeType.GRADE_3_PLUS_TRAE_ANEMIA,
+    AttributeType.GRADE_3_PLUS_TRAE_DIARRHEA,
+    AttributeType.GRADE_3_PLUS_TRAE_HYPERGLYCEMIA,
+    AttributeType.GRADE_3_PLUS_TRAE_DYSPNEA,
+    AttributeType.GRADE_3_PLUS_TRAE_PYREXIA,
+    AttributeType.GRADE_3_PLUS_TRAE_BLEEDING,
+    AttributeType.GRADE_3_PLUS_TRAE_PRURITUS,
+    AttributeType.GRADE_3_PLUS_TRAE_RASH,
+    AttributeType.GRADE_3_PLUS_TRAE_PNEUMONIA,
+    AttributeType.GRADE_3_PLUS_TRAE_THYROIDITIS,
+    AttributeType.GRADE_3_PLUS_TRAE_HYPOPHYSITIS,
+    AttributeType.GRADE_3_PLUS_TRAE_HEPATITIS,
+    AttributeType.GRADE_3_PLUS_TRAE_PNEUMONITIS,
+    AttributeType.GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE,
+    AttributeType.GRADE_3_PLUS_TRAE_HYPOTHYROIDISM,
+    AttributeType.GRADE_3_PLUS_TRAE_HYPERTHYROIDISM,
+    AttributeType.GRADE_3_PLUS_TRAE_AST_INCREASED,
+    AttributeType.GRADE_3_PLUS_TRAE_VOMITING,
+]
+
+
+# The set of attributes extracted from conference abstracts (ASCO, ESMO).
+# Abstracts expose fewer attributes than publications; the abstract pipeline
+# imports this constant rather than defining its own list.
+ABSTRACT_ATTRIBUTES: list[AttributeType] = [
+    # General
+    AttributeType.CONFERENCE,
+    AttributeType.PUBLISHED_YEAR,
+    AttributeType.ABSTRACT_NUMBER,
+    AttributeType.TRIAL_NAME,
+    AttributeType.CANCER_TYPE,
+    AttributeType.NCT_NUMBER,
+    AttributeType.NUMBER_OF_PATIENTS,
+    # Efficacy - Response Rates
+    AttributeType.OBJECTIVE_RESPONSE_RATE,
+    AttributeType.COMPLETE_RESPONSE,
+    AttributeType.PATHOLOGICAL_COMPLETE_RESPONSE,
+    AttributeType.COMPLETE_METABOLIC_RESPONSE,
+    AttributeType.DISEASE_CONTROL_RATE,
+    AttributeType.CLINICAL_BENEFIT_RATE,
+    AttributeType.MEDIAN_DOR,
+    AttributeType.DOR_RATE,
+    # Efficacy - Survival Metrics (PFS Family)
+    AttributeType.MEDIAN_PFS,
+    AttributeType.MEDIAN_FOLLOWUP_PFS,
+    AttributeType.P_VALUE_PFS,
+    AttributeType.HR_PFS,
+    AttributeType.CI_HR_PFS,
+    # Efficacy - OS Family
+    AttributeType.MEDIAN_OS,
+    AttributeType.MEDIAN_FOLLOWUP_OS,
+    AttributeType.P_VALUE_OS,
+    AttributeType.HR_OS,
+    AttributeType.CI_HR_OS,
+    # Efficacy - PFS Rate Timepoints
+    AttributeType.PFS_RATE_6M,
+    AttributeType.PFS_RATE_9M,
+    AttributeType.PFS_RATE_12M,
+    AttributeType.PFS_RATE_18M,
+    AttributeType.PFS_RATE_24M,
+    AttributeType.PFS_RATE_36M,
+    AttributeType.PFS_RATE_48M,
+    # Efficacy - OS Rate Timepoints
+    AttributeType.OS_RATE_6M,
+    AttributeType.OS_RATE_9M,
+    AttributeType.OS_RATE_12M,
+    AttributeType.OS_RATE_18M,
+    AttributeType.OS_RATE_24M,
+    AttributeType.OS_RATE_36M,
+    AttributeType.OS_RATE_48M,
+    # Efficacy - EFS Family (Event-Free Survival)
+    AttributeType.EFS,
+    AttributeType.P_VALUE_EFS,
+    AttributeType.HR_EFS,
+    AttributeType.CI_HR_EFS,
+    # Efficacy - RFS Family (Recurrence-Free Survival / Relapse-Free Survival)
+    AttributeType.RFS,
+    AttributeType.P_VALUE_RFS,
+    AttributeType.LENGTH_RFS,
+    AttributeType.HR_RFS,
+    AttributeType.CI_HR_RFS,
+    # Efficacy - MFS Family (Metastasis-Free Survival)
+    AttributeType.MFS,
+    AttributeType.LENGTH_MFS,
+    AttributeType.HR_MFS,
+    AttributeType.CI_HR_MFS,
+    # Efficacy - Time-to Metrics
+    AttributeType.TTR,
+    AttributeType.TTP,
+    AttributeType.HR_TTP,
+    AttributeType.CI_HR_TTP,
+    AttributeType.TTNT,
+    AttributeType.TTF,
+    # Safety — AE
+    AttributeType.AE,
+    AttributeType.GRADE_3_PLUS_AE,
+    AttributeType.AE_LEADING_TO_DISCONTINUATION,
+    AttributeType.SERIOUS_AE,
+    AttributeType.IMMUNE_RELATED_AE,
+    AttributeType.SERIOUS_IMMUNE_RELATED_AE,
+    AttributeType.AE_LEADING_TO_DEATH,
+    AttributeType.AE_LEADING_TO_DOSE_REDUCTION,
+    AttributeType.AE_LEADING_TO_DOSE_INTERRUPTION,
+    AttributeType.AE_REQUIRING_HOSPITALIZATION,
+    # Safety — Specific AEs
+    AttributeType.CRS,
+    AttributeType.IRR,
+    # Safety — Grade 3+ AE specific
+    AttributeType.GRADE_3_PLUS_AE_IMMUNE_RELATED,
+    AttributeType.GRADE_3_PLUS_AE_IRR,
+    AttributeType.GRADE_3_PLUS_AE_CRS,
+    AttributeType.GRADE_3_PLUS_AE_COLITIS,
+    AttributeType.GRADE_3_PLUS_AE_THROMBOCYTOPENIA,
+    AttributeType.GRADE_3_PLUS_AE_NEUTROPENIA,
+    AttributeType.GRADE_3_PLUS_AE_LEUKOPENIA,
+    AttributeType.GRADE_3_PLUS_AE_FATIGUE,
+    # Safety — TEAE
+    AttributeType.TEAE,
+    AttributeType.GRADE_3_PLUS_TEAE,
+    AttributeType.GRADE_3_TEAE,
+    AttributeType.GRADE_4_TEAE,
+    AttributeType.GRADE_5_TEAE,
+    AttributeType.TEAE_LEADING_TO_DISCONTINUATION,
+    AttributeType.TEAE_LEADING_TO_DEATH,
+    AttributeType.SERIOUS_TEAE,
+    AttributeType.TEAE_IMMUNE_RELATED,
+    AttributeType.TEAE_LEADING_TO_DOSE_REDUCTION,
+    AttributeType.TEAE_LEADING_TO_DOSE_INTERRUPTION,
+    AttributeType.TEAE_REQUIRING_HOSPITALIZATION,
+    # Safety — Grade 3+ TEAE specific
+    AttributeType.GRADE_3_PLUS_TEAE_IMMUNE_RELATED,
+    AttributeType.GRADE_3_PLUS_TEAE_IRR,
+    AttributeType.GRADE_3_PLUS_TEAE_CRS,
+    AttributeType.GRADE_3_PLUS_TEAE_COLITIS,
+    AttributeType.GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA,
+    AttributeType.GRADE_3_PLUS_TEAE_NEUTROPENIA,
+    AttributeType.GRADE_3_PLUS_TEAE_LEUKOPENIA,
+    AttributeType.GRADE_3_PLUS_TEAE_FATIGUE,
+    # Safety — TRAE
+    AttributeType.TRAE,
+    AttributeType.GRADE_3_PLUS_TRAE,
+    AttributeType.GRADE_3_TRAE,
+    AttributeType.GRADE_4_TRAE,
+    AttributeType.GRADE_5_TRAE,
+    AttributeType.TRAE_LEADING_TO_DISCONTINUATION,
+    AttributeType.TRAE_LEADING_TO_DEATH,
+    AttributeType.SERIOUS_TRAE,
+    AttributeType.TRAE_IMMUNE_RELATED,
+    AttributeType.TRAE_LEADING_TO_DOSE_REDUCTION,
+    AttributeType.TRAE_LEADING_TO_DOSE_INTERRUPTION,
+    AttributeType.TRAE_REQUIRING_HOSPITALIZATION,
+    # Safety — Grade 3+ TRAE specific
+    AttributeType.GRADE_3_PLUS_TRAE_IMMUNE_RELATED,
+    AttributeType.GRADE_3_PLUS_TRAE_IRR,
+    AttributeType.GRADE_3_PLUS_TRAE_CRS,
+    AttributeType.GRADE_3_PLUS_TRAE_COLITIS,
+    AttributeType.GRADE_3_PLUS_TRAE_THROMBOCYTOPENIA,
+    AttributeType.GRADE_3_PLUS_TRAE_NEUTROPENIA,
+    AttributeType.GRADE_3_PLUS_TRAE_LEUKOPENIA,
+    AttributeType.GRADE_3_PLUS_TRAE_FATIGUE,
+]

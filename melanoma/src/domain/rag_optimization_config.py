@@ -161,7 +161,26 @@ class RAGOptimizationConfig:
         AttributeType.SERIOUS_TRAE,
         # Specific AEs - all in Results/Safety
         AttributeType.CRS,
+        AttributeType.IRR,
         AttributeType.WBC_DECREASED,
+        # AE dose modification / hospitalization - all in Results/Safety
+        AttributeType.AE_LEADING_TO_DOSE_REDUCTION,
+        AttributeType.AE_LEADING_TO_DOSE_INTERRUPTION,
+        AttributeType.AE_REQUIRING_HOSPITALIZATION,
+        AttributeType.TEAE_LEADING_TO_DOSE_REDUCTION,
+        AttributeType.TEAE_LEADING_TO_DOSE_INTERRUPTION,
+        AttributeType.TEAE_REQUIRING_HOSPITALIZATION,
+        AttributeType.TRAE_LEADING_TO_DOSE_REDUCTION,
+        AttributeType.TRAE_LEADING_TO_DOSE_INTERRUPTION,
+        AttributeType.TRAE_REQUIRING_HOSPITALIZATION,
+        # CI (Confidence Intervals) for Hazard Ratios - all in Results
+        AttributeType.CI_HR_PFS,
+        AttributeType.CI_HR_OS,
+        AttributeType.CI_HR_EFS,
+        AttributeType.CI_HR_RFS,
+        AttributeType.CI_HR_MFS,
+        AttributeType.HR_TTP,
+        AttributeType.CI_HR_TTP,
         # Grade 3+ AE Specific Adverse Events - all in Results/Safety
         AttributeType.GRADE_3_PLUS_AE_CRS,
         AttributeType.GRADE_3_PLUS_AE_THROMBOCYTOPENIA,
@@ -455,6 +474,14 @@ class RAGOptimizationConfig:
         # Special case: Number of patients can be in methods OR results
         if attribute_type == AttributeType.NUMBER_OF_PATIENTS:
             return ["methods", "results", "table", "conclusions"]
+
+        # Special case: Trial name specifically excludes background
+        if attribute_type == AttributeType.TRIAL_NAME:
+            return [
+                "title",
+                "methods",
+                "conclusions",
+            ]
 
         # Special case: Publication name and year - primarily in title chunk for publications
         if attribute_type in (

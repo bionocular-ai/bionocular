@@ -10,7 +10,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-_DB = Path(__file__).parent / "data" / "trials_db" / "trials.db"
+_DB = Path(__file__).parent.parent / "data" / "trials_db" / "trials.db"
 
 _CSV_FILES = [
     "data/output/trials_extraction/1-300_trials.csv",
@@ -51,7 +51,7 @@ def _load_csv(path: Path) -> list[dict]:
 
 
 def main() -> int:
-    root = Path(__file__).parent
+    root = Path(__file__).parent.parent
     conn = sqlite3.connect(_DB)
 
     total_inserted = 0

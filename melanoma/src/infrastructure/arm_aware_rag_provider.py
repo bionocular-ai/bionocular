@@ -238,7 +238,10 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
                     search_query = SearchQuery(
                         text=query_text,
-                        top_k=target_chunks * 2,  # Retrieve more to allow filtering
+                        top_k=target_chunks
+                        * (
+                            5 if is_publication else 2
+                        ),  # Publications need wider search: tables rank lower than prose in BioBERT space
                         similarity_threshold=similarity_threshold,
                         metadata_filters=search_filters,
                     )
@@ -461,7 +464,10 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
                     search_query = SearchQuery(
                         text=query_text,
-                        top_k=target_chunks * 2,  # Retrieve more to allow filtering
+                        top_k=target_chunks
+                        * (
+                            5 if is_publication else 2
+                        ),  # Publications need wider search: tables rank lower than prose in BioBERT space
                         similarity_threshold=similarity_threshold,
                         metadata_filters=search_filters or {},  # Always pass dict
                     )
@@ -544,6 +550,12 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
             logger.info(
                 f"Retrieved {len(context_strings)} optimized chunks for {attribute_type.value}"
             )
+            if is_numeric and context_strings:
+                logger.info(
+                    "Chunks for %s: %s",
+                    attribute_type.value,
+                    [s[:80] for s in context_strings],
+                )
             return context_strings
 
         except Exception as e:
@@ -823,22 +835,25 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
             return sorted_results
         else:
-            priority_sections = {
+            # Priority order: TABLE first — tables carry authoritative numeric values
+            # (vs prose which may paraphrase or approximate). Within each type,
+            # preserve BioBERT similarity order.
+            _PRIORITY_ORDER = [
+                ChunkType.TABLE,
                 ChunkType.RESULTS,
                 ChunkType.CONCLUSIONS,
-                ChunkType.TABLE,
-            }
+            ]
+            _PRIORITY_SET = set(_PRIORITY_ORDER)
 
-            # Separate into priority and non-priority chunks
-            priority_chunks = []
-            non_priority_chunks = []
-
-            for result in search_results:
-                chunk_type = result.chunk.chunk_type
-                if chunk_type in priority_sections:
-                    priority_chunks.append(result)
-                else:
-                    non_priority_chunks.append(result)
+            priority_chunks = sorted(
+                [r for r in search_results if r.chunk.chunk_type in _PRIORITY_SET],
+                key=lambda r: _PRIORITY_ORDER.index(r.chunk.chunk_type)
+                if r.chunk.chunk_type in _PRIORITY_ORDER
+                else len(_PRIORITY_ORDER),
+            )
+            non_priority_chunks = [
+                r for r in search_results if r.chunk.chunk_type not in _PRIORITY_SET
+            ]
 
             # Log prioritization for debugging
             if priority_chunks:
@@ -847,5 +862,5 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
                     f"for attribute {attribute_type.value}"
                 )
 
-            # Return priority chunks first, then others
+            # Return priority chunks first (TABLE > RESULTS > CONCLUSIONS), then others
             return priority_chunks + non_priority_chunks
