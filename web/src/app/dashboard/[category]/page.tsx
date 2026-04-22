@@ -125,6 +125,7 @@ export default function CancerDashboardSnapshot() {
     queryFn: () =>
       trialsApi.getDashboardTrials(categorySlug, {
         limit: 9,
+        open_fraction: 0.7,
         sponsor_type: ['Industry'],
       }),
     retry: false,
@@ -220,7 +221,6 @@ export default function CancerDashboardSnapshot() {
     if (!snapshotData?.bubble?.length) return [];
     return snapshotData.bubble.map((p) => ({
       treatmentName: p.treatmentName,
-      approvalStatus: p.approvalStatus,
       efficacy: p.efficacy,
       safety: p.safety,
       numberOfPatients: p.numberOfPatients ?? 0,
@@ -233,7 +233,6 @@ export default function CancerDashboardSnapshot() {
     if (!snapshotData?.bar?.length) return [];
     return snapshotData.bar.map((p) => ({
       treatmentName: p.treatmentName,
-      approvalStatus: p.approvalStatus,
       averageValue: p.averageValue,
       medianValue: p.averageValue,
       minValue: p.averageValue,
@@ -591,7 +590,7 @@ export default function CancerDashboardSnapshot() {
                     </div>
                   )}
                   <div className="grid grid-cols-3 gap-2 min-h-0 flex-1 overflow-hidden">
-                    {trialsData?.trials.slice(0, 9).map((trial) => (
+                    {(trialsData?.trials ?? []).map((trial) => (
                       <TrialCard
                         key={trial.nct_id}
                         trial={trial}

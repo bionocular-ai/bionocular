@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DEFAULT_CANCER_TYPE_SLUG, PHASE_OPTIONS, STATUS_OPTIONS } from '@/lib/dashboard-constants';
+import { isOpenStudyStatus, selectTrialsWithOpenBias } from '@/lib/utils/trial-utils';
 
 /** Modality column headers in display order (reference). */
 const MODALITY_HEADERS = [
@@ -36,13 +37,6 @@ const MODALITY_HEADERS = [
 const MODALITY_OTHER = 'Other';
 
 const UNSPECIFIED_LABEL = 'Unspecified';
-const OPEN_STUDY_STATUSES = new Set([
-  'open',
-  'not yet recruiting',
-  'recruiting',
-  'active, not recruiting',
-]);
-
 /** Canonical group-by category values (match trials_extraction_prompts.py). Column order follows these lists. */
 const BIOMARKER_VALUES = [
   'BRAF (V600)',
@@ -102,10 +96,6 @@ function parseModalityValues(raw: string | null | undefined): string[] {
   return unique.length > 0 ? unique : [MODALITY_OTHER];
 }
 
-function isOpenStudyStatus(status: string | null | undefined): boolean {
-  return OPEN_STUDY_STATUSES.has((status ?? '').trim().toLowerCase());
-}
-
 function sortTrialsOpenStatusFirst(trials: DashboardTrialCard[]): DashboardTrialCard[] {
   return [...trials].sort((a, b) => {
     const aIsOpen = isOpenStudyStatus(a.study_status);
@@ -114,6 +104,7 @@ function sortTrialsOpenStatusFirst(trials: DashboardTrialCard[]): DashboardTrial
     return aIsOpen ? -1 : 1;
   });
 }
+
 
 /** Stable empty list for useMemo when no trials data yet. */
 const EMPTY_TRIALS: DashboardTrialCard[] = [];
@@ -952,7 +943,7 @@ function DashboardContent() {
                         ).map((groupLabel) => {
                           const groupTrials = trialsByModality.map[groupLabel] ?? [];
                           const visibleCount = visibleCountByGroup[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
-                          const visibleTrials = groupTrials.slice(0, visibleCount);
+                          const visibleTrials = selectTrialsWithOpenBias(groupTrials, visibleCount);
                           const hasMoreClient = groupTrials.length > visibleCount;
                           const totalForModality = totalByModality[groupLabel];
                           const hasMoreServer = totalForModality != null
@@ -1073,7 +1064,7 @@ function DashboardContent() {
                         ).map((groupLabel) => {
                           const groupTrials = trialsByCustomGroup.map[groupLabel] ?? [];
                           const visibleCount = visibleCountByGroup[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
-                          const visibleTrials = groupTrials.slice(0, visibleCount);
+                          const visibleTrials = selectTrialsWithOpenBias(groupTrials, visibleCount);
                           const hasMoreClient = groupTrials.length > visibleCount;
                           const totalForCategory = totalByGroup[groupLabel];
                           const hasMoreServer =

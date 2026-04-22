@@ -47,11 +47,7 @@ interface BarShapeProps {
 // ============================================================================
 
 const COLORS = {
-  bar: {
-    approved: '#3b82f6',
-    investigational: '#8b5cf6',
-    unknown: '#64748b',
-  },
+  bar: '#3b82f6',
   dot: {
     fill: '#1f2937',
     stroke: '#9ca3af',
@@ -61,11 +57,7 @@ const COLORS = {
 };
 
 const DARK_COLORS = {
-  bar: {
-    approved: '#0ea5e9',
-    investigational: '#8b5cf6',
-    unknown: '#64748b',
-  },
+  bar: '#0ea5e9',
   dot: {
     fill: '#475569',
     stroke: '#e2e8f0',
@@ -168,9 +160,6 @@ function CustomTooltipContent({ tooltipData, metricLabel, metricUnit, isPinned }
 
   if (tooltipData.type === 'scatter') {
     const trial = tooltipData.data as ScatterPoint;
-    const sourceValue = trial.publicationName || trial.abstractId;
-    const isWebScrape = trial.abstractId?.startsWith('webscrape_');
-    const hasSourceUrl = !!trial.sourceUrl;
 
     return (
       <div
@@ -211,10 +200,12 @@ function CustomTooltipContent({ tooltipData, metricLabel, metricUnit, isPinned }
               </Link>
             </div>
           )}
-          {sourceValue && (
+          {(trial.sourceType === 'webscrape' ? !!trial.sourceUrl : !!(trial.abstractId || trial.publicationName)) && (
             <div className="flex justify-between text-[11px]">
-              <span className="text-slate-400">{trial.publicationName ? 'Publication' : 'Abstract ID'}</span>
-              {isWebScrape && hasSourceUrl ? (
+              <span className="text-slate-400">
+                {trial.sourceType === 'publication' ? 'Publication' : trial.sourceType === 'webscrape' ? 'Web Source' : 'Abstract'}
+              </span>
+              {trial.sourceType === 'webscrape' ? (
                 <a
                   href={trial.sourceUrl}
                   target="_blank"
@@ -222,24 +213,24 @@ function CustomTooltipContent({ tooltipData, metricLabel, metricUnit, isPinned }
                   className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="text-[11px]">{sourceValue}</span>
+                  <span className="text-[11px]">{trial.sourceUrl}</span>
                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                   </svg>
                 </a>
-              ) : trial.abstractId ? (
+              ) : trial.sourceType === 'publication' ? (
+                <span className="text-slate-200 text-[11px]">{trial.publicationName}</span>
+              ) : (
                 <Link
                   href={`/trial/abstract/${trial.abstractId}`}
                   className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <span className="text-[11px]">{sourceValue}</span>
+                  <span className="text-[11px]">{trial.abstractId}</span>
                   <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </Link>
-              ) : (
-                <span className="text-slate-200 text-[11px]">{sourceValue}</span>
               )}
             </div>
           )}
@@ -264,18 +255,6 @@ function CustomTooltipContent({ tooltipData, metricLabel, metricUnit, isPinned }
       <div className="mb-2 pb-2 border-b border-slate-700">
         <div className="flex items-center justify-between gap-2">
           <h4 className="font-bold text-white text-xs">{treatment.treatmentName}</h4>
-          <span
-            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
-              treatment.approvalStatus === 'Approved'
-                ? 'bg-emerald-900/50 text-emerald-300'
-                : treatment.approvalStatus === 'Investigational'
-                ? 'bg-violet-900/50 text-violet-300'
-                : 'bg-slate-700/50 text-slate-300'
-            }`}
-          >
-            {treatment.approvalStatus === 'Approved' && '★ '}
-            {treatment.approvalStatus}
-          </span>
         </div>
       </div>
       <div className="mb-2">
@@ -303,45 +282,38 @@ function CustomTooltipContent({ tooltipData, metricLabel, metricUnit, isPinned }
             </Link>
           </div>
         )}
-        {(firstTrial?.publicationName || firstTrial?.abstractId) && (
+        {firstTrial && (firstTrial.sourceType === 'webscrape' ? !!firstTrial.sourceUrl : !!(firstTrial.abstractId || firstTrial.publicationName)) && (
           <div className="flex justify-between text-[11px]">
-            <span className="text-slate-400">{firstTrial.publicationName ? 'Publication' : 'Abstract ID'}</span>
-            {(() => {
-              const sourceValue = firstTrial.publicationName || firstTrial.abstractId;
-              const isWebScrape = firstTrial.abstractId?.startsWith('webscrape_');
-              const hasSourceUrl = !!firstTrial.sourceUrl;
-              if (isWebScrape && hasSourceUrl) {
-                return (
-                  <a
-                    href={firstTrial.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span className="text-[11px]">{sourceValue}</span>
-                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                );
-              }
-              if (firstTrial.abstractId) {
-                return (
-                  <Link
-                    href={`/trial/abstract/${firstTrial.abstractId}`}
-                    className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span className="text-[11px]">{sourceValue}</span>
-                    <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                );
-              }
-              return <span className="text-slate-200 text-[11px]">{sourceValue}</span>;
-            })()}
+            <span className="text-slate-400">
+              {firstTrial.sourceType === 'publication' ? 'Publication' : firstTrial.sourceType === 'webscrape' ? 'Web Source' : 'Abstract'}
+            </span>
+            {firstTrial.sourceType === 'webscrape' ? (
+              <a
+                href={firstTrial.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="text-[11px]">{firstTrial.sourceUrl}</span>
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            ) : firstTrial.sourceType === 'publication' ? (
+              <span className="text-slate-200 text-[11px]">{firstTrial.publicationName}</span>
+            ) : (
+              <Link
+                href={`/trial/abstract/${firstTrial.abstractId}`}
+                className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="text-[11px]">{firstTrial.abstractId}</span>
+                <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            )}
           </div>
         )}
       </div>
@@ -851,14 +823,6 @@ export default function BarChart({
           <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200 flex-shrink-0">
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded" style={{ background: colors.bar.approved }} />
-                <span className="text-slate-600 font-medium">Approved</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded" style={{ background: colors.bar.investigational }} />
-                <span className="text-slate-600 font-medium">Investigational</span>
-              </div>
-              <div className="flex items-center gap-1.5">
                 <div 
                   className="w-3 h-3 rounded-full" 
                   style={{ background: colors.dot.fill, border: `2px solid ${colors.dot.stroke}` }} 
@@ -939,16 +903,10 @@ export default function BarChart({
                 }}
                 onMouseLeave={handleBarMouseLeave}
               >
-                {data.map((entry: HeadToHeadDataPoint, index: number) => (
+                {data.map((_entry: HeadToHeadDataPoint, index: number) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={
-                      entry.approvalStatus === 'Approved'
-                        ? colors.bar.approved
-                        : entry.approvalStatus === 'Investigational'
-                        ? colors.bar.investigational
-                        : colors.bar.unknown
-                    }
+                    fill={colors.bar}
                   />
                 ))}
               </Bar>
@@ -1001,14 +959,6 @@ export default function BarChart({
       <CardContent className="pt-4">
         {showLegend && (
           <div className="flex items-center justify-center gap-6 text-xs mb-4">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded" style={{ background: colors.bar.approved }} />
-              <span className="text-slate-300">Approved</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded" style={{ background: colors.bar.investigational }} />
-              <span className="text-slate-300">Investigational</span>
-            </div>
             <div className="flex items-center gap-1.5">
               <div 
                 className="w-3 h-3 rounded-full" 
@@ -1078,16 +1028,10 @@ export default function BarChart({
                 }}
                 onMouseLeave={handleBarMouseLeave}
               >
-                {data.map((entry: HeadToHeadDataPoint, index: number) => (
+                {data.map((_entry: HeadToHeadDataPoint, index: number) => (
                   <Cell
                     key={`cell-${index}`}
-                    fill={
-                      entry.approvalStatus === 'Approved'
-                        ? colors.bar.approved
-                        : entry.approvalStatus === 'Investigational'
-                        ? colors.bar.investigational
-                        : colors.bar.unknown
-                    }
+                    fill={colors.bar}
                     fillOpacity={0.85}
                   />
                 ))}
@@ -1117,7 +1061,7 @@ export default function BarChart({
 
         {/* Summary Stats */}
         <div className="mt-6 pt-4 border-t border-slate-800">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-white tabular-nums">
                 {data.length}
@@ -1132,22 +1076,6 @@ export default function BarChart({
               </p>
               <p className="text-xs text-slate-400 uppercase tracking-wider">
                 Trial Results
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-sky-400 tabular-nums">
-                {data.filter((d: HeadToHeadDataPoint) => d.approvalStatus === 'Approved').length}
-              </p>
-              <p className="text-xs text-slate-400 uppercase tracking-wider">
-                Approved
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-violet-400 tabular-nums">
-                {data.filter((d: HeadToHeadDataPoint) => d.approvalStatus === 'Investigational').length}
-              </p>
-              <p className="text-xs text-slate-400 uppercase tracking-wider">
-                Investigational
               </p>
             </div>
           </div>

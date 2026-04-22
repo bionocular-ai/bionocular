@@ -33,7 +33,10 @@ import BubbleChart from '@/components/charts/BubbleChart';
 import DumbbellChart, { DumbbellDataPoint } from '@/components/charts/DumbbellChart';
 import { transformHeadToHeadData, transformEfficacySafetyData, transformBubbleChartData } from '@/lib/chart-transformers';
 import { analyticsApi } from '@/lib/api';
-import { HeadToHeadDataPoint, ChartMetric, TrialDataFile, EfficacySafetyDataPoint, BubbleChartDataPoint } from '@/types/analytics';
+import { HeadToHeadDataPoint, ChartMetric, TrialDataFile, EfficacySafetyDataPoint, BubbleChartDataPoint, EFFICACY_METRICS, SAFETY_METRICS } from '@/types/analytics';
+import { CompareTable } from '@/components/compare/CompareTable';
+import { buildCompareTable } from '@/lib/compare-transformers';
+import { CompareSelection, CompareSortMode, MAX_COMPARE_TREATMENTS } from '@/types/compare';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +44,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Category Mapping
@@ -88,15 +92,6 @@ function slugToCategory(slug: string): string {
 // Filter Options
 // ============================================================================
 
-const COMPANY_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'bms', label: 'Bristol-Myers Squibb' },
-  { value: 'merck', label: 'Merck' },
-  { value: 'novartis', label: 'Novartis' },
-  { value: 'roche', label: 'Roche' },
-  { value: 'pfizer', label: 'Pfizer' },
-];
-
 // Note: Funding type filtering is now handled by the backend API
 
 const THERAPY_TYPE_OPTIONS = [
@@ -112,18 +107,13 @@ const RESOURCE_TYPE_OPTIONS = [
   { value: 'all', label: 'All' },
   { value: 'conference', label: 'Conference' },
   { value: 'publication', label: 'Publications' },
+  { value: 'live_feed_upcoming', label: 'Live Feed Upcoming', italic: true },
 ];
 
 const FUNDING_TYPE_OPTIONS = [
   { value: 'all', label: 'All' },
   { value: 'industry', label: 'Industry' },
   { value: 'non-industry', label: 'Non-Industry' },
-];
-
-const BIOMARKER_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'yes', label: 'Yes' },
-  { value: 'no', label: 'No' },
 ];
 
 const EFFICACY_OPTIONS = [
@@ -385,13 +375,6 @@ const ADVANCED_LINE_OF_THERAPY_OPTIONS = [
   { value: 'Adjuvant', label: 'Adjuvant' },
   { value: 'Neoadjuvant', label: 'Neoadjuvant' },
 ];
-const ADVANCED_PREVIOUS_TREATMENT_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'Failed IO', label: 'Failed IO' },
-  { value: 'No prior BRAFi', label: 'No prior BRAFi' },
-  { value: 'IO Naive', label: 'IO Naive' },
-];
-
 // ============================================================================
 // Filter Select Component
 // ============================================================================
@@ -399,7 +382,7 @@ const ADVANCED_PREVIOUS_TREATMENT_OPTIONS = [
 interface FilterSelectProps {
   label: string;
   value: string;
-  options: { value: string; label: string }[];
+  options: { value: string; label: string; italic?: boolean }[];
   onChange: (value: string) => void;
   icon?: React.ReactNode;
   searchable?: boolean;
@@ -460,7 +443,7 @@ function FilterSelect({
                 }}
               >
                 <div className="flex items-center justify-between w-full">
-                  <span>{option.label}</span>
+                  <span className={option.italic ? 'italic' : ''}>{option.label}</span>
                   {value === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}
                 </div>
               </DropdownMenuItem>
@@ -571,20 +554,16 @@ export default function CategoryAnalyticsPage() {
     modeParam === 'efficacy' || modeParam === 'safety' ? modeParam : 'all';
 
   // Filter states - initialized based on mode
-  const [company, setCompany] = useState('all');
   const [therapyType, setTherapyType] = useState('all');
   const [resourceType, setResourceType] = useState<'all' | 'conference' | 'publication'>('all');
-  const [fundingType, setFundingType] = useState<'all' | 'industry' | 'non-industry'>('all');
-  const [biomarker, setBiomarker] = useState('all');
-  // Store raw user selections
-  const [rawSelectedApproved, setRawSelectedApproved] = useState<string[]>([]);
-  const [rawSelectedNonApproved, setRawSelectedNonApproved] = useState<string[]>([]);
-  // Advanced filters (same dimensions as Landscape, separate dropdowns)
+  const [fundingType, setFundingType] = useState<'all' | 'industry' | 'non-industry'>('industry');
+  const [advancedLineOfTherapy, setAdvancedLineOfTherapy] = useState('all');
+  // Store raw treatment selections (merged approved + non-approved)
+  const [rawSelectedTreatments, setRawSelectedTreatments] = useState<string[]>([]);
+  // Advanced filters
   const [advancedModality, setAdvancedModality] = useState('all');
   const [advancedStage, setAdvancedStage] = useState('all');
   const [advancedBiomarker, setAdvancedBiomarker] = useState('all');
-  const [advancedLineOfTherapy, setAdvancedLineOfTherapy] = useState('all');
-  const [advancedPreviousTreatment, setAdvancedPreviousTreatment] = useState('all');
 
   // Initialize params with safe defaults to avoid hydration mismatch
   // These will be updated by useEffect based on mode
@@ -746,9 +725,35 @@ export default function CategoryAnalyticsPage() {
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes (formerly cacheTime)
   });
+
+  const { data: treatmentMetaRaw } = useQuery({
+    queryKey: ['analytics', 'treatmentMeta', apiFilters.cancer_type],
+    queryFn: () => analyticsApi.getTreatmentMeta(apiFilters.cancer_type ?? 'All'),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowHeight, setWindowHeight] = useState(700);
   const [chartType, setChartType] = useState<'bar' | 'diverging' | 'bubble' | 'dumbbell'>('bar');
+
+  // Compare treatments table state
+  const [compareSort, setCompareSort] = useState<CompareSortMode>('most-complete');
+  const [compareHideEmpty, setCompareHideEmpty] = useState(false);
+  const [compareSelections, setCompareSelections] = useState<CompareSelection[]>([]);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+
+  // Clear selections when mode switches — metric namespace changes
+  useEffect(() => {
+    setCompareSelections([]);
+  }, [mode]);
+
+  const toggleCompareSelection = useCallback((sel: CompareSelection) => {
+    setCompareSelections(prev => {
+      const idx = prev.findIndex(s => s.treatmentName === sel.treatmentName && s.metricKey === sel.metricKey);
+      if (idx >= 0) return prev.filter((_, i) => i !== idx);
+      return [...prev, sel];
+    });
+  }, []);
 
   // Handle chart type changes - ensure proper filter states
   useEffect(() => {
@@ -771,16 +776,19 @@ export default function CategoryAnalyticsPage() {
       }
     } else if (mode === 'efficacy' && (chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell')) {
       if (chartType === 'bubble') {
-        setEfficacyParam('OBJECTIVE_RESPONSE_RATE'); // ORR
-        setEfficacyParamY('MEDIAN_PFS');             // Median PFS
-        setZAxisParam('NUMBER_OF_PATIENTS');         // Number of patients
+        setChartType('diverging');
+        if (efficacyParamY === 'none') {
+          setEfficacyParamY(efficacyParam === 'OBJECTIVE_RESPONSE_RATE' ? 'DISEASE_CONTROL_RATE' : 'OBJECTIVE_RESPONSE_RATE');
+        }
       } else if (efficacyParamY === 'none') {
         setEfficacyParamY(efficacyParam === 'OBJECTIVE_RESPONSE_RATE' ? 'DISEASE_CONTROL_RATE' : 'OBJECTIVE_RESPONSE_RATE');
       }
     } else if (mode === 'safety' && (chartType === 'diverging' || chartType === 'bubble' || chartType === 'dumbbell')) {
       if (chartType === 'bubble') {
-        if (zAxisParam.startsWith('P_VALUE_')) setZAxisParam('NUMBER_OF_PATIENTS');
-        setSafetyParamY('AE'); // Y-axis default: AE (%)
+        setChartType('diverging');
+        if (safetyParamY === 'none') {
+          setSafetyParamY(safetyParam === 'GRADE_3_PLUS_AE' ? 'TEAE' : 'GRADE_3_PLUS_AE');
+        }
       } else if (safetyParamY === 'none') {
         setSafetyParamY(safetyParam === 'GRADE_3_PLUS_AE' ? 'TEAE' : 'GRADE_3_PLUS_AE');
       }
@@ -937,23 +945,65 @@ export default function CategoryAnalyticsPage() {
     };
   }, [analyticsData, categoryName]);
 
-  // Derive valid selections by filtering raw selections against available therapies
-  // This automatically handles cleanup when available therapies change (e.g., category switch)
-  const selectedApproved = useMemo(
-    () => rawSelectedApproved.filter(t => availableTherapies.approved.includes(t)),
-    [rawSelectedApproved, availableTherapies.approved]
+  // All available treatments (approved + non-approved merged)
+  const allAvailableTreatments = useMemo(
+    () => [...availableTherapies.approved, ...availableTherapies.nonApproved].sort(),
+    [availableTherapies]
   );
 
-  const selectedNonApproved = useMemo(
-    () => rawSelectedNonApproved.filter(t => availableTherapies.nonApproved.includes(t)),
-    [rawSelectedNonApproved, availableTherapies.nonApproved]
+  // Validate raw selections against currently available treatments
+  const selectedTreatments = useMemo(
+    () => rawSelectedTreatments.filter(t => allAvailableTreatments.includes(t)).slice(0, MAX_COMPARE_TREATMENTS),
+    [rawSelectedTreatments, allAvailableTreatments]
   );
+
+  const compareTableData = useMemo(() => {
+    const trials = [
+      ...((analyticsData?.abstracts as unknown as TrialDataFile['abstracts']) ?? []),
+      ...((analyticsData?.publications as unknown as TrialDataFile['publications']) ?? []),
+    ];
+    return buildCompareTable(trials ?? [], allAvailableTreatments, mode, treatmentMetaRaw ?? []);
+  }, [analyticsData, allAvailableTreatments, mode, treatmentMetaRaw]);
+
+  const activeMetricKeys = useMemo(() => {
+    const keys: string[] = [];
+    if (mode === 'all') {
+      if (efficacyParam !== 'none') keys.push(efficacyParam);
+      if (safetyParam !== 'none') keys.push(safetyParam);
+    } else if (mode === 'efficacy') {
+      if (efficacyParam !== 'none') keys.push(efficacyParam);
+      if ((chartType === 'diverging' || chartType === 'dumbbell') && efficacyParamY !== 'none') keys.push(efficacyParamY);
+    } else if (mode === 'safety') {
+      if (safetyParam !== 'none') keys.push(safetyParam);
+      if ((chartType === 'diverging' || chartType === 'dumbbell') && safetyParamY !== 'none') keys.push(safetyParamY);
+    }
+    return keys;
+  }, [mode, chartType, efficacyParam, safetyParam, efficacyParamY, safetyParamY]);
+
+  // Derive chart overrides from cell selections. When any cells are selected, they
+  // take precedence over the dropdown-bound metric state for driving the chart.
+  const compareOverride = useMemo(() => {
+    if (compareSelections.length === 0) return null;
+    const treatments = Array.from(new Set(compareSelections.map(s => s.treatmentName)));
+    const efficacyMetrics: string[] = [];
+    const safetyMetrics: string[] = [];
+    for (const s of compareSelections) {
+      if (EFFICACY_METRICS[s.metricKey] && !efficacyMetrics.includes(s.metricKey)) efficacyMetrics.push(s.metricKey);
+      if (SAFETY_METRICS[s.metricKey] && !safetyMetrics.includes(s.metricKey)) safetyMetrics.push(s.metricKey);
+    }
+    return { treatments, efficacyMetrics, safetyMetrics };
+  }, [compareSelections]);
 
   // Transform data for chart (backend already filtered the data)
   const chartData = useMemo<HeadToHeadDataPoint[]>(() => {
     if (!analyticsData) return [];
-    if (!displayMetric) return [];
     if (!analyticsData.abstracts) return [];
+
+    const targetMetric =
+      compareOverride?.efficacyMetrics[0] ||
+      compareOverride?.safetyMetrics[0] ||
+      displayMetric;
+    if (!targetMetric) return [];
 
     // Backend has already filtered the data, so we just need to transform it
     // Transform backend data to TrialDataFile format for the transformer
@@ -968,12 +1018,12 @@ export default function CategoryAnalyticsPage() {
     };
 
     let data = transformHeadToHeadData(trialData, {
-      targetMetric: displayMetric as ChartMetric,
+      targetMetric: targetMetric as ChartMetric,
       minTrialCount: 1,
     });
 
     // Filter by selected therapies (this is still client-side as it's UI state)
-    const allSelected = [...selectedApproved, ...selectedNonApproved];
+    const allSelected = compareOverride?.treatments ?? selectedTreatments;
     if (allSelected.length > 0) {
       data = data.filter((d) => allSelected.includes(d.treatmentName));
     }
@@ -982,7 +1032,7 @@ export default function CategoryAnalyticsPage() {
     data.sort((a, b) => b.averageValue - a.averageValue);
 
     return data;
-  }, [analyticsData, displayMetric, selectedApproved, selectedNonApproved]);
+  }, [analyticsData, displayMetric, selectedTreatments, compareOverride]);
 
   // Transform data for diverging bar chart (efficacy vs safety, or efficacy vs efficacy, or safety vs safety)
   const divergingChartData = useMemo<EfficacySafetyDataPoint[]>(() => {
@@ -990,17 +1040,23 @@ export default function CategoryAnalyticsPage() {
     let efficacyMetric: ChartMetric;
     let safetyMetric: ChartMetric;
     if (mode === 'efficacy') {
-      if (efficacyParam === 'none' || efficacyParamY === 'none') return [];
-      efficacyMetric = efficacyParam as ChartMetric;
-      safetyMetric = efficacyParamY as ChartMetric;
+      const x = compareOverride?.efficacyMetrics[0] ?? efficacyParam;
+      const y = compareOverride?.efficacyMetrics[1] ?? efficacyParamY;
+      if (x === 'none' || y === 'none') return [];
+      efficacyMetric = x as ChartMetric;
+      safetyMetric = y as ChartMetric;
     } else if (mode === 'safety') {
-      if (safetyParam === 'none' || safetyParamY === 'none') return [];
-      efficacyMetric = safetyParam as ChartMetric;
-      safetyMetric = safetyParamY as ChartMetric;
+      const x = compareOverride?.safetyMetrics[0] ?? safetyParam;
+      const y = compareOverride?.safetyMetrics[1] ?? safetyParamY;
+      if (x === 'none' || y === 'none') return [];
+      efficacyMetric = x as ChartMetric;
+      safetyMetric = y as ChartMetric;
     } else {
-      if (efficacyParam === 'none' || safetyParam === 'none') return [];
-      efficacyMetric = efficacyParam as ChartMetric;
-      safetyMetric = safetyParam as ChartMetric;
+      const ex = compareOverride?.efficacyMetrics[0] ?? efficacyParam;
+      const sy = compareOverride?.safetyMetrics[0] ?? safetyParam;
+      if (ex === 'none' || sy === 'none') return [];
+      efficacyMetric = ex as ChartMetric;
+      safetyMetric = sy as ChartMetric;
     }
 
     const allTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
@@ -1018,13 +1074,13 @@ export default function CategoryAnalyticsPage() {
       minTrialCount: 1,
     });
 
-    const allSelected = [...selectedApproved, ...selectedNonApproved];
+    const allSelected = compareOverride?.treatments ?? selectedTreatments;
     if (allSelected.length > 0) {
       data = data.filter((d: EfficacySafetyDataPoint | BubbleChartDataPoint) => allSelected.includes(d.treatmentName));
     }
 
     return data;
-  }, [analyticsData, mode, efficacyParam, efficacyParamY, safetyParam, safetyParamY, selectedApproved, selectedNonApproved]);
+  }, [analyticsData, mode, efficacyParam, efficacyParamY, safetyParam, safetyParamY, selectedTreatments, compareOverride]);
 
   // Transform data for bubble chart (efficacy vs safety, or efficacy vs efficacy, or safety vs safety)
   const bubbleChartData = useMemo<BubbleChartDataPoint[]>(() => {
@@ -1032,17 +1088,23 @@ export default function CategoryAnalyticsPage() {
     let efficacyMetric: ChartMetric;
     let safetyMetric: ChartMetric;
     if (mode === 'efficacy') {
-      if (efficacyParam === 'none' || efficacyParamY === 'none') return [];
-      efficacyMetric = efficacyParam as ChartMetric;
-      safetyMetric = efficacyParamY as ChartMetric;
+      const x = compareOverride?.efficacyMetrics[0] ?? efficacyParam;
+      const y = compareOverride?.efficacyMetrics[1] ?? efficacyParamY;
+      if (x === 'none' || y === 'none') return [];
+      efficacyMetric = x as ChartMetric;
+      safetyMetric = y as ChartMetric;
     } else if (mode === 'safety') {
-      if (safetyParam === 'none' || safetyParamY === 'none') return [];
-      efficacyMetric = safetyParam as ChartMetric;
-      safetyMetric = safetyParamY as ChartMetric;
+      const x = compareOverride?.safetyMetrics[0] ?? safetyParam;
+      const y = compareOverride?.safetyMetrics[1] ?? safetyParamY;
+      if (x === 'none' || y === 'none') return [];
+      efficacyMetric = x as ChartMetric;
+      safetyMetric = y as ChartMetric;
     } else {
-      if (efficacyParam === 'none' || safetyParam === 'none') return [];
-      efficacyMetric = efficacyParam as ChartMetric;
-      safetyMetric = safetyParam as ChartMetric;
+      const ex = compareOverride?.efficacyMetrics[0] ?? efficacyParam;
+      const sy = compareOverride?.safetyMetrics[0] ?? safetyParam;
+      if (ex === 'none' || sy === 'none') return [];
+      efficacyMetric = ex as ChartMetric;
+      safetyMetric = sy as ChartMetric;
     }
 
     const allTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
@@ -1061,13 +1123,13 @@ export default function CategoryAnalyticsPage() {
       minTrialCount: 1,
     });
 
-    const allSelected = [...selectedApproved, ...selectedNonApproved];
+    const allSelected = compareOverride?.treatments ?? selectedTreatments;
     if (allSelected.length > 0) {
       data = data.filter((d: EfficacySafetyDataPoint | BubbleChartDataPoint) => allSelected.includes(d.treatmentName));
     }
 
     return data;
-  }, [analyticsData, mode, efficacyParam, efficacyParamY, safetyParam, safetyParamY, zAxisParam, selectedApproved, selectedNonApproved]);
+  }, [analyticsData, mode, efficacyParam, efficacyParamY, safetyParam, safetyParamY, zAxisParam, selectedTreatments, compareOverride]);
 
   // Dumbbell chart data: map bubble chart data (efficacy mode) to treatment + valueA (X) + valueB (Y) + hr (bubble size)
   const dumbbellChartData = useMemo<DumbbellDataPoint[]>(() => {
@@ -1092,7 +1154,7 @@ export default function CategoryAnalyticsPage() {
   }, [efficacyParam, safetyParam]);
 
   return (
-    <div className="flex flex-col min-h-screen w-full bg-slate-50">
+    <div className="flex flex-col h-screen w-full bg-slate-50 overflow-hidden">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="w-full px-4 md:px-6">
@@ -1614,135 +1676,89 @@ export default function CategoryAnalyticsPage() {
       )}
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Panel - Filters */}
-        <aside className="w-[480px] border-r border-slate-200 bg-white p-4 overflow-y-auto flex-shrink-0">
-          {/* Cancer Type Badge */}
-          <div className="mb-4 p-2.5 bg-[var(--brand-accent-light)] rounded-lg border border-[var(--brand-border)]">
-            <div className="text-[11px] font-medium text-[var(--brand-primary)] uppercase tracking-wider mb-0.5">Cancer Type</div>
-            <div className="text-sm font-semibold text-[var(--brand-text)]">{categoryName}</div>
-          </div>
-
-          {/* 2-Column Filter Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Row 1 */}
-            <FilterSelect
-              label="Company"
-              value={company}
-              options={COMPANY_OPTIONS}
-              onChange={setCompany}
-            />
-            <FilterSelect
-              label="Type of Therapy"
-              value={therapyType}
-              options={THERAPY_TYPE_OPTIONS}
-              onChange={setTherapyType}
-            />
-
-            {/* Row 2 */}
-            <FilterSelect
-              label="Type of Resource"
-              value={resourceType}
-              options={RESOURCE_TYPE_OPTIONS}
-              onChange={(value) => setResourceType(value as 'all' | 'conference' | 'publication')}
-            />
-
-            {/* Row 3 - Therapy Selection */}
-            <TherapyMultiSelect
-              label="Approved Therapies"
-              maxLabel="Max 5"
-              options={availableTherapies.approved}
-              selected={selectedApproved}
-              onChange={setRawSelectedApproved}
-              maxSelect={5}
-            />
-            <TherapyMultiSelect
-              label="Non-Approved"
-              maxLabel="Max 5"
-              options={availableTherapies.nonApproved}
-              selected={selectedNonApproved}
-              onChange={setRawSelectedNonApproved}
-              maxSelect={5}
-            />
-
-            {/* Row 4 */}
-            <FilterSelect
-              label="Type of Funding"
-              value={fundingType}
-              options={FUNDING_TYPE_OPTIONS}
-              onChange={(value) => setFundingType(value as 'all' | 'industry' | 'non-industry')}
-            />
-
-            {/* Row 5 */}
-            <FilterSelect
-              label="Biomarker (YES or NO)"
-              value={biomarker}
-              options={BIOMARKER_OPTIONS}
-              onChange={setBiomarker}
-            />
-          </div>
-
-          {/* Advanced filters (same dimensions as Landscape page, separate filters) */}
-          <div className="mt-4 space-y-3">
-            <div className="text-[11px] font-medium text-[var(--brand-primary)] uppercase tracking-wider">
-              Advanced filters
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Horizontal Filter Bar */}
+        <div className="bg-white border-b border-slate-200 px-4 py-3 flex-shrink-0">
+          <div className="flex items-end gap-2 flex-wrap">
+            <div className="px-2.5 py-1.5 bg-[var(--brand-accent-light)] rounded-md border border-[var(--brand-border)] flex-shrink-0 self-end">
+              <div className="text-[10px] font-medium text-[var(--brand-primary)] uppercase tracking-wider">Cancer Type</div>
+              <div className="text-sm font-semibold text-[var(--brand-text)]">{categoryName}</div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="w-36">
               <FilterSelect
-                label="Modality"
-                value={advancedModality}
-                options={ADVANCED_MODALITY_OPTIONS}
-                onChange={setAdvancedModality}
-              />
-              <FilterSelect
-                label="Stage"
-                value={advancedStage}
-                options={ADVANCED_STAGE_OPTIONS}
-                onChange={setAdvancedStage}
-              />
-              <FilterSelect
-                label="Biomarker"
-                value={advancedBiomarker}
-                options={ADVANCED_BIOMARKER_OPTIONS}
-                onChange={setAdvancedBiomarker}
-              />
-              <FilterSelect
-                label="Line of therapy"
-                value={advancedLineOfTherapy}
-                options={ADVANCED_LINE_OF_THERAPY_OPTIONS}
-                onChange={setAdvancedLineOfTherapy}
-              />
-              <FilterSelect
-                label="Previous treatment"
-                value={advancedPreviousTreatment}
-                options={ADVANCED_PREVIOUS_TREATMENT_OPTIONS}
-                onChange={setAdvancedPreviousTreatment}
+                label="Funding"
+                value={fundingType}
+                options={FUNDING_TYPE_OPTIONS}
+                onChange={(value) => setFundingType(value as 'all' | 'industry' | 'non-industry')}
               />
             </div>
-          </div>
-
-          {/* Divider */}
-          <div className="my-4 border-t border-slate-200" />
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
+            <div className="w-40">
+              <FilterSelect label="Therapy" value={therapyType} options={THERAPY_TYPE_OPTIONS} onChange={setTherapyType} />
+            </div>
+            <div className="w-40">
+              <FilterSelect label="Line of treatment" value={advancedLineOfTherapy} options={ADVANCED_LINE_OF_THERAPY_OPTIONS} onChange={setAdvancedLineOfTherapy} />
+            </div>
+            <div className="w-40">
+              <FilterSelect
+                label="Resource"
+                value={resourceType}
+                options={RESOURCE_TYPE_OPTIONS}
+                onChange={(value) => setResourceType(value as 'all' | 'conference' | 'publication')}
+              />
+            </div>
+            <div className="w-48">
+              <TherapyMultiSelect
+                label="Treatments"
+                maxLabel="Max 5"
+                options={allAvailableTreatments}
+                selected={selectedTreatments}
+                onChange={setRawSelectedTreatments}
+                maxSelect={5}
+              />
+            </div>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setAdvancedFiltersOpen(o => !o)}
+                className={cn(
+                  'flex h-10 items-center gap-1.5 rounded-md border-2 px-3 text-sm font-medium transition-all',
+                  advancedFiltersOpen
+                    ? 'border-[var(--brand-primary)] bg-[var(--brand-accent-light)] text-[var(--brand-primary)]'
+                    : 'border-[var(--brand-border)] bg-white text-gray-700 hover:border-[var(--brand-accent)]',
+                )}
+              >
+                Advanced
+                <ChevronDown className={cn('h-4 w-4 transition-transform', advancedFiltersOpen && 'rotate-180')} />
+              </button>
+              {advancedFiltersOpen && (
+                <>
+                  <div className="fixed inset-0 z-30" onClick={() => setAdvancedFiltersOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 z-40 w-[400px] rounded-lg border border-slate-200 bg-white shadow-lg p-4">
+                    <div className="text-[11px] font-medium text-[var(--brand-primary)] uppercase tracking-wider mb-3">
+                      Advanced filters
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <FilterSelect label="Modality" value={advancedModality} options={ADVANCED_MODALITY_OPTIONS} onChange={setAdvancedModality} />
+                      <FilterSelect label="Stage" value={advancedStage} options={ADVANCED_STAGE_OPTIONS} onChange={setAdvancedStage} />
+                      <FilterSelect label="Biomarker" value={advancedBiomarker} options={ADVANCED_BIOMARKER_OPTIONS} onChange={setAdvancedBiomarker} />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="flex-1 min-w-[8px]" />
             <Button
               variant="outline"
-              className="flex-1 border-[var(--brand-border)] text-[var(--brand-primary)] hover:bg-[var(--brand-accent-light)]"
+              className="h-10 border-[var(--brand-border)] text-[var(--brand-primary)] hover:bg-[var(--brand-accent-light)]"
               onClick={() => {
-                setCompany('all');
                 setTherapyType('all');
                 setResourceType('all');
-                setFundingType('all');
-                setBiomarker('all');
-                setRawSelectedApproved([]);
-                setRawSelectedNonApproved([]);
+                setFundingType('industry');
+                setAdvancedLineOfTherapy('all');
+                setRawSelectedTreatments([]);
                 setAdvancedModality('all');
                 setAdvancedStage('all');
                 setAdvancedBiomarker('all');
-                setAdvancedLineOfTherapy('all');
-                setAdvancedPreviousTreatment('all');
-                // Reset parameters based on mode
                 setEfficacyParamY('none');
                 setSafetyParamY('none');
                 if (mode === 'safety') {
@@ -1757,16 +1773,33 @@ export default function CategoryAnalyticsPage() {
                 }
               }}
             >
-              Reset Filters
+              Reset
             </Button>
-            <Button className="flex-1 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white">
-              Apply Filters
+            <Button className="h-10 bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-hover)] text-white">
+              Apply
             </Button>
           </div>
-        </aside>
+        </div>
+
+        {/* Split: Compare Table | Chart */}
+        <div className="flex flex-1 overflow-hidden gap-3 p-3 min-h-0">
+          <section className="flex-[0_0_60%] min-w-0 min-h-0 flex flex-col overflow-hidden">
+            <CompareTable
+              data={compareTableData}
+              mode={mode}
+              title={`Compare treatments — ${categoryName}`}
+              sort={compareSort}
+              onSortChange={setCompareSort}
+              hideEmpty={compareHideEmpty}
+              onHideEmptyChange={setCompareHideEmpty}
+              selections={compareSelections}
+              onToggleSelection={toggleCompareSelection}
+              activeMetricKeys={activeMetricKeys}
+            />
+          </section>
 
         {/* Right Panel - Chart */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-white min-w-0">
+        <main className="flex-[0_0_40%] min-h-0 flex flex-col overflow-hidden bg-white min-w-0 rounded-lg border border-slate-200">
           {/* Compact Chart Header */}
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-end gap-3 flex-shrink-0">
             {/* Chart type label + selector - Show in all Head to Head modes */}
@@ -1811,14 +1844,16 @@ export default function CategoryAnalyticsPage() {
                       <span>Diverging Chart</span>
                       {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setChartType('bubble')}
-                      className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
-                    >
-                      <CircleDot className="h-4 w-4 text-slate-500" />
-                      <span>Bubble Chart</span>
-                      {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
-                    </DropdownMenuItem>
+                    {mode === 'all' && (
+                      <DropdownMenuItem
+                        onClick={() => setChartType('bubble')}
+                        className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
+                      >
+                        <CircleDot className="h-4 w-4 text-slate-500" />
+                        <span>Bubble Chart</span>
+                        {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
+                      </DropdownMenuItem>
+                    )}
                     {mode === 'efficacy' && (
                       <DropdownMenuItem
                         onClick={() => setChartType('dumbbell')}
@@ -1987,6 +2022,7 @@ export default function CategoryAnalyticsPage() {
             </div>
           </div>
         </main>
+        </div>
       </div>
       </main>
 
@@ -2043,14 +2079,16 @@ export default function CategoryAnalyticsPage() {
                           <span>Diverging Chart</span>
                           {chartType === 'diverging' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setChartType('bubble')}
-                          className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
-                        >
-                          <CircleDot className="h-4 w-4 text-slate-500" />
-                          <span>Bubble Chart</span>
-                          {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
-                        </DropdownMenuItem>
+                        {mode === 'all' && (
+                          <DropdownMenuItem
+                            onClick={() => setChartType('bubble')}
+                            className="flex items-center gap-3 rounded-lg py-2.5 cursor-pointer focus:bg-[var(--brand-accent-light)] focus:text-[var(--brand-primary)]"
+                          >
+                            <CircleDot className="h-4 w-4 text-slate-500" />
+                            <span>Bubble Chart</span>
+                            {chartType === 'bubble' && <Check className="h-4 w-4 ml-auto text-[var(--brand-primary)]" />}
+                          </DropdownMenuItem>
+                        )}
                         {mode === 'efficacy' && (
                           <DropdownMenuItem
                             onClick={() => setChartType('dumbbell')}

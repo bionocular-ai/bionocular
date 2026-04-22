@@ -182,21 +182,6 @@ const CustomTooltip = ({
       <div className="mb-2 pb-2 border-b border-slate-700">
         <div className="flex items-center justify-between gap-2">
           <h4 className="font-bold text-white text-xs">{label || dataNonNull.treatmentName}</h4>
-          {(dataNonNull.approvalStatus || dataNonNull.developmentStatus) && (
-            <span
-              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 ${
-                (dataNonNull.approvalStatus === 'Approved' || dataNonNull.developmentStatus === 'Approved')
-                  ? 'bg-emerald-900/50 text-emerald-300'
-                  : (dataNonNull.developmentStatus === 'Development stopped')
-                  ? 'bg-red-900/50 text-red-300'
-                  : 'bg-violet-900/50 text-violet-300'
-              }`}
-            >
-              {((dataNonNull.approvalStatus === 'Approved' || dataNonNull.developmentStatus === 'Approved') && '★ ')}
-              {(dataNonNull.developmentStatus === 'Development stopped' && 'Ø ')}
-              {(dataNonNull.approvalStatus || dataNonNull.developmentStatus)}
-            </span>
-          )}
         </div>
         {dataNonNull.treatmentType && (
           <p className="text-[11px] text-slate-400 mt-0.5">{dataNonNull.treatmentType}</p>
@@ -259,47 +244,42 @@ const CustomTooltip = ({
             </Link>
           </div>
         )}
-        {(currentTrial.abstractId || currentTrial.publicationName) && (
+        {(currentTrial.sourceType === 'webscrape' ? !!currentTrial.sourceUrl : !!(currentTrial.abstractId || currentTrial.publicationName)) && (
           <div className="flex justify-between text-[11px]">
             <span className="text-slate-400">
-              {currentTrial.publicationName ? 'Publication' : 'Abstract ID'}
+              {currentTrial.sourceType === 'publication'
+                ? 'Publication'
+                : currentTrial.sourceType === 'webscrape'
+                ? 'Web Source'
+                : 'Abstract'}
             </span>
-            {(() => {
-              const sourceValue = currentTrial.publicationName || currentTrial.abstractId;
-              const isWebScrape = currentTrial.abstractId?.startsWith('webscrape_');
-              const hasSourceUrl = !!dataNonNull.sourceUrl;
-              if (isWebScrape && hasSourceUrl) {
-                return (
-                  <a
-                    href={dataNonNull.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span className="text-xs">{sourceValue}</span>
-                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                  </a>
-                );
-              }
-              if (currentTrial.abstractId) {
-                return (
-                  <Link
-                    href={`/trial/abstract/${currentTrial.abstractId}`}
-                    className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span className="text-[11px]">{sourceValue}</span>
-                    <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </Link>
-                );
-              }
-              return <span className="text-slate-200 text-[11px]">{sourceValue}</span>;
-            })()}
+            {currentTrial.sourceType === 'webscrape' ? (
+              <a
+                href={currentTrial.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="text-xs">{currentTrial.sourceUrl}</span>
+                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
+            ) : currentTrial.sourceType === 'publication' ? (
+              <span className="text-slate-200 text-[11px]">{currentTrial.publicationName}</span>
+            ) : (
+              <Link
+                href={`/trial/abstract/${currentTrial.abstractId}`}
+                className="text-sky-400 hover:text-sky-300 hover:underline cursor-pointer transition-colors inline-flex items-center gap-1"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="text-[11px]">{currentTrial.abstractId}</span>
+                <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            )}
           </div>
         )}
         {dataNonNull.biomarker && (
