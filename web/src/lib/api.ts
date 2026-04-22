@@ -252,6 +252,69 @@ export const trialsApi = {
     const supabase = createClient();
     const dbCancerType = getDbCancerType(cancerType);
 
+    // Two-query path: fetch open + closed separately at DB level to guarantee ratio.
+    const OPEN_RAW = ['RECRUITING', 'NOT_YET_RECRUITING', 'ACTIVE_NOT_RECRUITING'];
+    const CLOSED_RAW = ['COMPLETED', 'TERMINATED', 'WITHDRAWN', 'SUSPENDED', 'ENROLLING_BY_INVITATION', 'UNKNOWN'];
+
+    if (filters.open_fraction !== undefined && filters.limit !== undefined) {
+      const wantOpen = Math.round(filters.limit * filters.open_fraction);
+      const wantClosed = filters.limit - wantOpen;
+      const biasSelect = '*, clinical_trials!inner(brief_title, phases, lead_sponsor_name, enrollment_count, overall_status, lead_sponsor_class)';
+
+      const [{ data: openData, error: openErr }, { data: closedData, error: closedErr }] = await Promise.all([
+        supabase.from('trial_landscape').select(biasSelect).contains('cancer_type', [dbCancerType]).in('clinical_trials.overall_status', OPEN_RAW).limit(wantOpen),
+        supabase.from('trial_landscape').select(biasSelect).contains('cancer_type', [dbCancerType]).in('clinical_trials.overall_status', CLOSED_RAW).limit(wantClosed),
+      ]);
+
+      if (openErr || closedErr) {
+        console.error('[getDashboardTrials] status-split error:', openErr || closedErr);
+        return { trials: [], total: 0 };
+      }
+
+      const merged = [...(openData || []), ...(closedData || [])];
+      const nctIds = merged.map((d: Record<string, unknown>) => d.nct_id).filter(Boolean);
+      const { data: outcomesData } = await supabase.from('trial_outcomes').select('nct_id').in('nct_id', nctIds);
+      const nctIdsWithOutcomes = new Set((outcomesData || []).map((o: { nct_id: string }) => o.nct_id));
+
+      let biasTrials: DashboardTrialCard[] = merged.map((d: Record<string, unknown>) => {
+        const ctEntry = Array.isArray(d.clinical_trials) ? (d.clinical_trials as Record<string, unknown>[])[0] : d.clinical_trials as Record<string, unknown>;
+        const rawPhases = Array.isArray(ctEntry?.phases) ? ctEntry.phases as string[] : [];
+        return {
+          nct_id: (d.nct_id as string) || '',
+          title: (ctEntry?.brief_title as string) || null,
+          drug_name: (d.treatment_name as string) || null,
+          sponsor_name: (ctEntry?.lead_sponsor_name as string) || null,
+          enrollment_count: (ctEntry?.enrollment_count as number) || null,
+          phase: rawPhases.map(normalizePhase).join(', ') || 'Unknown',
+          study_status: normalizeStatus((ctEntry?.overall_status as string) || 'UNKNOWN'),
+          sponsor_type: (ctEntry?.lead_sponsor_class as string) || 'Unknown',
+          approval_group: 'Investigational',
+          trial_name: (d.acronym as string) || null,
+          modality: (d.modality as string) || null,
+          treatment_name: (d.treatment_name as string) || null,
+          stage: (d.stage as string) || null,
+          biomarker: (d.biomarker as string) || null,
+          line_of_therapy: (d.line_of_therapy as string) || null,
+          previous_treatment_criteria: (d.previous_treatment_criteria as string) || null,
+          has_outcomes: nctIdsWithOutcomes.has(d.nct_id as string),
+        };
+      });
+
+      if (filters.sponsor_type && filters.sponsor_type.length > 0) {
+        const wantsIndustry = filters.sponsor_type.some(s => s.toLowerCase() === 'industry');
+        const wantsNonIndustry = filters.sponsor_type.some(s => s.toLowerCase() === 'non-industry');
+        biasTrials = biasTrials.filter(t => {
+          const isIndustry = (t.sponsor_type || '').toUpperCase() === 'INDUSTRY';
+          if (wantsIndustry && wantsNonIndustry) return true;
+          if (wantsIndustry) return isIndustry;
+          if (wantsNonIndustry) return !isIndustry;
+          return false;
+        });
+      }
+
+      return { trials: biasTrials, total: biasTrials.length };
+    }
+
     // Parallel: exact count (HEAD) + data rows — both share identical filters.
     let countQ = supabase.from('trial_landscape')
       .select('nct_id', { count: 'exact', head: true })
@@ -297,6 +360,7 @@ export const trialsApi = {
          study_status: normalizeStatus((ctEntry?.overall_status as string) || 'UNKNOWN'),
          sponsor_type: (ctEntry?.lead_sponsor_class as string) || 'Unknown',
          approval_group: 'Investigational',
+         trial_name: (d.acronym as string) || null,
          modality: (d.modality as string) || null,
          treatment_name: (d.treatment_name as string) || null,
          stage: (d.stage as string) || null,
@@ -775,6 +839,8 @@ export interface DashboardTrialsFilters {
   category_filter?: string;
   category_skip?: number;
   category_limit?: number;
+  /** When set with limit, fetches open/closed trials in separate DB queries to guarantee the ratio. */
+  open_fraction?: number;
 }
 
 export interface TherapeuticIndexResponse {
@@ -995,6 +1061,24 @@ export const analyticsApi = {
     };
   },
 
+  getTreatmentMeta: async (
+    cancerType: string,
+  ): Promise<Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null }>> => {
+    const supabase = createClient();
+    const dbCancerType = getDbCancerType(cancerType);
+    const { data } = await supabase
+      .from('trial_landscape')
+      .select('treatment_name, modality, line_of_therapy')
+      .contains('cancer_type', [dbCancerType]);
+    return (data || [])
+      .filter((d: Record<string, unknown>) => d.treatment_name)
+      .map((d: Record<string, unknown>) => ({
+        treatmentName: d.treatment_name as string,
+        modality: (d.modality as string) || null,
+        lineOfTreatment: (d.line_of_therapy as string) || null,
+      }));
+  },
+
   getSnapshot: async (cancer_type: string, resource_type = 'all', bubbleLimit = 8, barLimit = 8): Promise<SnapshotResponse> => {
     void resource_type; // reserved for future filtering; keep signature stable
     // Reuse the same data + transformer pipeline as the analytics page so bubble
@@ -1020,7 +1104,6 @@ export const analyticsApi = {
       .slice(0, bubbleLimit)
       .map(p => ({
         treatmentName: p.treatmentName,
-        approvalStatus: (p.approvalStatus as 'Approved' | 'Investigational') || 'Investigational',
         efficacy: p.efficacy ?? 0,
         safety: p.safety ?? 0,
         numberOfPatients: p.numberOfPatients ?? null,
@@ -1034,7 +1117,6 @@ export const analyticsApi = {
       .slice(0, barLimit)
       .map(p => ({
         treatmentName: p.treatmentName,
-        approvalStatus: (p.approvalStatus as 'Approved' | 'Investigational') || 'Investigational',
         averageValue: p.efficacy ?? 0,
         trialCount: p.allTrials?.length ?? 1,
       }));
@@ -1048,7 +1130,6 @@ export const analyticsApi = {
 /** Pre-aggregated bubble data point (ORR + TRAE) returned by /api/analytics/snapshot */
 export interface SnapshotBubblePoint {
   treatmentName: string;
-  approvalStatus: 'Approved' | 'Investigational';
   efficacy: number;       // avg ORR
   safety: number;         // avg Grade 3+ TRAE
   numberOfPatients: number | null;
@@ -1058,7 +1139,6 @@ export interface SnapshotBubblePoint {
 /** Pre-aggregated bar data point (ORR) returned by /api/analytics/snapshot */
 export interface SnapshotBarPoint {
   treatmentName: string;
-  approvalStatus: 'Approved' | 'Investigational';
   averageValue: number;   // avg ORR
   trialCount: number;
 }

@@ -1,4 +1,63 @@
-import { Document } from '@/lib/api';
+import { Document, type DashboardTrialCard } from '@/lib/api';
+
+const OPEN_STUDY_STATUSES = new Set([
+  'open',
+  'not yet recruiting',
+  'recruiting',
+  'active, not recruiting',
+]);
+
+export function isOpenStudyStatus(status: string | null | undefined): boolean {
+  return OPEN_STUDY_STATUSES.has((status ?? '').trim().toLowerCase());
+}
+
+export function selectTrialsWithOpenBias(
+  trials: DashboardTrialCard[],
+  count: number,
+  openFraction = 0.7
+): DashboardTrialCard[] {
+  const open = trials.filter((t) => isOpenStudyStatus(t.study_status));
+  const closed = trials.filter((t) => !isOpenStudyStatus(t.study_status));
+  const wantOpen = Math.min(Math.round(count * openFraction), open.length);
+  const wantClosed = Math.min(count - wantOpen, closed.length);
+  const actualOpen = Math.min(open.length, count - wantClosed);
+  return [...open.slice(0, actualOpen), ...closed.slice(0, wantClosed)];
+}
+
+const CANCER_ABBREVS = new Set([
+  'NSCLC', 'SCLC', 'BC', 'MBC', 'ABC', 'CRC', 'MCRC', 'HCC', 'RCC', 'MRCC',
+  'AML', 'CLL', 'CML', 'NHL', 'MM', 'MDS', 'DLBCL', 'FL', 'MCL', 'GBM',
+  'TNBC', 'ER+', 'HR+', 'HER2+', 'HER2-', 'PD-L1', 'EGFR', 'ALK', 'KRAS',
+  'BRAF', 'MEK', 'IO', 'TKI', 'VEGF', 'CTDNA', 'TMB', 'MSI', 'DMMR',
+  'PMMR', 'MSS', 'MSI-H', 'TMB-H', 'ER', 'PR', 'OS', 'PFS', 'ORR', 'DOR',
+  'DCR', 'CBR', 'TTP', 'EFS', 'RFS', 'DFS', 'TTR', 'CR', 'SD', 'PD', 'NE',
+  'BCC', 'SCC', 'NPC', 'BTC', 'OC', 'EC', 'GC', 'GEJ', 'ESCC', 'PDAC',
+  'NET', 'NEC', 'MCC', 'GIST', 'PNET', 'LGG', 'HGG', 'IDH',
+  'ASCO', 'ESMO', 'AACR', 'WHO', 'ECOG', 'R/R', 'R/M', 'UC', 'UBC',
+]);
+
+/**
+ * Extract a trial acronym/name from the end of a brief title.
+ * Titles often append the trial name in parentheses or brackets, e.g.:
+ *   "A Phase 3 Study of Pembrolizumab in TNBC (KEYNOTE-522)"
+ * Returns null if no bracket is found or the candidate looks like a cancer/biomarker abbreviation.
+ */
+export function extractTrialAcronym(title: string | null): string | null {
+  if (!title) return null;
+  const match = title.match(/[\[(]\s*([^\])]+?)\s*[\])]\s*$/);
+  if (!match) return null;
+  const candidate = match[1].trim();
+  if (CANCER_ABBREVS.has(candidate.toUpperCase())) return null;
+  if (candidate.length <= 2) return null;
+  // Digit or hyphen → almost certainly a trial code (KEYNOTE-522, IMpower110)
+  if (/[\d-]/.test(candidate)) return candidate;
+  // Mixed-case word → proper noun trial name (CheckMate, Destiny)
+  if (candidate.length > 3 && candidate !== candidate.toUpperCase() && candidate !== candidate.toLowerCase()) return candidate;
+  // All-caps longer than 5 chars → likely trial acronym (FLAURA, MONARCH)
+  if (candidate === candidate.toUpperCase() && candidate.length > 5) return candidate;
+  // Short all-caps (3–5): denylist already filtered risky ones; accept the rest
+  return candidate;
+}
 
 export interface ExtractedTrialMetadata {
   nctId: string;

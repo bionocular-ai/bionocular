@@ -5,6 +5,7 @@ import type { DashboardTrialCard as DashboardTrialCardType } from '@/lib/api';
 import { User, Building2, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { extractTrialAcronym } from '@/lib/utils/trial-utils';
 
 export interface TrialCardProps {
   trial: DashboardTrialCardType;
@@ -62,8 +63,11 @@ function phaseTagVariant(phase: string): string {
 
 export function TrialCard({ trial, className, category }: TrialCardProps) {
   const phaseShort = phaseToShort(trial.phase);
-  const rawName = (trial.trial_name || trial.title || '').trim();
-  const displayName = rawName && rawName.toLowerCase() !== 'unknown' ? rawName : trial.nct_id;
+  const trialAcronym = trial.trial_name?.trim();
+  const acronym = (trialAcronym && trialAcronym.toLowerCase() !== 'unknown')
+    ? trialAcronym
+    : extractTrialAcronym(trial.title);
+  const displayName = acronym ?? trial.nct_id;
   const href = category
     ? `/trial/nct/${trial.nct_id}?category=${category}`
     : `/trial/nct/${trial.nct_id}`;

@@ -301,6 +301,7 @@ ATTRIBUTE_MAPPING = {
     "MEDIAN_FOLLOWUP_PFS": "pfs_followup_months",
     "P_VALUE_PFS": "p_value_pfs",
     "HR_PFS": "hr_pfs",
+    "CI_HR_PFS": "ci_hr_pfs",
     "PFS_RATE_6M": "pfs_rate_6m",
     "PFS_RATE_9M": "pfs_rate_9m",
     "PFS_RATE_12M": "pfs_rate_12m",
@@ -314,6 +315,7 @@ ATTRIBUTE_MAPPING = {
     "MEDIAN_FOLLOWUP_OS": "os_followup_months",
     "P_VALUE_OS": "p_value_os",
     "HR_OS": "hr_os",
+    "CI_HR_OS": "ci_hr_os",
     "OS_RATE_6M": "os_rate_6m",
     "OS_RATE_9M": "os_rate_9m",
     "OS_RATE_12M": "os_rate_12m",
@@ -326,13 +328,16 @@ ATTRIBUTE_MAPPING = {
     "EFS": "efs",
     "P_VALUE_EFS": "p_value_efs",
     "HR_EFS": "hr_efs",
+    "CI_HR_EFS": "ci_hr_efs",
     "RFS": "rfs",
     "P_VALUE_RFS": "p_value_rfs",
     "LENGTH_RFS": "rfs_followup_months",
     "HR_RFS": "hr_rfs",
+    "CI_HR_RFS": "ci_hr_rfs",
     "MFS": "mfs",
     "LENGTH_MFS": "mfs_followup_months",
     "HR_MFS": "hr_mfs",
+    "CI_HR_MFS": "ci_hr_mfs",
 
     # Efficacy: Response
     "OBJECTIVE_RESPONSE_RATE": "orr",
@@ -345,6 +350,8 @@ ATTRIBUTE_MAPPING = {
     "DOR_RATE": "dor_rate",
     "TTR": "ttr",
     "TTP": "ttp",
+    "HR_TTP": "hr_ttp",
+    "CI_HR_TTP": "ci_hr_ttp",
     "TTNT": "ttnt",
     "TTF": "ttf",
 
@@ -355,7 +362,11 @@ ATTRIBUTE_MAPPING = {
     "SERIOUS_AE": "serious_ae_pct",
     "IMMUNE_RELATED_AE": "immune_related_ae_pct",
     "SERIOUS_IMMUNE_RELATED_AE": "serious_ir_ae_pct",
-    "AE_LED_TO_DEATH": "ae_death_pct",
+    "AE_LEADING_TO_DEATH": "ae_death_pct",
+    "AE_LEADING_TO_DOSE_INTERRUPTION": "ae_dose_interruption_pct",
+    "AE_LEADING_TO_DOSE_REDUCTION": "ae_dose_reduction_pct",
+    "AE_REQUIRING_HOSPITALIZATION": "ae_hospitalization_pct",
+    "IRR": "irr_pct",
 
     # Safety: TRAE
     "TRAE": "trae_pct",
@@ -365,6 +376,9 @@ ATTRIBUTE_MAPPING = {
     "GRADE_5_TRAE": "grade_5_trae_pct",
     "TRAE_LEADING_TO_DISCONTINUATION": "trae_discontinuation_pct",
     "TRAE_LEADING_TO_DEATH": "trae_death_pct",
+    "TRAE_LEADING_TO_DOSE_INTERRUPTION": "trae_dose_interruption_pct",
+    "TRAE_LEADING_TO_DOSE_REDUCTION": "trae_dose_reduction_pct",
+    "TRAE_REQUIRING_HOSPITALIZATION": "trae_hospitalization_pct",
     "TRAE_IMMUNE_RELATED": "trae_ir_ae_pct",
     "SERIOUS_TRAE": "serious_trae_pct",
 
@@ -376,6 +390,9 @@ ATTRIBUTE_MAPPING = {
     "GRADE_5_TEAE": "grade_5_teae_pct",
     "TEAE_LEADING_TO_DISCONTINUATION": "teae_discontinuation_pct",
     "TEAE_LEADING_TO_DEATH": "teae_death_pct",
+    "TEAE_LEADING_TO_DOSE_INTERRUPTION": "teae_dose_interruption_pct",
+    "TEAE_LEADING_TO_DOSE_REDUCTION": "teae_dose_reduction_pct",
+    "TEAE_REQUIRING_HOSPITALIZATION": "teae_hospitalization_pct",
     "TEAE_IMMUNE_RELATED": "teae_ir_ae_pct",
     "SERIOUS_TEAE": "serious_teae_pct",
 
@@ -407,6 +424,12 @@ ATTRIBUTE_MAPPING = {
     "GRADE_3_PLUS_AE_PNEUMONITIS": "grade_3_plus_ae_pneumonitis",
     "GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE": "grade_3_plus_ae_alt_increased",
     "GRADE_3_PLUS_AE_WBC_DECREASED": "grade_3_plus_ae_wbc_decreased",
+    "GRADE_3_PLUS_AE_AST_INCREASED": "grade_3_plus_ae_ast_increased",
+    "GRADE_3_PLUS_AE_FATIGUE": "grade_3_plus_ae_fatigue",
+    "GRADE_3_PLUS_AE_HYPERTHYROIDISM": "grade_3_plus_ae_hyperthyroidism",
+    "GRADE_3_PLUS_AE_HYPOTHYROIDISM": "grade_3_plus_ae_hypothyroidism",
+    "GRADE_3_PLUS_AE_IRR": "grade_3_plus_ae_irr",
+    "GRADE_3_PLUS_AE_VOMITING": "grade_3_plus_ae_vomiting",
 
     # Safety: Specific Grade 3+ TRAEs
     "GRADE_3_PLUS_TRAE_IMMUNE_RELATED": "grade_3_plus_trae_ir_ae",
@@ -432,6 +455,12 @@ ATTRIBUTE_MAPPING = {
     "GRADE_3_PLUS_TRAE_PNEUMONITIS": "grade_3_plus_trae_pneumonitis",
     "GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE": "grade_3_plus_trae_alt_increased",
     "GRADE_3_PLUS_TRAE_WBC_DECREASED": "grade_3_plus_trae_wbc_decreased",
+    "GRADE_3_PLUS_TRAE_AST_INCREASED": "grade_3_plus_trae_ast_increased",
+    "GRADE_3_PLUS_TRAE_FATIGUE": "grade_3_plus_trae_fatigue",
+    "GRADE_3_PLUS_TRAE_HYPERTHYROIDISM": "grade_3_plus_trae_hyperthyroidism",
+    "GRADE_3_PLUS_TRAE_HYPOTHYROIDISM": "grade_3_plus_trae_hypothyroidism",
+    "GRADE_3_PLUS_TRAE_IRR": "grade_3_plus_trae_irr",
+    "GRADE_3_PLUS_TRAE_VOMITING": "grade_3_plus_trae_vomiting",
 
     # Safety: Specific Grade 3+ TEAEs
     "GRADE_3_PLUS_TEAE_IMMUNE_RELATED": "grade_3_plus_teae_ir_ae",
@@ -457,6 +486,12 @@ ATTRIBUTE_MAPPING = {
     "GRADE_3_PLUS_TEAE_PNEUMONITIS": "grade_3_plus_teae_pneumonitis",
     "GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE": "grade_3_plus_teae_alt_increased",
     "GRADE_3_PLUS_TEAE_WBC_DECREASED": "grade_3_plus_teae_wbc_decreased",
+    "GRADE_3_PLUS_TEAE_AST_INCREASED": "grade_3_plus_teae_ast_increased",
+    "GRADE_3_PLUS_TEAE_FATIGUE": "grade_3_plus_teae_fatigue",
+    "GRADE_3_PLUS_TEAE_HYPERTHYROIDISM": "grade_3_plus_teae_hyperthyroidism",
+    "GRADE_3_PLUS_TEAE_HYPOTHYROIDISM": "grade_3_plus_teae_hypothyroidism",
+    "GRADE_3_PLUS_TEAE_IRR": "grade_3_plus_teae_irr",
+    "GRADE_3_PLUS_TEAE_VOMITING": "grade_3_plus_teae_vomiting",
 }
 
 def get_attr_value(attrs, key, default=None, is_numeric=False):
@@ -511,7 +546,7 @@ def upload_trial_outcomes():
                 mapped_arms = []
                 for trial in trials_list:
                     # Logic for trial IDs
-                    raw_id = trial.get("trial_id") or trial.get("abstract_id") or trial.get("publication_id") or trial.get("id", "unknown")
+                    raw_id = trial.get("trial_id") or trial.get("abstract_id") or trial.get("pub_id") or trial.get("publication_id") or trial.get("id", "unknown")
                     nct_id = trial.get("nct_id") or (raw_id if str(raw_id).startswith("NCT") else None)
                     
                     # Publication & Arm specific Logic
@@ -531,8 +566,13 @@ def upload_trial_outcomes():
                     
                     if source_type == 'publication':
                         actual_source_name = raw_id # Publication ID (Batch ID)
-                        # Specific logic for publication_id column matching user request
-                        pub_id_value = first_arm_attrs.get("AttributeType.PUBLICATION_NAME", {}).get("value") or first_arm_attrs.get("PUBLICATION_NAME", {}).get("value")
+                        pub_id_value = None
+                        for k, v in first_arm_attrs.items():
+                            if k.lower().replace("attributetype.", "") == "publication_name":
+                                candidate = v.get("value")
+                                if candidate not in (None, "", "Not found", "N/A", "Not available"):
+                                    pub_id_value = candidate
+                                break
                     else:
                         actual_source_name = source_name
                         pub_id_value = None
@@ -570,11 +610,12 @@ def upload_trial_outcomes():
                         # Fill in the flattened columns
                         is_nr_list = []
                         known_strings = [
-                            'id', 'source_type', 'source_name', 'abstract_id', 'publication_id', 
-                            'source_url', 'nct_id', 'arm_id', 'arm_name', 'cancer_type', 'sponsors', 
-                            'line_of_treatment', 'generic_name', 'brand_name', 'dosage', 
-                            'type_of_dosing', 'mechanism_of_action', 'target_protein', 
-                            'type_of_therapy', 'sub_therapy', 'is_nr', 'all_attributes', 'created_at'
+                            'id', 'source_type', 'source_name', 'abstract_id', 'publication_id',
+                            'source_url', 'nct_id', 'arm_id', 'arm_name', 'cancer_type', 'sponsors',
+                            'line_of_treatment', 'generic_name', 'brand_name', 'dosage',
+                            'type_of_dosing', 'mechanism_of_action', 'target_protein',
+                            'type_of_therapy', 'sub_therapy', 'is_nr', 'all_attributes', 'created_at',
+                            'ci_hr_pfs', 'ci_hr_os', 'ci_hr_efs', 'ci_hr_rfs', 'ci_hr_mfs', 'ci_hr_ttp',
                         ]
                         
                         for attr_key, col_name in ATTRIBUTE_MAPPING.items():

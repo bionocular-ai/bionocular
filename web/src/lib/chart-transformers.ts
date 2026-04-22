@@ -9,37 +9,13 @@ import {
   HeadToHeadDataPoint,
   TrialDataPoint,
   ChartMetric,
-  ApprovalStatus,
+  SourceType,
   ArmResult,
   AttributeValue,
   EfficacySafetyDataPoint,
   BubbleChartDataPoint,
 } from '@/types/analytics';
 
-// ============================================================================
-// Approved Treatments Lookup (DEPRECATED - now handled by backend)
-// ============================================================================
-// NOTE: Approval status is now determined by the backend using indication-specific
-// classification. The backend adds an "approvalStatus" field to each arm.
-// This hardcoded list is kept only for backward compatibility with old data.
-// 
-// See: melanoma/src/app/approval_status_service.py
-
-const APPROVED_TREATMENTS = new Set([
-  'pembrolizumab',
-  'nivolumab',
-  'ipilimumab',
-  'dabrafenib',
-  'trametinib',
-  'vemurafenib',
-  'cobimetinib',
-  'encorafenib',
-  'binimetinib',
-  'atezolizumab',
-  'talimogene laherparepvec',
-  't-vec',
-  'lifileucel',
-]);
 
 // ============================================================================
 // Attribute Key Mapping (abstracts use AttributeType.X, publications use lowercase)
@@ -49,7 +25,7 @@ const APPROVED_TREATMENTS = new Set([
  * Get attribute value checking both uppercase (AttributeType.X) and lowercase (x) key formats
  * Publications use lowercase keys, abstracts use AttributeType.X format
  */
-function getAttribute(attributes: Record<string, AttributeInput>, metricName: string): AttributeInput {
+export function getAttribute(attributes: Record<string, AttributeInput>, metricName: string): AttributeInput {
   // Try AttributeType.X format first (used by abstracts)
   const uppercaseKey = `AttributeType.${metricName}`;
   if (attributes[uppercaseKey] !== undefined) {
@@ -93,7 +69,7 @@ function getAttribute(attributes: Record<string, AttributeInput>, metricName: st
 // Helper Functions
 // ============================================================================
 
-type AttributeInput = AttributeValue | string | number | boolean | null | undefined;
+export type AttributeInput = AttributeValue | string | number | boolean | null | undefined;
 
 /**
  * Deduplicate trials by treatment name, keeping the most recent year.
@@ -135,7 +111,7 @@ function deduplicateTrialsByTreatment<T extends { treatmentName: string; year?: 
 /**
  * Safely extract a numeric value from an attribute
  */
-function extractNumericValue(attr: AttributeInput): number | null {
+export function extractNumericValue(attr: AttributeInput): number | null {
   if (attr === null || attr === undefined) return null;
   
   // Boolean - not numeric
@@ -171,7 +147,7 @@ function extractNumericValue(attr: AttributeInput): number | null {
 /**
  * Safely extract a string value from an attribute
  */
-function extractStringValue(attr: AttributeInput): string {
+export function extractStringValue(attr: AttributeInput): string {
   if (attr === null || attr === undefined) return '';
   if (typeof attr === 'boolean') return attr ? 'true' : 'false';
   if (typeof attr === 'string') return attr;
@@ -190,7 +166,7 @@ function extractStringValue(attr: AttributeInput): string {
  * - Normalizes separators and whitespace
  * - Handles common variations
  */
-function normalizeTreatmentName(name: string): string {
+export function normalizeTreatmentName(name: string): string {
   if (!name) return 'Unknown';
   
   // Split by common combination separators
@@ -202,45 +178,6 @@ function normalizeTreatmentName(name: string): string {
   
   // Rejoin with consistent separator
   return parts.join(' + ');
-}
-
-/**
- * Determine approval status based on treatment name
- * DEPRECATED: Prefer using approval_status from backend when available
- * 
- * @param treatmentName - Name of the treatment
- * @param backendStatus - Approval status from backend (if available)
- * @returns Approval status
- */
-function getApprovalStatus(treatmentName: string, backendStatus?: string): ApprovalStatus {
-  // Prefer backend status if available (indication-specific, more accurate)
-  if (backendStatus) {
-    // Normalize backend status values
-    const normalized = backendStatus.toLowerCase();
-    if (normalized === 'approved') return 'Approved';
-    if (normalized === 'investigational' || normalized === 'control') return 'Investigational';
-  }
-  
-  // Fallback to old logic for backward compatibility
-  const normalized = treatmentName.toLowerCase();
-  
-  // Check if any approved treatment is in the name
-  for (const approved of APPROVED_TREATMENTS) {
-    if (normalized.includes(approved)) {
-      return 'Approved';
-    }
-  }
-  
-  // Check for combination therapies with approved drugs
-  if (normalized.includes('+')) {
-    const parts = normalized.split('+').map(p => p.trim());
-    const hasApproved = parts.some(part => 
-      Array.from(APPROVED_TREATMENTS).some(approved => part.includes(approved))
-    );
-    if (hasApproved) return 'Approved';
-  }
-  
-  return 'Investigational';
 }
 
 /**
@@ -357,10 +294,11 @@ export function transformHeadToHeadData(
       // Get abstract ID or publication ID directly from trial object
       // This matches the logic in TrialDataTable.tsx
       const abstractId = trial.abstract_id || trial.publication_id || '';
-      
+      const sourceType: SourceType = trial.abstract_id ? 'abstract' : trial.publication_id ? 'publication' : 'webscrape';
+
       // Get publication name from attributes (for publications)
       const publicationNameAttr = extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_NAME'));
-      
+
       // Extract patient count
       const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS'));
 
@@ -375,11 +313,7 @@ export function transformHeadToHeadData(
       if (patientCount !== null) {
         group.patients.push(patientCount);
       }
-      
-      // Get approval status from arm data if available (backend)
-      // Backend returns "Approved", "Investigational", "Control", or "Unknown"
-      const armApprovalStatus = arm.approval_status as ApprovalStatus | undefined;
-      
+
       group.trials.push({
         studyId,
         abstractId,
@@ -392,7 +326,7 @@ export function transformHeadToHeadData(
         nctNumber,
         numberOfPatients: patientCount,
         sourceUrl: trial.source_url || '',
-        approvalStatus: armApprovalStatus, // Backend approval status if available
+        sourceType,
       });
     }
   }
@@ -439,12 +373,8 @@ export function transformHeadToHeadData(
     const sum = values.reduce((a, b) => a + b, 0);
     const totalPatients = group.patients.reduce((a, b) => a + b, 0);
 
-    // Get approval status from first trial (backend) or fall back to name-based logic
-    const backendApprovalStatus = group.trials[0]?.approvalStatus;
-    
     result.push({
       treatmentName,
-      approvalStatus: getApprovalStatus(treatmentName, backendApprovalStatus),
       averageValue: sum / values.length,
       medianValue: calculateMedian(values),
       minValue: Math.min(...values),
@@ -595,7 +525,8 @@ export function transformEfficacySafetyData(
     publicationName?: string;
     citation?: string;
     phase?: string;
-    approvalStatus?: string;
+    sourceType?: SourceType;
+    sourceUrl?: string;
   }> = [];
 
   const grouped = new Map<string, {
@@ -642,14 +573,12 @@ export function transformEfficacySafetyData(
 
       // Store individual trial data
       const abstractId = trial.abstract_id || trial.publication_id || '';
+      const sourceType: SourceType = trial.abstract_id ? 'abstract' : trial.publication_id ? 'publication' : 'webscrape';
       const nctNumber = extractStringValue(getAttribute(arm.attributes, 'NCT_NUMBER'));
       const publicationName = extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_NAME'));
       const conference = extractStringValue(getAttribute(arm.attributes, 'CONFERENCE'));
       const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS'));
 
-      // Get approval status from arm data if available (backend)
-      const armApprovalStatus = arm.approval_status;
-      
       individualTrials.push({
         treatmentName,
         efficacy: efficacyValue,
@@ -661,7 +590,8 @@ export function transformEfficacySafetyData(
         publicationName: publicationName || undefined,
         citation: `${conference} ${yearStr}`,
         phase: phase || undefined,
-        approvalStatus: armApprovalStatus, // Backend approval status if available
+        sourceType,
+        sourceUrl: trial.source_url || undefined,
       });
 
       if (!grouped.has(treatmentName)) {
@@ -731,12 +661,8 @@ export function transformEfficacySafetyData(
       return a.safety - b.safety;
     });
 
-    // Get approval status from first trial (backend) or fall back to name-based logic
-    const backendApprovalStatus = allTrials[0]?.approvalStatus;
-    
     result.push({
       treatmentName,
-      approvalStatus: getApprovalStatus(treatmentName, backendApprovalStatus),
       efficacy: avgEfficacy,
       safety: avgSafety,
       numberOfPatients: totalPatients > 0 ? totalPatients : undefined,
@@ -815,20 +741,15 @@ export function transformBubbleChartData(
       const patientCount = extractNumericValue(getAttribute(arm.attributes, 'NUMBER_OF_PATIENTS')) || 0;
       const nctNumber = extractStringValue(getAttribute(arm.attributes, 'NCT_NUMBER'));
       const abstractId = trial.abstract_id || trial.publication_id || '';
+      const sourceType: SourceType = trial.abstract_id ? 'abstract' : trial.publication_id ? 'publication' : 'webscrape';
       const publicationName = extractStringValue(getAttribute(arm.attributes, 'PUBLICATION_NAME'));
       const conference = extractStringValue(getAttribute(arm.attributes, 'CONFERENCE'));
       const zValue = zMetric && zMetric !== 'NUMBER_OF_PATIENTS'
         ? (extractNumericValue(getAttribute(arm.attributes, zMetric)) ?? undefined)
         : undefined;
 
-      // Get approval status from backend if available
-      const armApprovalStatus = arm.approval_status;
-      const finalApprovalStatus = getApprovalStatus(treatmentName, armApprovalStatus);
-
       result.push({
         treatmentName,
-        approvalStatus: finalApprovalStatus,
-        developmentStatus: finalApprovalStatus === 'Approved' ? 'Approved' : 'Investigational',
         efficacy: efficacyValue,
         safety: safetyValue,
         numberOfPatients: patientCount,
@@ -840,6 +761,7 @@ export function transformBubbleChartData(
         phase: phase || undefined,
         year: yearStr || undefined,
         sourceUrl: trial.source_url || undefined,
+        sourceType,
       });
     }
   }
@@ -878,6 +800,8 @@ export function transformBubbleChartData(
       publicationName: trial.publicationName,
       citation: trial.citation,
       phase: trial.phase,
+      sourceType: trial.sourceType,
+      sourceUrl: trial.sourceUrl,
     }));
     point.currentTrialIndex = 0; // Most recent trial
   }
