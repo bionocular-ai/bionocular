@@ -195,13 +195,17 @@ class TestPostprocessingService:
             service._get_processor("invalid")
 
     def test_split_abstracts_asco(self, service):
-        content = """{0}------------------------------------------------
+        # ASCO format splits on \n---\n; chunks must have abstract ID or section keyword
+        # to avoid being merged as orphans
+        content = """10000 Title 1
 
-Abstract 1 content
+Background: Abstract 1 content
 
-{1}------------------------------------------------
+---
 
-Abstract 2 content"""
+9501 Title 2
+
+Background: Abstract 2 content"""
 
         result = service._split_abstracts(content, ConferenceType.ASCO)
         assert len(result) == 2

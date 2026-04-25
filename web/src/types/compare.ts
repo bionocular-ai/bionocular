@@ -32,6 +32,7 @@ export interface CompareRow {
 export interface TreatmentMeta {
   modality: string | null;
   lineOfTreatment: string | null;
+  nctId: string | null;
 }
 
 export interface CompareTableData {

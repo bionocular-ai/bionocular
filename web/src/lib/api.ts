@@ -1063,19 +1063,37 @@ export const analyticsApi = {
 
   getTreatmentMeta: async (
     cancerType: string,
-  ): Promise<Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null }>> => {
+  ): Promise<Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null; nctId: string | null }>> => {
     const supabase = createClient();
     const dbCancerType = getDbCancerType(cancerType);
-    const { data } = await supabase
-      .from('trial_landscape')
-      .select('treatment_name, modality, line_of_therapy')
+    const { data: outcomesData, error: outcomesError } = await supabase
+      .from('trial_outcomes')
+      .select('arm_name, nct_id, modality')
       .contains('cancer_type', [dbCancerType]);
-    return (data || [])
-      .filter((d: Record<string, unknown>) => d.treatment_name)
+    if (outcomesError) console.error('[getTreatmentMeta] trial_outcomes query failed:', outcomesError.message);
+
+    const nctIds = [...new Set(
+      (outcomesData || []).map((d: Record<string, unknown>) => d.nct_id as string).filter(Boolean)
+    )];
+    const lineByNct = new Map<string, string | null>();
+    if (nctIds.length > 0) {
+      const { data: landscapeData, error: landscapeError } = await supabase
+        .from('trial_landscape')
+        .select('nct_id, line_of_therapy')
+        .in('nct_id', nctIds);
+      if (landscapeError) console.error('[getTreatmentMeta] trial_landscape query failed:', landscapeError.message);
+      for (const d of (landscapeData || []) as Record<string, unknown>[]) {
+        lineByNct.set(d.nct_id as string, (d.line_of_therapy as string) || null);
+      }
+    }
+
+    return (outcomesData || [])
+      .filter((d: Record<string, unknown>) => d.arm_name)
       .map((d: Record<string, unknown>) => ({
-        treatmentName: d.treatment_name as string,
+        treatmentName: d.arm_name as string,
         modality: (d.modality as string) || null,
-        lineOfTreatment: (d.line_of_therapy as string) || null,
+        lineOfTreatment: lineByNct.get(d.nct_id as string) ?? null,
+        nctId: (d.nct_id as string) || null,
       }));
   },
 
