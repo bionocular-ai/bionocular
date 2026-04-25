@@ -141,9 +141,16 @@ function CompareSectionTable({
   activeMetricKeys: string[];
   treatmentMeta: Record<string, TreatmentMeta>;
 }) {
+  const orderedRows = useMemo(() => {
+    if (activeMetricKeys.length === 0) return rows;
+    const active = rows.filter(r => activeMetricKeys.includes(r.metricKey));
+    const inactive = rows.filter(r => !activeMetricKeys.includes(r.metricKey));
+    return [...active, ...inactive];
+  }, [rows, activeMetricKeys]);
+
   const firstInGroup = new Set<string>();
   let lastGroup = '';
-  for (const row of rows) {
+  for (const row of orderedRows) {
     const g = row.subGroup ?? '';
     if (g !== lastGroup) {
       firstInGroup.add(row.metricKey);
@@ -166,6 +173,14 @@ function CompareSectionTable({
             </th>
             <th
               className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-[0.12em] px-3 pb-2 pt-2 border-l border-slate-200 align-bottom"
+              style={{ width: 110, minWidth: 110 }}
+            >
+              <span className="invisible block text-[8px] mb-1.5">{'\u00A0'}</span>
+              <span className="block leading-tight">NCT</span>
+              <span className="invisible block text-[9px] mt-0.5">{'\u00A0'}</span>
+            </th>
+            <th
+              className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-[0.12em] px-3 pb-2 pt-2 border-l border-slate-200 align-bottom"
               style={{ width: 120, minWidth: 120 }}
             >
               <span className="invisible block text-[8px] mb-1.5">{'\u00A0'}</span>
@@ -180,7 +195,7 @@ function CompareSectionTable({
               <span className="block leading-tight">Line</span>
               <span className="invisible block text-[9px] mt-0.5">{'\u00A0'}</span>
             </th>
-            {rows.map(row => {
+            {orderedRows.map(row => {
               const isActive = activeMetricKeys.length === 0 || activeMetricKeys.includes(row.metricKey);
               const isFirst = firstInGroup.has(row.metricKey);
               const subGroup = row.subGroup ?? '';
@@ -238,6 +253,20 @@ function CompareSectionTable({
                     {treatment}
                   </span>
                 </td>
+                <td className="px-3 py-0 border-l border-slate-100 align-middle" style={{ width: 110, minWidth: 110 }}>
+                  {treatmentMeta[treatment]?.nctId ? (
+                    <a
+                      href={`https://clinicaltrials.gov/study/${treatmentMeta[treatment].nctId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[12px] font-mono text-[var(--brand-primary)] hover:underline leading-tight block py-3"
+                    >
+                      {treatmentMeta[treatment].nctId}
+                    </a>
+                  ) : (
+                    <span className="text-[13px] text-slate-400 leading-tight block py-3">—</span>
+                  )}
+                </td>
                 <td className="px-3 py-0 border-l border-slate-100 align-middle" style={{ width: 120, minWidth: 120 }}>
                   <span className="text-[13px] font-semibold text-slate-800 leading-tight block py-3">
                     {treatmentMeta[treatment]?.modality ?? '—'}
@@ -248,7 +277,7 @@ function CompareSectionTable({
                     {treatmentMeta[treatment]?.lineOfTreatment ?? '—'}
                   </span>
                 </td>
-                {rows.map(row => {
+                {orderedRows.map(row => {
                   const cell = row.cells[treatment];
                   const key = `${treatment}::${row.metricKey}`;
                   const isActive =

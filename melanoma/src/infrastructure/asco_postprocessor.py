@@ -450,65 +450,45 @@ class ASCOPostprocessor(PostprocessorInterface):
                 title = hdr_line.lstrip("# ").strip()
                 break
 
-        # Strategy 2: Look for long bold text (DocStrange format: **Title here**)
-        # The title is typically the longest bold line that's not a session info
+        def looks_like_author_line(line: str) -> bool:
+            """Check if a line looks like an author/affiliation line."""
+            line_lower = line.lower()
+            if ";" in line:
+                return True
+            institutional_keywords = [
+                "university",
+                "hospital",
+                "center",
+                "centre",
+                "institute",
+                "department",
+            ]
+            keyword_count = sum(1 for kw in institutional_keywords if kw in line_lower)
+            if keyword_count >= 2:
+                return True
+            if re.search(r"[A-Z][a-z]+\s+[A-Z][a-z]+.*;", line):
+                return True
+            return False
+
+        # Strategy 2: Look for bold text (DocStrange format: **Title here**)
+        # Take the first valid bold line — title always precedes author block in source.
         if not title:
-            bold_lines = []
             for hdr_line in header_lines_filtered:
-                # Extract bold text
                 bold_match = re.match(r"^\*\*(.*?)\*\*$", hdr_line.strip())
                 if bold_match:
                     bold_text = bold_match.group(1).strip()
-                    # Skip if it's just the abstract ID or session info
-                    if not re.match(
+                    if re.match(
                         r"^(?:(?:TPS|LBA)\s*)?(?:100\d{2}|9[56]\d{2})$", bold_text
                     ):
-                        bold_lines.append((len(bold_text), bold_text))
-
-            # Get the longest bold line (likely the title)
-            if bold_lines:
-                bold_lines.sort(reverse=True)  # Sort by length, descending
-                title = bold_lines[0][1]  # Get the longest one
+                        continue
+                    if looks_like_author_line(bold_text):
+                        continue
+                    title = bold_text
+                    break
 
         # Strategy 3: Look for plain text title (not bold/markdown)
         # This handles cases where title is plain text after session info
         if not title:
-            # Look for lines that are:
-            # - Not session keywords
-            # - Not abstract IDs
-            # - Not author lines (contain semicolons separating authors, institutional names)
-            # - Long enough to be a title (at least 30 chars)
-            # - Appear early in the header (first few non-session lines)
-
-            def looks_like_author_line(line: str) -> bool:
-                """Check if a line looks like an author/affiliation line."""
-                line_lower = line.lower()
-                # Author lines typically have:
-                # - Semicolons (separating authors from affiliations)
-                # - Multiple institutional keywords together
-                # - Patterns like "University; Hospital" or "Department of X, University"
-                if ";" in line:
-                    # Semicolon is a strong indicator of author/affiliation line
-                    return True
-                # Check for multiple institutional keywords (more likely author line)
-                institutional_keywords = [
-                    "university",
-                    "hospital",
-                    "center",
-                    "centre",
-                    "institute",
-                    "department",
-                ]
-                keyword_count = sum(
-                    1 for kw in institutional_keywords if kw in line_lower
-                )
-                if keyword_count >= 2:
-                    return True
-                # Check for patterns like "Name, Name; Institution" (author list)
-                if re.search(r"[A-Z][a-z]+\s+[A-Z][a-z]+.*;", line):
-                    return True
-                return False
-
             for hdr_line in header_lines_filtered[:10]:  # Check first 10 lines
                 line_stripped = hdr_line.strip()
                 # Skip if it's a markdown header (already checked)

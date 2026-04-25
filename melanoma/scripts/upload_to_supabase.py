@@ -644,6 +644,12 @@ def upload_trial_outcomes():
                             
                             record[col_name] = val
 
+                        # Fallback: use arm-level patient_count if attribute extraction missed it
+                        if record.get("num_patients") is None:
+                            arm_pc = arm_data.get("patient_count")
+                            if isinstance(arm_pc, (int, float)) and arm_pc > 0:
+                                record["num_patients"] = int(arm_pc)
+
                         # cancer_type: normalize from raw attr, store as TEXT[]
                         raw_ct = record.get('cancer_type')
                         if isinstance(raw_ct, str):

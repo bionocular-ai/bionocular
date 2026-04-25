@@ -112,6 +112,7 @@ export interface MetricConfig {
   lowerIsBetter?: boolean;
   subGroup?: string;
   integer?: boolean;
+  pValue?: boolean;
 }
 
 // Efficacy metrics configuration - keys match backend AttributeType names
@@ -122,13 +123,13 @@ export const EFFICACY_METRICS: Record<string, MetricConfig> = {
   // Survival Metrics - PFS
   MEDIAN_PFS: { key: 'MEDIAN_PFS', label: 'mPFS', unit: 'months', description: 'Median Progression-Free Survival', subGroup: 'PFS' },
   MEDIAN_FOLLOWUP_PFS: { key: 'MEDIAN_FOLLOWUP_PFS', label: 'PFS FU', unit: 'months', description: 'Median follow-up for measuring PFS', subGroup: 'PFS' },
-  P_VALUE_PFS: { key: 'P_VALUE_PFS', label: 'p (PFS)', unit: '', description: 'p-value of median PFS', lowerIsBetter: true, subGroup: 'PFS' },
+  P_VALUE_PFS: { key: 'P_VALUE_PFS', label: 'p (PFS)', unit: '', description: 'p-value of median PFS', lowerIsBetter: true, pValue: true, subGroup: 'PFS' },
   HR_PFS: { key: 'HR_PFS', label: 'HR (PFS)', unit: '', description: 'Hazard Ratio for PFS', lowerIsBetter: true, subGroup: 'PFS' },
 
   // Survival Metrics - OS
   MEDIAN_OS: { key: 'MEDIAN_OS', label: 'mOS', unit: 'months', description: 'Median Overall Survival', subGroup: 'OS' },
   MEDIAN_FOLLOWUP_OS: { key: 'MEDIAN_FOLLOWUP_OS', label: 'OS FU', unit: 'months', description: 'Median follow-up for measuring OS', subGroup: 'OS' },
-  P_VALUE_OS: { key: 'P_VALUE_OS', label: 'p (OS)', unit: '', description: 'p-value of OS', lowerIsBetter: true, subGroup: 'OS' },
+  P_VALUE_OS: { key: 'P_VALUE_OS', label: 'p (OS)', unit: '', description: 'p-value of OS', lowerIsBetter: true, pValue: true, subGroup: 'OS' },
   HR_OS: { key: 'HR_OS', label: 'HR (OS)', unit: '', description: 'Hazard Ratio for OS', lowerIsBetter: true, subGroup: 'OS' },
 
   // Response Metrics
@@ -162,10 +163,10 @@ export const EFFICACY_METRICS: Record<string, MetricConfig> = {
   // Other Survival Metrics
   EFS: { key: 'EFS', label: 'EFS', unit: 'months', description: 'Event-Free Survival', subGroup: 'EFS' },
   HR_EFS: { key: 'HR_EFS', label: 'HR (EFS)', unit: '', description: 'Hazard Ratio for EFS', lowerIsBetter: true, subGroup: 'EFS' },
-  P_VALUE_EFS: { key: 'P_VALUE_EFS', label: 'p (EFS)', unit: '', description: 'p-value of EFS', lowerIsBetter: true, subGroup: 'EFS' },
+  P_VALUE_EFS: { key: 'P_VALUE_EFS', label: 'p (EFS)', unit: '', description: 'p-value of EFS', lowerIsBetter: true, pValue: true, subGroup: 'EFS' },
   RFS: { key: 'RFS', label: 'RFS', unit: 'months', description: 'Recurrence-Free Survival', subGroup: 'RFS' },
   HR_RFS: { key: 'HR_RFS', label: 'HR (RFS)', unit: '', description: 'Hazard Ratio for RFS', lowerIsBetter: true, subGroup: 'RFS' },
-  P_VALUE_RFS: { key: 'P_VALUE_RFS', label: 'p (RFS)', unit: '', description: 'p-value of RFS', lowerIsBetter: true, subGroup: 'RFS' },
+  P_VALUE_RFS: { key: 'P_VALUE_RFS', label: 'p (RFS)', unit: '', description: 'p-value of RFS', lowerIsBetter: true, pValue: true, subGroup: 'RFS' },
   LENGTH_RFS: { key: 'LENGTH_RFS', label: 'RFS FU', unit: 'months', description: 'Length of measuring RFS', subGroup: 'RFS' },
   MFS: { key: 'MFS', label: 'MFS', unit: 'months', description: 'Metastasis-Free Survival', subGroup: 'MFS' },
   HR_MFS: { key: 'HR_MFS', label: 'HR (MFS)', unit: '', description: 'Hazard Ratio for MFS', lowerIsBetter: true, subGroup: 'MFS' },

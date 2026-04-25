@@ -36,10 +36,10 @@ function classifySentinel(attr: AttributeInput): 'NR' | 'NE' | null {
   return null;
 }
 
-function formatValue(value: number, unit: string, integer?: boolean): string {
+function formatValue(value: number, unit: string, integer?: boolean, pValue?: boolean): string {
   if (integer) return Math.round(value).toString();
+  if (pValue) return value < 0.001 ? '<0.001' : value.toFixed(3);
   const rounded = Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1);
-  if (unit === '%') return rounded;
   return rounded;
 }
 
@@ -94,7 +94,7 @@ function buildRow(
       assessmentMethod = best.assessmentMethod;
       if (best.status === 'value' && best.value !== null) {
         value = best.value;
-        displayValue = formatValue(best.value, metric.unit, metric.integer);
+        displayValue = formatValue(best.value, metric.unit, metric.integer, metric.pValue);
         coverage += 1;
       } else if (best.status === 'NE') {
         displayValue = 'NE';
@@ -178,7 +178,7 @@ export function buildCompareTable(
   trials: ClinicalTrialRaw[],
   selectedTreatments: string[],
   mode: CompareMode,
-  rawMeta?: Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null }>,
+  rawMeta?: Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null; nctId: string | null }>,
 ): CompareTableData {
   const treatments = selectedTreatments;
 
@@ -190,7 +190,7 @@ export function buildCompareTable(
     const metaByNorm = new Map(rawMeta.map(m => [normalizeTreatmentName(m.treatmentName), m]));
     for (const t of treatments) {
       const found = metaByNorm.get(normalizeTreatmentName(t));
-      treatmentMeta[t] = { modality: found?.modality ?? null, lineOfTreatment: found?.lineOfTreatment ?? null };
+      treatmentMeta[t] = { modality: found?.modality ?? null, lineOfTreatment: found?.lineOfTreatment ?? null, nctId: found?.nctId ?? null };
     }
   }
 

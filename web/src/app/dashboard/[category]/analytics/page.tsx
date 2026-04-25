@@ -31,7 +31,7 @@ import BarChart from '@/components/charts/BarChart';
 import DivergingBarChart from '@/components/charts/DivergingBarChart';
 import BubbleChart from '@/components/charts/BubbleChart';
 import DumbbellChart, { DumbbellDataPoint } from '@/components/charts/DumbbellChart';
-import { transformHeadToHeadData, transformEfficacySafetyData, transformBubbleChartData } from '@/lib/chart-transformers';
+import { transformHeadToHeadData, transformEfficacySafetyData, transformBubbleChartData, normalizeTreatmentName } from '@/lib/chart-transformers';
 import { analyticsApi } from '@/lib/api';
 import { HeadToHeadDataPoint, ChartMetric, TrialDataFile, EfficacySafetyDataPoint, BubbleChartDataPoint, EFFICACY_METRICS, SAFETY_METRICS } from '@/types/analytics';
 import { CompareTable } from '@/components/compare/CompareTable';
@@ -962,8 +962,9 @@ export default function CategoryAnalyticsPage() {
       ...((analyticsData?.abstracts as unknown as TrialDataFile['abstracts']) ?? []),
       ...((analyticsData?.publications as unknown as TrialDataFile['publications']) ?? []),
     ];
-    return buildCompareTable(trials ?? [], allAvailableTreatments, mode, treatmentMetaRaw ?? []);
-  }, [analyticsData, allAvailableTreatments, mode, treatmentMetaRaw]);
+    const treatmentsForTable = selectedTreatments.length > 0 ? selectedTreatments : allAvailableTreatments;
+    return buildCompareTable(trials ?? [], treatmentsForTable, mode, treatmentMetaRaw ?? []);
+  }, [analyticsData, selectedTreatments, allAvailableTreatments, mode, treatmentMetaRaw]);
 
   const activeMetricKeys = useMemo(() => {
     const keys: string[] = [];
@@ -1022,10 +1023,11 @@ export default function CategoryAnalyticsPage() {
       minTrialCount: 1,
     });
 
-    // Filter by selected therapies (this is still client-side as it's UI state)
-    const allSelected = compareOverride?.treatments ?? selectedTreatments;
-    if (allSelected.length > 0) {
-      data = data.filter((d) => allSelected.includes(d.treatmentName));
+    // Cell-clicked treatments override picker; if neither, show all
+    const filterTreatments = compareOverride?.treatments ?? selectedTreatments;
+    if (filterTreatments.length > 0) {
+      const normalized = filterTreatments.map(normalizeTreatmentName);
+      data = data.filter((d) => normalized.includes(d.treatmentName));
     }
 
     // Sort by value descending
@@ -1074,9 +1076,10 @@ export default function CategoryAnalyticsPage() {
       minTrialCount: 1,
     });
 
-    const allSelected = compareOverride?.treatments ?? selectedTreatments;
-    if (allSelected.length > 0) {
-      data = data.filter((d: EfficacySafetyDataPoint | BubbleChartDataPoint) => allSelected.includes(d.treatmentName));
+    const filterTreatments = compareOverride?.treatments ?? selectedTreatments;
+    if (filterTreatments.length > 0) {
+      const normalized = filterTreatments.map(normalizeTreatmentName);
+      data = data.filter((d: EfficacySafetyDataPoint | BubbleChartDataPoint) => normalized.includes(d.treatmentName));
     }
 
     return data;
@@ -1123,9 +1126,10 @@ export default function CategoryAnalyticsPage() {
       minTrialCount: 1,
     });
 
-    const allSelected = compareOverride?.treatments ?? selectedTreatments;
-    if (allSelected.length > 0) {
-      data = data.filter((d: EfficacySafetyDataPoint | BubbleChartDataPoint) => allSelected.includes(d.treatmentName));
+    const filterTreatments = compareOverride?.treatments ?? selectedTreatments;
+    if (filterTreatments.length > 0) {
+      const normalized = filterTreatments.map(normalizeTreatmentName);
+      data = data.filter((d: EfficacySafetyDataPoint | BubbleChartDataPoint) => normalized.includes(d.treatmentName));
     }
 
     return data;

@@ -198,11 +198,25 @@ class PostprocessingService(PostprocessingServiceInterface):
     ) -> list[str]:
         """Split raw content into individual abstracts."""
         if conference_type == ConferenceType.ASCO:
-            # ASCO format: Split by {N}------------------------------------------------
-            abstracts = re.split(
-                r"\{\d+\}------------------------------------------------", content
+            # ASCO format: Split by --- page separators, then re-attach orphan table
+            # chunks (table captions + HTML tables split off from their parent abstract)
+            raw = [p.strip() for p in re.split(r"\n---\n", content) if p.strip()]
+            abstract_id_pat = re.compile(
+                r"\b(?:(?:TPS|LBA)\s*)?(?:100\d{2}|9[56]\d{2})\b"
             )
-            return [abstract.strip() for abstract in abstracts if abstract.strip()]
+            section_pat = re.compile(
+                r"(?i)(background|methods|results|conclusions)\s*[:\*]"
+            )
+            merged: list[str] = []
+            for chunk in raw:
+                is_orphan = not abstract_id_pat.search(
+                    chunk[:200]
+                ) and not section_pat.search(chunk)
+                if is_orphan and merged:
+                    merged[-1] = merged[-1] + "\n\n" + chunk
+                else:
+                    merged.append(chunk)
+            return merged
 
         elif conference_type == ConferenceType.ESMO:
             # ESMO format: Split by DOI links (more reliable - each abstract ends with a DOI)
