@@ -32,6 +32,8 @@ export interface CompareRow {
 export interface TreatmentMeta {
   modality: string | null;
   lineOfTreatment: string | null;
+  stage: string | null;
+  biomarker: string | null;
   nctId: string | null;
 }
 

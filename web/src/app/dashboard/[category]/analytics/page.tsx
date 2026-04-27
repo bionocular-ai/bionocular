@@ -707,6 +707,7 @@ export default function CategoryAnalyticsPage() {
       cancer_type: categorySlug || undefined,
       therapy_type: therapyType,
       funding_type: fundingType as 'all' | 'industry' | 'non-industry',
+      modality: advancedModality !== 'all' ? advancedModality : undefined,
       limit: 2000, // Request all matching records
     };
 
@@ -716,7 +717,7 @@ export default function CategoryAnalyticsPage() {
     }
 
     return filters;
-  }, [resourceType, categorySlug, therapyType, fundingType, safetyParam, efficacyParam]);
+  }, [resourceType, categorySlug, therapyType, fundingType, safetyParam, efficacyParam, advancedModality]);
 
   // Fetch analytics data from backend with filters
   const { data: analyticsData, isLoading, error } = useQuery({
@@ -962,9 +963,21 @@ export default function CategoryAnalyticsPage() {
       ...((analyticsData?.abstracts as unknown as TrialDataFile['abstracts']) ?? []),
       ...((analyticsData?.publications as unknown as TrialDataFile['publications']) ?? []),
     ];
-    const treatmentsForTable = selectedTreatments.length > 0 ? selectedTreatments : allAvailableTreatments;
+    let treatmentsForTable = selectedTreatments.length > 0 ? selectedTreatments : allAvailableTreatments;
+    if (advancedLineOfTherapy !== 'all' && treatmentMetaRaw) {
+      const lineByName = new Map(treatmentMetaRaw.map(m => [m.treatmentName, m.lineOfTreatment]));
+      treatmentsForTable = treatmentsForTable.filter(t => lineByName.get(t) === advancedLineOfTherapy);
+    }
+    if (advancedStage !== 'all' && treatmentMetaRaw) {
+      const stageByName = new Map(treatmentMetaRaw.map(m => [m.treatmentName, m.stage]));
+      treatmentsForTable = treatmentsForTable.filter(t => stageByName.get(t) === advancedStage);
+    }
+    if (advancedBiomarker !== 'all' && treatmentMetaRaw) {
+      const biomarkerByName = new Map(treatmentMetaRaw.map(m => [m.treatmentName, m.biomarker]));
+      treatmentsForTable = treatmentsForTable.filter(t => biomarkerByName.get(t) === advancedBiomarker);
+    }
     return buildCompareTable(trials ?? [], treatmentsForTable, mode, treatmentMetaRaw ?? []);
-  }, [analyticsData, selectedTreatments, allAvailableTreatments, mode, treatmentMetaRaw]);
+  }, [analyticsData, selectedTreatments, allAvailableTreatments, mode, treatmentMetaRaw, advancedLineOfTherapy, advancedStage, advancedBiomarker]);
 
   const activeMetricKeys = useMemo(() => {
     const keys: string[] = [];

@@ -707,6 +707,7 @@ export interface AnalyticsFilters {
   cancer_type?: string;
   therapy_type?: string;
   funding_type?: 'all' | 'industry' | 'non-industry';
+  modality?: string;
   line_of_treatment?: string;
   has_metric?: string;
   skip?: number;
@@ -1010,11 +1011,40 @@ function outcomeRowToClinicalTrialRaw(d: Record<string, unknown>): import('@/typ
 export const analyticsApi = {
   getData: async (filters: AnalyticsFilters = {}): Promise<TrialDataFile> => {
     const supabase = createClient();
+
+    let allowedNctIds: string[] | null = null;
+    if (filters.funding_type === 'industry' || filters.funding_type === 'non-industry') {
+      let sponsorQ = supabase.from('clinical_trials').select('nct_id');
+      sponsorQ = filters.funding_type === 'industry'
+        ? sponsorQ.eq('lead_sponsor_class', 'INDUSTRY')
+        : sponsorQ.neq('lead_sponsor_class', 'INDUSTRY');
+      const { data: sponsorData, error: sponsorErr } = await sponsorQ.limit(50000);
+      if (sponsorErr) throw sponsorErr;
+      allowedNctIds = (sponsorData || []).map(r => r.nct_id as string).filter(Boolean);
+      if (allowedNctIds.length === 0) {
+        return { total_abstracts: 0, total_arms: 0, total_attributes_extracted: 0, average_confidence: 0.9, abstracts: [] };
+      }
+    }
+
     let query = supabase.from('trial_outcomes').select('*').limit(filters.limit || 200);
     if (filters.skip) query = query.range(filters.skip, filters.skip + (filters.limit || 200) - 1);
 
     if (filters.cancer_type && filters.cancer_type !== 'All') {
       query = query.contains('cancer_type', [getDbCancerType(filters.cancer_type)]);
+    }
+    if (filters.modality) {
+      query = query.eq('modality', filters.modality);
+    }
+    if (filters.therapy_type && filters.therapy_type !== 'all') {
+      query = query.eq('type_of_therapy', filters.therapy_type);
+    }
+    if (filters.resource_type === 'conference') {
+      query = query.eq('source_type', 'abstract');
+    } else if (filters.resource_type === 'publication') {
+      query = query.eq('source_type', 'publication');
+    }
+    if (allowedNctIds) {
+      query = query.in('nct_id', allowedNctIds);
     }
 
     const { data, error } = await query;
@@ -1035,7 +1065,7 @@ export const analyticsApi = {
 
   getTreatmentMeta: async (
     cancerType: string,
-  ): Promise<Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null; nctId: string | null }>> => {
+  ): Promise<Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null; stage: string | null; biomarker: string | null; nctId: string | null }>> => {
     const supabase = createClient();
     const dbCancerType = getDbCancerType(cancerType);
     const { data: outcomesData, error: outcomesError } = await supabase
@@ -1047,26 +1077,35 @@ export const analyticsApi = {
     const nctIds = [...new Set(
       (outcomesData || []).map((d: Record<string, unknown>) => d.nct_id as string).filter(Boolean)
     )];
-    const lineByNct = new Map<string, string | null>();
+    const landscapeByNct = new Map<string, { line_of_therapy: string | null; stage: string | null; biomarker: string | null }>();
     if (nctIds.length > 0) {
       const { data: landscapeData, error: landscapeError } = await supabase
         .from('trial_landscape')
-        .select('nct_id, line_of_therapy')
+        .select('nct_id, line_of_therapy, stage, biomarker')
         .in('nct_id', nctIds);
       if (landscapeError) console.error('[getTreatmentMeta] trial_landscape query failed:', landscapeError.message);
       for (const d of (landscapeData || []) as Record<string, unknown>[]) {
-        lineByNct.set(d.nct_id as string, (d.line_of_therapy as string) || null);
+        landscapeByNct.set(d.nct_id as string, {
+          line_of_therapy: (d.line_of_therapy as string) || null,
+          stage: (d.stage as string) || null,
+          biomarker: (d.biomarker as string) || null,
+        });
       }
     }
 
     return (outcomesData || [])
       .filter((d: Record<string, unknown>) => d.arm_name)
-      .map((d: Record<string, unknown>) => ({
-        treatmentName: d.arm_name as string,
-        modality: (d.modality as string) || null,
-        lineOfTreatment: lineByNct.get(d.nct_id as string) ?? null,
-        nctId: (d.nct_id as string) || null,
-      }));
+      .map((d: Record<string, unknown>) => {
+        const landscape = landscapeByNct.get(d.nct_id as string);
+        return {
+          treatmentName: d.arm_name as string,
+          modality: (d.modality as string) || null,
+          lineOfTreatment: landscape?.line_of_therapy ?? null,
+          stage: landscape?.stage ?? null,
+          biomarker: landscape?.biomarker ?? null,
+          nctId: (d.nct_id as string) || null,
+        };
+      });
   },
 
   getSnapshot: async (cancer_type: string, resource_type = 'all', bubbleLimit = 8, barLimit = 8): Promise<SnapshotResponse> => {

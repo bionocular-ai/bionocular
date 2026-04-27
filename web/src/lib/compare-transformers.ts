@@ -178,7 +178,7 @@ export function buildCompareTable(
   trials: ClinicalTrialRaw[],
   selectedTreatments: string[],
   mode: CompareMode,
-  rawMeta?: Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null; nctId: string | null }>,
+  rawMeta?: Array<{ treatmentName: string; modality: string | null; lineOfTreatment: string | null; stage: string | null; biomarker: string | null; nctId: string | null }>,
 ): CompareTableData {
   const treatments = selectedTreatments;
 
@@ -190,7 +190,7 @@ export function buildCompareTable(
     const metaByNorm = new Map(rawMeta.map(m => [normalizeTreatmentName(m.treatmentName), m]));
     for (const t of treatments) {
       const found = metaByNorm.get(normalizeTreatmentName(t));
-      treatmentMeta[t] = { modality: found?.modality ?? null, lineOfTreatment: found?.lineOfTreatment ?? null, nctId: found?.nctId ?? null };
+      treatmentMeta[t] = { modality: found?.modality ?? null, lineOfTreatment: found?.lineOfTreatment ?? null, stage: found?.stage ?? null, biomarker: found?.biomarker ?? null, nctId: found?.nctId ?? null };
     }
   }
 

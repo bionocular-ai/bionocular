@@ -18,8 +18,9 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { ArrowUpRight, Loader2, Bell, Send, Newspaper, Zap, Lightbulb, ChevronDown, Maximize2 } from 'lucide-react';
+import { ArrowUpRight, Loader2, Bell, Send, Newspaper, Zap, Lightbulb, Maximize2 } from 'lucide-react';
 import { trialsApi, analyticsApi, type LiveTickerArticle, type LiveTickerResult } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { PHASE_OPTIONS } from '@/lib/dashboard-constants';
 import { TrialCard } from '@/components/dashboard/TrialCard';
 import type { BubbleChartDataPoint, HeadToHeadDataPoint } from '@/types/analytics';
@@ -119,6 +120,11 @@ export default function CancerDashboardSnapshot() {
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
 
+  const [pipelineSponsor, setPipelineSponsor] = React.useState<'Industry' | 'Non-Industry'>('Industry');
+
+  type TrialUpdatesWindow = 7 | 30 | 60 | 90;
+  const [trialUpdatesDays, setTrialUpdatesDays] = React.useState<TrialUpdatesWindow>(60);
+
   // Fetch a snapshot of trial cards (same filter as landscape: Sponsor type = Industry)
   const { data: trialsData, isLoading: trialsLoading } = useQuery({
     queryKey: ['dashboard-snapshot-trials', categorySlug],
@@ -139,33 +145,37 @@ export default function CancerDashboardSnapshot() {
     refetchOnWindowFocus: false,
   });
 
-  // Pipeline Health: phase distribution for Industry-sponsored trials only (matches landscape filter)
+  // Pipeline Health: phase distribution for the currently-selected sponsor type
   const {
     data: pipelineStats,
     isLoading: pipelineStatsLoading,
     isError: pipelineStatsError,
   } = useQuery({
-    queryKey: ['disease-stats', categorySlug, 'Industry'],
+    queryKey: ['disease-stats', categorySlug, pipelineSponsor],
     queryFn: () =>
       trialsApi.getDiseaseLandscapeStats(categorySlug, {
-        sponsor_type: 'Industry',
+        sponsor_type: pipelineSponsor,
       }),
     enabled: Boolean(categorySlug),
     refetchOnWindowFocus: false,
   });
 
-  // Fetch trial updates count (New Records Added + Updates in past 30 days, from ClinicalTrials.gov API dates)
-  const { data: trialUpdatesCount } = useQuery({
-    queryKey: ['trial-updates-count', categorySlug, 30],
-    queryFn: () => trialsApi.getTrialUpdatesCount(categorySlug, 30),
+  // Fetch trial updates count (New Records Added + Updates in selected window, from ClinicalTrials.gov API dates)
+  const { data: trialUpdatesCount, isFetching: trialUpdatesCountFetching } = useQuery({
+    queryKey: ['trial-updates-count', categorySlug, trialUpdatesDays],
+    queryFn: () => trialsApi.getTrialUpdatesCount(categorySlug, trialUpdatesDays),
     enabled: Boolean(categorySlug),
     refetchOnWindowFocus: false,
   });
 
-  // Fetch latest 5 trial updates (by date from ClinicalTrials.gov API)
-  const { data: latestTrialUpdates, isLoading: latestUpdatesLoading } = useQuery({
-    queryKey: ['latest-trial-updates', categorySlug, 5],
-    queryFn: () => trialsApi.getLatestTrialUpdates(categorySlug, 5),
+  // Fetch latest 5 trial updates (by date from ClinicalTrials.gov API) within selected window
+  const {
+    data: latestTrialUpdates,
+    isLoading: latestUpdatesLoading,
+    isFetching: latestUpdatesFetching,
+  } = useQuery({
+    queryKey: ['latest-trial-updates', categorySlug, 5, trialUpdatesDays],
+    queryFn: () => trialsApi.getLatestTrialUpdates(categorySlug, 5, trialUpdatesDays),
     enabled: Boolean(categorySlug),
     refetchOnWindowFocus: false,
   });
@@ -243,22 +253,22 @@ export default function CancerDashboardSnapshot() {
     }));
   }, [snapshotData]);
 
-  /** Pipeline Health: phase distribution. Prefer Industry-only; fallback to overall when Industry stats are all zero or unavailable. */
+  /** Pipeline Health: phase distribution. Use the sponsor-filtered query; only fall back to overall when on the Industry default and that query returns zero rows. */
   const pipelinePhaseBars = React.useMemo(() => {
     const pipelinePhase = pipelineStats?.phase;
     const landscapePhase = landscapeStats?.phase;
 
-    // Industry stats are considered valid only if they have non-zero data
-    const industryTotal = pipelinePhase
+    const sponsorTotal = pipelinePhase
       ? Object.values(pipelinePhase).reduce((a, b) => a + b, 0)
       : 0;
-    const hasValidIndustryStats = !pipelineStatsError && !pipelineStatsLoading && industryTotal > 0;
+    const hasValidSponsorStats = !pipelineStatsError && !pipelineStatsLoading && sponsorTotal > 0;
+    const allowOverallFallback = pipelineSponsor === 'Industry';
 
-    const phase = hasValidIndustryStats
+    const phase = hasValidSponsorStats
       ? pipelinePhase
-      : !pipelineStatsLoading && landscapePhase
+      : allowOverallFallback && !pipelineStatsLoading && landscapePhase
         ? landscapePhase
-        : undefined;
+        : pipelinePhase;
 
     if (!phase) return [];
     const shortLabels: Record<string, string> = {
@@ -284,9 +294,9 @@ export default function CancerDashboardSnapshot() {
         heightPx,
       };
     });
-  }, [pipelineStats?.phase, pipelineStatsError, pipelineStatsLoading, landscapeStats?.phase]);
+  }, [pipelineStats?.phase, pipelineStatsError, pipelineStatsLoading, landscapeStats?.phase, pipelineSponsor]);
 
-  const pipelineHealthIsIndustryOnly =
+  const pipelineHealthSponsorActive =
     !pipelineStatsError &&
     Boolean(pipelineStats?.phase) &&
     Object.values(pipelineStats?.phase ?? {}).reduce((a, b) => a + b, 0) > 0;
@@ -401,23 +411,33 @@ export default function CancerDashboardSnapshot() {
                 className="rounded-t-none"
                 href={`/dashboard/${categorySlug}/trial-updates`}
                 headerRight={
-                  <div className="relative flex items-center">
-                    <select
-                      aria-label="Time range"
-                      className="text-xs font-semibold text-slate-700 bg-white border border-slate-200 rounded-lg pl-2.5 pr-7 py-1.5 appearance-none cursor-pointer hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 uppercase tracking-wider"
-                      defaultValue="30"
-                    >
-                      <option value="7">Past 7 Days</option>
-                      <option value="30">Past 30 Days</option>
-                      <option value="90">Past 90 Days</option>
-                    </select>
-                    <ChevronDown className="h-3.5 w-3.5 text-slate-500 pointer-events-none absolute right-2 top-1/2 -translate-y-1/2" aria-hidden />
+                  <div role="tablist" aria-label="Time range" className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 border border-slate-200 rounded-lg">
+                    {([7, 30, 60, 90] as const).map((d) => {
+                      const active = trialUpdatesDays === d;
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => setTrialUpdatesDays(d)}
+                          className={cn(
+                            'text-[10px] font-bold tracking-widest px-2 py-1 rounded uppercase transition-colors',
+                            active
+                              ? 'bg-white text-[var(--brand-primary)] shadow-sm'
+                              : 'text-slate-500 hover:text-slate-700',
+                          )}
+                        >
+                          {d}D
+                        </button>
+                      );
+                    })}
                   </div>
                 }
               >
                 <div className="flex flex-col h-full gap-2 min-h-0 -mt-1 -mx-1">
                   {/* Summary cards */}
-                  <div className="flex w-full gap-2 shrink-0">
+                  <div className={cn('flex w-full gap-2 shrink-0 transition-opacity', trialUpdatesCountFetching && 'opacity-60')}>
                     <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg py-1.5 px-2 min-w-0">
                       <div className="flex-shrink-0 w-6 h-6 rounded-md bg-amber-50 flex items-center justify-center">
                         <Zap className="h-3 w-3 text-amber-600" />
@@ -427,7 +447,7 @@ export default function CancerDashboardSnapshot() {
                           {trialUpdatesCount == null ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : (trialUpdatesCount.new_records_added.toLocaleString() ?? "0")}
                         </div>
                         <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">New Records Added</div>
-                        <div className="text-[7px] text-slate-400 mt-0.5">Past 30 days</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">Past {trialUpdatesDays} days</div>
                       </div>
                     </div>
                     <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg py-1.5 px-2 min-w-0">
@@ -439,7 +459,7 @@ export default function CancerDashboardSnapshot() {
                           {trialUpdatesCount == null ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : (trialUpdatesCount.updates.toLocaleString() ?? "0")}
                         </div>
                         <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Updates</div>
-                        <div className="text-[7px] text-slate-400 mt-0.5">Past 30 days</div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">Past {trialUpdatesDays} days</div>
                       </div>
                     </div>
                   </div>
@@ -454,13 +474,13 @@ export default function CancerDashboardSnapshot() {
                         <Link href={`/dashboard/${categorySlug}/trial-updates`} className="p-1 rounded hover:bg-slate-200 text-slate-500" aria-label="Full view"><Maximize2 className="h-3.5 w-3" /></Link>
                       </span>
                     </div>
-                    <div className="flex-1 min-h-0 overflow-hidden">
+                    <div className={cn('flex-1 min-h-0 overflow-hidden transition-opacity', latestUpdatesFetching && !latestUpdatesLoading && 'opacity-60')}>
                       {latestUpdatesLoading ? (
                         <div className="flex items-center justify-center py-8">
                           <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
                         </div>
                       ) : !latestTrialUpdates?.trials?.length ? (
-                        <div className="py-6 text-center text-sm text-slate-500">No trial updates</div>
+                        <div className="py-6 text-center text-sm text-slate-500">No trial updates in the past {trialUpdatesDays} days</div>
                       ) : (
                         latestTrialUpdates.trials.slice(0, 5).map((trial, idx) => (
                           <div
@@ -679,19 +699,38 @@ export default function CancerDashboardSnapshot() {
             <div className="flex-1 min-h-0">
               <SnapshotModule
                 title="Pipeline Health"
-                href={`/dashboard/${categorySlug}/landscape?sponsor_type=Industry`}
+                href={`/dashboard/${categorySlug}/landscape?sponsor_type=${pipelineSponsor}`}
               >
                 <style>{`.pipeline-module .lucide-arrow-up-right { color: #64748b; } .pipeline-module button:hover .lucide-arrow-up-right { color: #2563eb; } .pipeline-module button:hover { background-color: rgba(37,99,235,0.08); } .pipeline-module *:focus { outline: none; }`}</style>
                 <div className="h-full flex flex-col relative pipeline-module min-h-0">
                   <div className="flex w-full justify-between items-center mb-3 relative z-10 pt-1">
                     <div className="text-[var(--brand-text-muted)] text-xs font-medium">
-                    {pipelineHealthIsIndustryOnly
-                      ? 'Trials by phase (Industry-sponsored)'
+                    {pipelineHealthSponsorActive
+                      ? pipelineSponsor === 'Industry'
+                        ? 'Trials by phase (Industry-sponsored)'
+                        : 'Trials by phase (Non-Industry)'
                       : 'Trials by phase'}
                   </div>
                     <div className="flex gap-2">
-                      <span className="bg-[var(--brand-accent-light)] border border-[var(--brand-border)] text-[9px] font-bold tracking-widest px-2 py-1 rounded text-[var(--brand-primary)] uppercase shadow-sm">Industry</span>
-                      <span className="bg-transparent border border-[var(--brand-border)] text-[9px] font-bold tracking-widest px-2 py-1 rounded text-[var(--brand-text-muted)] uppercase">Non-Industry</span>
+                      {(['Industry', 'Non-Industry'] as const).map((s) => {
+                        const active = pipelineSponsor === s;
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setPipelineSponsor(s)}
+                            aria-pressed={active}
+                            className={cn(
+                              'border border-[var(--brand-border)] text-[9px] font-bold tracking-widest px-2 py-1 rounded uppercase transition-colors',
+                              active
+                                ? 'bg-[var(--brand-accent-light)] text-[var(--brand-primary)] shadow-sm'
+                                : 'bg-transparent text-[var(--brand-text-muted)] hover:bg-[var(--brand-accent-light)]/50',
+                            )}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                   <div className="flex-1 min-h-[90px] w-full z-10" ref={pipelineContainerRef}>
@@ -704,7 +743,7 @@ export default function CancerDashboardSnapshot() {
                         label: bar.shortLabel,
                         fullLabel: bar.label,
                         count: bar.count,
-                        href: `/dashboard/${categorySlug}/landscape?${new URLSearchParams({ sponsor_type: 'Industry', phase: bar.label }).toString()}`,
+                        href: `/dashboard/${categorySlug}/landscape?${new URLSearchParams({ sponsor_type: pipelineSponsor, phase: bar.label }).toString()}`,
                         isNa: bar.label === 'Not applicable',
                       }));
                       const maxCount = Math.max(...chartData.map((d) => d.count), 1);

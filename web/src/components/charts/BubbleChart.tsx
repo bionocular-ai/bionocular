@@ -775,6 +775,12 @@ export default function BubbleChart({
       const interval = rawMax > 1000 ? 100 : rawMax > 100 ? 50 : 10;
       roundedMin = Math.floor(min / interval) * interval;
       roundedMax = Math.ceil(rawMax / interval) * interval;
+    } else if (isCompact) {
+      // Snapshot bubble: hug observed range, rounded to 10s, padded one tick.
+      // Stay inside [0, 100] so the inverted-safety formatter stays non-negative.
+      const PAD = 10;
+      roundedMin = Math.max(0, Math.floor((min - PAD) / 10) * 10);
+      roundedMax = Math.min(100, Math.ceil((rawMax + PAD) / 10) * 10);
     } else {
       // For percentage metrics (efficacy, safety) always start at 0 so the
       // axis never floats to 30 or 40 when data happens to cluster there.
@@ -789,7 +795,7 @@ export default function BubbleChart({
     }
 
     return [roundedMin, roundedMax];
-  }, []);
+  }, [isCompact]);
 
   // Calculate domains with nice whole number boundaries.
   // For percentage axes (efficacy/safety): auto-scale to data so bubbles spread across the chart,
