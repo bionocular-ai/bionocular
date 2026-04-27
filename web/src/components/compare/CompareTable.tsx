@@ -175,9 +175,9 @@ function CompareSectionTable({
               className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-[0.12em] px-3 pb-2 pt-2 border-l border-slate-200 align-bottom"
               style={{ width: 110, minWidth: 110 }}
             >
-              <span className="invisible block text-[8px] mb-1.5">{'\u00A0'}</span>
+              <span className="invisible block text-[8px] mb-1.5">&nbsp;</span>
               <span className="block leading-tight">NCT</span>
-              <span className="invisible block text-[9px] mt-0.5">{'\u00A0'}</span>
+              <span className="invisible block text-[9px] mt-0.5">&nbsp;</span>
             </th>
             <th
               className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-[0.12em] px-3 pb-2 pt-2 border-l border-slate-200 align-bottom"
@@ -254,18 +254,9 @@ function CompareSectionTable({
                   </span>
                 </td>
                 <td className="px-3 py-0 border-l border-slate-100 align-middle" style={{ width: 110, minWidth: 110 }}>
-                  {treatmentMeta[treatment]?.nctId ? (
-                    <a
-                      href={`https://clinicaltrials.gov/study/${treatmentMeta[treatment].nctId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[12px] font-mono text-[var(--brand-primary)] hover:underline leading-tight block py-3"
-                    >
-                      {treatmentMeta[treatment].nctId}
-                    </a>
-                  ) : (
-                    <span className="text-[13px] text-slate-400 leading-tight block py-3">—</span>
-                  )}
+                  <span className="text-[13px] font-semibold text-slate-800 leading-tight block py-3">
+                    {treatmentMeta[treatment]?.nctId ?? '—'}
+                  </span>
                 </td>
                 <td className="px-3 py-0 border-l border-slate-100 align-middle" style={{ width: 120, minWidth: 120 }}>
                   <span className="text-[13px] font-semibold text-slate-800 leading-tight block py-3">
