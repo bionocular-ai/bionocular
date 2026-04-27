@@ -11,6 +11,7 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   DASHBOARD: '/dashboard',
   ANALYTICS: '/analytics',
+  AGENT: '/agent',
 } as const;
 
 export const PUBLIC_ROUTES = [

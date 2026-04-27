@@ -6,6 +6,7 @@ import { useSession } from "@/lib/supabase/hooks";
 import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/user-menu';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
+import { AgentNavLink } from '@/components/nav/AgentNavLink';
 import { Search, Activity, ArrowRight } from 'lucide-react';
 
 const CANCER_TYPES = [
@@ -39,6 +40,7 @@ export default function MainDashboardPage() {
               </span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+              <AgentNavLink />
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu
