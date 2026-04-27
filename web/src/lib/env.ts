@@ -48,3 +48,23 @@ export const isDevelopment = env.nodeEnv === 'development';
  */
 export const isProduction = env.nodeEnv === 'production';
 
+/**
+ * Server-only environment variables.
+ *
+ * Lazy access — only call from server code (route handlers, server components, server actions).
+ * Throws at call time if the var is missing, so importing this module in a client bundle is safe.
+ */
+function requireServerEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) throw new Error(`Missing required server env var: ${key}`);
+  return value;
+}
+
+export function getServerEnv() {
+  return {
+    supabaseSecretKey: requireServerEnv('SUPABASE_SECRET_KEY'),
+    anthropicApiKey: requireServerEnv('ANTHROPIC_API_KEY'),
+    pubmedApiKey: process.env.PUBMED_API_KEY,
+  };
+}
+
