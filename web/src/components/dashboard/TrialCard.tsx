@@ -76,51 +76,46 @@ export function TrialCard({ trial, className, category }: TrialCardProps) {
   return (
     <div
       className={cn(
-        'group relative rounded-xl overflow-hidden',
+        '@container/card group relative rounded-lg overflow-hidden',
         'bg-[#1e3a5f]',
         'border border-[#2d4a6f]/80',
         'shadow-sm',
-        'flex flex-col min-h-[152px] min-w-[320px]',
+        'flex flex-col h-full min-h-0 min-w-0',
         className
       )}
     >
-      <Link href={href} className="flex flex-col flex-1 min-w-0 min-h-0">
-        <div className="px-3 pt-3 pb-2 flex flex-col flex-1 min-h-0 gap-2">
-          {/* Trial name or NCT + Drug name — take space from top */}
-          <div className="flex flex-col gap-2 flex-1 min-h-0 min-w-0">
-            <div className="shrink-0">
-              <span
-                className="font-semibold text-[14px] text-white leading-tight truncate block"
-                title={displayName !== trial.nct_id ? `${trial.nct_id} — ${displayName}` : trial.nct_id}
-              >
-                {displayName}
-              </span>
-            </div>
-            <div
-              className="text-xs text-slate-200 leading-snug font-medium shrink-0 min-w-0 line-clamp-2 break-words"
-              title={(trial.treatment_name || trial.drug_name) || undefined}
-            >
-              {trial.treatment_name || trial.drug_name || '—'}
-            </div>
-          </div>
-          {/* Sponsor — always just above the footer */}
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 shrink-0 min-w-0 mt-auto">
-            <Building2 className="h-3 w-3 flex-shrink-0 text-slate-500" aria-hidden />
-            <span className="truncate">{trial.sponsor_name || '—'}</span>
-          </div>
+      <Link
+        href={href}
+        className="flex-1 flex flex-col min-w-0 min-h-0 px-[clamp(0.5rem,2.4cqw,1.25rem)] pt-[clamp(0.5rem,2.4cqw,1.25rem)] pb-[clamp(0.375rem,1.8cqw,0.875rem)] gap-[clamp(0.25rem,1.4cqw,0.75rem)]"
+      >
+        <span
+          className="font-semibold text-[clamp(0.75rem,3.6cqw,1.625rem)] text-white leading-[1.15] truncate block tabular-nums tracking-tight"
+          title={displayName !== trial.nct_id ? `${trial.nct_id} — ${displayName}` : trial.nct_id}
+        >
+          {displayName}
+        </span>
+        <span
+          className="text-[clamp(0.65rem,3cqw,1.25rem)] text-slate-200 leading-[1.3] font-medium line-clamp-2 @[20rem]/card:line-clamp-3 break-words min-w-0"
+          title={(trial.treatment_name || trial.drug_name) || undefined}
+        >
+          {trial.treatment_name || trial.drug_name || '—'}
+        </span>
+        <div className="flex items-center gap-[clamp(0.25rem,1cqw,0.5rem)] text-[clamp(0.6rem,2.4cqw,1rem)] text-slate-400 mt-auto pt-[clamp(0.25rem,1cqw,0.5rem)] min-w-0">
+          <Building2 className="h-[clamp(0.625rem,2.2cqw,1rem)] w-[clamp(0.625rem,2.2cqw,1rem)] flex-shrink-0 text-slate-500/80" aria-hidden />
+          <span className="truncate">{trial.sponsor_name || '—'}</span>
         </div>
       </Link>
 
       {/* Footer: enrollment, phase, status; Results when applicable */}
-      <div className="px-3 py-2 border-t border-[#2d4a6f]/80 flex items-center justify-between gap-2 flex-nowrap shrink-0">
-        <div className="flex items-center gap-1.5 flex-nowrap min-w-0">
-          <span className="inline-flex items-center gap-1 text-[10px] text-slate-300 font-medium tabular-nums">
-            <User className="h-3 w-3 flex-shrink-0 text-slate-500" aria-hidden />
+      <div className="px-[clamp(0.5rem,2.4cqw,1.25rem)] py-[clamp(0.3rem,1.6cqw,0.75rem)] border-t border-[#2d4a6f]/80 flex items-center justify-between gap-2 flex-nowrap shrink-0 overflow-hidden">
+        <div className="flex items-center gap-[clamp(0.25rem,1.1cqw,0.625rem)] flex-nowrap min-w-0">
+          <span className="inline-flex items-center gap-1 text-[clamp(0.55rem,2.3cqw,0.9375rem)] text-slate-300 font-medium tabular-nums">
+            <User className="h-[clamp(0.625rem,2.2cqw,1rem)] w-[clamp(0.625rem,2.2cqw,1rem)] flex-shrink-0 text-slate-500" aria-hidden />
             {trial.enrollment_count != null ? trial.enrollment_count : '—'}
           </span>
           <span
             className={cn(
-              'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+              'inline-flex items-center rounded px-[clamp(0.25rem,1.1cqw,0.5rem)] py-[clamp(0.0625rem,0.5cqw,0.25rem)] text-[clamp(0.55rem,2.3cqw,0.9375rem)] font-semibold uppercase tracking-wider',
               phaseTagVariant(phaseShort)
             )}
           >
@@ -128,7 +123,7 @@ export function TrialCard({ trial, className, category }: TrialCardProps) {
           </span>
           <span
             className={cn(
-              'inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
+              'inline-flex items-center rounded px-[clamp(0.25rem,1.1cqw,0.5rem)] py-[clamp(0.0625rem,0.5cqw,0.25rem)] text-[clamp(0.55rem,2.3cqw,0.9375rem)] font-semibold uppercase tracking-wider',
               studyStatusVariant(trial.study_status)
             )}
           >
@@ -140,12 +135,12 @@ export function TrialCard({ trial, className, category }: TrialCardProps) {
             href={href}
             onClick={(e) => e.stopPropagation()}
             className={cn(
-              'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider flex-shrink-0',
+              'inline-flex items-center gap-1 rounded px-[clamp(0.25rem,1.1cqw,0.5rem)] py-[clamp(0.0625rem,0.5cqw,0.25rem)] text-[clamp(0.55rem,2.3cqw,0.9375rem)] font-semibold uppercase tracking-wider flex-shrink-0',
               'bg-sky-600/90 hover:bg-sky-500 text-white transition-colors duration-150'
             )}
             aria-label="View results"
           >
-            <FileText className="h-3 w-3" aria-hidden />
+            <FileText className="h-[clamp(0.625rem,2.2cqw,1rem)] w-[clamp(0.625rem,2.2cqw,1rem)]" aria-hidden />
             Results
           </Link>
         )}

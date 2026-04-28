@@ -341,6 +341,7 @@ interface BarChartProps {
   wrapXAxisLabels?: boolean;
   /** Optional override for bottom margin (e.g. analytics fullscreen). */
   bottomMargin?: number;
+  leftMargin?: number;
   /** When false, tooltips (hover and pin) are disabled (e.g. dashboard snapshot) */
   showTooltip?: boolean;
 }
@@ -358,6 +359,7 @@ export default function BarChart({
   rounded = true,
   wrapXAxisLabels = false,
   bottomMargin: bottomMarginProp,
+  leftMargin: leftMarginProp,
   showTooltip = true,
 }: BarChartProps) {
   // Ensure height is always a valid positive number (fixes SSR warnings)
@@ -450,13 +452,13 @@ export default function BarChart({
         top: 20,
         right: 6,
         bottom: bottomMarginProp ?? (wrapXAxisLabels ? 24 : 140),
-        left: 6,
+        left: leftMarginProp ?? 6,
       }
     : {
         top: 20,
         right: showReferenceLine ? 14 : 30,
         bottom: bottomMarginProp ?? 130,
-        left: 60,
+        left: leftMarginProp ?? 60,
       };
 
   // Median label on the right: white/chart background + subtle border, anchored to end of reference line
@@ -878,7 +880,7 @@ export default function BarChart({
                   value: `${metricLabel} (${metricUnit})`,
                   angle: -90,
                   position: 'insideLeft',
-                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 12, fontWeight: 600 },
                 }}
               />
               {showReferenceLine && (
@@ -1003,7 +1005,7 @@ export default function BarChart({
                   value: `${metricLabel} (${metricUnit})`,
                   angle: -90,
                   position: 'insideLeft',
-                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 13, fontWeight: 600 },
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 12, fontWeight: 600 },
                 }}
               />
               {showReferenceLine && (
