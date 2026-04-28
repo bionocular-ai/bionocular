@@ -54,6 +54,8 @@ interface BubbleChartProps {
   rounded?: boolean;
   /** When false, tooltips (hover and pin) are disabled (e.g. dashboard snapshot) */
   showTooltip?: boolean;
+  /** Override left margin (default in compact mode is 6) */
+  leftMargin?: number;
 }
 
 // ============================================================================
@@ -471,6 +473,7 @@ export default function BubbleChart({
   isCompact = false,
   rounded = true,
   showTooltip = true,
+  leftMargin: leftMarginProp,
 }: BubbleChartProps) {
   const chartHeight = Math.max(height || 600, 100);
   const currentMaxRadius = compact || isCompact ? 30 : MAX_RADIUS;
@@ -912,7 +915,7 @@ export default function BubbleChart({
     left: 70,
   };
   // Margins for dashboard card (isCompact): reduced left for tighter layout
-  const marginCompact = { top: 20, right: 30, bottom: 15, left: 6 };
+  const marginCompact = { top: 20, right: 30, bottom: 15, left: leftMarginProp ?? 6 };
   const effectiveMargin = isCompact ? marginCompact : (fillHeight ? marginFillHeight : margin);
 
   // Get readable label for Z-axis parameter - defined early so it can be used in other callbacks
@@ -1115,6 +1118,7 @@ export default function BubbleChart({
               tickLine={{ stroke: colors.grid }}
               axisLine={{ stroke: colors.grid }}
               tickFormatter={formatYAxisTick}
+              width={50}
               label={{
                 value: yAxisLabel,
                 angle: -90,

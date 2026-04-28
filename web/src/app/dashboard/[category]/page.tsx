@@ -90,23 +90,23 @@ function SnapshotModule({
 
   return (
     <Card className={`flex flex-col overflow-hidden h-full bg-white border border-[var(--brand-border)] shadow-md ${className}`}>
-      <CardHeader className={`flex flex-row items-center justify-between h-[clamp(38px,3.6vh,46px)] py-0 px-4 shrink-0 ${headerBg}`}>
-        <CardTitle className={`text-[12px] font-bold tracking-[0.08em] uppercase flex items-center gap-2 min-w-0 truncate ${dark ? "text-slate-200" : "text-[var(--brand-text)]"}`}>
-           <div className="w-1.5 h-3.5 shrink-0 bg-[var(--brand-primary)] rounded-full" />
+      <CardHeader className={`flex flex-row items-center justify-between h-[clamp(30px,3vh,42px)] py-0 px-3 shrink-0 ${headerBg}`}>
+        <CardTitle className={`text-[clamp(10px,0.7vw,12px)] font-bold tracking-[0.1em] uppercase flex items-center gap-1.5 min-w-0 truncate ${dark ? "text-slate-200" : "text-[var(--brand-text)]"}`}>
+           <div className="w-1 h-3 shrink-0 bg-[var(--brand-primary)] rounded-full" />
            <span className="truncate">{title}</span>
         </CardTitle>
         {headerRight ?? (!hideNav && (href || onNavigate) && (
           <button
             type="button"
             onClick={handleNav}
-            className={`p-1.5 rounded-full transition-all active:scale-95 ${dark ? "text-slate-400 hover:text-[var(--brand-accent)] hover:bg-white/10" : "text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-accent-light)]"}`}
+            className={`p-1 rounded-full transition-all active:scale-95 ${dark ? "text-slate-400 hover:text-[var(--brand-accent)] hover:bg-white/10" : "text-[var(--brand-text-muted)] hover:text-[var(--brand-primary)] hover:bg-[var(--brand-accent-light)]"}`}
             aria-label={`Open ${title}`}
           >
-            <ArrowUpRight className="h-4 w-4" />
+            <ArrowUpRight className="h-3.5 w-3.5" />
           </button>
         ))}
       </CardHeader>
-      <CardContent className="p-[clamp(12px,1.6vw,20px)] flex-1 flex flex-col min-h-0 overflow-hidden">
+      <CardContent className="p-[clamp(8px,1.1vw,16px)] flex-1 flex flex-col min-h-0 overflow-hidden">
         {children}
       </CardContent>
     </Card>
@@ -357,6 +357,30 @@ export default function CancerDashboardSnapshot() {
     return () => ro.disconnect();
   }, []);
 
+  // Efficacy/Safety chart sizing (bubble + bar fill panel)
+  const bubbleContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const barContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const [bubbleH, setBubbleH] = React.useState(110);
+  const [barH, setBarH] = React.useState(110);
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const measureBubble = () => {
+      const rect = bubbleContainerRef.current?.getBoundingClientRect();
+      if (rect && rect.height > 0) setBubbleH(Math.max(Math.floor(rect.height), 90));
+    };
+    const measureBar = () => {
+      const rect = barContainerRef.current?.getBoundingClientRect();
+      if (rect && rect.height > 0) setBarH(Math.max(Math.floor(rect.height), 90));
+    };
+    measureBubble();
+    measureBar();
+    const ro = new ResizeObserver(() => { measureBubble(); measureBar(); });
+    if (bubbleContainerRef.current) ro.observe(bubbleContainerRef.current);
+    if (barContainerRef.current) ro.observe(barContainerRef.current);
+    return () => ro.disconnect();
+  }, []);
+
   return (
     <div className="flex flex-col h-screen w-full bg-[var(--brand-bg)] overflow-hidden relative selection:bg-[var(--brand-accent-light)] selection:text-[var(--brand-primary)]">
       {/* Header */}
@@ -384,24 +408,24 @@ export default function CancerDashboardSnapshot() {
       </header>
 
       {/* Page Title Context */}
-      <div className="px-10 sm:px-12 lg:px-16 xl:px-20 2xl:px-24 py-6 sm:py-8 shrink-0 flex flex-col items-center justify-center z-10 relative text-center">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-[var(--brand-text)] tracking-tight flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+      <div className="px-[clamp(0.75rem,2vw,5rem)] py-[clamp(0.4rem,1vh,1.5rem)] shrink-0 flex flex-col items-center justify-center z-10 relative text-center">
+        <h1 className="text-[clamp(1.125rem,1.75vw,2.25rem)] font-extrabold text-[var(--brand-text)] tracking-tight flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
           {categoryName} <span style={{ color: 'var(--brand-primary)' }}>bi<span className="brand-o">o</span>nocular</span>
         </h1>
       </div>
 
       {/* Main Grid: 1 col below 768px, 2 cols 768–1023px (Left|Middle, then Right), 3 cols 1024px+.
           Use min-h-0 + overflow so columns are constrained to viewport and scroll independently. */}
-      <main className="flex-1 min-h-0 flex flex-col px-10 sm:px-12 lg:px-16 xl:px-20 2xl:px-24 pb-8 sm:pb-10 z-10 relative">
-        <div className="flex-1 min-h-0 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 sm:gap-5 lg:gap-6 items-stretch overflow-hidden">
+      <main className="flex-1 min-h-0 flex flex-col px-[clamp(0.75rem,2vw,5rem)] pb-[clamp(0.75rem,1.2vh,2rem)] z-10 relative">
+        <div className="flex-1 min-h-0 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-[clamp(0.5rem,0.6vw,1.25rem)] items-stretch overflow-hidden">
 
           {/* LEFT COLUMN: Data/Abstract, News, Alerts */}
-          <div className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-hidden">
-            <div className="flex flex-col gap-0 flex-1 min-h-0">
+          <div className="lg:col-span-4 flex flex-col gap-[clamp(0.5rem,0.6vw,1rem)] min-h-0 overflow-hidden">
+            <div className="flex flex-col gap-0 flex-1 min-h-0 @container/updates">
               {landscapeStats?.status?.["Overall Status"] != null && (
-                <div className="shrink-0 px-4 py-2.5 bg-slate-50 border border-slate-200 border-b-slate-200 rounded-t-lg flex items-center justify-center">
-                  <span className="text-sm font-semibold text-slate-700">
-                    Total Trials Examined: <span className="tabular-nums text-slate-900">{(landscapeStats.status["Overall Status"]).toLocaleString()}</span>
+                <div className="shrink-0 px-3 py-[clamp(0.25rem,0.3vh,0.4rem)] bg-slate-50 border border-slate-200 border-b-slate-200 rounded-t-lg flex items-center justify-center">
+                  <span className="text-[clamp(0.625rem,0.7vw,0.75rem)] font-semibold uppercase tracking-[0.08em] text-slate-600">
+                    Total Trials Examined<span className="mx-2 text-slate-300">·</span><span className="tabular-nums text-slate-900 normal-case tracking-normal">{(landscapeStats.status["Overall Status"]).toLocaleString()}</span>
                   </span>
                 </div>
               )}
@@ -435,38 +459,36 @@ export default function CancerDashboardSnapshot() {
                   </div>
                 }
               >
-                <div className="flex flex-col h-full gap-2 min-h-0 -mt-1 -mx-1">
+                <div className="flex flex-col h-full gap-[clamp(0.375rem,0.4vh,0.625rem)] min-h-0 -mt-1 -mx-1">
                   {/* Summary cards */}
                   <div className={cn('flex w-full gap-2 shrink-0 transition-opacity', trialUpdatesCountFetching && 'opacity-60')}>
-                    <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg py-1.5 px-2 min-w-0">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-md bg-amber-50 flex items-center justify-center">
-                        <Zap className="h-3 w-3 text-amber-600" />
+                    <div className="flex-1 flex items-center gap-2 bg-white border border-slate-200 rounded-lg py-[clamp(0.2rem,0.25vh,0.4rem)] px-2 min-w-0">
+                      <div className="flex-shrink-0 w-[clamp(1.125rem,1.3vw,1.375rem)] h-[clamp(1.125rem,1.3vw,1.375rem)] rounded bg-amber-50 flex items-center justify-center">
+                        <Zap className="h-2.5 w-2.5 text-amber-600" />
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-slate-800 tabular-nums">
-                          {trialUpdatesCount == null ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : (trialUpdatesCount.new_records_added.toLocaleString() ?? "0")}
+                      <div className="min-w-0 flex items-baseline gap-1.5">
+                        <div className="text-[clamp(0.875rem,1vw,1rem)] font-bold text-slate-900 tabular-nums leading-none">
+                          {trialUpdatesCount == null ? <Loader2 className="h-3 w-3 animate-spin text-blue-400" /> : (trialUpdatesCount.new_records_added.toLocaleString() ?? "0")}
                         </div>
-                        <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">New Records Added</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">Past {trialUpdatesDays} days</div>
+                        <div className="text-[clamp(0.5rem,0.55vw,0.5625rem)] font-semibold text-slate-500 uppercase tracking-[0.1em] truncate">New Records</div>
                       </div>
                     </div>
-                    <div className="flex-1 flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg py-1.5 px-2 min-w-0">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center">
-                        <Lightbulb className="h-3 w-3 text-blue-600" />
+                    <div className="flex-1 flex items-center gap-2 bg-white border border-slate-200 rounded-lg py-[clamp(0.2rem,0.25vh,0.4rem)] px-2 min-w-0">
+                      <div className="flex-shrink-0 w-[clamp(1.125rem,1.3vw,1.375rem)] h-[clamp(1.125rem,1.3vw,1.375rem)] rounded bg-blue-50 flex items-center justify-center">
+                        <Lightbulb className="h-2.5 w-2.5 text-blue-600" />
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-slate-800 tabular-nums">
-                          {trialUpdatesCount == null ? <Loader2 className="h-4 w-4 animate-spin text-blue-400" /> : (trialUpdatesCount.updates.toLocaleString() ?? "0")}
+                      <div className="min-w-0 flex items-baseline gap-1.5">
+                        <div className="text-[clamp(0.875rem,1vw,1rem)] font-bold text-slate-900 tabular-nums leading-none">
+                          {trialUpdatesCount == null ? <Loader2 className="h-3 w-3 animate-spin text-blue-400" /> : (trialUpdatesCount.updates.toLocaleString() ?? "0")}
                         </div>
-                        <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider">Updates</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">Past {trialUpdatesDays} days</div>
+                        <div className="text-[clamp(0.5rem,0.55vw,0.5625rem)] font-semibold text-slate-500 uppercase tracking-[0.1em] truncate">Updates</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Data table: 4 columns so "Update Message" and icon have space; label and values align in col 3 */}
                   <div className="flex-1 flex flex-col min-h-0 border border-slate-200 rounded-xl overflow-hidden bg-white -mb-2">
-                    <div className="grid grid-cols-[5rem_1fr_minmax(5rem,auto)_2.25rem] gap-2 px-3 py-2.5 bg-slate-100 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600 shrink-0 items-center">
+                    <div className="grid grid-cols-[5rem_1fr_minmax(4.5rem,auto)_2rem] gap-2 px-3 py-[clamp(0.375rem,0.4vh,0.625rem)] bg-slate-100 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600 shrink-0 items-center">
                       <span>Date</span>
                       <span>Record Name</span>
                       <span className="min-w-0 block pl-3">Update Message</span>
@@ -485,9 +507,9 @@ export default function CancerDashboardSnapshot() {
                         latestTrialUpdates.trials.slice(0, 5).map((trial, idx) => (
                           <div
                             key={trial.nct_id}
-                            className={`grid grid-cols-[5rem_1fr_minmax(5rem,auto)_2.25rem] gap-2 px-3 py-2.5 border-b border-slate-100 text-xs items-center ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/80"}`}
+                            className={`grid grid-cols-[5rem_1fr_minmax(4.5rem,auto)_2rem] gap-2 px-3 py-[clamp(0.375rem,0.45vh,0.625rem)] border-b border-slate-100 text-xs items-center ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/80"}`}
                           >
-                            <span className="text-slate-500 font-medium">
+                            <span className="text-slate-500 font-medium tabular-nums whitespace-nowrap">
                               {trial.date_iso
                                 ? new Date(trial.date_iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                                 : '—'}
@@ -517,9 +539,9 @@ export default function CancerDashboardSnapshot() {
               </div>
             </div>
 
-            <div className="flex-1 min-h-0">
+            <div className="@container/news flex-1 min-h-0">
               <SnapshotModule title="Latest News" href={`/dashboard/${categorySlug}/live-ticker`}>
-                <div className="space-y-2 pt-1 -mx-2 -mt-3 -mb-2">
+                <div className="space-y-[clamp(0.125rem,1cqh,0.625rem)] pt-1 -mx-2 -mt-3 -mb-2 h-full flex flex-col">
                   {liveTickerLoading && (
                     <div className="flex items-center justify-center py-6">
                       <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
@@ -555,25 +577,25 @@ export default function CancerDashboardSnapshot() {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex gap-3 items-center group p-2.5 rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all duration-200"
+                        className="flex flex-1 min-h-0 gap-[clamp(0.375rem,1.2cqw,1rem)] items-center group px-[clamp(0.375rem,1.1cqw,0.875rem)] py-[clamp(0.3rem,1.4cqh,0.875rem)] rounded-lg hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 transition-all duration-200"
                       >
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-sky-600 shrink-0 flex items-center justify-center text-white shadow-inner relative overflow-hidden">
-                          <Newspaper className="h-4 w-4 relative z-10" />
+                        <div className="w-[clamp(1.75rem,4.6cqw,3.5rem)] h-[clamp(1.75rem,4.6cqw,3.5rem)] rounded-md bg-gradient-to-br from-blue-500 to-sky-600 shrink-0 flex items-center justify-center text-white shadow-inner relative overflow-hidden">
+                          <Newspaper className="h-[clamp(0.75rem,2.2cqw,1.5rem)] w-[clamp(0.75rem,2.2cqw,1.5rem)] relative z-10" />
                         </div>
-                        <div className="flex flex-col gap-1 min-w-0 flex-1">
-                          <span className="text-xs font-semibold text-slate-700 line-clamp-2 leading-relaxed group-hover:text-blue-700 transition-colors">{title}</span>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] text-slate-400 font-medium">{dateLabel}</span>
+                        <div className="flex flex-col gap-[clamp(0.125rem,0.5cqw,0.375rem)] min-w-0 flex-1">
+                          <span className="text-[clamp(0.7rem,1.7cqw,1.125rem)] font-semibold text-slate-700 line-clamp-2 leading-snug group-hover:text-blue-700 transition-colors">{title}</span>
+                          <div className="flex items-center gap-[clamp(0.25rem,0.8cqw,0.625rem)] flex-wrap">
+                            <span className="text-[clamp(0.55rem,1.2cqw,0.9375rem)] text-slate-400 font-medium tabular-nums">{dateLabel}</span>
                             {nct_id && (
                               <>
-                                <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                <span className="text-[10px] text-slate-500 font-mono">{nct_id}</span>
+                                <span className="w-0.5 h-0.5 rounded-full bg-slate-300" />
+                                <span className="text-[clamp(0.55rem,1.2cqw,0.9375rem)] text-slate-500 font-mono">{nct_id}</span>
                               </>
                             )}
                             {efficacySafetyLabel && (
                               <>
-                                <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                <span className="text-[10px] font-medium text-slate-600">{efficacySafetyLabel}</span>
+                                <span className="w-0.5 h-0.5 rounded-full bg-slate-300" />
+                                <span className="text-[clamp(0.55rem,1.2cqw,0.9375rem)] font-medium text-slate-600">{efficacySafetyLabel}</span>
                               </>
                             )}
                           </div>
@@ -585,37 +607,37 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="h-[clamp(160px,20vh,230px)] shrink-0">
+            <div className="h-[clamp(140px,18vh,230px)] shrink-0">
               <SnapshotModule title="Alerts">
-                <div className="flex flex-col items-center justify-center h-full text-center px-4 gap-3 text-slate-500">
-                  <div className="h-12 w-12 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center mb-1">
-                    <Bell className="h-5 w-5 text-slate-300" />
+                <div className="flex flex-col items-center justify-center h-full text-center px-3 gap-1.5 text-slate-500">
+                  <div className="h-9 w-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center">
+                    <Bell className="h-4 w-4 text-slate-300" />
                   </div>
-                  <p className="text-sm font-medium text-slate-600">No recent alerts</p>
-                  <p className="text-xs text-slate-400 max-w-[220px] leading-relaxed hidden xl:block">Stay updated on clinical changes by creating a saved search or watchlist.</p>
-                  <button className="mt-2 text-[10px] font-bold tracking-wide uppercase px-4 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-lg hover:bg-slate-50 hover:border-blue-300 hover:text-blue-700 transition-all shadow-sm">Setup Alert</button>
+                  <p className="text-[clamp(0.7rem,0.8vw,0.8125rem)] font-medium text-slate-600">No recent alerts</p>
+                  <p className="text-[clamp(0.6rem,0.65vw,0.6875rem)] text-slate-400 max-w-[220px] leading-snug hidden xl:block">Stay updated on clinical changes by creating a saved search or watchlist.</p>
+                  <button className="mt-1 text-[clamp(0.55rem,0.6vw,0.625rem)] font-bold tracking-[0.1em] uppercase px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 hover:border-blue-300 hover:text-blue-700 transition-all shadow-sm">Setup Alert</button>
                 </div>
               </SnapshotModule>
             </div>
           </div>
 
           {/* MIDDLE COLUMN: Trial Cards, Results */}
-          <div className="lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-hidden">
-            <div className="flex-1 flex flex-col min-h-0">
+          <div className="lg:col-span-4 flex flex-col gap-[clamp(0.5rem,0.6vw,1rem)] min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 @container/landscape">
               <SnapshotModule title="Trial Landscape" href={`/dashboard/${categorySlug}/landscape`}>
-                <div className="flex flex-col gap-3 h-full min-h-0">
+                <div className="flex flex-col gap-[clamp(0.5rem,0.5vw,0.75rem)] h-full min-h-0">
                   {trialsLoading && (
                     <div className="flex items-center justify-center flex-1">
                       <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                     </div>
                   )}
-                  <div className="grid grid-cols-3 gap-2 min-h-0 flex-1 overflow-hidden">
+                  <div className="grid grid-cols-3 grid-rows-3 gap-[clamp(0.375rem,0.4vw,0.625rem)] min-h-0 flex-1 overflow-hidden">
                     {(trialsData?.trials ?? []).map((trial) => (
                       <TrialCard
                         key={trial.nct_id}
                         trial={trial}
                         category={categorySlug}
-                        className="min-w-0 min-h-[110px]"
+                        className="min-w-0"
                       />
                     ))}
                   </div>
@@ -641,13 +663,13 @@ export default function CancerDashboardSnapshot() {
                     <div className="flex flex-col gap-0 h-full min-h-0 flex-1">
                       {/* Bubble: Efficacy vs Safety (top, half) */}
                       <div
-                        className="min-h-0 flex-1 flex flex-col min-w-0"
-                        style={{ minHeight: 'clamp(90px,10vh,110px)' }}
+                        ref={bubbleContainerRef}
+                        className="min-h-0 flex-1 flex flex-col min-w-0 overflow-hidden"
                       >
                         {efficacySafetyBubbleData.length > 0 ? (
                           <BubbleChart
                             data={efficacySafetyBubbleData}
-                            height={110}
+                            height={bubbleH}
                             compact={true}
                             fillHeight={false}
                             isCompact={true}
@@ -659,15 +681,16 @@ export default function CancerDashboardSnapshot() {
                             axisMode="efficacy-safety"
                             rounded={false}
                             showTooltip={false}
+                            leftMargin={16}
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-[110px] text-[10px] text-slate-400">No bubble data</div>
+                          <div className="flex items-center justify-center h-full text-[10px] text-slate-400">No bubble data</div>
                         )}
                       </div>
                       {/* Simple bar: ORR by treatment (bottom, half) */}
                       <div
-                        className="min-h-0 flex-1 flex flex-col min-w-0"
-                        style={{ minHeight: 'clamp(90px,10vh,110px)' }}
+                        ref={barContainerRef}
+                        className="min-h-0 flex-1 flex flex-col min-w-0 overflow-hidden"
                       >
                         {efficacySafetyBarData.length > 0 ? (
                           <BarChart
@@ -675,16 +698,18 @@ export default function CancerDashboardSnapshot() {
                             metric="OBJECTIVE_RESPONSE_RATE"
                             title=""
                             description=""
-                            height={110}
+                            height={barH}
                             showReferenceLine={false}
                             showLegend={false}
                             compact={true}
                             rounded={false}
                             wrapXAxisLabels={true}
                             showTooltip={false}
+                            bottomMargin={0}
+                            leftMargin={16}
                           />
                         ) : (
-                          <div className="flex items-center justify-center h-[110px] text-[10px] text-slate-400">No bar data</div>
+                          <div className="flex items-center justify-center h-full text-[10px] text-slate-400">No bar data</div>
                         )}
                       </div>
                     </div>
@@ -695,23 +720,23 @@ export default function CancerDashboardSnapshot() {
           </div>
 
           {/* RIGHT COLUMN: Pipeline, Regulatory, AI — full width on md when 2-col */}
-          <div className="md:col-span-2 lg:col-span-4 flex flex-col gap-4 sm:gap-5 min-h-0 overflow-hidden">
-            <div className="flex-1 min-h-0">
+          <div className="md:col-span-2 lg:col-span-4 flex flex-col gap-[clamp(0.5rem,0.6vw,1rem)] min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 @container/pipeline">
               <SnapshotModule
                 title="Pipeline Health"
                 href={`/dashboard/${categorySlug}/landscape?sponsor_type=${pipelineSponsor}`}
               >
                 <style>{`.pipeline-module .lucide-arrow-up-right { color: #64748b; } .pipeline-module button:hover .lucide-arrow-up-right { color: #2563eb; } .pipeline-module button:hover { background-color: rgba(37,99,235,0.08); } .pipeline-module *:focus { outline: none; }`}</style>
-                <div className="h-full flex flex-col relative pipeline-module min-h-0">
-                  <div className="flex w-full justify-between items-center mb-3 relative z-10 pt-1">
-                    <div className="text-[var(--brand-text-muted)] text-xs font-medium">
+                <div className="h-full flex flex-col relative pipeline-module min-h-0 -mt-1 -mx-1 -mb-3">
+                  <div className="flex w-full justify-between items-center gap-x-3 gap-y-1 flex-wrap mb-1 relative z-10">
+                    <div className="text-[var(--brand-text-muted)] text-[clamp(0.65rem,0.75vw,0.75rem)] font-medium min-w-0">
                     {pipelineHealthSponsorActive
                       ? pipelineSponsor === 'Industry'
                         ? 'Trials by phase (Industry-sponsored)'
                         : 'Trials by phase (Non-Industry)'
                       : 'Trials by phase'}
                   </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 shrink-0">
                       {(['Industry', 'Non-Industry'] as const).map((s) => {
                         const active = pipelineSponsor === s;
                         return (
@@ -733,7 +758,7 @@ export default function CancerDashboardSnapshot() {
                       })}
                     </div>
                   </div>
-                  <div className="flex-1 min-h-[90px] w-full z-10" ref={pipelineContainerRef}>
+                  <div className="flex-1 min-h-[60px] w-full z-10" ref={pipelineContainerRef}>
                     {(() => {
                       const showLoading = (statsLoading && pipelineStatsLoading) || pipelinePhaseBars.length === 0;
                       if (showLoading) {
@@ -791,7 +816,7 @@ export default function CancerDashboardSnapshot() {
                         >
                           <RechartsBarChart
                             data={chartData}
-                            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                            margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
                             barCategoryGap="25%"
                           >
                             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
@@ -801,6 +826,7 @@ export default function CancerDashboardSnapshot() {
                               axisLine={{ stroke: '#e2e8f0' }}
                               tickLine={false}
                               interval={0}
+                              height={20}
                             />
                             <YAxis
                               domain={[0, bestTickMax]}
@@ -837,7 +863,7 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 @container/timeline">
               <SnapshotModule
                 title="Regulatory Timeline"
                 href={`/dashboard/${categorySlug}/regulatory-timeline`}
@@ -845,7 +871,7 @@ export default function CancerDashboardSnapshot() {
               >
                 <div className="flex flex-col h-full min-h-0 -m-5 -mb-8 mt-1 pb-0">
                   <div className="flex px-5 pt-1.5 pb-0.5">
-                    <div style={{ width: '105px' }} aria-hidden />
+                    <div className="w-[clamp(64px,7vw,105px)] shrink-0" aria-hidden />
                     <div className="flex-1 relative ml-1 h-4">
                       <span
                         className="absolute top-0 text-[10px] font-semibold text-[var(--brand-text-muted)] tracking-wide"
@@ -862,13 +888,13 @@ export default function CancerDashboardSnapshot() {
                     </div>
                   </div>
                   <div
-                    className="flex-1 min-h-[120px] px-2"
+                    className="flex-1 min-h-0 px-2"
                     ref={regulatoryContainerRef}
                   >
                     {regulatoryReady && (categorySlug === 'merkel-cell-carcinoma' ? (
                       <div className="w-full h-full flex flex-row">
                         {/* Y-Axis Labels */}
-                        <div className="flex flex-col justify-between py-1 pr-2 pl-2" style={{ width: '105px', height: regulatoryDims.height - 20 }}>
+                        <div className="flex flex-col justify-between py-1 pr-2 pl-2 shrink-0 w-[clamp(64px,7vw,105px)]" style={{ height: regulatoryDims.height - 20 }}>
                           {MCC_REGULATORY_TRIALS.map((trial) => (
                             <div key={trial.nct} className="py-0.5">
                               <div className="text-[9px] font-semibold text-slate-700 leading-tight break-words">
@@ -1001,7 +1027,7 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="h-[clamp(160px,20vh,230px)] shrink-0">
+            <div className="@container/agent h-[clamp(140px,18vh,230px)] shrink-0">
               <SnapshotModule
                 title={
                   <>
@@ -1009,18 +1035,18 @@ export default function CancerDashboardSnapshot() {
                   </>
                 }
               >
-                <div className="h-full flex flex-col justify-end relative overflow-hidden mt-1">
-                  <div className="flex items-stretch bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-lg p-2 pl-3 min-h-[5rem] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]/50 transition-all z-10">
+                <div className="h-full flex flex-col justify-end relative overflow-hidden gap-[clamp(0.375rem,0.8cqw,0.625rem)]">
+                  <div className="flex items-stretch bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-lg p-[clamp(0.375rem,1.2cqh,0.75rem)] pl-[clamp(0.625rem,1.6cqh,1rem)] h-[clamp(2.5rem,40cqh,5.5rem)] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]/50 transition-all z-10">
                     <textarea
-                      rows={2}
-                      className="bg-transparent flex-1 outline-none text-[var(--brand-text)] text-sm placeholder:text-[var(--brand-text-muted)] font-medium resize-none py-1.5"
+                      rows={1}
+                      className="bg-transparent flex-1 outline-none text-[var(--brand-text)] text-[clamp(0.7rem,1.8cqh,1rem)] placeholder:text-[var(--brand-text-muted)] font-medium resize-none py-[clamp(0.125rem,0.6cqh,0.375rem)]"
                       placeholder="Ask Bionocular AI Agent..."
                     />
-                    <button className="h-9 w-9 self-end rounded-md bg-[var(--brand-primary)] flex items-center justify-center text-white ml-2 hover:bg-[var(--brand-primary-hover)] hover:shadow-md transition-all active:scale-95 shrink-0">
-                      <Send className="h-4 w-4" />
+                    <button className="h-[clamp(1.5rem,3.6cqh,2.25rem)] w-[clamp(1.5rem,3.6cqh,2.25rem)] self-end rounded-md bg-[var(--brand-primary)] flex items-center justify-center text-white ml-[clamp(0.375rem,1cqh,0.625rem)] hover:bg-[var(--brand-primary-hover)] hover:shadow-md transition-all active:scale-95 shrink-0">
+                      <Send className="h-[clamp(0.75rem,2.2cqh,1.25rem)] w-[clamp(0.75rem,2.2cqh,1.25rem)]" />
                     </button>
                   </div>
-                  <div className="text-center mt-2 text-[9px] font-medium text-[var(--brand-text-muted)] uppercase tracking-wider">
+                  <div className="text-center text-[clamp(0.55rem,0.85cqw,0.75rem)] font-medium text-[var(--brand-text-muted)] uppercase tracking-[0.1em]">
                     Validate insights with primary sources
                   </div>
                 </div>
