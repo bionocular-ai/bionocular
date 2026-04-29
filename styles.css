@@ -236,3 +236,103 @@ body {
   .nav a { font-size: 16px; padding: 4px 0; width: 100%; display: block; }
   .mobile-menu-backdrop[style*="display: block"] { display: block; }
 }
+
+/* ─── Hero AI Name Animation Block ──────────────────────────────────── */
+.hero-ai-name-block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35em;
+  font-family: 'IBM Plex Sans', Inter, sans-serif;
+  font-size: clamp(1.05rem, 2.2vw, 1.4rem);
+  font-weight: 700;
+  color: var(--brand-accent);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.hero-ai-prefix {
+  color: rgba(218,240,230,0.6);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.hero-ai-words {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+/* "Artificial" – always shown with a red strikethrough */
+.hero-ai-artificial {
+  color: rgba(218,240,230,0.5);
+  text-decoration: line-through;
+  text-decoration-color: #E57373;
+  text-decoration-thickness: 2px;
+  position: relative;
+}
+
+/* Strike span no longer needed but kept for markup compatibility */
+.hero-ai-strike { display: none; }
+
+/* "Authenticated" – always visible in accent teal */
+.hero-ai-authenticated {
+  color: #7AC1A2;
+  margin-left: 0.25em;
+  letter-spacing: 0.01em;
+}
+
+.hero-ai-suffix {
+  color: rgba(218,240,230,0.9);
+}
+
+/* ─── Hero Vision Line ───────────────────────────────────────────────── */
+.hero-vision-line {
+  font-size: clamp(0.85rem, 1.5vw, 1rem);
+  color: rgba(218,240,230,0.72);
+  line-height: 1.55;
+  border-left: 2px solid var(--brand-accent);
+  padding-left: 0.85em;
+  margin-top: 0 !important;
+}
+
+.hero-vision-line em {
+  font-style: italic;
+  color: rgba(218,240,230,0.92);
+  font-weight: 500;
+}
+
+.hero-vision-sub {
+  font-size: 0.88em;
+  color: rgba(218,240,230,0.58);
+  letter-spacing: 0.01em;
+}
+
+/* ─── Hero Feature List ──────────────────────────────────────────────── */
+.hero-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55em;
+}
+
+.hero-feature-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+  font-size: clamp(0.78rem, 1.3vw, 0.9rem);
+  color: rgba(218,240,230,0.78);
+  line-height: 1.5;
+}
+
+.hero-feature-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-accent);
+  margin-top: 0.45em;
+  box-shadow: 0 0 6px rgba(122,193,162,0.6);
+}
