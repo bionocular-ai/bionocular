@@ -375,6 +375,32 @@ export default function Home() {
               Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.
             </p>
 
+            {/* bionocular AI name animation block */}
+            <div className="hero-ai-name-block" aria-label="bionocular Authenticated Intelligence">
+              <span className="hero-ai-prefix">bionocular AI</span>
+              <span className="hero-ai-words">
+                <span className="hero-ai-artificial" aria-hidden="true">Artificial</span>
+                <span className="hero-ai-strike" aria-hidden="true" />
+                <span className="hero-ai-authenticated">Authenticated</span>
+              </span>
+              <span className="hero-ai-suffix">Intelligence</span>
+            </div>
+
+            {/* Vision tagline */}
+            <p className="hero-vision-line m-0">
+              <em>Where Clinical Rigor Meets Strategic Vision.</em><br />
+              <span className="hero-vision-sub">By Biopharma Strategists, for Biopharma Leaders.</span>
+            </p>
+
+            {/* Feature bullet list */}
+            <ul className="hero-feature-list">
+              <li><span className="hero-feature-dot" />Cancer specific innovative dashboard</li>
+              <li><span className="hero-feature-dot" />Cancer specific efficacy &amp; safety of all treatments — stopped, ongoing or SoC</li>
+              <li><span className="hero-feature-dot" />Cancer specific live news &amp; live monitoring of all treatments</li>
+              <li><span className="hero-feature-dot" />Cancer specific clinical trial landscape with treatment, modality, target, line &amp; many more key filters</li>
+              <li><span className="hero-feature-dot" />Cancer specific AI agent</li>
+            </ul>
+
             {/* CTA buttons */}
             <div className="hero-split-ctas flex mt-6">
               <a
