@@ -94,15 +94,126 @@ export const trialsApi = {
     }], total: 1, skip, limit };
   },
 
-  getByAbstractId: async (abstractId: string): Promise<AbstractData> => {
+  getByAbstractId: async (abstractId: string, category?: string | null): Promise<AbstractData> => {
     const supabase = createClient();
-    const { data } = await supabase.from('trial_outcomes').select('*').eq('abstract_id', abstractId).single();
-    if (!data) return { abstract_id: abstractId };
-    const armResults =
+    const dbCancerType = category ? getDbCancerType(category) : null;
+    const matchesCategory = (cancerTypes: unknown): boolean => {
+      if (!dbCancerType) return false;
+      if (Array.isArray(cancerTypes)) return (cancerTypes as unknown[]).includes(dbCancerType);
+      if (typeof cancerTypes === 'string') return cancerTypes === dbCancerType;
+      return false;
+    };
+    const CONTROL_ARM_RE = /investigator'?s?\s*choice|control|placebo|standard\s*of\s*care|comparator/i;
+    const pickRow = (rows: Record<string, unknown>[]): Record<string, unknown> | null => {
+      if (rows.length === 0) return null;
+      const sorted = [...rows].sort((a, b) => {
+        const aCat = matchesCategory(a.cancer_type) ? 1 : 0;
+        const bCat = matchesCategory(b.cancer_type) ? 1 : 0;
+        if (aCat !== bCat) return bCat - aCat;
+        const aCtrl = typeof a.arm_name === 'string' && CONTROL_ARM_RE.test(a.arm_name) ? 1 : 0;
+        const bCtrl = typeof b.arm_name === 'string' && CONTROL_ARM_RE.test(b.arm_name) ? 1 : 0;
+        if (aCtrl !== bCtrl) return aCtrl - bCtrl;
+        const aHas = typeof a.abstract_id === 'string' && a.abstract_id && a.abstract_id !== abstractId ? 1 : 0;
+        const bHas = typeof b.abstract_id === 'string' && b.abstract_id && b.abstract_id !== abstractId ? 1 : 0;
+        if (aHas !== bHas) return bHas - aHas;
+        const ay = Number(a.published_year ?? 0);
+        const by = Number(b.published_year ?? 0);
+        return by - ay;
+      });
+      return sorted[0];
+    };
+    const { data: byAbstract } = await supabase
+      .from('trial_outcomes')
+      .select('*')
+      .eq('abstract_id', abstractId)
+      .limit(50);
+    let data: Record<string, unknown> | null = pickRow((byAbstract as Record<string, unknown>[] | null) ?? []);
+
+    // Fallback: abstractId may actually be a NCT id (links can substitute NCT
+    // when a row's abstract_id is missing). Try looking up by nct_id and pick
+    // the most recently published row.
+    if (!data && /^NCT\d+/i.test(abstractId)) {
+      const { data: byNct, error: nctErr } = await supabase
+        .from('trial_outcomes')
+        .select('*')
+        .eq('nct_id', abstractId)
+        .limit(50);
+      if (nctErr) console.warn('getByAbstractId nct_id lookup error', nctErr);
+      data = pickRow((byNct as Record<string, unknown>[] | null) ?? []);
+    }
+
+    // Final fallback: no trial_outcomes row at all. Still try to render a
+    // summary card from clinical_trials + trial_landscape if abstractId is a NCT.
+    if (!data) {
+      if (/^NCT\d+/i.test(abstractId)) {
+        const [{ data: trialRow }, { data: landscapeRows }] = await Promise.all([
+          supabase
+            .from('clinical_trials')
+            .select('nct_id, brief_title, overall_status, phases, enrollment_count, lead_sponsor_name, lead_sponsor_class, conditions')
+            .eq('nct_id', abstractId)
+            .maybeSingle(),
+          supabase
+            .from('trial_landscape')
+            .select('*')
+            .eq('nct_id', abstractId),
+        ]);
+        return {
+          abstract_id: abstractId,
+          title: ((trialRow as ClinicalTrialFlat | null)?.brief_title as string) || '',
+          outcome: null,
+          trial: (trialRow as ClinicalTrialFlat | null) ?? null,
+          landscape: ((landscapeRows as TrialLandscapeRow[] | null) ?? [])[0] ?? null,
+        };
+      }
+      return { abstract_id: abstractId };
+    }
+
+    const outcome = data as unknown as TrialOutcomeRow;
+    const nctId = (outcome.nct_id as string) || '';
+
+    let trial: ClinicalTrialFlat | null = null;
+    let landscape: TrialLandscapeRow | null = null;
+    if (nctId) {
+      const [{ data: trialRow }, { data: landscapeRows }] = await Promise.all([
+        supabase
+          .from('clinical_trials')
+          .select('nct_id, brief_title, overall_status, phases, enrollment_count, lead_sponsor_name, lead_sponsor_class, conditions')
+          .eq('nct_id', nctId)
+          .maybeSingle(),
+        supabase
+          .from('trial_landscape')
+          .select('*')
+          .eq('nct_id', nctId),
+      ]);
+      trial = (trialRow as ClinicalTrialFlat | null) ?? null;
+      const rows = (landscapeRows as TrialLandscapeRow[] | null) ?? [];
+      const outcomeCancerTypes = Array.isArray(outcome.cancer_type) ? outcome.cancer_type as string[] : [];
+      landscape =
+        (dbCancerType ? rows.find(r => r.cancer_type === dbCancerType) : null) ??
+        rows.find(r => outcomeCancerTypes.includes(r.cancer_type ?? '')) ??
+        rows[0] ?? null;
+    }
+
+    // Always synthesise arm_results from the flat outcome columns so legacy
+    // consumers (AbstractTimeline → extractKeyMetrics) keep working post-migration.
+    const synthesisedRaw = outcomeRowToClinicalTrialRaw(data as Record<string, unknown>);
+    const synthesisedArms = synthesisedRaw.arm_results as unknown as Record<string, ArmResult>;
+    const existingArms =
       data.arm_results && typeof data.arm_results === 'object'
         ? (data.arm_results as unknown as Record<string, ArmResult>)
         : undefined;
-    return { abstract_id: data.abstract_id, source_url: data.source, arm_results: armResults, title: '' };
+    const armResults =
+      existingArms && Object.keys(existingArms).length > 0 ? existingArms : synthesisedArms;
+
+    return {
+      abstract_id: (outcome.abstract_id as string) || abstractId,
+      source_url: outcome.source as string | undefined,
+      arm_results: armResults,
+      title: (trial?.brief_title as string) || (outcome.trial_name as string) || '',
+      outcome,
+      trial,
+      landscape,
+    };
   },
 
   getLandscapeStats: async (cancerType?: string): Promise<LandscapeStatsResponse> => {
@@ -399,6 +510,8 @@ export const trialsApi = {
     const dbCancerType = getDbCancerType(category);
 
     // Build a base filter factory so both queries share identical filters.
+    // Non-Industry uses an OR clause so NULL lead_sponsor_class rows are kept
+    // (Postgres `<>` returns NULL for NULL operand → would silently drop rows).
     const buildQuery = () => {
       let q = supabase.from('clinical_trials')
         .select('overall_status, phases, lead_sponsor_class')
@@ -407,7 +520,7 @@ export const trialsApi = {
         const wantIndustry = opts.sponsor_type.toLowerCase() === 'industry';
         q = wantIndustry
           ? q.eq('lead_sponsor_class', 'INDUSTRY')
-          : q.neq('lead_sponsor_class', 'INDUSTRY');
+          : q.or('lead_sponsor_class.neq.INDUSTRY,lead_sponsor_class.is.null');
       }
       return q;
     };
@@ -426,7 +539,7 @@ export const trialsApi = {
           const wantIndustry = opts.sponsor_type.toLowerCase() === 'industry';
           q = wantIndustry
             ? q.eq('lead_sponsor_class', 'INDUSTRY')
-            : q.neq('lead_sponsor_class', 'INDUSTRY');
+            : q.or('lead_sponsor_class.neq.INDUSTRY,lead_sponsor_class.is.null');
         }
         return q;
       })(),
@@ -652,7 +765,51 @@ export interface AbstractData {
   title?: string;
   source_url?: string; // For web-scraped trials
   arm_results?: Record<string, ArmResult>;
+  outcome?: TrialOutcomeRow | null;
+  trial?: ClinicalTrialFlat | null;
+  landscape?: TrialLandscapeRow | null;
   [key: string]: unknown;
+}
+
+/** Flat row from `trial_outcomes` (one record per arm/abstract). */
+export type TrialOutcomeRow = Record<string, unknown> & {
+  abstract_id?: string;
+  nct_id?: string;
+  arm_name?: string;
+  source?: string;
+  conference?: string;
+  published_year?: string | number;
+  publication_year?: string | number;
+  trial_name?: string;
+  phase?: string;
+  cancer_type?: string[] | string;
+  modality?: string;
+  num_patients?: number;
+  approval_status?: string;
+};
+
+/** Subset of `clinical_trials` columns used by the abstract page. */
+export interface ClinicalTrialFlat {
+  nct_id: string;
+  brief_title: string | null;
+  overall_status: string | null;
+  phases: string[] | null;
+  enrollment_count: number | null;
+  lead_sponsor_name: string | null;
+  lead_sponsor_class: string | null;
+  conditions: string[] | null;
+}
+
+/** Subset of `trial_landscape` columns used by the abstract page. */
+export interface TrialLandscapeRow {
+  nct_id: string;
+  cancer_type: string | null;
+  modality: string | null;
+  treatment_name: string | null;
+  stage: string | null;
+  biomarker: string | null;
+  line_of_therapy: string | null;
+  acronym: string | null;
 }
 
 export interface ArmResult {
@@ -878,7 +1035,7 @@ export interface LiveTickerResponse {
 // Maps every flat column in trial_outcomes to its AttributeType.X key so that
 // chart-transformers (which call getAttribute(attributes, 'OBJECTIVE_RESPONSE_RATE') etc.)
 // find values without any JSON parsing.
-const OUTCOME_COL_TO_ATTR: Record<string, string> = {
+export const OUTCOME_COL_TO_ATTR: Record<string, string> = {
   // Efficacy
   orr:                          'OBJECTIVE_RESPONSE_RATE',
   complete_response:            'COMPLETE_RESPONSE',
@@ -1012,17 +1169,26 @@ export const analyticsApi = {
   getData: async (filters: AnalyticsFilters = {}): Promise<TrialDataFile> => {
     const supabase = createClient();
 
+    // Funding partition: Industry = trial_outcomes rows whose nct_id matches a
+    // clinical_trials row with lead_sponsor_class='INDUSTRY'. Non-Industry =
+    // strict complement (incl. NCTs missing from clinical_trials and NULL class).
     let allowedNctIds: string[] | null = null;
+    let excludedNctIds: string[] | null = null;
     if (filters.funding_type === 'industry' || filters.funding_type === 'non-industry') {
-      let sponsorQ = supabase.from('clinical_trials').select('nct_id');
-      sponsorQ = filters.funding_type === 'industry'
-        ? sponsorQ.eq('lead_sponsor_class', 'INDUSTRY')
-        : sponsorQ.neq('lead_sponsor_class', 'INDUSTRY');
-      const { data: sponsorData, error: sponsorErr } = await sponsorQ.limit(50000);
+      const { data: sponsorData, error: sponsorErr } = await supabase
+        .from('clinical_trials')
+        .select('nct_id')
+        .eq('lead_sponsor_class', 'INDUSTRY')
+        .limit(50000);
       if (sponsorErr) throw sponsorErr;
-      allowedNctIds = (sponsorData || []).map(r => r.nct_id as string).filter(Boolean);
-      if (allowedNctIds.length === 0) {
-        return { total_abstracts: 0, total_arms: 0, total_attributes_extracted: 0, average_confidence: 0.9, abstracts: [] };
+      const industryIds = (sponsorData || []).map(r => r.nct_id as string).filter(Boolean);
+      if (filters.funding_type === 'industry') {
+        if (industryIds.length === 0) {
+          return { total_abstracts: 0, total_arms: 0, total_attributes_extracted: 0, average_confidence: 0.9, abstracts: [] };
+        }
+        allowedNctIds = industryIds;
+      } else {
+        excludedNctIds = industryIds;
       }
     }
 
@@ -1045,6 +1211,9 @@ export const analyticsApi = {
     }
     if (allowedNctIds) {
       query = query.in('nct_id', allowedNctIds);
+    }
+    if (excludedNctIds && excludedNctIds.length > 0) {
+      query = query.not('nct_id', 'in', `(${excludedNctIds.join(',')})`);
     }
 
     const { data, error } = await query;
