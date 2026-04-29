@@ -39,7 +39,7 @@ export default function TrialUpdatesPage() {
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
 
-  const [timeRange, setTimeRange] = React.useState<string>('30');
+  const [timeRange, setTimeRange] = React.useState<string>('90');
 
   const handleCancerTypeChange = React.useCallback(
     (slug: string) => {

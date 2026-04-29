@@ -294,27 +294,6 @@ const SAFETY_BUBBLE_XY_OPTIONS = [
   ...EFFICACY_OPTIONS.filter((o) => o.value.startsWith('HR_')),
 ];
 
-// Available therapies for selection
-const APPROVED_THERAPIES = [
-  'Nivolumab + Ipilimumab',
-  'Pembrolizumab',
-  'Dabrafenib + Trametinib',
-  'Ipilimumab',
-  'Encorafenib + Binimetinib',
-  'Vemurafenib',
-  'Talimogene Laherparepvec',
-  'Cobimetinib + Vemurafenib',
-  'Atezolizumab',
-];
-
-const NON_APPROVED_THERAPIES = [
-  'Lifileucel',
-  'Fianlimab + Cemiplimab',
-  'Relatlimab + Nivolumab',
-  'Tebentafusp',
-  'RP1 + Nivolumab',
-];
-
 // Advanced filters: options from Landscape page (separate filters, not "Group by")
 const ADVANCED_MODALITY_OPTIONS = [
   { value: 'all', label: 'All' },
@@ -551,7 +530,7 @@ export default function CategoryAnalyticsPage() {
   // Read from URL params using Next.js useSearchParams to avoid hydration mismatch
   const modeParam = searchParams.get('mode');
   const mode: 'all' | 'efficacy' | 'safety' =
-    modeParam === 'efficacy' || modeParam === 'safety' ? modeParam : 'all';
+    modeParam === 'all' ? 'all' : modeParam === 'safety' ? 'safety' : 'efficacy';
 
   // Filter states - initialized based on mode
   const [therapyType, setTherapyType] = useState('all');
@@ -735,7 +714,9 @@ export default function CategoryAnalyticsPage() {
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowHeight, setWindowHeight] = useState(700);
-  const [chartType, setChartType] = useState<'bar' | 'diverging' | 'bubble' | 'dumbbell'>('bar');
+  const [chartType, setChartType] = useState<'bar' | 'diverging' | 'bubble' | 'dumbbell'>(
+    modeParam === 'all' ? 'bubble' : 'bar'
+  );
 
   // Compare treatments table state
   const [compareSort, setCompareSort] = useState<CompareSortMode>('most-complete');
@@ -857,7 +838,7 @@ export default function CategoryAnalyticsPage() {
   // Get available therapies for the selected cancer category
   const availableTherapies = useMemo(() => {
     if (!analyticsData || !analyticsData.abstracts) {
-      return { approved: APPROVED_THERAPIES, nonApproved: NON_APPROVED_THERAPIES };
+      return { approved: [] as string[], nonApproved: [] as string[] };
     }
 
     // Filter by cancer type first
@@ -940,10 +921,7 @@ export default function CategoryAnalyticsPage() {
       }
     }
 
-    return {
-      approved: approved.length > 0 ? approved : APPROVED_THERAPIES,
-      nonApproved: nonApproved.length > 0 ? nonApproved : NON_APPROVED_THERAPIES,
-    };
+    return { approved, nonApproved };
   }, [analyticsData, categoryName]);
 
   // All available treatments (approved + non-approved merged)
@@ -1229,7 +1207,7 @@ export default function CategoryAnalyticsPage() {
                   </Link>
                   <span className="w-px h-4 bg-white/30" aria-hidden />
                   <Link
-                    href={`/dashboard/${categorySlug}/analytics`}
+                    href={`/dashboard/${categorySlug}/analytics?mode=all`}
                     className="px-2 py-1 rounded text-sm font-semibold text-white bg-white/20"
                   >
                     Head to Head Efficacy : Safety
@@ -1427,7 +1405,7 @@ export default function CategoryAnalyticsPage() {
                   </Link>
                   <span className="w-px h-4 bg-white/30" aria-hidden />
                   <Link
-                    href={`/dashboard/${categorySlug}/analytics`}
+                    href={`/dashboard/${categorySlug}/analytics?mode=all`}
                     className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
                   >
                     Head to Head Efficacy : Safety
@@ -1571,7 +1549,7 @@ export default function CategoryAnalyticsPage() {
                   </Link>
                   <span className="w-px h-4 bg-white/30" aria-hidden />
                   <Link
-                    href={`/dashboard/${categorySlug}/analytics`}
+                    href={`/dashboard/${categorySlug}/analytics?mode=all`}
                     className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
                   >
                     Head to Head Efficacy : Safety
@@ -2165,7 +2143,7 @@ export default function CategoryAnalyticsPage() {
                   <span className="w-px h-3 bg-white/30" />
                   <Link href={`/dashboard/${categorySlug}/analytics?mode=safety`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Safety</Link>
                   <span className="w-px h-3 bg-white/30" />
-                  <Link href={`/dashboard/${categorySlug}/analytics`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy : Safety</Link>
+                  <Link href={`/dashboard/${categorySlug}/analytics?mode=all`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy : Safety</Link>
                 </nav>
                 <span className="w-px h-3 bg-white/30 mx-1" />
                 <span className="text-[var(--brand-accent)] text-xs">
@@ -2187,7 +2165,7 @@ export default function CategoryAnalyticsPage() {
                   <span className="w-px h-3 bg-white/30" />
                   <span className="px-1.5 py-0.5 rounded text-xs font-semibold text-white bg-white/20">Head to Head Safety</span>
                   <span className="w-px h-3 bg-white/30" />
-                  <Link href={`/dashboard/${categorySlug}/analytics`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy : Safety</Link>
+                  <Link href={`/dashboard/${categorySlug}/analytics?mode=all`} className="px-1.5 py-0.5 rounded text-xs font-medium text-white/80 hover:text-white hover:bg-white/15">Head to Head Efficacy : Safety</Link>
                 </nav>
                 <span className="w-px h-3 bg-white/30 mx-1" />
                 <span className="text-[var(--brand-accent)] text-xs">

@@ -123,7 +123,7 @@ export default function CancerDashboardSnapshot() {
   const [pipelineSponsor, setPipelineSponsor] = React.useState<'Industry' | 'Non-Industry'>('Industry');
 
   type TrialUpdatesWindow = 7 | 30 | 60 | 90;
-  const [trialUpdatesDays, setTrialUpdatesDays] = React.useState<TrialUpdatesWindow>(60);
+  const [trialUpdatesDays, setTrialUpdatesDays] = React.useState<TrialUpdatesWindow>(90);
 
   // Fetch a snapshot of trial cards (same filter as landscape: Sponsor type = Industry)
   const { data: trialsData, isLoading: trialsLoading } = useQuery({

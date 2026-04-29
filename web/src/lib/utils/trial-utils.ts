@@ -374,6 +374,27 @@ interface AbstractDataInput {
   publication_id?: string;
   title?: string;
   arm_results?: Record<string, ArmResultInput>;
+  outcome?: Record<string, unknown> | null;
+  trial?: {
+    nct_id?: string;
+    brief_title?: string | null;
+    overall_status?: string | null;
+    phases?: string[] | null;
+    enrollment_count?: number | null;
+    lead_sponsor_name?: string | null;
+    lead_sponsor_class?: string | null;
+    conditions?: string[] | null;
+  } | null;
+  landscape?: {
+    nct_id?: string;
+    cancer_type?: string | null;
+    modality?: string | null;
+    treatment_name?: string | null;
+    stage?: string | null;
+    biomarker?: string | null;
+    line_of_therapy?: string | null;
+    acronym?: string | null;
+  } | null;
   [key: string]: unknown;
 }
 
@@ -399,49 +420,74 @@ export function extractAbstractDetails(abstractData: AbstractDataInput | null) {
   const isPublication = !!abstractData.publication_id;
   const abstractId = abstractData.abstract_id || abstractData.publication_id || '';
   
-  // Extract conference/year from abstract_id or file path
-  let conference = '';
-  let year = '';
+  const outcome = (abstractData.outcome ?? {}) as Record<string, unknown>;
+  const trial = abstractData.trial ?? null;
+  const landscape = abstractData.landscape ?? null;
+  const outcomeStr = (key: string): string => {
+    const v = outcome[key];
+    return typeof v === 'string' || typeof v === 'number' ? String(v) : '';
+  };
+
+  // Extract conference/year — prefer the flat outcome columns, fallback to abstract_id parsing.
+  let conference = outcomeStr('conference');
+  let year = outcomeStr('published_year') || outcomeStr('publication_year');
   if (abstractId) {
-    if (abstractId.startsWith('ASCO_')) {
-      conference = 'ASCO';
-      const match = abstractId.match(/ASCO_(\d{4})/);
-      year = match ? match[1] : '';
-    } else if (abstractId.startsWith('ESMO_')) {
-      conference = 'ESMO';
-      const match = abstractId.match(/ESMO_(\d{4})/);
-      year = match ? match[1] : '';
+    if (!conference && abstractId.startsWith('ASCO_')) conference = 'ASCO';
+    if (!conference && abstractId.startsWith('ESMO_')) conference = 'ESMO';
+    if (!year) {
+      const match = abstractId.match(/_(\d{4})/);
+      if (match) year = match[1];
     }
   }
-  
-  // Extract common fields
-  const nctNumber = extractAttributeValue(attributes, 'NCT_NUMBER') || 
+
+  // Extract common fields — prefer joined relational data when present.
+  const nctNumber = (trial?.nct_id as string) ||
+                    outcomeStr('nct_id') ||
+                    extractAttributeValue(attributes, 'NCT_NUMBER') ||
                     extractAttributeValue(attributes, 'nct_number') || '';
-  const title = extractAttributeValue(attributes, 'TRIAL_NAME') || 
-                extractAttributeValue(attributes, 'trial_name') || 
+  const title = (trial?.brief_title as string) ||
+                outcomeStr('trial_name') ||
+                extractAttributeValue(attributes, 'TRIAL_NAME') ||
+                extractAttributeValue(attributes, 'trial_name') ||
                 abstractData.title || '';
-  const phase = extractAttributeValue(attributes, 'CLINICAL_TRIAL_PHASE') || 
+  const phase = outcomeStr('phase') ||
+                (Array.isArray(trial?.phases) ? (trial!.phases as string[]).join(', ') : '') ||
+                extractAttributeValue(attributes, 'CLINICAL_TRIAL_PHASE') ||
                 extractAttributeValue(attributes, 'clinical_trial_phase') || '';
-  const sponsor = extractAttributeValue(attributes, 'SPONSORS') || 
+  const sponsor = (trial?.lead_sponsor_name as string) ||
+                  extractAttributeValue(attributes, 'SPONSORS') ||
                   extractAttributeValue(attributes, 'sponsors') || '';
-  const status = extractAttributeValue(attributes, 'STATUS') || 
+  const status = (trial?.overall_status as string) ||
+                 extractAttributeValue(attributes, 'STATUS') ||
                  extractAttributeValue(attributes, 'status') || '';
-  const cancerType = extractAttributeValue(attributes, 'CANCER_TYPE') || 
+  const outcomeCancerType = Array.isArray(outcome.cancer_type)
+    ? ((outcome.cancer_type as string[])[0] ?? '')
+    : outcomeStr('cancer_type');
+  const cancerType = outcomeCancerType ||
+                     (Array.isArray(trial?.conditions) ? (trial!.conditions as string[])[0] ?? '' : '') ||
+                     extractAttributeValue(attributes, 'CANCER_TYPE') ||
                      extractAttributeValue(attributes, 'cancer_type') || '';
-  const lineOfTherapy = extractAttributeValue(attributes, 'LINE_OF_TREATMENT') || 
+  const lineOfTherapy = (landscape?.line_of_therapy as string) ||
+                        extractAttributeValue(attributes, 'LINE_OF_TREATMENT') ||
                         extractAttributeValue(attributes, 'line_of_treatment') || '';
-  const treatment = extractAttributeValue(attributes, 'GENERIC_NAME') || 
+  const treatment = outcomeStr('arm_name') ||
+                    (landscape?.treatment_name as string) ||
+                    extractAttributeValue(attributes, 'GENERIC_NAME') ||
                     extractAttributeValue(attributes, 'generic_name') || '';
   const indication = cancerType;
-  const population = extractAttributeValue(attributes, 'POPULATION') || 
+  const population = extractAttributeValue(attributes, 'POPULATION') ||
                      extractAttributeValue(attributes, 'population') || '';
-  const target = extractAttributeValue(attributes, 'TARGET') || 
+  const target = outcomeStr('target') ||
+                 extractAttributeValue(attributes, 'TARGET') ||
                  extractAttributeValue(attributes, 'target') || '';
-  const modality = extractAttributeValue(attributes, 'MODALITY') || 
+  const modality = outcomeStr('modality') ||
+                   extractAttributeValue(attributes, 'MODALITY') ||
                    extractAttributeValue(attributes, 'modality') || '';
-  const sessionType = extractAttributeValue(attributes, 'SESSION_TYPE') || 
+  const sessionType = extractAttributeValue(attributes, 'SESSION_TYPE') ||
                       extractAttributeValue(attributes, 'session_type') || '';
-  const numberOfPatients = extractAttributeValue(attributes, 'NUMBER_OF_PATIENTS') || 
+  const numberOfPatients = (typeof trial?.enrollment_count === 'number' ? String(trial!.enrollment_count) : '') ||
+                           outcomeStr('num_patients') ||
+                           extractAttributeValue(attributes, 'NUMBER_OF_PATIENTS') ||
                            extractAttributeValue(attributes, 'number_of_patients') || '';
   
   // Clean phase value
