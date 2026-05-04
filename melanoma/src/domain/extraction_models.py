@@ -338,8 +338,8 @@ DERIVED_ATTRIBUTES: frozenset[AttributeType] = frozenset({
     AttributeType.TARGET,
 })
 
-FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
-    AttributeFamily.IDENTIFICATION: [
+FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, tuple[AttributeType, ...]] = {
+    AttributeFamily.IDENTIFICATION: (
         # Publication identification (PUBLICATION_ATTRIBUTES)
         AttributeType.PUBLICATION_NAME,
         AttributeType.PUBLICATION_YEAR,
@@ -353,8 +353,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.ABSTRACT_NUMBER,
         AttributeType.CONFERENCE,
         AttributeType.PUBLISHED_YEAR,
-    ],
-    AttributeFamily.RESPONSE_RATES: [
+    ),
+    AttributeFamily.RESPONSE_RATES: (
         AttributeType.OBJECTIVE_RESPONSE_RATE,
         AttributeType.COMPLETE_RESPONSE,
         AttributeType.PATHOLOGICAL_COMPLETE_RESPONSE,
@@ -363,8 +363,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.CLINICAL_BENEFIT_RATE,
         AttributeType.MEDIAN_DOR,
         AttributeType.DOR_RATE,
-    ],
-    AttributeFamily.PFS_FAMILY: [
+    ),
+    AttributeFamily.PFS_FAMILY: (
         # Efficacy - Survival Metrics (PFS Family)
         AttributeType.MEDIAN_PFS,
         AttributeType.MEDIAN_FOLLOWUP_PFS,
@@ -379,8 +379,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.PFS_RATE_24M,
         AttributeType.PFS_RATE_36M,
         AttributeType.PFS_RATE_48M,
-    ],
-    AttributeFamily.OS_FAMILY: [
+    ),
+    AttributeFamily.OS_FAMILY: (
         # Efficacy - OS Family
         AttributeType.MEDIAN_OS,
         AttributeType.MEDIAN_FOLLOWUP_OS,
@@ -395,8 +395,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.OS_RATE_24M,
         AttributeType.OS_RATE_36M,
         AttributeType.OS_RATE_48M,
-    ],
-    AttributeFamily.EFS_RFS_MFS: [
+    ),
+    AttributeFamily.EFS_RFS_MFS: (
         # Efficacy - EFS Family (Event-Free Survival)
         AttributeType.EFS,
         AttributeType.P_VALUE_EFS,
@@ -413,16 +413,16 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.LENGTH_MFS,
         AttributeType.HR_MFS,
         AttributeType.CI_HR_MFS,
-    ],
-    AttributeFamily.TIME_TO_METRICS: [
+    ),
+    AttributeFamily.TIME_TO_METRICS: (
         AttributeType.TTR,
         AttributeType.TTP,
         AttributeType.HR_TTP,
         AttributeType.CI_HR_TTP,
         AttributeType.TTNT,
         AttributeType.TTF,
-    ],
-    AttributeFamily.AE_GENERAL: [
+    ),
+    AttributeFamily.AE_GENERAL: (
         # Safety — AE
         AttributeType.AE,
         AttributeType.GRADE_3_PLUS_AE,
@@ -437,8 +437,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         # Safety — Specific AEs
         AttributeType.CRS,
         AttributeType.IRR,
-    ],
-    AttributeFamily.AE_GRADE3_SPECIFIC: [
+    ),
+    AttributeFamily.AE_GRADE3_SPECIFIC: (
         AttributeType.GRADE_3_PLUS_AE_IMMUNE_RELATED,
         AttributeType.GRADE_3_PLUS_AE_IRR,
         AttributeType.GRADE_3_PLUS_AE_CRS,
@@ -466,8 +466,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.GRADE_3_PLUS_AE_HYPERTHYROIDISM,
         AttributeType.GRADE_3_PLUS_AE_AST_INCREASED,
         AttributeType.GRADE_3_PLUS_AE_VOMITING,
-    ],
-    AttributeFamily.TEAE_GENERAL: [
+    ),
+    AttributeFamily.TEAE_GENERAL: (
         AttributeType.TEAE,
         AttributeType.GRADE_3_PLUS_TEAE,
         AttributeType.GRADE_3_TEAE,
@@ -480,8 +480,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.TEAE_LEADING_TO_DOSE_REDUCTION,
         AttributeType.TEAE_LEADING_TO_DOSE_INTERRUPTION,
         AttributeType.TEAE_REQUIRING_HOSPITALIZATION,
-    ],
-    AttributeFamily.TEAE_GRADE3_SPECIFIC: [
+    ),
+    AttributeFamily.TEAE_GRADE3_SPECIFIC: (
         AttributeType.GRADE_3_PLUS_TEAE_IMMUNE_RELATED,
         AttributeType.GRADE_3_PLUS_TEAE_IRR,
         AttributeType.GRADE_3_PLUS_TEAE_CRS,
@@ -509,8 +509,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.GRADE_3_PLUS_TEAE_HYPERTHYROIDISM,
         AttributeType.GRADE_3_PLUS_TEAE_AST_INCREASED,
         AttributeType.GRADE_3_PLUS_TEAE_VOMITING,
-    ],
-    AttributeFamily.TRAE_GENERAL: [
+    ),
+    AttributeFamily.TRAE_GENERAL: (
         AttributeType.TRAE,
         AttributeType.GRADE_3_PLUS_TRAE,
         AttributeType.GRADE_3_TRAE,
@@ -523,8 +523,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.TRAE_LEADING_TO_DOSE_REDUCTION,
         AttributeType.TRAE_LEADING_TO_DOSE_INTERRUPTION,
         AttributeType.TRAE_REQUIRING_HOSPITALIZATION,
-    ],
-    AttributeFamily.TRAE_GRADE3_SPECIFIC: [
+    ),
+    AttributeFamily.TRAE_GRADE3_SPECIFIC: (
         AttributeType.GRADE_3_PLUS_TRAE_IMMUNE_RELATED,
         AttributeType.GRADE_3_PLUS_TRAE_IRR,
         AttributeType.GRADE_3_PLUS_TRAE_CRS,
@@ -552,7 +552,7 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
         AttributeType.GRADE_3_PLUS_TRAE_HYPERTHYROIDISM,
         AttributeType.GRADE_3_PLUS_TRAE_AST_INCREASED,
         AttributeType.GRADE_3_PLUS_TRAE_VOMITING,
-    ],
+    ),
 }
 
 
