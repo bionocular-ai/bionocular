@@ -6,7 +6,9 @@ import json
 import logging
 import random
 import re
-from typing import Any, Optional
+from typing import Any, Optional, Type
+
+from pydantic import BaseModel
 
 from ..domain.extraction_interfaces import LLMService
 from .cost_calculator import CostCalculator
@@ -250,6 +252,91 @@ class GeminiLLMService(LLMService):
             success=False,
             error_message=str(last_exc),
         )
+        raise last_exc
+
+    async def generate_structured(
+        self,
+        prompt: str,
+        response_schema: Type[BaseModel],
+        temperature: float = 0.0,
+        max_tokens: int = 4096,
+        model_name: Optional[str] = None,
+        operation: str = "structured_extraction",
+        attribute_type: Optional[str] = None,
+        max_retries: int = 3,
+    ) -> BaseModel:
+        """Generate a response constrained to `response_schema` (a Pydantic class).
+
+        Returns a parsed instance of `response_schema`. Raises on rate limit
+        exhaustion or unrecoverable API failure (same retry policy as
+        `generate_response`).
+        """
+        from google.genai import types
+
+        effective_model = (model_name or self._model).removeprefix("google/")
+        effective_max_tokens = max(max_tokens, self._max_tokens)
+        config = types.GenerateContentConfig(
+            temperature=temperature,
+            max_output_tokens=effective_max_tokens,
+            response_mime_type="application/json",
+            response_schema=response_schema,
+        )
+
+        def _sync_call() -> Any:
+            return self._client.models.generate_content(
+                model=effective_model,
+                contents=prompt,
+                config=config,
+            )
+
+        last_exc: Optional[Exception] = None
+        for attempt in range(max_retries):
+            try:
+                response = await asyncio.to_thread(_sync_call)
+                self._record_usage(
+                    response.usage_metadata,
+                    model=effective_model,
+                    operation=operation,
+                    attribute_type=attribute_type,
+                    success=True,
+                )
+                # SDK exposes `parsed` when response_schema is a Pydantic class.
+                parsed = getattr(response, "parsed", None)
+                if isinstance(parsed, response_schema):
+                    return parsed
+                # Fallback: parse from JSON text (covers SDK versions that don't
+                # populate `parsed` reliably).
+                text = response.text or ""
+                return response_schema.model_validate_json(text)
+            except Exception as exc:
+                last_exc = exc
+                if self._is_rate_limit_error(exc) and attempt < max_retries - 1:
+                    wait_sec = min(60 * (2**attempt) + random.uniform(0, 5), 300)
+                    logger.warning(
+                        "Rate limit (429) on attempt %d/%d — retrying in %.0fs",
+                        attempt + 1,
+                        max_retries,
+                        wait_sec,
+                    )
+                    await asyncio.sleep(wait_sec)
+                else:
+                    logger.error(
+                        "Gemini structured call failed | model=%s op=%s error=%s",
+                        effective_model,
+                        operation,
+                        exc,
+                    )
+                    self._record_usage(
+                        None,
+                        model=effective_model,
+                        operation=operation,
+                        attribute_type=attribute_type,
+                        success=False,
+                        error_message=str(exc),
+                    )
+                    raise
+
+        assert last_exc is not None
         raise last_exc
 
     async def extract_structured_data(

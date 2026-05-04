@@ -5,24 +5,16 @@ to identify and separate treatment arms from clinical trial abstracts.
 """
 
 import logging
-import re
 from datetime import datetime
 from typing import Any
 
-from tenacity import (
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
-
-from ..domain.extraction_interfaces import LLMService
 from ..domain.treatment_arm_models import (
     ArmType,
-    LineOfTreatment,
     TreatmentArm,
     TreatmentArmSeparationResult,
+    TreatmentArmSeparationSchema,
 )
+from .gemini_service import GeminiLLMService
 
 logger = logging.getLogger(__name__)
 
@@ -35,11 +27,11 @@ class TreatmentArmSeparator:
     for downstream processing.
     """
 
-    def __init__(self, llm_service: LLMService):
+    def __init__(self, llm_service: GeminiLLMService):
         """Initialize treatment arm separator.
 
         Args:
-            llm_service: LLM service for text generation
+            llm_service: Gemini LLM service (structured output required)
         """
         self.llm_service = llm_service
 
@@ -68,14 +60,11 @@ class TreatmentArmSeparator:
             # Create separation prompt with abstract text
             prompt = self._format_separation_prompt(abstract_text)
 
-            # Call LLM with retry logic
-            response = await self._call_llm_with_retry(prompt)
-            logger.debug(
-                f"LLM separation raw response (first 500 chars): {(response or '')[:500]}"
-            )
+            # Call Gemini with structured-output constraint
+            schema_result = await self._call_llm_for_separation(prompt)
 
-            # Parse LLM response
-            treatment_arms = self._parse_arm_separation_response(response)
+            # Build domain arms from validated schema
+            treatment_arms = self._build_arms_from_schema(schema_result, abstract_id)
 
             # Validate separation results
             validation_result = self._validate_arm_separation(treatment_arms)
@@ -218,186 +207,62 @@ DOCUMENT TEXT:
         """
         return self.separation_prompt.replace("{abstract_text}", abstract_text)
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=4, max=10),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError)),
-    )
-    async def _call_llm_with_retry(self, prompt: str) -> str:
-        """Call LLM with retry logic for handling temporary failures."""
-        try:
-            # Use the LLMService interface method
-            import os
+    async def _call_llm_for_separation(
+        self, prompt: str
+    ) -> TreatmentArmSeparationSchema:
+        """Call Gemini with structured-output constraint."""
+        return await self.llm_service.generate_structured(  # type: ignore[return-value]
+            prompt=prompt,
+            response_schema=TreatmentArmSeparationSchema,
+            temperature=0.1,
+            max_tokens=4096,
+            operation="treatment_arm_separation",
+        )
 
-            return await self.llm_service.generate_response(
-                prompt=prompt,
-                temperature=0.1,
-                max_tokens=2000,
-                model_name=os.getenv("EXTRACTION_MODEL", "gpt-4o"),
-            )
-        except Exception as e:
-            error_msg = str(e)
-            logger.error(f"LLM call failed: {error_msg}")
-
-            # Check for quota exceeded error
-            quota_indicators = [
-                "quota",
-                "429",
-                "exceeded",
-                "billing",
-                "payment",
-                "rate limit",
-            ]
-            is_quota_error = any(
-                indicator in error_msg.lower() for indicator in quota_indicators
-            )
-
-            if is_quota_error:
-                logger.error(f"OpenAI quota exceeded: {e}")
-                raise RuntimeError(f"OpenAI quota exceeded: {e}") from e
-            else:
-                logger.warning(f"LLM call failed, retrying: {e}")
-                raise
-
-    def _parse_arm_separation_response(self, response: str) -> list[TreatmentArm]:
-        """Parse LLM response to extract treatment arms."""
-        try:
-            import json
-
-            raw_response = (response or "").strip()
-            logger.debug(
-                f"Parsing LLM response (first 500 chars): {raw_response[:500]}"
-            )
-
-            # 1) Strip common markdown code fences, optional json tag
-            code_fence_match = re.search(
-                r"```(?:json)?\s*([\s\S]*?)```", raw_response, re.IGNORECASE
-            )
-            if code_fence_match:
-                candidate = code_fence_match.group(1).strip()
-            else:
-                candidate = raw_response
-
-            # 2) Extract the largest JSON object substring if extra text surrounds it
-            obj_match = re.search(r"\{[\s\S]*\}", candidate)
-            json_str = obj_match.group(0) if obj_match else candidate
-
-            # 3) Try strict parse first
-            try:
-                data = json.loads(json_str)
-            except json.JSONDecodeError:
-                # 3a) Heuristic: try to extract the treatment_arms array and wrap
-                arms_match = re.search(
-                    r'"treatment_arms"\s*:\s*\[(?:[\s\S]*?)\]', json_str
-                )
-                if arms_match:
-                    fixed = "{" + arms_match.group(0) + "}"
-                    data = json.loads(fixed)
-                else:
-                    # 3b) Remove trailing commas before closing braces/brackets and retry
-                    tmp = re.sub(r",\s*([}\]])", r"\1", json_str)
-                    data = json.loads(tmp)
-
-            # Normalize to find treatment_arms regardless of shape
-            treatment_arms = []
-            arms_data = []
-
-            def find_arms(obj):
-                if isinstance(obj, dict):
-                    if "treatment_arms" in obj and isinstance(
-                        obj["treatment_arms"], list
-                    ):
-                        return obj["treatment_arms"]
-                    # search shallow children
-                    for v in obj.values():
-                        found = find_arms(v)
-                        if found is not None:
-                            return found
-                elif isinstance(obj, list):
-                    # Some models return a list of arms directly
-                    if (
-                        obj
-                        and isinstance(obj[0], dict)
-                        and ("arm_name" in obj[0] or "generic_name" in obj[0])
-                    ):
-                        return obj
-                return None
-
-            candidate_arms = find_arms(data)
-            if isinstance(candidate_arms, list):
-                arms_data = candidate_arms
-            else:
+    def _build_arms_from_schema(
+        self,
+        schema: TreatmentArmSeparationSchema,
+        abstract_id: str,
+    ) -> list[TreatmentArm]:
+        """Build domain TreatmentArm objects from validated Pydantic schema."""
+        arms: list[TreatmentArm] = []
+        for i, item in enumerate(schema.treatment_arms):
+            generic_name = (item.generic_name or "").strip()
+            arm_type = item.arm_type
+            if not generic_name and arm_type not in (ArmType.PLACEBO, ArmType.CONTROL):
                 logger.warning(
-                    "No 'treatment_arms' key found in LLM response after normalization"
+                    "Skipping arm %d in %s due to empty generic name", i + 1, abstract_id
                 )
-                arms_data = []
-
-            for i, arm_data in enumerate(arms_data):
-                try:
-                    # Skip arms with empty generic names (except placebo/control arms)
-                    generic_name = arm_data.get("generic_name", "").strip()
-                    arm_type = arm_data.get("arm_type", "").strip().lower()
-
-                    # Allow placebo and control arms even with empty generic names
-                    if not generic_name and arm_type not in ["placebo", "control"]:
-                        logger.warning(f"Skipping arm {i+1} due to empty generic name")
-                        continue
-
-                    # Set generic name for placebo/control arms if empty
-                    if not generic_name and arm_type in ["placebo", "control"]:
-                        generic_name = "Placebo" if arm_type == "placebo" else "Control"
-                        logger.info(
-                            f"Setting generic name to '{generic_name}' for {arm_type} arm"
-                        )
-
-                    # Safe enum construction — fall back to UNKNOWN instead of dropping the arm
-                    try:
-                        atype = ArmType(arm_data.get("arm_type", "unknown"))
-                    except ValueError:
-                        logger.warning(
-                            f"Unknown arm_type '{arm_data.get('arm_type')}' for arm {i+1}, "
-                            "defaulting to unknown"
-                        )
-                        atype = ArmType.UNKNOWN
-
-                    try:
-                        lot = LineOfTreatment(
-                            arm_data.get("line_of_treatment", "unknown")
-                        )
-                    except ValueError:
-                        lot = LineOfTreatment.UNKNOWN
-
-                    # Create treatment arm
-                    arm = TreatmentArm(
-                        arm_id=arm_data.get("arm_id", f"arm_{i+1}"),
-                        arm_name=arm_data.get("arm_name", ""),
-                        generic_name=generic_name,
-                        brand_name=arm_data.get("brand_name"),
-                        dose=arm_data.get("dose"),
-                        dosing_schedule=arm_data.get("dosing_schedule"),
-                        patient_count=arm_data.get("patient_count"),
-                        line_of_treatment=lot,
-                        arm_type=atype,
-                        combination_drugs=arm_data.get("combination_drugs", []),
-                        confidence_score=arm_data.get("confidence_score", 0.0),
-                        source_text=arm_data.get("source_text"),
-                        arm_metadata={
-                            "nct_number": arm_data.get("nct_number"),
-                            "generic_name": arm_data.get("generic_name", ""),
-                            "raw_arm_data": arm_data,  # Store raw data for debugging
-                        },
-                    )
-                    treatment_arms.append(arm)
-
-                except Exception as e:
-                    logger.warning(f"Failed to parse arm {i+1}: {e}")
-                    continue
-
-            return treatment_arms
-
-        except Exception as e:
-            logger.exception(f"Failed to parse arm separation response: {e}")
-            return []
+                continue
+            if not generic_name:
+                generic_name = "Placebo" if arm_type == ArmType.PLACEBO else "Control"
+                logger.info(
+                    "Setting generic name to '%s' for %s arm",
+                    generic_name,
+                    arm_type.value,
+                )
+            arms.append(
+                TreatmentArm(
+                    arm_id=item.arm_id or f"arm_{i + 1}",
+                    arm_name=item.arm_name,
+                    generic_name=generic_name,
+                    brand_name=None,
+                    dose=item.dose,
+                    dosing_schedule=item.dosing_schedule,
+                    patient_count=item.patient_count,
+                    line_of_treatment=item.line_of_treatment,
+                    arm_type=arm_type,
+                    combination_drugs=item.combination_drugs,
+                    confidence_score=item.confidence_score,
+                    source_text=item.source_text or None,
+                    arm_metadata={
+                        "nct_number": item.nct_number,
+                        "generic_name": item.generic_name,
+                        "raw_arm_data": item.model_dump(),
+                    },
+                )
+            )
+        return arms
 
     def _validate_arm_separation(
         self, treatment_arms: list[TreatmentArm]
