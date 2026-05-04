@@ -3,6 +3,7 @@
 import logging
 import re
 import time
+from datetime import date
 from typing import Optional
 
 import requests  # type: ignore[import-untyped]
@@ -172,14 +173,20 @@ class ClinicalTrialsGovAPIClient(ClinicalTrialsAPIClient):
         return None
 
     def search_trials_by_condition(
-        self, condition: str, status_list: Optional[list[str]] = None
+        self,
+        condition: str,
+        status_list: Optional[list[str]] = None,
+        last_update_after: Optional[date] = None,
     ) -> list[str]:
-        """Search for trials by condition and optional status filter.
+        """Search for trials by condition and optional status / update-date filters.
 
         Args:
             condition: Condition/cancer type to search for
             status_list: Optional list of trial statuses to filter by.
                         If None or empty, returns all trials for the condition.
+            last_update_after: Optional inclusive lower bound on
+                LastUpdatePostDate. When set, only trials updated on or after
+                this date are returned (used for incremental syncs).
 
         Returns:
             List of NCT numbers matching the search criteria
@@ -201,6 +208,12 @@ class ClinicalTrialsGovAPIClient(ClinicalTrialsAPIClient):
                 if status_list:
                     request_params["filter.overallStatus"] = ",".join(status_list)
                 # If status_list is None or empty, don't add filter - get all trials
+
+                if last_update_after is not None:
+                    request_params["query.term"] = (
+                        f"AREA[LastUpdatePostDate]"
+                        f"RANGE[{last_update_after.isoformat()},MAX]"
+                    )
 
                 if page_token:
                     request_params["pageToken"] = page_token

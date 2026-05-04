@@ -1,10 +1,23 @@
 import json
 import os
+import pathlib
 import sqlite3
 import sys
 
 from dotenv import load_dotenv
 from supabase import Client, create_client
+
+# Allow `from src...` imports when running this script from the melanoma/ root.
+sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+
+from src.infrastructure.clinical_trials.supabase_parser import (  # noqa: E402
+    CANCER_TYPE_MAP,
+    MULTI_CANCER_TYPE_MAP,
+    extract_processed_trial,
+    normalize_cancer_type,
+    parse_age_to_years,
+    sanitize_date,
+)
 
 # Load environment variables
 load_dotenv()
@@ -20,189 +33,16 @@ supabase: Client = create_client(url, key)
 
 base_dir = "data/deployed"
 
-# Canonical Skin Cancer Types
-CANCER_TYPE_MAP = {
-    # Melanoma Variants
-    "cutaneous-melanoma": "Cutaneous Melanoma",
-    "cutaneous melanoma": "Cutaneous Melanoma",
-    "cutaneous-melanoma-with-brain-cns-metastasis": "Cutaneous Melanoma with Brain/CNS Metastasis",
-    "cutaneous melanoma with brain/cns metastasis": "Cutaneous Melanoma with Brain/CNS Metastasis",
-    "uveal-melanoma": "Uveal Melanoma",
-    "uveal melanoma": "Uveal Melanoma",
-    "acral-melanoma": "Acral Melanoma",
-    "acral melanoma": "Acral Melanoma",
-    "mucosal-melanoma": "Mucosal Melanoma",
-    "mucosal melanoma": "Mucosal Melanoma",
-    # Non-Melanoma Skin Cancer (NMSC)
-    "cutaneous-squamous-cell-carcinoma": "Cutaneous Squamous Cell Carcinoma",
-    "cutaneous squamous cell carcinoma": "Cutaneous Squamous Cell Carcinoma",
-    "cscc": "Cutaneous Squamous Cell Carcinoma",
-    "basal-cell-carcinoma": "Basal Cell Carcinoma",
-    "basal cell carcinoma": "Basal Cell Carcinoma",
-    "bcc": "Basal Cell Carcinoma",
-    "merkel-cell-carcinoma": "Merkel Cell Carcinoma",
-    "merkel cell carcinoma": "Merkel Cell Carcinoma",
-    "mcc": "Merkel Cell Carcinoma",
-}
-
-# Multi-indication trials that map to multiple canonical cancer types
-MULTI_CANCER_TYPE_MAP = {
-    "uveal / mucosal / acral melanoma": [
-        "Uveal Melanoma",
-        "Mucosal Melanoma",
-        "Acral Melanoma",
-    ],
-    "basal cell / merkel cell / cutaneous squamous cell carcinoma": [
-        "Basal Cell Carcinoma",
-        "Merkel Cell Carcinoma",
-        "Cutaneous Squamous Cell Carcinoma",
-    ],
-    "advanced non-uveal melanoma": ["Mucosal Melanoma", "Acral Melanoma"],
-    "advanced solid tumors": None,  # Too broad — intentionally excluded
-    "metastatic solid tumors": None,  # Too broad — intentionally excluded
-}
-
-
-def normalize_cancer_type(raw_type) -> list:
-    """Maps a raw cancer type string to a list of canonical cancer type(s).
-    Returns an empty list if the type cannot be confidently mapped."""
-    if not raw_type:
-        return []
-    clean = str(raw_type).lower().strip()
-
-    # Check multi-value map first
-    if clean in MULTI_CANCER_TYPE_MAP:
-        result = MULTI_CANCER_TYPE_MAP[clean]
-        return result if result else []  # Excluded types return empty
-
-    # Single-value map
-    single = CANCER_TYPE_MAP.get(clean)
-    return [single] if single else []
-
-
-def parse_age_to_years(age_str):
-    """Converts strings like '18 Years' or '6 Months' into a numeric year representation."""
-    if not age_str:
-        return None
-    age_str = age_str.lower().strip()
-    try:
-        val = float(age_str.split()[0])
-        if "month" in age_str:
-            return val / 12.0
-        if "week" in age_str:
-            return val / 52.14
-        if "day" in age_str:
-            return val / 365.25
-        return val
-    except Exception:
-        return None
-
-
-def sanitize_date(date_str):
-    """Ensures date strings are in YYYY-MM-DD format for Postgres.
-    If the API provides YYYY-MM, we append -01.
-    """
-    if not date_str:
-        return None
-    # If already YYYY-MM-DD
-    if len(date_str) == 10:
-        return date_str
-    # If YYYY-MM
-    if len(date_str) == 7 and "-" in date_str:
-        return f"{date_str}-01"
-    # If just YYYY
-    if len(date_str) == 4 and date_str.isdigit():
-        return f"{date_str}-01-01"
-    return date_str
-
-
-def extract_processed_trial(raw_json, nct_id, cancer_types_map):
-    """Extract and flatten complex Trial JSON into SQL-friendly columns."""
-    protocol = raw_json.get("protocolSection", {})
-    id_mod = protocol.get("identificationModule", {})
-    status_mod = protocol.get("statusModule", {})
-    design_mod = protocol.get("designModule", {})
-    sponsor_mod = protocol.get("sponsorCollaboratorsModule", {})
-    desc_mod = protocol.get("descriptionModule", {})
-    cond_mod = protocol.get("conditionsModule", {})
-    elig_mod = protocol.get("eligibilityModule", {})
-    arms_mod = protocol.get("armsInterventionsModule", {})
-    out_mod = protocol.get("outcomesModule", {})
-    loc_mod = protocol.get("contactsLocationsModule", {})
-
-    has_results = raw_json.get("hasResults", False)
-    expanded_access = status_mod.get("expandedAccessInfo", {}).get(
-        "hasExpandedAccess", False
-    )
-    has_dmc = protocol.get("oversightModule", {}).get("oversightHasDmc", False)
-    is_fda_drug = protocol.get("oversightModule", {}).get("isFdaRegulatedDrug", False)
-    is_fda_device = protocol.get("oversightModule", {}).get(
-        "isFdaRegulatedDevice", False
-    )
-    design_info = design_mod.get("designInfo", {})
-    references_mod = raw_json.get("referencesModule", {})
-
-    min_age_raw = elig_mod.get("minimumAge")
-    max_age_raw = elig_mod.get("maximumAge")
-
-    return {
-        "nct_id": nct_id,
-        "brief_title": id_mod.get("briefTitle"),
-        "official_title": id_mod.get("officialTitle"),
-        "acronym": id_mod.get("acronym"),
-        "overall_status": status_mod.get("overallStatus"),
-        "study_type": design_mod.get("studyType"),
-        "primary_purpose": design_info.get("primaryPurpose"),
-        "phases": design_mod.get("phases", []),
-        "enrollment_count": design_mod.get("enrollmentInfo", {}).get("count"),
-        "has_results": has_results,
-        "has_expanded_access": expanded_access,
-        "allocation": design_info.get("allocation"),
-        "intervention_model": design_info.get("interventionModel"),
-        "masking": design_info.get("maskingInfo", {}).get("masking"),
-        "oversight_has_dmc": has_dmc,
-        "is_fda_regulated_drug": is_fda_drug,
-        "is_fda_regulated_device": is_fda_device,
-        "start_date": sanitize_date(status_mod.get("startDateStruct", {}).get("date")),
-        "primary_completion_date": sanitize_date(
-            status_mod.get("primaryCompletionDateStruct", {}).get("date")
-        ),
-        "completion_date": sanitize_date(
-            status_mod.get("completionDateStruct", {}).get("date")
-        ),
-        "first_posted_date": sanitize_date(
-            status_mod.get("studyFirstPostDateStruct", {}).get("date")
-        ),
-        "last_update_posted_date": sanitize_date(
-            status_mod.get("lastUpdatePostDateStruct", {}).get("date")
-        ),
-        "lead_sponsor_name": sponsor_mod.get("leadSponsor", {}).get("name"),
-        "lead_sponsor_class": sponsor_mod.get("leadSponsor", {}).get("class"),
-        "investigator_name": sponsor_mod.get("responsibleParty", {}).get(
-            "investigatorFullName"
-        ),
-        "minimum_age": min_age_raw,
-        "maximum_age": max_age_raw,
-        "min_age_years": parse_age_to_years(min_age_raw),
-        "max_age_years": parse_age_to_years(max_age_raw),
-        "std_ages": elig_mod.get("stdAges", []),
-        "sex": elig_mod.get("sex"),
-        "healthy_volunteers": elig_mod.get("healthyVolunteers"),
-        "brief_summary": desc_mod.get("briefSummary"),
-        "detailed_description": desc_mod.get("detailedDescription"),
-        "eligibility_criteria": elig_mod.get("eligibilityCriteria"),
-        # New natively-array typed columns
-        "cancer_type": cancer_types_map.get(nct_id, []),
-        "conditions": cond_mod.get("conditions", []),
-        "keywords": cond_mod.get("keywords", []),
-        # JSONB arrays
-        "locations": loc_mod.get("locations", []),
-        "interventions": arms_mod.get("interventions", []),
-        "arm_groups": arms_mod.get("armGroups", []),
-        "primary_outcomes": out_mod.get("primaryOutcomes", []),
-        "secondary_outcomes": out_mod.get("secondaryOutcomes", []),
-        "study_references": references_mod.get("references", []),
-    }
+# Re-exports kept so any existing call sites in this module / external scripts
+# that imported these names from upload_to_supabase keep working.
+__all__ = [
+    "CANCER_TYPE_MAP",
+    "MULTI_CANCER_TYPE_MAP",
+    "extract_processed_trial",
+    "normalize_cancer_type",
+    "parse_age_to_years",
+    "sanitize_date",
+]
 
 
 def upload_clinical_trials():
