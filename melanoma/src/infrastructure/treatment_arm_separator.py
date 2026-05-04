@@ -116,68 +116,97 @@ class TreatmentArmSeparator:
                 errors=[f"Separation failed: {str(e)}"],
             )
 
-    def _create_separation_prompt(self) -> str:
+    @staticmethod
+    def _create_separation_prompt() -> str:
         """Create the treatment arm separation prompt."""
         return """
-TASK: Identify the main treatment arms from this clinical trial abstract.
+TASK: Identify the primary treatment arms in this clinical trial document.
 
-CRITICAL REQUIREMENTS:
-1. Focus on PRIMARY treatment arms only (typically 1-3 arms)
-2. Each arm must have distinct treatment regimens
-3. Different doses of the same drug are separate arms ONLY if explicitly compared
-4. Combination therapies are single arms with "+" notation
-5. Be conservative - avoid over-segmentation
-6. Non-drug comparison groups ARE valid arms: surgery, observation (OBS), watchful waiting,
-   radiotherapy, CLND, registry cohorts, etc. Use arm_type="unknown" and set
-   generic_name to the procedure name (e.g., "Observation", "Surgery", "Radiotherapy", "CLND").
+Treatment arms are usually defined in the Title and in Methods / Patients and Methods / Trial Design / Study Design. Look there first; confirm against Results tables.
 
-- Single drug: "Drug Name" (e.g., "Nivolumab")
-- Combination: "Drug A + Drug B" (e.g., "Nivolumab + Ipilimumab")
-- Placebo/Control: Mark as control arm with generic_name="Placebo" or "Observation" (OBS)
-- Non-pharmacological arm: use arm_type="unknown", generic_name = procedure name
-- Different doses: Only if explicitly mentioned as separate comparison groups
+RULES:
+1. Extract PRIMARY treatment arms only. Most trials have 1-3; multi-cohort or platform trials may have up to 5.
+2. Each arm = one distinct treatment regimen.
+3. Combination = single arm with "+" notation (e.g., "Nivolumab + Ipilimumab").
+4. Different doses of the same drug = separate arms ONLY if the trial explicitly compares them as randomized arms.
+5. Non-pharmacological comparators ARE arms: surgery, observation (OBS), watchful waiting, radiotherapy, CLND, registry cohorts. Use arm_type="unknown" and set generic_name to the procedure name.
+6. Placebo / control arms ARE arms. Use arm_type="placebo" or "control" with generic_name="Placebo" / "Control".
+7. NOT arms - do NOT emit these as separate arms:
+   - Subgroup analyses (BRAF+ vs BRAF-, PD-L1 high vs low, ECOG 0 vs 1, age <65 vs >=65)
+   - Biomarker cohorts within a single treatment arm
+   - Geographic / regional cohorts of the same regimen
+   - Dose-escalation cohorts in Phase 1 unless explicitly compared as randomized arms in Phase 2
+   - Adjuvant therapies, supportive care, exploratory expansion cohorts
+8. If the abstract uses cohort labels (e.g., "Cohort A"), append the regimen: "Cohort A (Nivolumab)".
+9. Prefer drug/treatment names over generic labels like "Arm 1", "Treatment arm", "Experimental arm".
 
-CONSERVATIVE APPROACH:
-- Most clinical trials have 2-3 arms; multi-cohort or platform trials may have up to 5
-- If unsure, err on the side of fewer arms
-- Focus on the main treatment comparison
-- Avoid creating arms for adjuvant therapies, supportive care, or exploratory treatments
-- Non-pharmacological arms (Observation, Surgery, Radiotherapy, CLND) are valid — include them
+FIELDS:
+- arm_id: "arm_1", "arm_2", ... (sequential)
+- arm_name: drug or treatment name(s) as referred to in the text
+- generic_name: strict pharmacological/generic name without doses or "arm" suffix (e.g., "Nivolumab", "Dabrafenib + Trametinib", "Placebo")
+- combination_drugs: list of individual drugs for combination arms; [] for monotherapy/placebo/non-drug
+- arm_type: one of [monotherapy, combination, placebo, control, dose_variation, unknown]
+- line_of_treatment: one of [first_line, second_line, third_line_plus, adjuvant, neoadjuvant, maintenance, unknown]. Infer from Methods (e.g., "previously untreated" -> first_line; "after failure of >=1 prior therapy" -> second_line).
+- dose: dose with units if specified, else null
+- dosing_schedule: schedule (e.g., "Q3W", "every 2 weeks") if specified, else null
+- patient_count: integer N for this arm if explicitly stated, else 0
+- nct_number: NCT identifier if found in the document, else ""
+- source_text: the verbatim sentence from the document that defines this arm
+- confidence_score: rubric:
+    1.0 - arm explicitly named in the randomization scheme or trial design
+    0.7 - arm clearly inferable from Methods + Results but not named in a randomization scheme
+    0.4 - arm uncertain (e.g., dose-escalation cohort treated as arm, ambiguous text)
 
-FIELD DEFINITIONS:
-- arm_name: The primary drug or treatment name(s) for this arm, exactly as referred to in the text (e.g., "Dabrafenib + Trametinib", "Nivolumab", "Placebo", "CLND", "Observation"). If the abstract uses a cohort label (e.g., "Cohort A"), append the drug name: "Cohort A (Nivolumab)". Prefer drug/treatment names over generic labels like "Arm 1", "Treatment arm", or "Experimental arm".
-- generic_name: The strict pharmacological/generic name of the active drug(s) without "arm" or dosages (e.g., "Nivolumab", "Dabrafenib + Trametinib", "Placebo").
-- combination_drugs: For combination arms (arm_type="combination"), list each drug separately (e.g., ["Nivolumab", "Ipilimumab"]). Leave [] for monotherapy, placebo, or non-drug arms.
-- arm_type: Must be one of ["monotherapy", "combination", "placebo", "control", "dose_variation", "unknown"].
-
-OUTPUT FORMAT (JSON):
+OUTPUT FORMAT (JSON ONLY - no markdown, no explanations):
 {
   "treatment_arms": [
     {
       "arm_id": "arm_1",
       "arm_name": "Nivolumab + Ipilimumab",
       "generic_name": "Nivolumab + Ipilimumab",
-      "dose": "Dose if specified",
-      "dosing_schedule": "Schedule if specified",
-      "patient_count": 0,
-      "arm_type": "combination",
       "combination_drugs": ["Nivolumab", "Ipilimumab"],
-      "confidence_score": 0.95,
-      "source_text": "Relevant text from abstract",
-      "nct_number": ""
+      "arm_type": "combination",
+      "line_of_treatment": "first_line",
+      "dose": "Nivo 1 mg/kg + Ipi 3 mg/kg",
+      "dosing_schedule": "Q3W x 4 then Nivo Q2W",
+      "patient_count": 314,
+      "nct_number": "NCT01844505",
+      "source_text": "Patients were randomly assigned to receive nivolumab plus ipilimumab...",
+      "confidence_score": 1.0
+    },
+    {
+      "arm_id": "arm_2",
+      "arm_name": "Nivolumab",
+      "generic_name": "Nivolumab",
+      "combination_drugs": [],
+      "arm_type": "monotherapy",
+      "line_of_treatment": "first_line",
+      "dose": "3 mg/kg",
+      "dosing_schedule": "Q2W",
+      "patient_count": 316,
+      "nct_number": "NCT01844505",
+      "source_text": "...nivolumab alone...",
+      "confidence_score": 1.0
+    },
+    {
+      "arm_id": "arm_3",
+      "arm_name": "Ipilimumab",
+      "generic_name": "Ipilimumab",
+      "combination_drugs": [],
+      "arm_type": "control",
+      "line_of_treatment": "first_line",
+      "dose": "3 mg/kg",
+      "dosing_schedule": "Q3W x 4",
+      "patient_count": 315,
+      "nct_number": "NCT01844505",
+      "source_text": "...or ipilimumab alone.",
+      "confidence_score": 1.0
     }
   ]
 }
 
-ABSTRACT TEXT:
+DOCUMENT TEXT:
 {abstract_text}
-
-STRICT RESPONSE RULES:
-- Return ONLY valid JSON
-- Maximum 5 arms (most trials have 1-2, but substudies may have more)
-- Focus on primary treatment comparisons
-- Do NOT include explanations or markdown
-- Each arm must have distinct treatment regimen
 """
 
     def _format_separation_prompt(self, abstract_text: str) -> str:
