@@ -316,6 +316,246 @@ class AttributeType(str, Enum):
     PDF_NUMBER = "pdf_number"
 
 
+class AttributeFamily(str, Enum):
+    """Coarse attribute groupings for grouped LLM extraction calls."""
+
+    IDENTIFICATION = "identification"
+    RESPONSE_RATES = "response_rates"
+    PFS_FAMILY = "pfs_family"
+    OS_FAMILY = "os_family"
+    EFS_RFS_MFS = "efs_rfs_mfs"
+    TIME_TO_METRICS = "time_to_metrics"
+    AE_GENERAL = "ae_general"
+    AE_GRADE3_SPECIFIC = "ae_grade3_specific"
+    TEAE_GENERAL = "teae_general"
+    TEAE_GRADE3_SPECIFIC = "teae_grade3_specific"
+    TRAE_GENERAL = "trae_general"
+    TRAE_GRADE3_SPECIFIC = "trae_grade3_specific"
+
+
+DERIVED_ATTRIBUTES: frozenset[AttributeType] = frozenset({
+    AttributeType.MODALITY,
+    AttributeType.TARGET,
+})
+
+FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, list[AttributeType]] = {
+    AttributeFamily.IDENTIFICATION: [
+        # Publication identification (PUBLICATION_ATTRIBUTES)
+        AttributeType.PUBLICATION_NAME,
+        AttributeType.PUBLICATION_YEAR,
+        AttributeType.PDF_NUMBER,
+        AttributeType.TRIAL_NAME,
+        AttributeType.CANCER_TYPE,
+        AttributeType.NCT_NUMBER,
+        AttributeType.NUMBER_OF_PATIENTS,
+        AttributeType.LINE_OF_TREATMENT,
+        # Abstract-specific identification (ABSTRACT_ATTRIBUTES General block)
+        AttributeType.ABSTRACT_NUMBER,
+        AttributeType.CONFERENCE,
+        AttributeType.PUBLISHED_YEAR,
+    ],
+    AttributeFamily.RESPONSE_RATES: [
+        AttributeType.OBJECTIVE_RESPONSE_RATE,
+        AttributeType.COMPLETE_RESPONSE,
+        AttributeType.PATHOLOGICAL_COMPLETE_RESPONSE,
+        AttributeType.COMPLETE_METABOLIC_RESPONSE,
+        AttributeType.DISEASE_CONTROL_RATE,
+        AttributeType.CLINICAL_BENEFIT_RATE,
+        AttributeType.MEDIAN_DOR,
+        AttributeType.DOR_RATE,
+    ],
+    AttributeFamily.PFS_FAMILY: [
+        # Efficacy - Survival Metrics (PFS Family)
+        AttributeType.MEDIAN_PFS,
+        AttributeType.MEDIAN_FOLLOWUP_PFS,
+        AttributeType.P_VALUE_PFS,
+        AttributeType.HR_PFS,
+        AttributeType.CI_HR_PFS,
+        # Efficacy - PFS Rate Timepoints
+        AttributeType.PFS_RATE_6M,
+        AttributeType.PFS_RATE_9M,
+        AttributeType.PFS_RATE_12M,
+        AttributeType.PFS_RATE_18M,
+        AttributeType.PFS_RATE_24M,
+        AttributeType.PFS_RATE_36M,
+        AttributeType.PFS_RATE_48M,
+    ],
+    AttributeFamily.OS_FAMILY: [
+        # Efficacy - OS Family
+        AttributeType.MEDIAN_OS,
+        AttributeType.MEDIAN_FOLLOWUP_OS,
+        AttributeType.P_VALUE_OS,
+        AttributeType.HR_OS,
+        AttributeType.CI_HR_OS,
+        # Efficacy - OS Rate Timepoints
+        AttributeType.OS_RATE_6M,
+        AttributeType.OS_RATE_9M,
+        AttributeType.OS_RATE_12M,
+        AttributeType.OS_RATE_18M,
+        AttributeType.OS_RATE_24M,
+        AttributeType.OS_RATE_36M,
+        AttributeType.OS_RATE_48M,
+    ],
+    AttributeFamily.EFS_RFS_MFS: [
+        # Efficacy - EFS Family (Event-Free Survival)
+        AttributeType.EFS,
+        AttributeType.P_VALUE_EFS,
+        AttributeType.HR_EFS,
+        AttributeType.CI_HR_EFS,
+        # Efficacy - RFS Family (Recurrence-Free Survival / Relapse-Free Survival)
+        AttributeType.RFS,
+        AttributeType.P_VALUE_RFS,
+        AttributeType.LENGTH_RFS,
+        AttributeType.HR_RFS,
+        AttributeType.CI_HR_RFS,
+        # Efficacy - MFS Family (Metastasis-Free Survival)
+        AttributeType.MFS,
+        AttributeType.LENGTH_MFS,
+        AttributeType.HR_MFS,
+        AttributeType.CI_HR_MFS,
+    ],
+    AttributeFamily.TIME_TO_METRICS: [
+        AttributeType.TTR,
+        AttributeType.TTP,
+        AttributeType.HR_TTP,
+        AttributeType.CI_HR_TTP,
+        AttributeType.TTNT,
+        AttributeType.TTF,
+    ],
+    AttributeFamily.AE_GENERAL: [
+        # Safety — AE
+        AttributeType.AE,
+        AttributeType.GRADE_3_PLUS_AE,
+        AttributeType.AE_LEADING_TO_DISCONTINUATION,
+        AttributeType.SERIOUS_AE,
+        AttributeType.IMMUNE_RELATED_AE,
+        AttributeType.SERIOUS_IMMUNE_RELATED_AE,
+        AttributeType.AE_LEADING_TO_DEATH,
+        AttributeType.AE_LEADING_TO_DOSE_REDUCTION,
+        AttributeType.AE_LEADING_TO_DOSE_INTERRUPTION,
+        AttributeType.AE_REQUIRING_HOSPITALIZATION,
+        # Safety — Specific AEs
+        AttributeType.CRS,
+        AttributeType.IRR,
+    ],
+    AttributeFamily.AE_GRADE3_SPECIFIC: [
+        AttributeType.GRADE_3_PLUS_AE_IMMUNE_RELATED,
+        AttributeType.GRADE_3_PLUS_AE_IRR,
+        AttributeType.GRADE_3_PLUS_AE_CRS,
+        AttributeType.GRADE_3_PLUS_AE_COLITIS,
+        AttributeType.GRADE_3_PLUS_AE_THROMBOCYTOPENIA,
+        AttributeType.GRADE_3_PLUS_AE_NEUTROPENIA,
+        AttributeType.GRADE_3_PLUS_AE_LEUKOPENIA,
+        AttributeType.GRADE_3_PLUS_AE_FATIGUE,
+        AttributeType.GRADE_3_PLUS_AE_NAUSEA,
+        AttributeType.GRADE_3_PLUS_AE_ANEMIA,
+        AttributeType.GRADE_3_PLUS_AE_DIARRHEA,
+        AttributeType.GRADE_3_PLUS_AE_HYPERGLYCEMIA,
+        AttributeType.GRADE_3_PLUS_AE_DYSPNEA,
+        AttributeType.GRADE_3_PLUS_AE_PYREXIA,
+        AttributeType.GRADE_3_PLUS_AE_BLEEDING,
+        AttributeType.GRADE_3_PLUS_AE_PRURITUS,
+        AttributeType.GRADE_3_PLUS_AE_RASH,
+        AttributeType.GRADE_3_PLUS_AE_PNEUMONIA,
+        AttributeType.GRADE_3_PLUS_AE_THYROIDITIS,
+        AttributeType.GRADE_3_PLUS_AE_HYPOPHYSITIS,
+        AttributeType.GRADE_3_PLUS_AE_HEPATITIS,
+        AttributeType.GRADE_3_PLUS_AE_PNEUMONITIS,
+        AttributeType.GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE,
+        AttributeType.GRADE_3_PLUS_AE_HYPOTHYROIDISM,
+        AttributeType.GRADE_3_PLUS_AE_HYPERTHYROIDISM,
+        AttributeType.GRADE_3_PLUS_AE_AST_INCREASED,
+        AttributeType.GRADE_3_PLUS_AE_VOMITING,
+    ],
+    AttributeFamily.TEAE_GENERAL: [
+        AttributeType.TEAE,
+        AttributeType.GRADE_3_PLUS_TEAE,
+        AttributeType.GRADE_3_TEAE,
+        AttributeType.GRADE_4_TEAE,
+        AttributeType.GRADE_5_TEAE,
+        AttributeType.TEAE_LEADING_TO_DISCONTINUATION,
+        AttributeType.TEAE_LEADING_TO_DEATH,
+        AttributeType.SERIOUS_TEAE,
+        AttributeType.TEAE_IMMUNE_RELATED,
+        AttributeType.TEAE_LEADING_TO_DOSE_REDUCTION,
+        AttributeType.TEAE_LEADING_TO_DOSE_INTERRUPTION,
+        AttributeType.TEAE_REQUIRING_HOSPITALIZATION,
+    ],
+    AttributeFamily.TEAE_GRADE3_SPECIFIC: [
+        AttributeType.GRADE_3_PLUS_TEAE_IMMUNE_RELATED,
+        AttributeType.GRADE_3_PLUS_TEAE_IRR,
+        AttributeType.GRADE_3_PLUS_TEAE_CRS,
+        AttributeType.GRADE_3_PLUS_TEAE_COLITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_THROMBOCYTOPENIA,
+        AttributeType.GRADE_3_PLUS_TEAE_NEUTROPENIA,
+        AttributeType.GRADE_3_PLUS_TEAE_LEUKOPENIA,
+        AttributeType.GRADE_3_PLUS_TEAE_FATIGUE,
+        AttributeType.GRADE_3_PLUS_TEAE_NAUSEA,
+        AttributeType.GRADE_3_PLUS_TEAE_ANEMIA,
+        AttributeType.GRADE_3_PLUS_TEAE_DIARRHEA,
+        AttributeType.GRADE_3_PLUS_TEAE_HYPERGLYCEMIA,
+        AttributeType.GRADE_3_PLUS_TEAE_DYSPNEA,
+        AttributeType.GRADE_3_PLUS_TEAE_PYREXIA,
+        AttributeType.GRADE_3_PLUS_TEAE_BLEEDING,
+        AttributeType.GRADE_3_PLUS_TEAE_PRURITUS,
+        AttributeType.GRADE_3_PLUS_TEAE_RASH,
+        AttributeType.GRADE_3_PLUS_TEAE_PNEUMONIA,
+        AttributeType.GRADE_3_PLUS_TEAE_THYROIDITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_HYPOPHYSITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_HEPATITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_PNEUMONITIS,
+        AttributeType.GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE,
+        AttributeType.GRADE_3_PLUS_TEAE_HYPOTHYROIDISM,
+        AttributeType.GRADE_3_PLUS_TEAE_HYPERTHYROIDISM,
+        AttributeType.GRADE_3_PLUS_TEAE_AST_INCREASED,
+        AttributeType.GRADE_3_PLUS_TEAE_VOMITING,
+    ],
+    AttributeFamily.TRAE_GENERAL: [
+        AttributeType.TRAE,
+        AttributeType.GRADE_3_PLUS_TRAE,
+        AttributeType.GRADE_3_TRAE,
+        AttributeType.GRADE_4_TRAE,
+        AttributeType.GRADE_5_TRAE,
+        AttributeType.TRAE_LEADING_TO_DISCONTINUATION,
+        AttributeType.TRAE_LEADING_TO_DEATH,
+        AttributeType.SERIOUS_TRAE,
+        AttributeType.TRAE_IMMUNE_RELATED,
+        AttributeType.TRAE_LEADING_TO_DOSE_REDUCTION,
+        AttributeType.TRAE_LEADING_TO_DOSE_INTERRUPTION,
+        AttributeType.TRAE_REQUIRING_HOSPITALIZATION,
+    ],
+    AttributeFamily.TRAE_GRADE3_SPECIFIC: [
+        AttributeType.GRADE_3_PLUS_TRAE_IMMUNE_RELATED,
+        AttributeType.GRADE_3_PLUS_TRAE_IRR,
+        AttributeType.GRADE_3_PLUS_TRAE_CRS,
+        AttributeType.GRADE_3_PLUS_TRAE_COLITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_THROMBOCYTOPENIA,
+        AttributeType.GRADE_3_PLUS_TRAE_NEUTROPENIA,
+        AttributeType.GRADE_3_PLUS_TRAE_LEUKOPENIA,
+        AttributeType.GRADE_3_PLUS_TRAE_FATIGUE,
+        AttributeType.GRADE_3_PLUS_TRAE_NAUSEA,
+        AttributeType.GRADE_3_PLUS_TRAE_ANEMIA,
+        AttributeType.GRADE_3_PLUS_TRAE_DIARRHEA,
+        AttributeType.GRADE_3_PLUS_TRAE_HYPERGLYCEMIA,
+        AttributeType.GRADE_3_PLUS_TRAE_DYSPNEA,
+        AttributeType.GRADE_3_PLUS_TRAE_PYREXIA,
+        AttributeType.GRADE_3_PLUS_TRAE_BLEEDING,
+        AttributeType.GRADE_3_PLUS_TRAE_PRURITUS,
+        AttributeType.GRADE_3_PLUS_TRAE_RASH,
+        AttributeType.GRADE_3_PLUS_TRAE_PNEUMONIA,
+        AttributeType.GRADE_3_PLUS_TRAE_THYROIDITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_HYPOPHYSITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_HEPATITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_PNEUMONITIS,
+        AttributeType.GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE,
+        AttributeType.GRADE_3_PLUS_TRAE_HYPOTHYROIDISM,
+        AttributeType.GRADE_3_PLUS_TRAE_HYPERTHYROIDISM,
+        AttributeType.GRADE_3_PLUS_TRAE_AST_INCREASED,
+        AttributeType.GRADE_3_PLUS_TRAE_VOMITING,
+    ],
+}
+
+
 class ValidationStatus(str, Enum):
     """Validation status for extracted attributes."""
 
