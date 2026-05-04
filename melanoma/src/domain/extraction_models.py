@@ -46,6 +46,8 @@ class AttributeType(str, Enum):
     LINE_OF_TREATMENT = (
         "line_of_treatment"  # e.g., "first-line", "second-line", "previously untreated"
     )
+    MODALITY = "modality"  # arm-level, derived from drug_knowledge (Antibody, Small Molecule, ADC, ...)
+    TARGET = "target"  # arm-level, derived from drug_knowledge (PD-1, BRAF, MEK, ...)
 
     # Endpoints and Biomarkers
     PRIMARY_ENDPOINT = "primary_endpoint"
@@ -2387,6 +2389,9 @@ PUBLICATION_ATTRIBUTES: list[AttributeType] = [
     AttributeType.CANCER_TYPE,
     AttributeType.NCT_NUMBER,
     AttributeType.NUMBER_OF_PATIENTS,
+    AttributeType.LINE_OF_TREATMENT,
+    AttributeType.MODALITY,
+    AttributeType.TARGET,
     # Efficacy - Response Rates
     AttributeType.OBJECTIVE_RESPONSE_RATE,
     AttributeType.COMPLETE_RESPONSE,
@@ -2586,6 +2591,9 @@ ABSTRACT_ATTRIBUTES: list[AttributeType] = [
     AttributeType.CANCER_TYPE,
     AttributeType.NCT_NUMBER,
     AttributeType.NUMBER_OF_PATIENTS,
+    AttributeType.LINE_OF_TREATMENT,
+    AttributeType.MODALITY,
+    AttributeType.TARGET,
     # Efficacy - Response Rates
     AttributeType.OBJECTIVE_RESPONSE_RATE,
     AttributeType.COMPLETE_RESPONSE,
