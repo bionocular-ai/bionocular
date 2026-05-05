@@ -386,6 +386,9 @@ class EnhancedExtractionService:
         file path, so ``doc_type`` is informational only.
         """
         del doc_type  # behaviour preserved by the legacy heuristics
+        logger.warning(
+            "Legacy RAG extraction path used — scheduled for removal 2026-08-04"
+        )
         if self.batch_extractor is None or self.arm_aware_rag_provider is None:
             raise RuntimeError(
                 f"{LEGACY_FLAG_ENV}=1 was set but the legacy dependencies "
