@@ -563,6 +563,9 @@ class ValidationStatus(str, Enum):
     VALID = "valid"
     INVALID = "invalid"
     WARNING = "warning"
+    VERIFIED = "verified"
+    EMPTY = "empty"
+    FAILED = "failed"
 
 
 class ExtractionConfidence(str, Enum):
