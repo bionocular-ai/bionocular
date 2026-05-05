@@ -8,7 +8,7 @@ Infrastructure (`prompt_templates.py`) reads these and passes them
 to LLM API calls via `ExtractionPromptTemplateProvider`.
 """
 
-from .extraction_models import AttributeType
+from .extraction_models import AttributeFamily, AttributeType
 
 # Prepended for attributes that risk multi-arm / study-level contamination.
 ARM_SPECIFIC_VERIFICATION_PREFIX = (
@@ -247,4 +247,332 @@ ATTRIBUTE_PROMPTS: dict[AttributeType, str] = {
     AttributeType.GRADE_3_PLUS_AE_HYPERTHYROIDISM: "Extract Grade 3+ AE hyperthyroidism percentage. Look for 'Grade 3+ AE hyperthyroidism', 'Grade 3-4 hyperthyroidism', 'G3+ hyperthyroidism'.",
     AttributeType.GRADE_3_PLUS_AE_AST_INCREASED: "Extract Grade 3+ AE AST (aspartate aminotransferase) increased percentage. Look for 'Grade 3+ AE AST', 'Grade 3-4 AST increased', 'G3+ AST'.",
     AttributeType.GRADE_3_PLUS_AE_VOMITING: "Extract Grade 3+ AE vomiting percentage. Look for 'Grade 3+ AE vomiting', 'Grade 3-4 vomiting', 'G3+ vomiting'.",
+}
+
+
+# AE / TEAE / TRAE definitions block, reused in all 6 safety-family prompts.
+# This text is intentionally inlined inside each AE/TEAE/TRAE family prompt
+# (not as a separate constant prepended by the extractor) because the LLM
+# must see it adjacent to the attribute list it is being asked to extract.
+_AE_DEFINITIONS_BLOCK = (
+    "DEFINITIONS — read carefully, these are commonly confused:\n"
+    "- AE (Adverse Event): any untoward medical occurrence, regardless of relationship to treatment.\n"
+    "- TEAE (Treatment-Emergent AE): an AE that started or worsened after the first study dose.\n"
+    "- TRAE (Treatment-Related AE / Drug-Related AE): an AE the investigator judged related to treatment.\n"
+    "The denominators differ. Extract values ONLY from rows / columns explicitly labeled with this family's term. "
+    "If only \"AEs\" are reported and you are extracting TRAE, return empty string — do not assume."
+)
+
+_NO_INFERENCE_CLAUSE = (
+    "If the value is not explicitly stated for THIS arm, return empty string. "
+    "Do not infer from study totals or other arms. Do not compute values."
+)
+
+_VALUE_FORMAT_NOTE = (
+    "Accepted values per attribute: 'NR' (not reached, where applicable), "
+    "'' (empty string when not stated), a decimal number, or a 'lower-upper' range for CIs."
+)
+
+
+# One extraction prompt per AttributeFamily. The {arms_block} placeholder is
+# filled by the extractor with the per-arm output schema and arm metadata.
+# Convention: prompts do NOT inline SHARED_EXTRACTION_RULES; the extractor
+# prepends those formatting rules separately.
+FAMILY_PROMPTS: dict[AttributeFamily, str] = {
+    AttributeFamily.IDENTIFICATION: (
+        "FAMILY: Trial / Publication Identification.\n"
+        "Definition: study-level metadata identifying the trial, the cancer setting, "
+        "the publication or abstract, and per-arm enrollment counts.\n\n"
+        "Attributes to extract (canonical name — expected unit / format):\n"
+        "- nct_number — NCT identifier (NCT followed by 8 digits) or other registry id.\n"
+        "- cancer_type — one of the controlled cancer-type vocabulary entries.\n"
+        "- trial_name — protocol name token (e.g. KEYNOTE-716); 'No Name' if none.\n"
+        "- number_of_patients — integer, per arm.\n"
+        "- line_of_treatment — integer or label as stated.\n"
+        "- abstract_number, conference, published_year — abstract metadata when present.\n"
+        "- publication_name, publication_year, pdf_number — publication metadata when present.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — context says 'KEYNOTE-716 (NCT03553836); pembrolizumab arm n=487, placebo arm n=489; "
+        "N Engl J Med 2022.' Output:\n"
+        '{\n'
+        '  "Pembrolizumab": {"nct_number": {"value": "NCT03553836", "quote": "..."}, '
+        '"trial_name": {"value": "KEYNOTE-716", "quote": "..."}, '
+        '"number_of_patients": {"value": "487", "quote": "..."}},\n'
+        '  "Placebo": {"nct_number": {"value": "NCT03553836", "quote": "..."}, '
+        '"trial_name": {"value": "KEYNOTE-716", "quote": "..."}, '
+        '"number_of_patients": {"value": "489", "quote": "..."}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.RESPONSE_RATES: (
+        "FAMILY: Tumor response rates (RECIST / iRECIST endpoints).\n"
+        "Definition: per-arm response rates derived from investigator or BICR assessment, "
+        "including ORR, CR, pCR, CMR, DCR, CBR, and duration of response (DOR).\n\n"
+        "Attributes to extract (canonical name — expected unit):\n"
+        "- objective_response_rate — percentage.\n"
+        "- complete_response — percentage.\n"
+        "- pathological_complete_response — percentage.\n"
+        "- complete_metabolic_response — percentage.\n"
+        "- disease_control_rate — percentage.\n"
+        "- clinical_benefit_rate — percentage.\n"
+        "- median_dor — months (or 'NR').\n"
+        "- dor_rate — percentage at a stated timepoint.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "SANCTIONED EXCEPTION (ORR ONLY): If `OBJECTIVE_RESPONSE_RATE` is not explicitly stated "
+        "for THIS arm but both `COMPLETE_RESPONSE` (CR) and Partial Response (PR) counts/percentages "
+        "ARE explicitly stated for THIS arm, compute `ORR = (CR + PR) / NUMBER_OF_PATIENTS`. "
+        "Return percentage to one decimal. Set `quote` to the verbatim sentence(s) you used "
+        "(CR sentence + PR sentence + N sentence). Set `source` to `computed_orr`. "
+        "Apply ONLY to ORR. No other attribute may be computed.\n\n"
+        "EXAMPLE — 'In the nivolumab arm (n=200), CR was 12 (6.0%) and PR was 48 (24.0%). ORR was not reported.' Output:\n"
+        '{\n'
+        '  "Nivolumab": {\n'
+        '    "complete_response": {"value": "6.0", "quote": "CR was 12 (6.0%)"},\n'
+        '    "objective_response_rate": {"value": "30.0", "quote": "CR was 12 (6.0%) and PR was 48 (24.0%) ... n=200", "source": "computed_orr"}\n'
+        '  }\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.PFS_FAMILY: (
+        "FAMILY: Progression-Free Survival (PFS).\n"
+        "Definition: time from randomization (or treatment start) to disease progression or death "
+        "from any cause, plus statistical comparators (HR, p-value, CI) and rate timepoints.\n\n"
+        "Attributes (canonical name — unit):\n"
+        "- median_pfs — months (or 'NR').\n"
+        "- median_followup_pfs — months.\n"
+        "- p_value_pfs — decimal, OR significance label "
+        "(Non-Significant p>0.05, Significant p<=0.05, Highly Significant p<=0.001).\n"
+        "- hr_pfs — decimal hazard ratio.\n"
+        "- ci_hr_pfs — 'lower-upper' (e.g. '0.54-0.89').\n"
+        "- pfs_rate_6m / 9m / 12m / 18m / 24m / 36m / 48m — percentage at the stated timepoint.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — 'Median PFS was 14.7 months (95% CI 10.2-19.8) vs 5.6 months; HR 0.45 (0.33-0.61), p<0.001. "
+        "12-month PFS rate was 56% vs 24%.' Output (per arm):\n"
+        '{\n'
+        '  "Experimental": {"median_pfs": {"value": "14.7", "quote": "Median PFS was 14.7 months"}, '
+        '"hr_pfs": {"value": "0.45", "quote": "HR 0.45 (0.33-0.61)"}, '
+        '"ci_hr_pfs": {"value": "0.33-0.61", "quote": "(0.33-0.61)"}, '
+        '"pfs_rate_12m": {"value": "56", "quote": "12-month PFS rate was 56%"}},\n'
+        '  "Control": {"median_pfs": {"value": "5.6", "quote": "vs 5.6 months"}, '
+        '"pfs_rate_12m": {"value": "24", "quote": "vs 24%"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.OS_FAMILY: (
+        "FAMILY: Overall Survival (OS).\n"
+        "Definition: time from randomization (or treatment start) to death from any cause, "
+        "plus statistical comparators (HR, p-value, CI) and rate timepoints.\n\n"
+        "Attributes (canonical name — unit):\n"
+        "- median_os — months (or 'NR').\n"
+        "- median_followup_os — months.\n"
+        "- p_value_os — decimal, OR significance label "
+        "(Non-Significant p>0.05, Significant p<=0.05, Highly Significant p<=0.001).\n"
+        "- hr_os — decimal hazard ratio.\n"
+        "- ci_hr_os — 'lower-upper' format.\n"
+        "- os_rate_6m / 9m / 12m / 18m / 24m / 36m / 48m — percentage at the stated timepoint.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — 'Median OS in the pembrolizumab group was not reached vs 16.9 months in the chemotherapy "
+        "group; HR 0.63 (95% CI 0.50-0.79), p<0.001. 24-month OS was 55% vs 38%.' Output:\n"
+        '{\n'
+        '  "Pembrolizumab": {"median_os": {"value": "NR", "quote": "Median OS in the pembrolizumab group was not reached"}, '
+        '"hr_os": {"value": "0.63", "quote": "HR 0.63 (95% CI 0.50-0.79)"}, '
+        '"ci_hr_os": {"value": "0.50-0.79", "quote": "(95% CI 0.50-0.79)"}, '
+        '"os_rate_24m": {"value": "55", "quote": "24-month OS was 55%"}},\n'
+        '  "Chemotherapy": {"median_os": {"value": "16.9", "quote": "vs 16.9 months in the chemotherapy group"}, '
+        '"os_rate_24m": {"value": "38", "quote": "vs 38%"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.EFS_RFS_MFS: (
+        "FAMILY: Event-Free / Recurrence-Free / Metastasis-Free Survival.\n"
+        "Definition:\n"
+        "- EFS (Event-Free Survival): time to first event (progression, recurrence, or death) "
+        "in neoadjuvant / adjuvant settings.\n"
+        "- RFS (Recurrence-Free / Relapse-Free Survival): time from definitive treatment to recurrence or death.\n"
+        "- MFS (Metastasis-Free Survival): time from definitive treatment to distant metastasis or death.\n"
+        "These three endpoints are distinct — extract each only from rows/sections explicitly using its name.\n\n"
+        "Attributes (canonical name — unit):\n"
+        "- efs — months (or 'NR'); p_value_efs — decimal or significance label; hr_efs — decimal; "
+        "ci_hr_efs — 'lower-upper'.\n"
+        "- rfs — months; p_value_rfs — decimal or label; length_rfs — months follow-up; "
+        "hr_rfs — decimal; ci_hr_rfs — 'lower-upper'.\n"
+        "- mfs — months; length_mfs — months follow-up; hr_mfs — decimal; ci_hr_mfs — 'lower-upper'.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — 'Median RFS was not reached in the dabrafenib+trametinib arm vs 16.6 months in placebo; "
+        "HR 0.47 (95% CI 0.39-0.58).' Output:\n"
+        '{\n'
+        '  "Dabrafenib+Trametinib": {"rfs": {"value": "NR", "quote": "Median RFS was not reached"}, '
+        '"hr_rfs": {"value": "0.47", "quote": "HR 0.47 (95% CI 0.39-0.58)"}, '
+        '"ci_hr_rfs": {"value": "0.39-0.58", "quote": "(95% CI 0.39-0.58)"}},\n'
+        '  "Placebo": {"rfs": {"value": "16.6", "quote": "vs 16.6 months in placebo"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.TIME_TO_METRICS: (
+        "FAMILY: Time-to clinical milestone metrics.\n"
+        "Definition: per-arm median times measured from a reference event to a clinical milestone.\n"
+        "- TTR: Time to Response (treatment start to first documented response).\n"
+        "- TTP: Time to Progression (treatment start to disease progression; deaths censored).\n"
+        "- TTNT: Time to Next Treatment.\n"
+        "- TTF: Time to Treatment Failure (start to discontinuation for any reason).\n\n"
+        "Attributes (canonical name — unit):\n"
+        "- ttr — months (or 'NR').\n"
+        "- ttp — months (or 'NR'); hr_ttp — decimal; ci_hr_ttp — 'lower-upper'.\n"
+        "- ttnt — months (or 'NR').\n"
+        "- ttf — months (or 'NR').\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — 'Median time to response was 2.8 months in arm A and 3.1 months in arm B. "
+        "Median TTP in arm A was 9.4 months.' Output:\n"
+        '{\n'
+        '  "Arm A": {"ttr": {"value": "2.8", "quote": "Median time to response was 2.8 months in arm A"}, '
+        '"ttp": {"value": "9.4", "quote": "Median TTP in arm A was 9.4 months"}},\n'
+        '  "Arm B": {"ttr": {"value": "3.1", "quote": "and 3.1 months in arm B"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.AE_GENERAL: (
+        "FAMILY: Adverse Events — general (any-cause).\n"
+        f"{_AE_DEFINITIONS_BLOCK}\n\n"
+        "Scope of THIS family: any-cause AE rates only. Use rows/columns labeled 'AE', 'adverse event', "
+        "'any grade AE', or equivalent.\n\n"
+        "Attributes (canonical name — unit, all percentages unless noted):\n"
+        "- ae, grade_3_plus_ae, ae_leading_to_discontinuation, serious_ae, immune_related_ae, "
+        "serious_immune_related_ae, ae_leading_to_death, ae_leading_to_dose_reduction, "
+        "ae_leading_to_dose_interruption, ae_requiring_hospitalization.\n"
+        "- crs (cytokine release syndrome), irr (infusion-related reaction).\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — 'Any-grade AEs occurred in 196/200 (98%) in arm A. Grade 3+ AEs in 80 (40%). "
+        "Discontinuations due to AE: 12 (6%).' Output:\n"
+        '{\n'
+        '  "Arm A": {"ae": {"value": "98", "quote": "Any-grade AEs occurred in 196/200 (98%)"}, '
+        '"grade_3_plus_ae": {"value": "40", "quote": "Grade 3+ AEs in 80 (40%)"}, '
+        '"ae_leading_to_discontinuation": {"value": "6", "quote": "Discontinuations due to AE: 12 (6%)"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.AE_GRADE3_SPECIFIC: (
+        "FAMILY: Adverse Events — Grade 3+ specific (any-cause), per preferred term.\n"
+        f"{_AE_DEFINITIONS_BLOCK}\n\n"
+        "Scope of THIS family: Grade 3+ AE rates for specific preferred terms, any-cause. "
+        "Use rows from any-cause AE tables only. If only TRAE/TEAE tables are present, return empty string.\n\n"
+        "Attributes (all percentages, per arm) — extract for each named preferred term:\n"
+        "grade_3_plus_ae_immune_related, _irr, _crs, _colitis, _thrombocytopenia, _neutropenia, "
+        "_leukopenia, _fatigue, _nausea, _anemia, _diarrhea, _hyperglycemia, _dyspnea, _pyrexia, "
+        "_bleeding, _pruritus, _rash, _pneumonia, _thyroiditis, _hypophysitis, _hepatitis, "
+        "_pneumonitis, _alanine_aminotransferase, _hypothyroidism, _hyperthyroidism, _ast_increased, "
+        "_vomiting.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — any-cause AE table: 'Grade 3-4 colitis: arm A 5 (2.5%), arm B 1 (0.5%). "
+        "Grade 3-4 ALT increased: arm A 8 (4.0%), arm B 2 (1.0%).' Output:\n"
+        '{\n'
+        '  "Arm A": {"grade_3_plus_ae_colitis": {"value": "2.5", "quote": "Grade 3-4 colitis: arm A 5 (2.5%)"}, '
+        '"grade_3_plus_ae_alanine_aminotransferase": {"value": "4.0", "quote": "Grade 3-4 ALT increased: arm A 8 (4.0%)"}},\n'
+        '  "Arm B": {"grade_3_plus_ae_colitis": {"value": "0.5", "quote": "arm B 1 (0.5%)"}, '
+        '"grade_3_plus_ae_alanine_aminotransferase": {"value": "1.0", "quote": "arm B 2 (1.0%)"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.TEAE_GENERAL: (
+        "FAMILY: Treatment-Emergent Adverse Events (TEAE) — general.\n"
+        f"{_AE_DEFINITIONS_BLOCK}\n\n"
+        "Scope of THIS family: TEAE rates only. Use rows/columns explicitly labeled 'TEAE' or "
+        "'treatment-emergent'. Do NOT use any-cause AE rows or TRAE rows.\n\n"
+        "Attributes (canonical name — unit, percentages):\n"
+        "- teae, grade_3_plus_teae, grade_3_teae, grade_4_teae, grade_5_teae, "
+        "teae_leading_to_discontinuation, teae_leading_to_death, serious_teae, "
+        "teae_immune_related, teae_leading_to_dose_reduction, teae_leading_to_dose_interruption, "
+        "teae_requiring_hospitalization.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — 'TEAEs of any grade occurred in 95% of patients in arm A. Grade 3+ TEAEs in 38%. "
+        "Serious TEAEs in 22%.' Output:\n"
+        '{\n'
+        '  "Arm A": {"teae": {"value": "95", "quote": "TEAEs of any grade occurred in 95% of patients in arm A"}, '
+        '"grade_3_plus_teae": {"value": "38", "quote": "Grade 3+ TEAEs in 38%"}, '
+        '"serious_teae": {"value": "22", "quote": "Serious TEAEs in 22%"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.TEAE_GRADE3_SPECIFIC: (
+        "FAMILY: Treatment-Emergent Adverse Events — Grade 3+ specific, per preferred term.\n"
+        f"{_AE_DEFINITIONS_BLOCK}\n\n"
+        "Scope of THIS family: Grade 3+ TEAE rates for specific preferred terms. Use rows from TEAE "
+        "(treatment-emergent) tables only. If a specific term appears only in any-cause AE tables or "
+        "TRAE tables, return empty string for this family.\n\n"
+        "Attributes (all percentages, per arm) — for each named preferred term:\n"
+        "grade_3_plus_teae_immune_related, _irr, _crs, _colitis, _thrombocytopenia, _neutropenia, "
+        "_leukopenia, _fatigue, _nausea, _anemia, _diarrhea, _hyperglycemia, _dyspnea, _pyrexia, "
+        "_bleeding, _pruritus, _rash, _pneumonia, _thyroiditis, _hypophysitis, _hepatitis, "
+        "_pneumonitis, _alanine_aminotransferase, _hypothyroidism, _hyperthyroidism, _ast_increased, "
+        "_vomiting.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — TEAE table: 'Grade 3-4 TEAE neutropenia: arm A 18 (9.0%), arm B 4 (2.0%).' Output:\n"
+        '{\n'
+        '  "Arm A": {"grade_3_plus_teae_neutropenia": {"value": "9.0", "quote": "Grade 3-4 TEAE neutropenia: arm A 18 (9.0%)"}},\n'
+        '  "Arm B": {"grade_3_plus_teae_neutropenia": {"value": "2.0", "quote": "arm B 4 (2.0%)"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.TRAE_GENERAL: (
+        "FAMILY: Treatment-Related Adverse Events (TRAE) — general.\n"
+        f"{_AE_DEFINITIONS_BLOCK}\n\n"
+        "Scope of THIS family: TRAE rates only. Use rows/columns explicitly labeled 'TRAE', "
+        "'treatment-related', or 'drug-related'. Do NOT use any-cause AE rows or TEAE rows.\n\n"
+        "Attributes (canonical name — unit, percentages):\n"
+        "- trae, grade_3_plus_trae, grade_3_trae, grade_4_trae, grade_5_trae, "
+        "trae_leading_to_discontinuation, trae_leading_to_death, serious_trae, trae_immune_related, "
+        "trae_leading_to_dose_reduction, trae_leading_to_dose_interruption, "
+        "trae_requiring_hospitalization.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — 'Treatment-related AEs of any grade occurred in 78% of arm A. Grade 3+ TRAEs in 25%. "
+        "TRAEs leading to discontinuation in 7%.' Output:\n"
+        '{\n'
+        '  "Arm A": {"trae": {"value": "78", "quote": "Treatment-related AEs of any grade occurred in 78% of arm A"}, '
+        '"grade_3_plus_trae": {"value": "25", "quote": "Grade 3+ TRAEs in 25%"}, '
+        '"trae_leading_to_discontinuation": {"value": "7", "quote": "TRAEs leading to discontinuation in 7%"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
+
+    AttributeFamily.TRAE_GRADE3_SPECIFIC: (
+        "FAMILY: Treatment-Related Adverse Events — Grade 3+ specific, per preferred term.\n"
+        f"{_AE_DEFINITIONS_BLOCK}\n\n"
+        "Scope of THIS family: Grade 3+ TRAE rates for specific preferred terms. Use rows from TRAE "
+        "(treatment-related / drug-related) tables only. If a specific term appears only in any-cause "
+        "AE tables or TEAE tables, return empty string for this family.\n\n"
+        "Attributes (all percentages, per arm) — for each named preferred term:\n"
+        "grade_3_plus_trae_immune_related, _irr, _crs, _colitis, _thrombocytopenia, _neutropenia, "
+        "_leukopenia, _fatigue, _nausea, _anemia, _diarrhea, _hyperglycemia, _dyspnea, _pyrexia, "
+        "_bleeding, _pruritus, _rash, _pneumonia, _thyroiditis, _hypophysitis, _hepatitis, "
+        "_pneumonitis, _alanine_aminotransferase, _hypothyroidism, _hyperthyroidism, _ast_increased, "
+        "_vomiting.\n\n"
+        f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_NO_INFERENCE_CLAUSE}\n\n"
+        "EXAMPLE — TRAE table: 'Grade 3-4 drug-related rash: arm A 6 (3.0%), arm B 1 (0.5%).' Output:\n"
+        '{\n'
+        '  "Arm A": {"grade_3_plus_trae_rash": {"value": "3.0", "quote": "Grade 3-4 drug-related rash: arm A 6 (3.0%)"}},\n'
+        '  "Arm B": {"grade_3_plus_trae_rash": {"value": "0.5", "quote": "arm B 1 (0.5%)"}}\n'
+        '}\n\n'
+        "{arms_block}"
+    ),
 }
