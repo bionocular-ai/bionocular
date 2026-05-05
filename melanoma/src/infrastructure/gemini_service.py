@@ -22,6 +22,18 @@ _CODE_FENCE_RE = re.compile(r"```(?:json)?\s*([\s\S]*?)```", re.IGNORECASE)
 _JSON_OBJECT_RE = re.compile(r"\{[\s\S]*\}", re.DOTALL)
 _TRAILING_COMMA_RE = re.compile(r",\s*([}\]])")
 
+# Minimum input tokens required for Gemini explicit context caching on the
+# Gemini 3.x Pro family. Historically 32_768 on 2.5 Pro; conservatively reused
+# here for 3.1 Pro until Google publishes a different floor.
+# Source: https://ai.google.dev/gemini-api/docs/caching (see "Minimum input
+# token count" section per model).
+GEMINI_CACHE_MIN_TOKENS = 32_768
+
+# Cheap rule-of-thumb: 1 token ~= 4 chars of English. Intentionally conservative
+# so we only short-circuit when we are clearly below the floor; borderline docs
+# still attempt the SDK call and fall back gracefully on rejection.
+_CHARS_PER_TOKEN_ESTIMATE = 4
+
 
 def _repair_truncated_json(text: str) -> str:
     in_string = False
@@ -340,6 +352,123 @@ class GeminiLLMService(LLMService):
 
         assert last_exc is not None
         raise last_exc
+
+    async def create_context_cache(
+        self,
+        doc_text: str,
+        system_instruction: str,
+        ttl_seconds: int = 3600,
+    ) -> str | None:
+        """Create an explicit Gemini context cache for `doc_text`.
+
+        Returns the cache resource name (usable as a `cached_content` reference)
+        or `None` if the document is below Gemini's caching floor or the SDK
+        rejects the request as too small.
+        """
+        estimated_tokens = len(doc_text) // _CHARS_PER_TOKEN_ESTIMATE
+        if estimated_tokens < GEMINI_CACHE_MIN_TOKENS:
+            logger.warning(
+                "Skipping context cache — doc too short (chars=%d, est_tokens=%d, floor=%d)",
+                len(doc_text),
+                estimated_tokens,
+                GEMINI_CACHE_MIN_TOKENS,
+            )
+            return None
+
+        from google.genai import types
+        from google.genai.errors import ClientError
+
+        config = types.CreateCachedContentConfig(
+            contents=[doc_text],
+            system_instruction=system_instruction,
+            ttl=f"{ttl_seconds}s",
+        )
+
+        def _sync_call() -> Any:
+            return self._client.caches.create(model=self._model, config=config)
+
+        try:
+            cached = await asyncio.to_thread(_sync_call)
+        except ClientError as exc:
+            # 400 INVALID_ARGUMENT covers the MIN_TOKEN rejection path. Other
+            # 4xx (auth, quota) we still want to swallow into a fallback rather
+            # than fail extraction — the caller will inline the doc instead.
+            logger.warning(
+                "Gemini cache create rejected (chars=%d, est_tokens=%d): %s",
+                len(doc_text),
+                estimated_tokens,
+                exc,
+            )
+            return None
+
+        name: str | None = getattr(cached, "name", None)
+        return name
+
+    async def cached_or_inline_generate(
+        self,
+        cache_id: str | None,
+        doc_text: str,
+        prompt: str,
+        response_schema: type[T],
+        temperature: float = 0.1,
+        max_tokens: int = 4000,
+    ) -> T:
+        """Generate structured output, transparently using a cache when available.
+
+        If `cache_id` is provided, generates against the cached document context.
+        Otherwise prepends `doc_text` inline to `prompt` and falls through to
+        `generate_structured`. Callers receive the same parsed `response_schema`
+        instance regardless of branch.
+        """
+        if cache_id is None:
+            inline_prompt = f"{doc_text}\n\n{prompt}"
+            return await self.generate_structured(
+                inline_prompt,
+                response_schema=response_schema,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+        from google.genai import types
+
+        effective_max_tokens = max(max_tokens, self._max_tokens)
+        config = types.GenerateContentConfig(
+            temperature=temperature,
+            max_output_tokens=effective_max_tokens,
+            response_mime_type="application/json",
+            response_schema=response_schema,
+            cached_content=cache_id,
+        )
+
+        def _sync_call() -> Any:
+            return self._client.models.generate_content(
+                model=self._model,
+                contents=prompt,
+                config=config,
+            )
+
+        response = await asyncio.to_thread(_sync_call)
+        self._record_usage(
+            getattr(response, "usage_metadata", None),
+            model=self._model,
+            operation="cached_structured_extraction",
+            success=True,
+        )
+        parsed = getattr(response, "parsed", None)
+        if isinstance(parsed, response_schema):
+            return parsed
+        text = response.text or ""
+        return response_schema.model_validate_json(text)
+
+    async def delete_cache(self, cache_id: str | None) -> None:
+        """Delete a previously created context cache. No-op when `cache_id` is None."""
+        if cache_id is None:
+            return
+
+        def _sync_call() -> Any:
+            return self._client.caches.delete(name=cache_id)
+
+        await asyncio.to_thread(_sync_call)
 
     async def extract_structured_data(
         self,
