@@ -707,21 +707,17 @@
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_ae_thrombocytopenia": {
-          "value": 68.2,
-          "confidence": 0.8,
+          "value": "Not found",
+          "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
+          "source_chunks": [],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_ae_neutropenia": {
-          "value": 50.0,
-          "confidence": 0.8,
+          "value": "Not found",
+          "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
+          "source_chunks": [],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_ae_leukopenia": {
@@ -860,14 +856,14 @@
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_teae_thrombocytopenia": {
-          "value": "Not found",
+          "value": 68.2,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_teae_neutropenia": {
-          "value": "Not found",
+          "value": 50.0,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],

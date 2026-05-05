@@ -1,24 +1,25 @@
 {
-  "doc_id": "ASCO_2024_LBA9512",
+  "doc_id": "ASCO_2024_9504",
   "doc_type": "abstract",
   "arms": {
     "arm_1": {
       "arm_id": "arm_1",
-      "arm_name": "mRNA-4157 + Pembrolizumab",
-      "generic_name": "mRNA-4157 + Pembrolizumab",
-      "dose": "Not specified",
-      "dosing_schedule": "Not specified",
-      "patient_count": 0,
+      "arm_name": "Nivolumab + Relatlimab + Ipilimumab",
+      "generic_name": "Nivolumab + Relatlimab + Ipilimumab",
+      "dose": "Nivolumab 480 mg + Relatlimab 160 mg + Ipilimumab 1 mg/kg",
+      "dosing_schedule": "Nivolumab Q4W + Relatlimab Q4W + Ipilimumab Q8W",
+      "patient_count": 46,
       "arm_type": "combination",
       "combination_drugs": [
-        "mRNA-4157",
-        "Pembrolizumab"
+        "Nivolumab",
+        "Relatlimab",
+        "Ipilimumab"
       ],
-      "confidence_score": 0.9,
-      "source_text": "Individualized neoantigen therapy mRNA-4157 (V940) plus pembrolizumab in resected melanoma",
-      "total_attributes": 4,
+      "confidence_score": 0.99,
+      "source_text": "Pts with advanced melanoma were treated with first-line NIVO 480 mg Q4W + RELA 160 mg Q4W + IPI 1 mg/kg Q8W until progression or unacceptable toxicity.",
+      "total_attributes": 20,
       "api_attributes": 0,
-      "abstract_attributes": 4,
+      "abstract_attributes": 20,
       "errors": [],
       "warnings": [],
       "attributes": {
@@ -40,18 +41,21 @@
           "source": "abstract_llm_extraction"
         },
         "nct_number": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "abstract_llm_extraction"
-        },
-        "trial_name": {
-          "value": "mRNA-4157-P201 (KEYNOTE-942)",
+          "value": "NCT03459222",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
             "chunk_0"
+          ],
+          "source": "abstract_llm_extraction"
+        },
+        "trial_name": {
+          "value": "RELATIVITY-048",
+          "confidence": 0.8,
+          "validation_status": "pending",
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1"
           ],
           "source": "abstract_llm_extraction"
         },
@@ -61,22 +65,29 @@
           "validation_status": "pending",
           "source_chunks": [
             "chunk_0",
-            "chunk_1"
+            "chunk_1",
+            "chunk_2"
           ],
           "source": "abstract_llm_extraction"
         },
         "number_of_patients": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 46,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2"
+          ],
           "source": "abstract_llm_extraction"
         },
         "median_pfs": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": "NR",
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "median_followup_pfs": {
@@ -104,14 +115,20 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "median_os": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": "NR",
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2"
+          ],
           "source": "abstract_llm_extraction"
         },
         "median_followup_os": {
@@ -139,21 +156,29 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "objective_response_rate": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 58.7,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2"
+          ],
           "source": "abstract_llm_extraction"
         },
         "complete_response": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 17.4,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "pathological_complete_response": {
@@ -171,10 +196,12 @@
           "source": "abstract_llm_extraction"
         },
         "disease_control_rate": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 76.1,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "clinical_benefit_rate": {
@@ -185,17 +212,21 @@
           "source": "abstract_llm_extraction"
         },
         "median_dor": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": "NR",
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "dor_rate": {
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "pfs_rate_6m": {
@@ -227,10 +258,12 @@
           "source": "abstract_llm_extraction"
         },
         "pfs_rate_24m": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 57.2,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "pfs_rate_36m": {
@@ -241,10 +274,12 @@
           "source": "abstract_llm_extraction"
         },
         "pfs_rate_48m": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 51.6,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "os_rate_6m": {
@@ -276,10 +311,12 @@
           "source": "abstract_llm_extraction"
         },
         "os_rate_24m": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 79.8,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "os_rate_36m": {
@@ -290,10 +327,14 @@
           "source": "abstract_llm_extraction"
         },
         "os_rate_48m": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 69.1,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2"
+          ],
           "source": "abstract_llm_extraction"
         },
         "efs": {
@@ -584,24 +625,30 @@
           "source": "abstract_llm_extraction"
         },
         "trae": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 95.7,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_trae": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 43.4,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_3_trae": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 39.1,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_4_trae": {
@@ -619,10 +666,12 @@
           "source": "abstract_llm_extraction"
         },
         "trae_leading_to_discontinuation": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 41.3,
+          "confidence": 0.8,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "trae_leading_to_death": {
@@ -636,7 +685,9 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0"
+          ],
           "source": "abstract_llm_extraction"
         },
         "serious_trae": {
@@ -706,7 +757,13 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2",
+            "chunk_3",
+            "chunk_4"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_ae_colitis": {
@@ -720,7 +777,13 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2",
+            "chunk_3",
+            "chunk_4"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_ae_irr": {
@@ -741,7 +804,13 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2",
+            "chunk_3",
+            "chunk_4"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_trae_crs": {
@@ -769,7 +838,13 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2",
+            "chunk_3",
+            "chunk_4"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_trae_colitis": {
@@ -797,7 +872,13 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2",
+            "chunk_3",
+            "chunk_4"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_teae_crs": {
@@ -825,7 +906,13 @@
           "value": "Not found",
           "confidence": 0.0,
           "validation_status": "pending",
-          "source_chunks": [],
+          "source_chunks": [
+            "chunk_0",
+            "chunk_1",
+            "chunk_2",
+            "chunk_3",
+            "chunk_4"
+          ],
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_teae_colitis": {
@@ -850,8 +937,8 @@
           "source": "abstract_llm_extraction"
         }
       },
-      "modality": "Vaccine; Monoclonal Antibody",
-      "biological_target": "Personalized neoantigen; PD-1"
+      "modality": "Monoclonal Antibody; Monoclonal Antibody; Monoclonal Antibody",
+      "biological_target": "PD-1; LAG-3; CTLA-4"
     }
   }
 }

@@ -19,10 +19,10 @@
       "notes": "Dabra+Tram vs Placebo adjuvant"
     },
     {
-      "doc_id": "ASCO_2024_LBA9503",
+      "doc_id": "ASCO_2024_9524",
       "doc_type": "abstract",
       "expected_arm_count": 2,
-      "notes": "DREAMseq sequencing"
+      "notes": "RELATIVITY-047 Nivo+Rela vs Nivo 3yr OS"
     },
     {
       "doc_id": "ASCO_2024_9525",
@@ -31,10 +31,10 @@
       "notes": "Nivo/Rela/Nivo+Rela"
     },
     {
-      "doc_id": "ASCO_2024_LBA9512",
+      "doc_id": "ASCO_2024_9504",
       "doc_type": "abstract",
       "expected_arm_count": 1,
-      "notes": "mRNA-4157+Pembro"
+      "notes": "RELATIVITY-048 Nivo+Rela+Ipi triplet"
     },
     {
       "doc_id": "ASCO_2024_9505",
