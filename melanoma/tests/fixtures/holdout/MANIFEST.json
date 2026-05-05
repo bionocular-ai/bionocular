@@ -1,0 +1,46 @@
+{
+  "fixtures": [
+    {
+      "doc_id": "Batch-I_22",
+      "doc_type": "publication",
+      "expected_arm_count": 3,
+      "notes": "CheckMate-067 IO 3-arm"
+    },
+    {
+      "doc_id": "Batch-II_1",
+      "doc_type": "publication",
+      "expected_arm_count": 2,
+      "notes": "COMBI-d targeted 2-arm"
+    },
+    {
+      "doc_id": "ASCO_2024_9500",
+      "doc_type": "abstract",
+      "expected_arm_count": 2,
+      "notes": "Dabra+Tram vs Placebo adjuvant"
+    },
+    {
+      "doc_id": "ASCO_2024_LBA9503",
+      "doc_type": "abstract",
+      "expected_arm_count": 2,
+      "notes": "DREAMseq sequencing"
+    },
+    {
+      "doc_id": "ASCO_2024_9525",
+      "doc_type": "abstract",
+      "expected_arm_count": 3,
+      "notes": "Nivo/Rela/Nivo+Rela"
+    },
+    {
+      "doc_id": "ASCO_2024_LBA9512",
+      "doc_type": "abstract",
+      "expected_arm_count": 1,
+      "notes": "mRNA-4157+Pembro"
+    },
+    {
+      "doc_id": "ASCO_2024_9505",
+      "doc_type": "abstract",
+      "expected_arm_count": 1,
+      "notes": "Lifileucel+Pembro"
+    }
+  ]
+}
