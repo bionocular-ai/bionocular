@@ -4,8 +4,8 @@ These prompts encode oncology business rules for attribute extraction:
 what to look for, how to interpret clinical values, and what format
 to return. They are domain knowledge, not infrastructure.
 
-Infrastructure (`prompt_templates.py`) reads these and passes them
-to LLM API calls via `ExtractionPromptTemplateProvider`.
+Infrastructure reads these and passes them to LLM API calls via
+`ExtractionPromptTemplateProvider`.
 """
 
 from .extraction_models import AttributeFamily, AttributeType
@@ -31,6 +31,9 @@ SHARED_EXTRACTION_RULES = (
 
 # One extraction instruction per AttributeType.
 # Infrastructure reads this dict; do not import infrastructure here.
+# DEPRECATED — replaced by FAMILY_PROMPTS (Task 4). Kept temporarily so legacy
+# RAG extraction path (batch_attribute_extractor.py) still imports cleanly.
+# Scheduled for removal in Task 9 / 11. Do not add new entries here.
 ATTRIBUTE_PROMPTS: dict[AttributeType, str] = {
     # General Parameters
     AttributeType.NCT_NUMBER: "Extract clinical trial identifier from 'Clinical trial identification:' or 'Clinical Trial Information:' section. Priority: NCT number (NCT + 8 digits), then EudraCT, then other identifiers. Return exactly as found or empty string.",
@@ -288,7 +291,12 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "- cancer_type — one of the controlled cancer-type vocabulary entries.\n"
         "- trial_name — protocol name token (e.g. KEYNOTE-716); 'No Name' if none.\n"
         "- number_of_patients — integer, per arm.\n"
-        "- line_of_treatment — integer or label as stated.\n"
+        "- line_of_treatment — trial-level (same value across arms). One of: "
+        "first_line, second_line, third_line_plus, adjuvant, neoadjuvant, maintenance, unknown. "
+        "Inference rules: 'previously untreated' / 'treatment-naive' / 'first-line' → first_line; "
+        "'after one prior systemic therapy' / 'after failure of ≥1 prior therapy' → second_line; "
+        "'after ≥2 prior therapies' → third_line_plus; trial designs explicitly labeled "
+        "adjuvant / neoadjuvant / maintenance → those values; if unclear → unknown.\n"
         "- abstract_number, conference, published_year — abstract metadata when present.\n"
         "- publication_name, publication_year, pdf_number — publication metadata when present.\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"

@@ -49,3 +49,42 @@ def test_each_prompt_under_400_words() -> None:
     for fam, p in FAMILY_PROMPTS.items():
         wc = len(p.split())
         assert wc <= 400, f"{fam} prompt too long: {wc} words"
+
+
+def test_no_cross_family_attribute_leakage() -> None:
+    """TEAE prompt must not mention TRAE attrs and vice versa.
+
+    Prevents the LLM from being asked to extract attrs from the wrong family.
+    The shared DEFINITIONS block legitimately mentions all three terms; we
+    skip it by splitting on the 'Scope of THIS family:' marker that follows
+    the definitions block in every safety-family prompt.
+    """
+    safety_families = [
+        AttributeFamily.AE_GENERAL,
+        AttributeFamily.AE_GRADE3_SPECIFIC,
+        AttributeFamily.TEAE_GENERAL,
+        AttributeFamily.TEAE_GRADE3_SPECIFIC,
+        AttributeFamily.TRAE_GENERAL,
+        AttributeFamily.TRAE_GRADE3_SPECIFIC,
+    ]
+    marker = "Scope of THIS family:"
+    for fam in safety_families:
+        prompt = FAMILY_PROMPTS[fam]
+        assert marker in prompt, f"{fam} missing scope marker"
+        post_definitions = prompt.split(marker, 1)[1]
+        fam_name = fam.value  # e.g. "teae_general", "trae_grade3_specific"
+        if fam_name.startswith("teae"):
+            assert "trae_" not in post_definitions, (
+                f"{fam} prompt leaks trae_* attrs after definitions block"
+            )
+        elif fam_name.startswith("trae"):
+            assert "teae_" not in post_definitions, (
+                f"{fam} prompt leaks teae_* attrs after definitions block"
+            )
+        else:  # ae_*
+            assert "trae_" not in post_definitions, (
+                f"{fam} prompt leaks trae_* attrs after definitions block"
+            )
+            assert "teae_" not in post_definitions, (
+                f"{fam} prompt leaks teae_* attrs after definitions block"
+            )
