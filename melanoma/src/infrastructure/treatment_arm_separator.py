@@ -8,6 +8,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from ..domain.constants import TREATMENT_ARM_SEPARATION_OPERATION
 from ..domain.treatment_arm_models import (
     ArmType,
     TreatmentArm,
@@ -211,12 +212,12 @@ DOCUMENT TEXT:
         self, prompt: str
     ) -> TreatmentArmSeparationSchema:
         """Call Gemini with structured-output constraint."""
-        return await self.llm_service.generate_structured(  # type: ignore[return-value]
+        return await self.llm_service.generate_structured(
             prompt=prompt,
             response_schema=TreatmentArmSeparationSchema,
             temperature=0.1,
             max_tokens=4096,
-            operation="treatment_arm_separation",
+            operation=TREATMENT_ARM_SEPARATION_OPERATION,
         )
 
     def _build_arms_from_schema(

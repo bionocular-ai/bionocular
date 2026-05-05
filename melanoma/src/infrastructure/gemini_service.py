@@ -6,9 +6,11 @@ import json
 import logging
 import random
 import re
-from typing import Any, Optional, Type
+from typing import Any, Optional, TypeVar
 
 from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
 
 from ..domain.extraction_interfaces import LLMService
 from .cost_calculator import CostCalculator
@@ -257,14 +259,14 @@ class GeminiLLMService(LLMService):
     async def generate_structured(
         self,
         prompt: str,
-        response_schema: Type[BaseModel],
+        response_schema: type[T],
         temperature: float = 0.0,
         max_tokens: int = 4096,
         model_name: Optional[str] = None,
         operation: str = "structured_extraction",
         attribute_type: Optional[str] = None,
         max_retries: int = 3,
-    ) -> BaseModel:
+    ) -> T:
         """Generate a response constrained to `response_schema` (a Pydantic class).
 
         Returns a parsed instance of `response_schema`. Raises on rate limit
