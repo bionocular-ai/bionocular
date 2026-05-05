@@ -225,6 +225,10 @@ class TreatmentArmExtractionResult(BaseModel):
     )
     errors: list[str] = Field(default_factory=list, description="Processing errors")
     warnings: list[str] = Field(default_factory=list, description="Processing warnings")
+    prompt_version: str = Field(
+        default="",
+        description="Prompt-pipeline version that produced this result. Empty means legacy v1.",
+    )
     created_at: datetime = Field(default_factory=datetime.now)
 
     @property
