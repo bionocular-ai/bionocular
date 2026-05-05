@@ -431,10 +431,9 @@ class GeminiLLMService(LLMService):
 
         from google.genai import types
 
-        effective_max_tokens = max(max_tokens, self._max_tokens)
         config = types.GenerateContentConfig(
             temperature=temperature,
-            max_output_tokens=effective_max_tokens,
+            max_output_tokens=max_tokens,
             response_mime_type="application/json",
             response_schema=response_schema,
             cached_content=cache_id,
