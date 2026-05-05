@@ -2413,6 +2413,10 @@ class ExtractedAttribute(BaseModel):
     source_chunks: list[str] = Field(
         default_factory=list, description="Chunk IDs that contributed to extraction"
     )
+    source_quote: str = Field(
+        default="",
+        description="Verbatim sentence(s) from the source doc supporting the extracted value.",
+    )
     source: str = Field(
         default="abstract_llm_extraction", description="Source of the extracted data"
     )
