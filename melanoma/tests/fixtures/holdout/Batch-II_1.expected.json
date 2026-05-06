@@ -64,7 +64,7 @@
           "source": "publication_llm_extraction"
         },
         "trial_name": {
-          "value": "Not found",
+          "value": "COMBI-d",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [
@@ -85,7 +85,7 @@
           "source": "publication_llm_extraction"
         },
         "number_of_patients": {
-          "value": "Not found",
+          "value": "211",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [
@@ -118,14 +118,14 @@
           "source": "publication_llm_extraction"
         },
         "p_value_pfs": {
-          "value": "Not found",
+          "value": "",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
           "source": "publication_llm_extraction"
         },
         "hr_pfs": {
-          "value": 0.67,
+          "value": "",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -134,7 +134,7 @@
           "source": "publication_llm_extraction"
         },
         "ci_hr_pfs": {
-          "value": "Not found",
+          "value": "",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [
@@ -163,7 +163,7 @@
           "source": "publication_llm_extraction"
         },
         "p_value_os": {
-          "value": 0.0107,
+          "value": "",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -173,7 +173,7 @@
           "source": "publication_llm_extraction"
         },
         "hr_os": {
-          "value": 0.71,
+          "value": "",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -182,7 +182,7 @@
           "source": "publication_llm_extraction"
         },
         "ci_hr_os": {
-          "value": "0.55-0.92",
+          "value": "",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -201,7 +201,7 @@
           "source": "publication_llm_extraction"
         },
         "complete_response": {
-          "value": 33.0,
+          "value": 16,
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -505,7 +505,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_ae": {
-          "value": 32.0,
+          "value": "32",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -580,7 +580,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae": {
-          "value": 32.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -710,7 +710,7 @@
           "source": "publication_llm_extraction"
         },
         "trae_leading_to_discontinuation": {
-          "value": "Not found",
+          "value": 11,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -775,209 +775,6 @@
           "source_chunks": [],
           "source": "publication_llm_extraction"
         },
-        "grade_3_plus_ae_crs": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_thrombocytopenia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_neutropenia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_leukopenia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_nausea": {
-          "value": 0.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_anemia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_diarrhea": {
-          "value": 1.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_colitis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hyperglycemia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_dyspnea": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_pyrexia": {
-          "value": 7.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_bleeding": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_pruritus": {
-          "value": 0.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_rash": {
-          "value": 0.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_pneumonia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_thyroiditis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hypophysitis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hepatitis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_pneumonitis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_alanine_aminotransferase": {
-          "value": 4.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_immune_related": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_irr": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_fatigue": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hypothyroidism": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hyperthyroidism": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_ast_increased": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_vomiting": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
         "grade_3_plus_trae_immune_related": {
           "value": "Not found",
           "confidence": 0.0,
@@ -1030,7 +827,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_diarrhea": {
-          "value": 1.0,
+          "value": "<1",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1060,7 +857,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_pyrexia": {
-          "value": 15.0,
+          "value": 7.0,
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1131,7 +928,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_alanine_aminotransferase": {
-          "value": 4.0,
+          "value": 2,
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1147,7 +944,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_fatigue": {
-          "value": "Not found",
+          "value": "2",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -1175,7 +972,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_vomiting": {
-          "value": "Not found",
+          "value": "<1",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -1217,7 +1014,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_nausea": {
-          "value": 0.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1233,7 +1030,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_diarrhea": {
-          "value": 1.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1263,7 +1060,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_pyrexia": {
-          "value": 15.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1281,7 +1078,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_pruritus": {
-          "value": 0.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1290,7 +1087,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_rash": {
-          "value": 0.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1334,7 +1131,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_alanine_aminotransferase": {
-          "value": 4.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1447,7 +1244,7 @@
           "source": "publication_llm_extraction"
         },
         "trial_name": {
-          "value": "Not found",
+          "value": "COMBI-d",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [
@@ -1468,7 +1265,7 @@
           "source": "publication_llm_extraction"
         },
         "number_of_patients": {
-          "value": "Not found",
+          "value": "212",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [
@@ -1501,15 +1298,15 @@
           "source": "publication_llm_extraction"
         },
         "p_value_pfs": {
-          "value": "Not found",
+          "value": 0.0004,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
           "source": "publication_llm_extraction"
         },
         "hr_pfs": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 0.67,
+          "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
             "chunk_0"
@@ -1517,7 +1314,7 @@
           "source": "publication_llm_extraction"
         },
         "ci_hr_pfs": {
-          "value": "Not found",
+          "value": "0.53-0.84",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [
@@ -1556,8 +1353,8 @@
           "source": "publication_llm_extraction"
         },
         "hr_os": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": 0.71,
+          "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
             "chunk_0"
@@ -1565,8 +1362,8 @@
           "source": "publication_llm_extraction"
         },
         "ci_hr_os": {
-          "value": "Not found",
-          "confidence": 0.0,
+          "value": "0.55-0.92",
+          "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
             "chunk_0",
@@ -1584,7 +1381,7 @@
           "source": "publication_llm_extraction"
         },
         "complete_response": {
-          "value": 28.0,
+          "value": 13,
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1888,7 +1685,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_ae": {
-          "value": 30.0,
+          "value": "31",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1963,7 +1760,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae": {
-          "value": 30.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2083,7 +1880,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_5_trae": {
-          "value": 1.0,
+          "value": "<1",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2093,14 +1890,14 @@
           "source": "publication_llm_extraction"
         },
         "trae_leading_to_discontinuation": {
-          "value": "Not found",
+          "value": 7,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
           "source": "publication_llm_extraction"
         },
         "trae_leading_to_death": {
-          "value": 1.0,
+          "value": "<1",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2158,209 +1955,6 @@
           "source_chunks": [],
           "source": "publication_llm_extraction"
         },
-        "grade_3_plus_ae_crs": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_thrombocytopenia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_neutropenia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_leukopenia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_nausea": {
-          "value": 1.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_anemia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_diarrhea": {
-          "value": 2.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_colitis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hyperglycemia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_dyspnea": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_pyrexia": {
-          "value": 2.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_bleeding": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_pruritus": {
-          "value": 0.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_rash": {
-          "value": 1.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_pneumonia": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_thyroiditis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hypophysitis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hepatitis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_pneumonitis": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_alanine_aminotransferase": {
-          "value": 0.0,
-          "confidence": 0.8,
-          "validation_status": "pending",
-          "source_chunks": [
-            "chunk_0"
-          ],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_immune_related": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_irr": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_fatigue": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hypothyroidism": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_hyperthyroidism": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_ast_increased": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
-        "grade_3_plus_ae_vomiting": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
-          "source_chunks": [],
-          "source": "publication_llm_extraction"
-        },
         "grade_3_plus_trae_immune_related": {
           "value": "Not found",
           "confidence": 0.0,
@@ -2397,7 +1991,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_nausea": {
-          "value": 1.0,
+          "value": "<1",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2413,7 +2007,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_diarrhea": {
-          "value": 2.0,
+          "value": 1,
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2443,7 +2037,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_pyrexia": {
-          "value": 4.0,
+          "value": 2.0,
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2470,7 +2064,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_rash": {
-          "value": 1.0,
+          "value": "<1",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2530,7 +2124,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_fatigue": {
-          "value": "Not found",
+          "value": "<1",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -2558,7 +2152,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_trae_vomiting": {
-          "value": "Not found",
+          "value": "<1",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -2600,7 +2194,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_nausea": {
-          "value": 1.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2616,7 +2210,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_diarrhea": {
-          "value": 2.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2646,7 +2240,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_pyrexia": {
-          "value": 4.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2664,7 +2258,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_pruritus": {
-          "value": 0.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2673,7 +2267,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_rash": {
-          "value": 1.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -2717,7 +2311,7 @@
           "source": "publication_llm_extraction"
         },
         "grade_3_plus_teae_alanine_aminotransferase": {
-          "value": 0.0,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [

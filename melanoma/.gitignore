@@ -196,3 +196,4 @@ config.local.*
 # Private key files (but not source code files with "key" in name)
 *.private.key
 *.secret.key
+tests/fixtures/holdout/csv/

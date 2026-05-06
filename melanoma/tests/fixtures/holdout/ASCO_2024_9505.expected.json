@@ -33,7 +33,7 @@
           "confidence": 1.0
         },
         "abstract_number": {
-          "value": "Not found",
+          "value": "9505",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -90,7 +90,7 @@
           "source": "abstract_llm_extraction"
         },
         "median_followup_pfs": {
-          "value": "Not found",
+          "value": 17.2,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -125,7 +125,7 @@
           "source": "abstract_llm_extraction"
         },
         "median_followup_os": {
-          "value": "Not found",
+          "value": 17.2,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -902,6 +902,11 @@
           "validation_status": "pending",
           "source_chunks": [],
           "source": "abstract_llm_extraction"
+        },
+        "grade_3_plus_teae_anemia": {
+          "value": 45.5,
+          "source": "manual_label",
+          "confidence": 1.0
         }
       },
       "modality": "TIL Therapy; Monoclonal Antibody",

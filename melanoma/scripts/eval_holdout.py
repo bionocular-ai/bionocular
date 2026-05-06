@@ -133,6 +133,8 @@ def _norm_value(attr_name: str, raw: Any) -> str:
     s = str(raw).strip()
     if not s:
         return ""
+    if s.lower() in {"not found", "n/a", "na", "none"}:
+        return ""
     try:
         attr = AttributeType(attr_name)
     except ValueError:

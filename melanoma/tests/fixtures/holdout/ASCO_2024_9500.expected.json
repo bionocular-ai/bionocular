@@ -33,7 +33,7 @@
           "confidence": 1.0
         },
         "abstract_number": {
-          "value": "Not found",
+          "value": "9500",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -70,7 +70,7 @@
           "source": "abstract_llm_extraction"
         },
         "number_of_patients": {
-          "value": 438,
+          "value": "438",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -156,7 +156,7 @@
           "source": "abstract_llm_extraction"
         },
         "ci_hr_os": {
-          "value": 0.62,
+          "value": "0.62-1.01",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -284,7 +284,7 @@
           "source": "abstract_llm_extraction"
         },
         "os_rate_12m": {
-          "value": "Not found",
+          "value": 97,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -305,7 +305,7 @@
           "source": "abstract_llm_extraction"
         },
         "os_rate_36m": {
-          "value": "Not found",
+          "value": 86,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -380,7 +380,7 @@
           "source": "abstract_llm_extraction"
         },
         "ci_hr_rfs": {
-          "value": 0.43,
+          "value": "0.43-0.63",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -403,14 +403,14 @@
           "source": "abstract_llm_extraction"
         },
         "hr_mfs": {
-          "value": "Not found",
+          "value": 0.56,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
           "source": "abstract_llm_extraction"
         },
         "ci_hr_mfs": {
-          "value": "Not found",
+          "value": "0.44-0.71",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -946,7 +946,7 @@
           "confidence": 1.0
         },
         "abstract_number": {
-          "value": "Not found",
+          "value": "9500",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -983,7 +983,7 @@
           "source": "abstract_llm_extraction"
         },
         "number_of_patients": {
-          "value": 432,
+          "value": "432",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1051,7 +1051,7 @@
           "source": "abstract_llm_extraction"
         },
         "p_value_os": {
-          "value": 0.063,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -1197,7 +1197,7 @@
           "source": "abstract_llm_extraction"
         },
         "os_rate_12m": {
-          "value": "Not found",
+          "value": 94,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -1218,7 +1218,7 @@
           "source": "abstract_llm_extraction"
         },
         "os_rate_36m": {
-          "value": "Not found",
+          "value": 77,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],

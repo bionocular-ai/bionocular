@@ -34,7 +34,7 @@
           "confidence": 1.0
         },
         "abstract_number": {
-          "value": "Not found",
+          "value": "9504",
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -91,7 +91,7 @@
           "source": "abstract_llm_extraction"
         },
         "median_followup_pfs": {
-          "value": "Not found",
+          "value": 44.1,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -132,7 +132,7 @@
           "source": "abstract_llm_extraction"
         },
         "median_followup_os": {
-          "value": "Not found",
+          "value": 44.1,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],
@@ -634,7 +634,7 @@
           "source": "abstract_llm_extraction"
         },
         "grade_3_plus_trae": {
-          "value": 43.4,
+          "value": 39.1,
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -643,7 +643,7 @@
           "source": "abstract_llm_extraction"
         },
         "grade_3_trae": {
-          "value": 39.1,
+          "value": "Not found",
           "confidence": 0.8,
           "validation_status": "pending",
           "source_chunks": [
@@ -675,7 +675,7 @@
           "source": "abstract_llm_extraction"
         },
         "trae_leading_to_death": {
-          "value": "Not found",
+          "value": 4.3,
           "confidence": 0.0,
           "validation_status": "pending",
           "source_chunks": [],

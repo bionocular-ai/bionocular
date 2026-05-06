@@ -22,9 +22,9 @@ The improvement in overall survival establishes the combination of dabrafenib an
 
 GlaxoSmithKline.
 
-*Lancet* **2015; 386: 444–51**
-
 Published **Online** May 31, 2015 http://dx.doi.org/10.1016/ S0140-6736(15)60898-4
+
+Lancet 2015; 386: 444–51
 
 # **Research in context**
 

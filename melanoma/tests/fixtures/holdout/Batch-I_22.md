@@ -20,7 +20,11 @@ Among previously untreated patients with metastatic melanoma, nivolumab alone or
 
 This article was published on May 31, 2015, at NEJM.org.
 
-**N Engl J Med 2015;373:23-34. DOI: 10.1056/NEJMoa1504030** *Copyright © 2015 Massachusetts Medical Society.* 
+N Engl J Med 2015;373:23-34. 
+
+DOI: 10.1056/NEJMoa1504030 
+
+*Copyright © 2015 Massachusetts Medical Society.* 
 
 CONSIDERABLE PROGRESS IN THE TREATment of metastatic melanoma has been made in the past 5 years, with the approval of immune checkpoint–blocking antibodies and, in parallel, agents targeting aberrant signaling in the 40 to 50% of melanomas with *BRAF* mutations. <sup>1-6</sup> Ipilimumab, an anti–cytotoxic T-lymphocyte–associated antigen 4 (CTLA-4) antibody, acts to up-regulate antitumor immunity and was the first agent to be associated with an improvement in overall survival in a phase 3 study involving patients with metastatic melanoma. <sup>5,6</sup> Ipilimumab was associated with responses in 10% and 15% of patients <sup>5,6</sup>; approximately 20% of treated patients had long-term survival. <sup>7,8</sup>
 
