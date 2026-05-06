@@ -60,6 +60,8 @@ def validate_ci(v: str) -> Result:
     if v == "":
         return (True, "", "")
     s = _CI_PREFIX_RE.sub("", v.strip())
+    if s.startswith("(") and s.endswith(")"):
+        s = s[1:-1].strip()
     # Normalize separators to a hyphen.
     s_norm = re.sub(r"\s*(?:to|,|–|-)\s*", "-", s, count=1)
     if CI_RE.match(s_norm):
@@ -155,38 +157,46 @@ def validate_median_months(v: str) -> Result:
 
 # ---- Attribute family dispatch ----------------------------------------
 
-_HR_ATTRS: frozenset[AttributeType] = frozenset({
-    AttributeType.HR_PFS,
-    AttributeType.HR_OS,
-    AttributeType.HR_EFS,
-    AttributeType.HR_RFS,
-    AttributeType.HR_MFS,
-    AttributeType.HR_TTP,
-})
+_HR_ATTRS: frozenset[AttributeType] = frozenset(
+    {
+        AttributeType.HR_PFS,
+        AttributeType.HR_OS,
+        AttributeType.HR_EFS,
+        AttributeType.HR_RFS,
+        AttributeType.HR_MFS,
+        AttributeType.HR_TTP,
+    }
+)
 
-_CI_ATTRS: frozenset[AttributeType] = frozenset({
-    AttributeType.CI_HR_PFS,
-    AttributeType.CI_HR_OS,
-    AttributeType.CI_HR_EFS,
-    AttributeType.CI_HR_RFS,
-    AttributeType.CI_HR_MFS,
-    AttributeType.CI_HR_TTP,
-})
+_CI_ATTRS: frozenset[AttributeType] = frozenset(
+    {
+        AttributeType.CI_HR_PFS,
+        AttributeType.CI_HR_OS,
+        AttributeType.CI_HR_EFS,
+        AttributeType.CI_HR_RFS,
+        AttributeType.CI_HR_MFS,
+        AttributeType.CI_HR_TTP,
+    }
+)
 
-_P_VALUE_ATTRS: frozenset[AttributeType] = frozenset({
-    AttributeType.P_VALUE_PFS,
-    AttributeType.P_VALUE_OS,
-    AttributeType.P_VALUE_EFS,
-    AttributeType.P_VALUE_RFS,
-})
+_P_VALUE_ATTRS: frozenset[AttributeType] = frozenset(
+    {
+        AttributeType.P_VALUE_PFS,
+        AttributeType.P_VALUE_OS,
+        AttributeType.P_VALUE_EFS,
+        AttributeType.P_VALUE_RFS,
+    }
+)
 
-_MEDIAN_MONTHS_ATTRS: frozenset[AttributeType] = frozenset({
-    AttributeType.MEDIAN_OS,
-    AttributeType.MEDIAN_PFS,
-    AttributeType.MEDIAN_DOR,
-    AttributeType.MEDIAN_FOLLOWUP_PFS,
-    AttributeType.MEDIAN_FOLLOWUP_OS,
-})
+_MEDIAN_MONTHS_ATTRS: frozenset[AttributeType] = frozenset(
+    {
+        AttributeType.MEDIAN_OS,
+        AttributeType.MEDIAN_PFS,
+        AttributeType.MEDIAN_DOR,
+        AttributeType.MEDIAN_FOLLOWUP_PFS,
+        AttributeType.MEDIAN_FOLLOWUP_OS,
+    }
+)
 
 
 def _build_percentage_attrs() -> frozenset[AttributeType]:
@@ -227,8 +237,17 @@ def _build_percentage_attrs() -> frozenset[AttributeType]:
     }
     # All AE / TEAE / TRAE rate fields are percentages. They are exactly the
     # AttributeType members whose name starts with one of these prefixes.
-    ae_prefixes = ("AE", "GRADE_", "SERIOUS_", "TEAE", "TRAE", "CRS", "IRR",
-                   "WBC_", "IMMUNE_RELATED_AE")
+    ae_prefixes = (
+        "AE",
+        "GRADE_",
+        "SERIOUS_",
+        "TEAE",
+        "TRAE",
+        "CRS",
+        "IRR",
+        "WBC_",
+        "IMMUNE_RELATED_AE",
+    )
     for attr in AttributeType:
         if any(attr.name.startswith(p) for p in ae_prefixes):
             explicit.add(attr)

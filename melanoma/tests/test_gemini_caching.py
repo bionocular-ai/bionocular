@@ -155,9 +155,7 @@ async def test_cached_or_inline_generate_cached_path_references_cache(
     response = MagicMock()
     response.parsed = parsed
     response.text = '{"answer": "cached-ok"}'
-    response.usage_metadata = MagicMock(
-        prompt_token_count=10, candidates_token_count=2
-    )
+    response.usage_metadata = MagicMock(prompt_token_count=10, candidates_token_count=2)
     service._client.models.generate_content.return_value = response
 
     result = await service.cached_or_inline_generate(
@@ -205,7 +203,7 @@ async def test_cache_lifecycle_smoke() -> None:
 
     svc = GeminiLLMService(api_key=api_key)
     # ~40k chars of filler — over the conservative floor.
-    doc = ("This is a clinical trial document. " * 1200)[: 40_000]
+    doc = ("This is a clinical trial document. " * 1200)[:40_000]
     cache_id = await svc.create_context_cache(
         doc_text=doc,
         system_instruction="You answer questions about the cached document.",
@@ -218,7 +216,7 @@ async def test_cache_lifecycle_smoke() -> None:
         result = await svc.cached_or_inline_generate(
             cache_id=cache_id,
             doc_text=doc,
-            prompt="Reply with JSON {\"answer\": \"pong\"}.",
+            prompt='Reply with JSON {"answer": "pong"}.',
             response_schema=_DummySchema,
         )
         assert isinstance(result, _DummySchema)

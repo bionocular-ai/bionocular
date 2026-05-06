@@ -1,11 +1,11 @@
 """Tests for AttributeFamily enum and FAMILY_TO_ATTRIBUTES map."""
 from src.domain.extraction_models import (
-    AttributeFamily,
-    AttributeType,
+    ABSTRACT_ATTRIBUTES,
     DERIVED_ATTRIBUTES,
     FAMILY_TO_ATTRIBUTES,
     PUBLICATION_ATTRIBUTES,
-    ABSTRACT_ATTRIBUTES,
+    AttributeFamily,
+    AttributeType,
 )
 
 
@@ -34,7 +34,9 @@ def test_no_attribute_in_two_families() -> None:
 def test_derived_attributes_not_in_any_family() -> None:
     for fam, attrs in FAMILY_TO_ATTRIBUTES.items():
         intersection = DERIVED_ATTRIBUTES & set(attrs)
-        assert not intersection, f"{fam}: derived attrs must not be extracted by LLM, found {intersection}"
+        assert (
+            not intersection
+        ), f"{fam}: derived attrs must not be extracted by LLM, found {intersection}"
 
 
 def test_os_family_membership() -> None:

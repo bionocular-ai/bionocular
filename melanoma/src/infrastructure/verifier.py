@@ -64,8 +64,8 @@ async def verify_low_confidence(
             f"{attribute.value} was extracted as '{current_value}' but failed "
             f"validation: {failure_reason}. "
             "Search the document for the correct value for THIS arm. "
-            "Return JSON: {\"value\": \"...\", \"quote\": \"...verbatim sentence...\"}. "
-            "If the document does not state this for this arm, return value=\"\", quote=\"\"."
+            'Return JSON: {"value": "...", "quote": "...verbatim sentence..."}. '
+            'If the document does not state this for this arm, return value="", quote="".'
         )
         result = await gemini.cached_or_inline_generate(
             cache_id, doc_text, prompt, VerifierSchema

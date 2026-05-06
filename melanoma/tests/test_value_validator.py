@@ -11,8 +11,8 @@ from src.infrastructure.value_validator import (
     validate_percentage,
 )
 
-
 # ---- HR ----------------------------------------------------------------
+
 
 def test_validate_hr_passes_decimal():
     assert validate_hr("0.65") == (True, "0.65", "")
@@ -36,6 +36,7 @@ def test_validate_hr_rejects_integer_only():
 
 
 # ---- CI ----------------------------------------------------------------
+
 
 def test_validate_ci_normalizes_to_dash():
     for raw in ["0.54-0.89", "0.54 to 0.89", "0.54, 0.89", "0.54–0.89"]:
@@ -61,7 +62,23 @@ def test_validate_ci_rejects_garbage():
     assert validate_ci("low to high")[0] is False
 
 
+def test_validate_ci_strips_parens():
+    ok, n, _ = validate_ci("(0.50-0.79)")
+    assert ok and n == "0.50-0.79"
+
+
+def test_validate_ci_with_prefix_and_to():
+    ok, n, _ = validate_ci("95% CI: 0.50 to 0.79")
+    assert ok and n == "0.50-0.79"
+
+
+def test_validate_ci_rejects_single_decimal():
+    ok, _, reason = validate_ci("0.66")
+    assert not ok and "confidence interval" in reason
+
+
 # ---- p-value -----------------------------------------------------------
+
 
 def test_validate_p_value_decimal():
     assert validate_p_value("0.003") == (True, "0.003", "")
@@ -100,6 +117,7 @@ def test_validate_p_value_rejects_nr():
 
 # ---- percentage --------------------------------------------------------
 
+
 def test_validate_percentage_with_pct_sign():
     assert validate_percentage("45%") == (True, "45", "")
 
@@ -130,6 +148,7 @@ def test_validate_percentage_rejects_nr():
 
 # ---- NCT ---------------------------------------------------------------
 
+
 def test_validate_nct_passes():
     assert validate_nct("NCT01844505")[0]
 
@@ -147,6 +166,7 @@ def test_validate_nct_lowercase_rejected():
 
 
 # ---- median months -----------------------------------------------------
+
 
 def test_validate_median_months_decimal():
     assert validate_median_months("36.9")[0]
@@ -173,6 +193,7 @@ def test_validate_median_months_rejects_text():
 
 
 # ---- dispatch ----------------------------------------------------------
+
 
 def test_dispatch_hr_pfs():
     assert validate_for_attribute(AttributeType.HR_PFS, "0.65")[0]
@@ -222,9 +243,11 @@ def test_dispatch_median_followup_pfs():
 
 
 def test_dispatch_unknown_passthrough():
-    assert validate_for_attribute(
-        AttributeType.TRIAL_NAME, "CheckMate-067"
-    ) == (True, "CheckMate-067", "passthrough")
+    assert validate_for_attribute(AttributeType.TRIAL_NAME, "CheckMate-067") == (
+        True,
+        "CheckMate-067",
+        "passthrough",
+    )
 
 
 def test_dispatch_empty_always_valid():

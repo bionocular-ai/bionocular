@@ -26,7 +26,6 @@ from src.domain.treatment_arm_models import (
     TreatmentArmSeparationResult,
 )
 
-
 # ── Fixtures ────────────────────────────────────────────────────────────────
 
 
@@ -220,7 +219,10 @@ async def test_extract_runs_validation_then_verifier_for_invalid(
     verify_mock.assert_awaited_once()
     args, kwargs = verify_mock.call_args
     # 4th positional is the arm, 5th is the attribute type
-    assert kwargs.get("attribute", args[4] if len(args) > 4 else None) == AttributeType.HR_OS
+    assert (
+        kwargs.get("attribute", args[4] if len(args) > 4 else None)
+        == AttributeType.HR_OS
+    )
 
 
 @pytest.mark.asyncio
@@ -268,9 +270,7 @@ async def test_extract_calls_enrich_after_assembly(monkeypatch) -> None:
     service = _make_service()
 
     enrich_mock = MagicMock(side_effect=lambda r: r)
-    with patch(
-        "src.app.enhanced_extraction_service.enrich_result", new=enrich_mock
-    ):
+    with patch("src.app.enhanced_extraction_service.enrich_result", new=enrich_mock):
         result = await service.extract("text", "doc-1", DocumentType.ABSTRACT)
 
     enrich_mock.assert_called_once()
@@ -281,9 +281,7 @@ async def test_extract_calls_enrich_after_assembly(monkeypatch) -> None:
 async def test_extract_deletes_cache_in_finally(monkeypatch) -> None:
     monkeypatch.delenv(LEGACY_FLAG_ENV, raising=False)
     arm_separator = AsyncMock()
-    arm_separator.separate_treatment_arms = AsyncMock(
-        side_effect=RuntimeError("boom")
-    )
+    arm_separator.separate_treatment_arms = AsyncMock(side_effect=RuntimeError("boom"))
     service = _make_service(arm_separator=arm_separator)
 
     with pytest.raises(RuntimeError, match="boom"):

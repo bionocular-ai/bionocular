@@ -2,6 +2,7 @@
 """Unit tests for drug_knowledge canonicalization and drug_enricher."""
 
 import logging
+
 from src.domain.drug_knowledge import (
     canonicalize,
     get_drug_info,
@@ -11,7 +12,6 @@ from src.domain.drug_knowledge import (
 from src.domain.extraction_models import AttributeType
 from src.domain.treatment_arm_models import TreatmentArmExtractionResult
 from src.infrastructure.drug_enricher import enrich_result
-
 
 # ---- canonicalize ---------------------------------------------------------
 

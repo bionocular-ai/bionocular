@@ -93,11 +93,17 @@ async def test_extract_calls_gemini_and_maps_response() -> None:
         payload = {
             "arms": {
                 "arm_1": {
-                    "median_os": {"value": "32.7", "quote": "median OS was 32.7 months"},
+                    "median_os": {
+                        "value": "32.7",
+                        "quote": "median OS was 32.7 months",
+                    },
                     "hr_os": {"value": "", "quote": ""},
                 },
                 "arm_2": {
-                    "median_os": {"value": "20.0", "quote": "median OS was 20.0 months"},
+                    "median_os": {
+                        "value": "20.0",
+                        "quote": "median OS was 20.0 months",
+                    },
                 },
             }
         }

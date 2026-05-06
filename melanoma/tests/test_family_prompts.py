@@ -51,6 +51,26 @@ def test_each_prompt_under_400_words() -> None:
         assert wc <= 400, f"{fam} prompt too long: {wc} words"
 
 
+def test_identification_prompt_has_citation_location_hint() -> None:
+    p = FAMILY_PROMPTS[AttributeFamily.IDENTIFICATION]
+    assert "below the article title" in p.lower()
+    assert "N Engl J Med" in p
+    assert "year fallback" in p.lower() or "line immediately above" in p.lower()
+
+
+def test_ci_hr_prompts_demand_range_not_single_value() -> None:
+    for fam in [
+        AttributeFamily.PFS_FAMILY,
+        AttributeFamily.OS_FAMILY,
+        AttributeFamily.EFS_RFS_MFS,
+        AttributeFamily.TIME_TO_METRICS,
+    ]:
+        p = FAMILY_PROMPTS[fam]
+        assert "two decimals" in p.lower(), f"{fam} missing 'two decimals'"
+        assert "low-high" in p, f"{fam} missing 'low-high'"
+        assert "Never return only one number" in p, f"{fam} missing single-number ban"
+
+
 def test_no_cross_family_attribute_leakage() -> None:
     """TEAE prompt must not mention TRAE attrs and vice versa.
 
@@ -74,17 +94,17 @@ def test_no_cross_family_attribute_leakage() -> None:
         post_definitions = prompt.split(marker, 1)[1]
         fam_name = fam.value  # e.g. "teae_general", "trae_grade3_specific"
         if fam_name.startswith("teae"):
-            assert "trae_" not in post_definitions, (
-                f"{fam} prompt leaks trae_* attrs after definitions block"
-            )
+            assert (
+                "trae_" not in post_definitions
+            ), f"{fam} prompt leaks trae_* attrs after definitions block"
         elif fam_name.startswith("trae"):
-            assert "teae_" not in post_definitions, (
-                f"{fam} prompt leaks teae_* attrs after definitions block"
-            )
+            assert (
+                "teae_" not in post_definitions
+            ), f"{fam} prompt leaks teae_* attrs after definitions block"
         else:  # ae_*
-            assert "trae_" not in post_definitions, (
-                f"{fam} prompt leaks trae_* attrs after definitions block"
-            )
-            assert "teae_" not in post_definitions, (
-                f"{fam} prompt leaks teae_* attrs after definitions block"
-            )
+            assert (
+                "trae_" not in post_definitions
+            ), f"{fam} prompt leaks trae_* attrs after definitions block"
+            assert (
+                "teae_" not in post_definitions
+            ), f"{fam} prompt leaks teae_* attrs after definitions block"

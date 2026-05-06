@@ -26,7 +26,7 @@ SHARED_EXTRACTION_RULES = (
     "sum Grade 3% + Grade 4% + Grade 5% to get the Grade 3+ total; return the percentage, not the patient count. "
     "Do not apply these rules to CI ranges like '0.68 (0.55–0.85)'. "
     "If the value is not explicitly stated in the context, return empty string — do not infer or guess from nearby numbers. "
-    "Return numbers only, no units — except CI ranges which use 'lower-upper' format."
+    "Return numbers only, no units — except CI ranges which use 'low-high' format with two decimals (e.g., '0.42-0.64'), never a single number."
 )
 
 # One extraction instruction per AttributeType.
@@ -263,7 +263,7 @@ _AE_DEFINITIONS_BLOCK = (
     "- TEAE (Treatment-Emergent AE): an AE that started or worsened after the first study dose.\n"
     "- TRAE (Treatment-Related AE / Drug-Related AE): an AE the investigator judged related to treatment.\n"
     "The denominators differ. Extract values ONLY from rows / columns explicitly labeled with this family's term. "
-    "If only \"AEs\" are reported and you are extracting TRAE, return empty string — do not assume."
+    'If only "AEs" are reported and you are extracting TRAE, return empty string — do not assume.'
 )
 
 _NO_INFERENCE_CLAUSE = (
@@ -274,6 +274,13 @@ _NO_INFERENCE_CLAUSE = (
 _VALUE_FORMAT_NOTE = (
     "Accepted values per attribute: 'NR' (not reached, where applicable), "
     "'' (empty string when not stated), a decimal number, or a 'lower-upper' range for CIs."
+)
+
+_CI_HR_RULE = (
+    "CI HR FORMAT: 95% CI for the hazard ratio is a 'low-high' range with TWO decimals "
+    "separated by a hyphen (e.g., '0.42-0.64'). The CI is the parenthesized range that "
+    "accompanies the HR — e.g., 'HR 0.52 (95% CI 0.42-0.64)' → ci_hr='0.42-0.64', NOT '0.52'. "
+    "Never return only one number; if the document gives only the HR with no CI, return ''."
 )
 
 
@@ -299,21 +306,33 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "adjuvant / neoadjuvant / maintenance → those values; if unclear → unknown.\n"
         "- abstract_number, conference, published_year — abstract metadata when present.\n"
         "- publication_name, publication_year, pdf_number — publication metadata when present.\n\n"
+        "WHERE TO LOOK for publication_name / publication_year: the citation block "
+        "immediately below the article title and author list, NOT inside the abstract body. "
+        "Common shapes:\n"
+        "  - 'N Engl J Med 2015;373:23-34.'  → publication_name='N Engl J Med 2015;373:23-34.', publication_year='2015'\n"
+        "  - 'Lancet 2015; 386: 444–51'      → publication_name='Lancet 2015; 386: 444–51', publication_year='2015'\n"
+        "Return the full citation string (journal + volume + pages) for publication_name, "
+        "preserving the journal's original punctuation and dashes (en-dash or hyphen as printed). "
+        "Extract the 4-digit year as publication_year. "
+        "YEAR FALLBACK: if the citation string itself does not contain a 4-digit year, "
+        "look on the line immediately ABOVE the citation — typically a date stamp such as "
+        "'Published Online May 31, 2015' or 'This article was published on May 31, 2015' "
+        "— and take the 4-digit year from there. "
+        "If no citation block is present (e.g., conference abstract), return '' for both.\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — context says 'KEYNOTE-716 (NCT03553836); pembrolizumab arm n=487, placebo arm n=489; "
         "N Engl J Med 2022.' Output:\n"
-        '{\n'
+        "{\n"
         '  "Pembrolizumab": {"nct_number": {"value": "NCT03553836", "quote": "..."}, '
         '"trial_name": {"value": "KEYNOTE-716", "quote": "..."}, '
         '"number_of_patients": {"value": "487", "quote": "..."}},\n'
         '  "Placebo": {"nct_number": {"value": "NCT03553836", "quote": "..."}, '
         '"trial_name": {"value": "KEYNOTE-716", "quote": "..."}, '
         '"number_of_patients": {"value": "489", "quote": "..."}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.RESPONSE_RATES: (
         "FAMILY: Tumor response rates (RECIST / iRECIST endpoints).\n"
         "Definition: per-arm response rates derived from investigator or BICR assessment, "
@@ -336,15 +355,14 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "(CR sentence + PR sentence + N sentence). Set `source` to `computed_orr`. "
         "Apply ONLY to ORR. No other attribute may be computed.\n\n"
         "EXAMPLE — 'In the nivolumab arm (n=200), CR was 12 (6.0%) and PR was 48 (24.0%). ORR was not reported.' Output:\n"
-        '{\n'
+        "{\n"
         '  "Nivolumab": {\n'
         '    "complete_response": {"value": "6.0", "quote": "CR was 12 (6.0%)"},\n'
         '    "objective_response_rate": {"value": "30.0", "quote": "CR was 12 (6.0%) and PR was 48 (24.0%) ... n=200", "source": "computed_orr"}\n'
-        '  }\n'
-        '}\n\n'
+        "  }\n"
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.PFS_FAMILY: (
         "FAMILY: Progression-Free Survival (PFS).\n"
         "Definition: time from randomization (or treatment start) to disease progression or death "
@@ -355,23 +373,23 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "- p_value_pfs — decimal, OR significance label "
         "(Non-Significant p>0.05, Significant p<=0.05, Highly Significant p<=0.001).\n"
         "- hr_pfs — decimal hazard ratio.\n"
-        "- ci_hr_pfs — 'lower-upper' (e.g. '0.54-0.89').\n"
+        "- ci_hr_pfs — 'low-high' range (see CI HR FORMAT below).\n"
         "- pfs_rate_6m / 9m / 12m / 18m / 24m / 36m / 48m — percentage at the stated timepoint.\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_CI_HR_RULE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — 'Median PFS was 14.7 months (95% CI 10.2-19.8) vs 5.6 months; HR 0.45 (0.33-0.61), p<0.001. "
         "12-month PFS rate was 56% vs 24%.' Output (per arm):\n"
-        '{\n'
+        "{\n"
         '  "Experimental": {"median_pfs": {"value": "14.7", "quote": "Median PFS was 14.7 months"}, '
         '"hr_pfs": {"value": "0.45", "quote": "HR 0.45 (0.33-0.61)"}, '
         '"ci_hr_pfs": {"value": "0.33-0.61", "quote": "(0.33-0.61)"}, '
         '"pfs_rate_12m": {"value": "56", "quote": "12-month PFS rate was 56%"}},\n'
         '  "Control": {"median_pfs": {"value": "5.6", "quote": "vs 5.6 months"}, '
         '"pfs_rate_12m": {"value": "24", "quote": "vs 24%"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.OS_FAMILY: (
         "FAMILY: Overall Survival (OS).\n"
         "Definition: time from randomization (or treatment start) to death from any cause, "
@@ -382,23 +400,23 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "- p_value_os — decimal, OR significance label "
         "(Non-Significant p>0.05, Significant p<=0.05, Highly Significant p<=0.001).\n"
         "- hr_os — decimal hazard ratio.\n"
-        "- ci_hr_os — 'lower-upper' format.\n"
+        "- ci_hr_os — 'low-high' range (see CI HR FORMAT below).\n"
         "- os_rate_6m / 9m / 12m / 18m / 24m / 36m / 48m — percentage at the stated timepoint.\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_CI_HR_RULE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — 'Median OS in the pembrolizumab group was not reached vs 16.9 months in the chemotherapy "
         "group; HR 0.63 (95% CI 0.50-0.79), p<0.001. 24-month OS was 55% vs 38%.' Output:\n"
-        '{\n'
+        "{\n"
         '  "Pembrolizumab": {"median_os": {"value": "NR", "quote": "Median OS in the pembrolizumab group was not reached"}, '
         '"hr_os": {"value": "0.63", "quote": "HR 0.63 (95% CI 0.50-0.79)"}, '
         '"ci_hr_os": {"value": "0.50-0.79", "quote": "(95% CI 0.50-0.79)"}, '
         '"os_rate_24m": {"value": "55", "quote": "24-month OS was 55%"}},\n'
         '  "Chemotherapy": {"median_os": {"value": "16.9", "quote": "vs 16.9 months in the chemotherapy group"}, '
         '"os_rate_24m": {"value": "38", "quote": "vs 38%"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.EFS_RFS_MFS: (
         "FAMILY: Event-Free / Recurrence-Free / Metastasis-Free Survival.\n"
         "Definition:\n"
@@ -409,23 +427,23 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "These three endpoints are distinct — extract each only from rows/sections explicitly using its name.\n\n"
         "Attributes (canonical name — unit):\n"
         "- efs — months (or 'NR'); p_value_efs — decimal or significance label; hr_efs — decimal; "
-        "ci_hr_efs — 'lower-upper'.\n"
+        "ci_hr_efs — 'low-high' range (see CI HR FORMAT below).\n"
         "- rfs — months; p_value_rfs — decimal or label; length_rfs — months follow-up; "
-        "hr_rfs — decimal; ci_hr_rfs — 'lower-upper'.\n"
-        "- mfs — months; length_mfs — months follow-up; hr_mfs — decimal; ci_hr_mfs — 'lower-upper'.\n\n"
+        "hr_rfs — decimal; ci_hr_rfs — 'low-high' range.\n"
+        "- mfs — months; length_mfs — months follow-up; hr_mfs — decimal; ci_hr_mfs — 'low-high' range.\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_CI_HR_RULE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — 'Median RFS was not reached in the dabrafenib+trametinib arm vs 16.6 months in placebo; "
         "HR 0.47 (95% CI 0.39-0.58).' Output:\n"
-        '{\n'
+        "{\n"
         '  "Dabrafenib+Trametinib": {"rfs": {"value": "NR", "quote": "Median RFS was not reached"}, '
         '"hr_rfs": {"value": "0.47", "quote": "HR 0.47 (95% CI 0.39-0.58)"}, '
         '"ci_hr_rfs": {"value": "0.39-0.58", "quote": "(95% CI 0.39-0.58)"}},\n'
         '  "Placebo": {"rfs": {"value": "16.6", "quote": "vs 16.6 months in placebo"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.TIME_TO_METRICS: (
         "FAMILY: Time-to clinical milestone metrics.\n"
         "Definition: per-arm median times measured from a reference event to a clinical milestone.\n"
@@ -435,21 +453,21 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "- TTF: Time to Treatment Failure (start to discontinuation for any reason).\n\n"
         "Attributes (canonical name — unit):\n"
         "- ttr — months (or 'NR').\n"
-        "- ttp — months (or 'NR'); hr_ttp — decimal; ci_hr_ttp — 'lower-upper'.\n"
+        "- ttp — months (or 'NR'); hr_ttp — decimal; ci_hr_ttp — 'low-high' range (see CI HR FORMAT below).\n"
         "- ttnt — months (or 'NR').\n"
         "- ttf — months (or 'NR').\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
+        f"{_CI_HR_RULE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — 'Median time to response was 2.8 months in arm A and 3.1 months in arm B. "
         "Median TTP in arm A was 9.4 months.' Output:\n"
-        '{\n'
+        "{\n"
         '  "Arm A": {"ttr": {"value": "2.8", "quote": "Median time to response was 2.8 months in arm A"}, '
         '"ttp": {"value": "9.4", "quote": "Median TTP in arm A was 9.4 months"}},\n'
         '  "Arm B": {"ttr": {"value": "3.1", "quote": "and 3.1 months in arm B"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.AE_GENERAL: (
         "FAMILY: Adverse Events — general (any-cause).\n"
         f"{_AE_DEFINITIONS_BLOCK}\n\n"
@@ -464,14 +482,13 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — 'Any-grade AEs occurred in 196/200 (98%) in arm A. Grade 3+ AEs in 80 (40%). "
         "Discontinuations due to AE: 12 (6%).' Output:\n"
-        '{\n'
+        "{\n"
         '  "Arm A": {"ae": {"value": "98", "quote": "Any-grade AEs occurred in 196/200 (98%)"}, '
         '"grade_3_plus_ae": {"value": "40", "quote": "Grade 3+ AEs in 80 (40%)"}, '
         '"ae_leading_to_discontinuation": {"value": "6", "quote": "Discontinuations due to AE: 12 (6%)"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.AE_GRADE3_SPECIFIC: (
         "FAMILY: Adverse Events — Grade 3+ specific (any-cause), per preferred term.\n"
         f"{_AE_DEFINITIONS_BLOCK}\n\n"
@@ -487,15 +504,14 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — any-cause AE table: 'Grade 3-4 colitis: arm A 5 (2.5%), arm B 1 (0.5%). "
         "Grade 3-4 ALT increased: arm A 8 (4.0%), arm B 2 (1.0%).' Output:\n"
-        '{\n'
+        "{\n"
         '  "Arm A": {"grade_3_plus_ae_colitis": {"value": "2.5", "quote": "Grade 3-4 colitis: arm A 5 (2.5%)"}, '
         '"grade_3_plus_ae_alanine_aminotransferase": {"value": "4.0", "quote": "Grade 3-4 ALT increased: arm A 8 (4.0%)"}},\n'
         '  "Arm B": {"grade_3_plus_ae_colitis": {"value": "0.5", "quote": "arm B 1 (0.5%)"}, '
         '"grade_3_plus_ae_alanine_aminotransferase": {"value": "1.0", "quote": "arm B 2 (1.0%)"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.TEAE_GENERAL: (
         "FAMILY: Treatment-Emergent Adverse Events (TEAE) — general.\n"
         f"{_AE_DEFINITIONS_BLOCK}\n\n"
@@ -510,14 +526,13 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — 'TEAEs of any grade occurred in 95% of patients in arm A. Grade 3+ TEAEs in 38%. "
         "Serious TEAEs in 22%.' Output:\n"
-        '{\n'
+        "{\n"
         '  "Arm A": {"teae": {"value": "95", "quote": "TEAEs of any grade occurred in 95% of patients in arm A"}, '
         '"grade_3_plus_teae": {"value": "38", "quote": "Grade 3+ TEAEs in 38%"}, '
         '"serious_teae": {"value": "22", "quote": "Serious TEAEs in 22%"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.TEAE_GRADE3_SPECIFIC: (
         "FAMILY: Treatment-Emergent Adverse Events — Grade 3+ specific, per preferred term.\n"
         f"{_AE_DEFINITIONS_BLOCK}\n\n"
@@ -533,13 +548,12 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_VALUE_FORMAT_NOTE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — TEAE table: 'Grade 3-4 TEAE neutropenia: arm A 18 (9.0%), arm B 4 (2.0%).' Output:\n"
-        '{\n'
+        "{\n"
         '  "Arm A": {"grade_3_plus_teae_neutropenia": {"value": "9.0", "quote": "Grade 3-4 TEAE neutropenia: arm A 18 (9.0%)"}},\n'
         '  "Arm B": {"grade_3_plus_teae_neutropenia": {"value": "2.0", "quote": "arm B 4 (2.0%)"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.TRAE_GENERAL: (
         "FAMILY: Treatment-Related Adverse Events (TRAE) — general.\n"
         f"{_AE_DEFINITIONS_BLOCK}\n\n"
@@ -554,14 +568,13 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — 'Treatment-related AEs of any grade occurred in 78% of arm A. Grade 3+ TRAEs in 25%. "
         "TRAEs leading to discontinuation in 7%.' Output:\n"
-        '{\n'
+        "{\n"
         '  "Arm A": {"trae": {"value": "78", "quote": "Treatment-related AEs of any grade occurred in 78% of arm A"}, '
         '"grade_3_plus_trae": {"value": "25", "quote": "Grade 3+ TRAEs in 25%"}, '
         '"trae_leading_to_discontinuation": {"value": "7", "quote": "TRAEs leading to discontinuation in 7%"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
-
     AttributeFamily.TRAE_GRADE3_SPECIFIC: (
         "FAMILY: Treatment-Related Adverse Events — Grade 3+ specific, per preferred term.\n"
         f"{_AE_DEFINITIONS_BLOCK}\n\n"
@@ -577,10 +590,10 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_VALUE_FORMAT_NOTE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — TRAE table: 'Grade 3-4 drug-related rash: arm A 6 (3.0%), arm B 1 (0.5%).' Output:\n"
-        '{\n'
+        "{\n"
         '  "Arm A": {"grade_3_plus_trae_rash": {"value": "3.0", "quote": "Grade 3-4 drug-related rash: arm A 6 (3.0%)"}},\n'
         '  "Arm B": {"grade_3_plus_trae_rash": {"value": "0.5", "quote": "arm B 1 (0.5%)"}}\n'
-        '}\n\n'
+        "}\n\n"
         "{arms_block}"
     ),
 }

@@ -333,10 +333,12 @@ class AttributeFamily(str, Enum):
     TRAE_GRADE3_SPECIFIC = "trae_grade3_specific"
 
 
-DERIVED_ATTRIBUTES: frozenset[AttributeType] = frozenset({
-    AttributeType.MODALITY,
-    AttributeType.TARGET,
-})
+DERIVED_ATTRIBUTES: frozenset[AttributeType] = frozenset(
+    {
+        AttributeType.MODALITY,
+        AttributeType.TARGET,
+    }
+)
 
 FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, tuple[AttributeType, ...]] = {
     AttributeFamily.IDENTIFICATION: (

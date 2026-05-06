@@ -10,10 +10,10 @@ from typing import Any, Optional, TypeVar
 
 from pydantic import BaseModel
 
-T = TypeVar("T", bound=BaseModel)
-
 from ..domain.extraction_interfaces import LLMService
 from .cost_calculator import CostCalculator
+
+T = TypeVar("T", bound=BaseModel)
 
 logger = logging.getLogger(__name__)
 

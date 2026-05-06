@@ -253,9 +253,7 @@ class EnhancedExtractionService:
                             reason,
                         )
 
-            processing_time = int(
-                (datetime.now() - start_time).total_seconds() * 1000
-            )
+            processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
             result = self._assemble_result(
                 doc_id=doc_id,
                 arms=arms,
@@ -359,9 +357,7 @@ class EnhancedExtractionService:
             for a in arm_result["attributes"].values()
             if isinstance(a, dict) and "confidence" in a
         ]
-        overall_confidence = (
-            sum(confidences) / len(confidences) if confidences else 0.0
-        )
+        overall_confidence = sum(confidences) / len(confidences) if confidences else 0.0
 
         return TreatmentArmExtractionResult(
             abstract_id=doc_id,
@@ -1933,26 +1929,26 @@ class EnhancedExtractionService:
                     for arm in arms
                 }
                 try:
-                    context_texts = (
-                        await rag_provider.get_context_for_attribute(
-                            document_id=abstract_id,
-                            attribute_type=attribute,
-                            context_chunks=3,
-                            similarity_threshold=similarity_threshold,
-                            metadata_filters=metadata_filters,
-                        )
+                    context_texts = await rag_provider.get_context_for_attribute(
+                        document_id=abstract_id,
+                        attribute_type=attribute,
+                        context_chunks=3,
+                        similarity_threshold=similarity_threshold,
+                        metadata_filters=metadata_filters,
                     )
                     if not context_texts:
                         logger.debug(
                             f"No chunks retrieved for {attribute.value} after 3-tier filtering - skipping LLM call"
                         )
                         return (attribute, not_found)
-                    single_attr_results = await batch_extractor._extract_single_attribute_for_all_arms(
-                        arms=arms,
-                        attribute=attribute,
-                        context=context_texts,
-                        document_id=abstract_id,
-                        source=extraction_source,
+                    single_attr_results = (
+                        await batch_extractor._extract_single_attribute_for_all_arms(
+                            arms=arms,
+                            attribute=attribute,
+                            context=context_texts,
+                            document_id=abstract_id,
+                            source=extraction_source,
+                        )
                     )
                     return (attribute, single_attr_results)
                 except Exception as e:

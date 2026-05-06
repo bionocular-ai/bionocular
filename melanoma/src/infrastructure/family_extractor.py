@@ -115,16 +115,17 @@ class FamilyExtractor:
 
     def _max_tokens_for(self, family: AttributeFamily, n_arms: int) -> int:
         """Pure budget formula. Tested directly."""
-        return _TOKEN_BUDGET_BASE + n_arms * len(FAMILY_TO_ATTRIBUTES[family]) * _TOKEN_BUDGET_PER_CELL
+        return (
+            _TOKEN_BUDGET_BASE
+            + n_arms * len(FAMILY_TO_ATTRIBUTES[family]) * _TOKEN_BUDGET_PER_CELL
+        )
 
     def _render_arms_block(self, arms: list[TreatmentArm]) -> str:
         """Compact `arm_id: name (type, n=N)` listing fed into the prompt."""
         lines: list[str] = ["Arms in this document:"]
         for arm in arms:
             n_str = f", n={arm.patient_count}" if arm.patient_count else ""
-            lines.append(
-                f"{arm.arm_id}: {arm.arm_name} ({arm.arm_type.value}{n_str})"
-            )
+            lines.append(f"{arm.arm_id}: {arm.arm_name} ({arm.arm_type.value}{n_str})")
         lines.append("")
         lines.append(
             "Return one JSON object whose top-level key is `arms`, mapping each "

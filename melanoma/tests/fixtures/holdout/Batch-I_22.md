@@ -20,7 +20,7 @@ Among previously untreated patients with metastatic melanoma, nivolumab alone or
 
 This article was published on May 31, 2015, at NEJM.org.
 
-N Engl J Med 2015;373:23-34. 
+N Engl J Med 2015;373:23-34.
 
 DOI: 10.1056/NEJMoa1504030 
 
@@ -89,8 +89,8 @@ Analyses of progression-free survival in prespecified subgroups showed consisten
 Among patients with a positive PD-L1 tumor status, the median progression-free survival was 14.0 months (95% CI, 9.1 to not reached) in the nivolumab group, 14.0 months (95% CI, 9.7 to not reached) in the nivolumab-plus-ipilimumab group, and 3.9 months (95% CI, 2.8 to 4.2) in the ipilimumab group (Fig. 1B). Among patients with a negative PD-L1 tumor status, the median progression-free survival was 5.3 months (95% CI, 2.8 to 7.1), 11.2 months (95% CI, 8.0 to not reached), and 2.8 months (95% CI, 2.8 to 3.1), respectively (Fig. 1C).
 
 | **Table 1. Characteristics of the Patients at Baseline.**\* | | | | |
-| Characteristic                              | Nivolumab<br>(N=316) | Nivolumab plus<br>Ipilimumab<br>(N=314) | Ipilimumab<br>(N=315) | Total<br>(N=945) |
 |---------------------------------------------|----------------------|-----------------------------------------|-----------------------|------------------|
+| Characteristic                              | Nivolumab<br>(N=316) | Nivolumab plus<br>Ipilimumab<br>(N=314) | Ipilimumab<br>(N=315) | Total<br>(N=945) |
 | Age — yr                                    |                      |                                         |                       |                  |
 | Mean                                        | 59                   | 59                                      | 61                    | 60               |
 | Range                                       | 25–90                | 18–88                                   | 18–89                 | 18–90            |
@@ -138,8 +138,8 @@ The tumor-burden change was assessed as the change from baseline in the sum of t
 Among patients with PD-L1–positive tumors, the objective response rates were 57.5% (95% CI, 45.9 to 68.5) in the nivolumab group, 72.1% (95% CI, 59.9 to 82.3) in the nivolumab-plus-ipilimumab group, and 21.3% (95% CI, 12.7 to 32.3) in the ipilimumab group. Among patients with PD-L1– negative tumors, the objective response rates were 41.3% (95% CI, 34.6 to 48.4), 54.8% (95% CI, 47.8 to 61.6), and 17.8% (95% CI, 12.8 to 23.8), respectively (Table S2 in the Supplementary Appendix).
 
 | **Table 2. Response to Treatment.** | | | |
-| Variable                         | Nivolumab<br>(N=316) | Nivolumab plus<br>Ipilimumab<br>(N=314) | Ipilimumab<br>(N=315) |
 |----------------------------------|----------------------|-----------------------------------------|-----------------------|
+| Variable                         | Nivolumab<br>(N=316) | Nivolumab plus<br>Ipilimumab<br>(N=314) | Ipilimumab<br>(N=315) |
 | Best overall response — no. (%)* |                      |                                         |                       |
 | Complete response                | 28 (8.9)             | 36 (11.5)                               | 7 (2.2)               |
 | Partial response                 | 110 (34.8)           | 145 (46.2)                              | 53 (16.8)             |
@@ -176,30 +176,30 @@ In this randomized, double-blind, phase 3 study involving patients with previous
 
 The median progression-free survival that was observed with the combination of nivolumab and ipilimumab in this study (11.7 months in patients with *BRAF* mutation) is similar to that recently reported with combined BRAF and MEK inhibition in patients with *BRAF*-mutated metastatic melanoma (9.9 months with vemurafenib and cobimetinib2 and 9.3 to 11.4 months with dabrafenib and trametinib3,4). However, it remains unclear how the duration of response with nivolumab and ipilimumab compares with that observed with combined BRAF and MEK inhibition. The rate of objective response in the nivolumab-plus-ipilimumab group (57.6%) is numerically higher than that observed with PD-1 blockade alone in patients with advanced melanoma (40% with nivolumab in previously untreated patients with wild-type *BRAF*<sup>9</sup> or 33% with pembrolizumab in previously treated patients and previously untreated patients12). Given the results of a phase 1 trial in which nivolumab plus ipilimumab was associated with a survival rate of 79% at 2 years,18 as well as the long-term survival data reported for ipilimumab,7,8 it will be interesting to determine whether the efficacy results reported here will be reflected in an overall survival benefit.
 
-| **Table 3. Adverse Events.**\* | | | | | | | | |
-| Event                                                         | Nivolumab<br>(N=313)                    |              | Nivolumab plus Ipilimumab<br>(N=313) |              | Ipilimumab<br>(N=311) |              |  |  |
-|---------------------------------------------------------------|-----------------------------------------|--------------|--------------------------------------|--------------|-----------------------|--------------|--|--|
-|                                                               | Any                                     | Grade 3 or 4 | Any                                  | Grade 3 or 4 | Any                   | Grade 3 or 4 |  |  |
-|                                                               | number of patients with event (percent) |              |                                      |              |                       |              |  |  |
-| Any adverse event                                             | 311 (99.4)                              | 136 (43.5)   | 312 (99.7)                           | 215 (68.7)   | 308 (99.0)            | 173 (55.6)   |  |  |
-| Treatment-related adverse event†                              | 257 (82.1)                              | 51 (16.3)    | 299 (95.5)                           | 172 (55.0)   | 268 (86.2)            | 85 (27.3)    |  |  |
-| Diarrhea                                                      | 60 (19.2)                               | 7 (2.2)      | 138 (44.1)                           | 29 (9.3)     | 103 (33.1)            | 19 (6.1)     |  |  |
-| Fatigue                                                       | 107 (34.2)                              | 4 (1.3)      | 110 (35.1)                           | 13 (4.2)     | 87 (28.0)             | 3 (1.0)      |  |  |
-| Pruritus                                                      | 59 (18.8)                               | 0            | 104 (33.2)                           | 6 (1.9)      | 110 (35.4)            | 1 (0.3)      |  |  |
-| Rash                                                          | 81 (25.9)                               | 2 (0.6)      | 126 (40.3)                           | 15 (4.8)     | 102 (32.8)            | 6 (1.9)      |  |  |
-| Nausea                                                        | 41 (13.1)                               | 0            | 81 (25.9)                            | 7 (2.2)      | 50 (16.1)             | 2 (0.6)      |  |  |
-| Pyrexia                                                       | 18 (5.8)                                | 0            | 58 (18.5)                            | 2 (0.6)      | 21 (6.8)              | 1 (0.3)      |  |  |
-| Decreased appetite                                            | 34 (10.9)                               | 0            | 56 (17.9)                            | 4 (1.3)      | 39 (12.5)             | 1 (0.3)      |  |  |
-| Increase in alanine amino<br>transferase level                | 12 (3.8)                                | 4 (1.3)      | 55 (17.6)                            | 26 (8.3)     | 12 (3.9)              | 5 (1.6)      |  |  |
-| Vomiting                                                      | 20 (6.4)                                | 1 (0.3)      | 48 (15.3)                            | 8 (2.6)      | 23 (7.4)              | 1 (0.3)      |  |  |
-| Increase in aspartate amino<br>transferase level              | 12 (3.8)                                | 3 (1.0)      | 48 (15.3)                            | 19 (6.1)     | 11 (3.5)              | 2 (0.6)      |  |  |
-| Hypothyroidism                                                | 27 (8.6)                                | 0            | 47 (15.0)                            | 1 (0.3)      | 13 (4.2)              | 0            |  |  |
-| Colitis                                                       | 4 (1.3)                                 | 2 (0.6)      | 37 (11.8)                            | 24 (7.7)     | 36 (11.6)             | 27 (8.7)     |  |  |
-| Arthralgia                                                    | 24 (7.7)                                | 0            | 33 (10.5)                            | 1 (0.3)      | 19 (6.1)              | 0            |  |  |
-| Headache                                                      | 23 (7.3)                                | 0            | 32 (10.2)                            | 1 (0.3)      | 24 (7.7)              | 1 (0.3)      |  |  |
-| Dyspnea                                                       | 14 (4.5)                                | 1 (0.3)      | 32 (10.2)                            | 2 (0.6)      | 13 (4.2)              | 0            |  |  |
-| Treatment-related adverse event<br>leading to discontinuation | 24 (7.7)                                | 16 (5.1)     | 114 (36.4)                           | 92 (29.4)    | 46 (14.8)             | 41 (13.2)    |  |  |
-| **\*The safety population included all the patients who received at least one dose of study drug. The severity of adverse events was graded according to the National Cancer Institute Common Terminology Criteria for Adverse Events, version 4.0. &dagger;The treatment-related adverse events listed here were those reported in at least 10% of the patients in any of the three study groups.** | | | | | | | | |
+| **Table 3. Adverse Events.**\* | | | | | | |
+|---------------------------------------------------------------|-----------------------------------------|--------------|--------------------------------------|--------------|-----------------------|--------------|
+| Event                                                         | Nivolumab<br>(N=313)                    |              | Nivolumab plus Ipilimumab<br>(N=313) |              | Ipilimumab<br>(N=311) |              |
+|                                                               | Any                                     | Grade 3 or 4 | Any                                  | Grade 3 or 4 | Any                   | Grade 3 or 4 |
+|                                                               | number of patients with event (percent) |              |                                      |              |                       |              |
+| Any adverse event                                             | 311 (99.4)                              | 136 (43.5)   | 312 (99.7)                           | 215 (68.7)   | 308 (99.0)            | 173 (55.6)   |
+| Treatment-related adverse event†                              | 257 (82.1)                              | 51 (16.3)    | 299 (95.5)                           | 172 (55.0)   | 268 (86.2)            | 85 (27.3)    |
+| Diarrhea                                                      | 60 (19.2)                               | 7 (2.2)      | 138 (44.1)                           | 29 (9.3)     | 103 (33.1)            | 19 (6.1)     |
+| Fatigue                                                       | 107 (34.2)                              | 4 (1.3)      | 110 (35.1)                           | 13 (4.2)     | 87 (28.0)             | 3 (1.0)      |
+| Pruritus                                                      | 59 (18.8)                               | 0            | 104 (33.2)                           | 6 (1.9)      | 110 (35.4)            | 1 (0.3)      |
+| Rash                                                          | 81 (25.9)                               | 2 (0.6)      | 126 (40.3)                           | 15 (4.8)     | 102 (32.8)            | 6 (1.9)      |
+| Nausea                                                        | 41 (13.1)                               | 0            | 81 (25.9)                            | 7 (2.2)      | 50 (16.1)             | 2 (0.6)      |
+| Pyrexia                                                       | 18 (5.8)                                | 0            | 58 (18.5)                            | 2 (0.6)      | 21 (6.8)              | 1 (0.3)      |
+| Decreased appetite                                            | 34 (10.9)                               | 0            | 56 (17.9)                            | 4 (1.3)      | 39 (12.5)             | 1 (0.3)      |
+| Increase in alanine amino<br>transferase level                | 12 (3.8)                                | 4 (1.3)      | 55 (17.6)                            | 26 (8.3)     | 12 (3.9)              | 5 (1.6)      |
+| Vomiting                                                      | 20 (6.4)                                | 1 (0.3)      | 48 (15.3)                            | 8 (2.6)      | 23 (7.4)              | 1 (0.3)      |
+| Increase in aspartate amino<br>transferase level              | 12 (3.8)                                | 3 (1.0)      | 48 (15.3)                            | 19 (6.1)     | 11 (3.5)              | 2 (0.6)      |
+| Hypothyroidism                                                | 27 (8.6)                                | 0            | 47 (15.0)                            | 1 (0.3)      | 13 (4.2)              | 0            |
+| Colitis                                                       | 4 (1.3)                                 | 2 (0.6)      | 37 (11.8)                            | 24 (7.7)     | 36 (11.6)             | 27 (8.7)     |
+| Arthralgia                                                    | 24 (7.7)                                | 0            | 33 (10.5)                            | 1 (0.3)      | 19 (6.1)              | 0            |
+| Headache                                                      | 23 (7.3)                                | 0            | 32 (10.2)                            | 1 (0.3)      | 24 (7.7)              | 1 (0.3)      |
+| Dyspnea                                                       | 14 (4.5)                                | 1 (0.3)      | 32 (10.2)                            | 2 (0.6)      | 13 (4.2)              | 0            |
+| Treatment-related adverse event<br>leading to discontinuation | 24 (7.7)                                | 16 (5.1)     | 114 (36.4)                           | 92 (29.4)    | 46 (14.8)             | 41 (13.2)    |
+| **\*The safety population included all the patients who received at least one dose of study drug. The severity of adverse events was graded according to the National Cancer Institute Common Terminology Criteria for Adverse Events, version 4.0. &dagger;The treatment-related adverse events listed here were those reported in at least 10% of the patients in any of the three study groups.** | | | | | | |
 
 The results of subgroup analyses suggest that the greatest benefit with the combination of nivolumab and ipilimumab versus nivolumab alone may occur in the context of negative PD-L1 tumor expression. In the subgroup of patients with PD-L1–positive tumors, both nivolumab alone and nivolumab plus ipilimumab resulted in a similar prolongation of progression-free survival as compared with ipilimumab alone, although objective response rates were numerically higher in the combination group than in either monotherapy group. Thus, the use of PD-L1 as a biomarker may allow clinicians to make more informed decisions about the benefit–risk ratio of combination therapy versus monotherapy. However, caution is warranted in interpreting these data because the effects on overall survival are not yet known and because the most effective method and cutoff point for assaying PD-L1 expression remain to be determined. Nonetheless, the observation of at least additive activity of the combination of ipilimumab and nivolumab in the context of negative PD-L1 expression is of interest in melanoma as well as in other tumor types in which PD-1 checkpoint inhibitors are under evaluation.
 

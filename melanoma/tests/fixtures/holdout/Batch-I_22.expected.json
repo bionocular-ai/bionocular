@@ -20,9 +20,9 @@
       "warnings": [],
       "attributes": {
         "publication_name": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
+          "value": "N Engl J Med 2015;373:23-34.",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",
@@ -33,9 +33,9 @@
           "source": "publication_llm_extraction"
         },
         "publication_year": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
+          "value": "2015",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",
@@ -1205,9 +1205,9 @@
       "warnings": [],
       "attributes": {
         "publication_name": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
+          "value": "N Engl J Med 2015;373:23-34.",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",
@@ -1218,9 +1218,9 @@
           "source": "publication_llm_extraction"
         },
         "publication_year": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
+          "value": "2015",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",
@@ -2387,9 +2387,9 @@
       "warnings": [],
       "attributes": {
         "publication_name": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
+          "value": "N Engl J Med 2015;373:23-34.",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",
@@ -2400,9 +2400,9 @@
           "source": "publication_llm_extraction"
         },
         "publication_year": {
-          "value": "Not found",
-          "confidence": 0.0,
-          "validation_status": "pending",
+          "value": "2015",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",

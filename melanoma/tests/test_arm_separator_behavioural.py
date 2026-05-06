@@ -26,7 +26,9 @@ def separator() -> TreatmentArmSeparator:
     return TreatmentArmSeparator(llm)
 
 
-async def test_subgroup_analyses_are_not_separate_arms(separator: TreatmentArmSeparator) -> None:
+async def test_subgroup_analyses_are_not_separate_arms(
+    separator: TreatmentArmSeparator,
+) -> None:
     text = (FIXTURES / "subgroup_trap.md").read_text()
     result = await separator.separate_treatment_arms(text, "subgroup_trap")
     arm_count = len(result.treatment_arms)
@@ -37,7 +39,9 @@ async def test_subgroup_analyses_are_not_separate_arms(separator: TreatmentArmSe
         assert "braf+" not in name and "braf-" not in name and "braf wild" not in name
 
 
-async def test_dose_escalation_cohorts_are_not_separate_arms(separator: TreatmentArmSeparator) -> None:
+async def test_dose_escalation_cohorts_are_not_separate_arms(
+    separator: TreatmentArmSeparator,
+) -> None:
     text = (FIXTURES / "dose_escalation_trap.md").read_text()
     result = await separator.separate_treatment_arms(text, "dose_escalation_trap")
     arm_count = len(result.treatment_arms)
@@ -45,7 +49,9 @@ async def test_dose_escalation_cohorts_are_not_separate_arms(separator: Treatmen
     assert arm_count <= 2, f"expected at most 2 arms, got {arm_count}: {arm_names}"
 
 
-async def test_geographic_cohorts_are_not_separate_arms(separator: TreatmentArmSeparator) -> None:
+async def test_geographic_cohorts_are_not_separate_arms(
+    separator: TreatmentArmSeparator,
+) -> None:
     text = (FIXTURES / "geographic_cohort_trap.md").read_text()
     result = await separator.separate_treatment_arms(text, "geographic_cohort_trap")
     arm_count = len(result.treatment_arms)

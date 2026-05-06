@@ -23,9 +23,9 @@
       "warnings": [],
       "attributes": {
         "publication_name": {
-          "value": "Lancet",
-          "confidence": 0.8,
-          "validation_status": "pending",
+          "value": "Lancet 2015; 386: 444\u201351",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",
@@ -37,8 +37,8 @@
         },
         "publication_year": {
           "value": "2015",
-          "confidence": 0.8,
-          "validation_status": "pending",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",
@@ -1203,9 +1203,9 @@
       "warnings": [],
       "attributes": {
         "publication_name": {
-          "value": "Lancet",
-          "confidence": 0.8,
-          "validation_status": "pending",
+          "value": "Lancet 2015; 386: 444\u201351",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",
@@ -1217,8 +1217,8 @@
         },
         "publication_year": {
           "value": "2015",
-          "confidence": 0.8,
-          "validation_status": "pending",
+          "confidence": 1.0,
+          "validation_status": "validated",
           "source_chunks": [
             "chunk_0",
             "chunk_1",

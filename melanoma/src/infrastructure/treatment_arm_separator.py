@@ -232,7 +232,9 @@ DOCUMENT TEXT:
             arm_type = item.arm_type
             if not generic_name and arm_type not in (ArmType.PLACEBO, ArmType.CONTROL):
                 logger.warning(
-                    "Skipping arm %d in %s due to empty generic name", i + 1, abstract_id
+                    "Skipping arm %d in %s due to empty generic name",
+                    i + 1,
+                    abstract_id,
                 )
                 continue
             if not generic_name:
