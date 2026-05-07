@@ -25,6 +25,7 @@ from tenacity import (
 
 from ..domain.extraction_models import (
     FAMILY_TO_ATTRIBUTES,
+    TRIAL_LEVEL_ATTRIBUTES,
     AttributeFamily,
     AttributeType,
     ExtractedAttribute,
@@ -78,6 +79,13 @@ class FamilyExtractor:
         arms: list[TreatmentArm],
     ) -> dict[str, dict[AttributeType, ExtractedAttribute]]:
         """Extract one attribute family for all `arms`.
+
+        `doc_text` is now the family-specific slice produced by
+        `family_section_router.slice_for_family` for publications. The Gemini cache
+        still carries the full doc + system instruction; this slice is appended
+        inline only when `cache_id` is `None` (see
+        `gemini_service.cached_or_inline_generate`). For abstracts the orchestrator
+        passes the full text (no slicing).
 
         Returns `{arm_id: {attribute: ExtractedAttribute}}`. Arms the LLM omits
         come back as empty dicts; arm_ids the LLM hallucinated are skipped with
@@ -146,19 +154,21 @@ class FamilyExtractor:
     ) -> type[BaseModel]:
         """Build the per-call Pydantic response schema.
 
+        Trial-level attrs (NCT, trial_name, cancer_type, publication_*) are
+        lifted into a single `trial` block so the LLM emits them once per
+        document instead of once per arm. `_map_response` broadcasts the
+        `trial` values back to every arm.
+
         Gemini's ``types.Schema`` does not support open-ended maps
         (``additionalProperties``), so we materialize one explicit field per
-        ``arm_id`` rather than ``dict[str, PerArm]``. The schema mirrors
-        ``FAMILY_TO_ATTRIBUTES[family]``; derived attributes (MODALITY, TARGET)
-        live outside that map and are naturally absent.
+        ``arm_id`` rather than ``dict[str, PerArm]``.
         """
         attrs = FAMILY_TO_ATTRIBUTES[family]
-        # Plain strings (not nested {value, quote} objects) keep the
-        # constraint-state count under Gemini's serving budget for the largest
-        # families. Source quotes are still populated downstream by the
-        # verifier on cells that fail first-pass validation.
+        trial_attrs = tuple(a for a in attrs if a in TRIAL_LEVEL_ATTRIBUTES)
+        per_arm_attrs = tuple(a for a in attrs if a not in TRIAL_LEVEL_ATTRIBUTES)
+
         per_arm_fields: dict[str, Any] = {
-            attr.value: (str, Field(default="")) for attr in attrs
+            attr.value: (str, Field(default="")) for attr in per_arm_attrs
         }
         per_arm_model = create_model(
             f"PerArm_{family.value}",
@@ -176,12 +186,28 @@ class FamilyExtractor:
             **arms_fields,
         )
 
-        wrapper = create_model(
+        wrapper_fields: dict[str, Any] = {
+            "arms": (arms_model, Field(default_factory=arms_model)),
+        }
+        if trial_attrs:
+            trial_fields: dict[str, Any] = {
+                attr.value: (str, Field(default="")) for attr in trial_attrs
+            }
+            trial_model = create_model(
+                f"Trial_{family.value}",
+                __base__=BaseModel,
+                **trial_fields,
+            )
+            wrapper_fields["trial"] = (
+                trial_model,
+                Field(default_factory=trial_model),
+            )
+
+        return create_model(
             f"FamilyExtractionResponse_{family.value}",
             __base__=BaseModel,
-            arms=(arms_model, Field(default_factory=arms_model)),
+            **wrapper_fields,
         )
-        return wrapper
 
     # ------------------------------------------------------------------ #
     # LLM call + retry
@@ -229,10 +255,9 @@ class FamilyExtractor:
         arms_model = getattr(response, "arms", None)
         if arms_model is None:
             return result
-        # `arms_model` is a dynamic Pydantic model with one field per arm_id
-        # (see _build_response_schema). Walk its declared fields, not __dict__,
-        # so we don't trip on private attrs and so unset arms surface as the
-        # default empty PerArm.
+
+        trial_model = getattr(response, "trial", None)
+        # Walk declared fields so unset arms surface as the default empty PerArm.
         arms_obj: dict[str, BaseModel] = {
             field_name: getattr(arms_model, field_name)
             for field_name in arms_model.__class__.model_fields
@@ -247,7 +272,10 @@ class FamilyExtractor:
                 continue
             arm_result: dict[AttributeType, ExtractedAttribute] = {}
             for attr in attrs:
-                raw = getattr(per_arm, attr.value, "")
+                if attr in TRIAL_LEVEL_ATTRIBUTES:
+                    raw = getattr(trial_model, attr.value, "") if trial_model else ""
+                else:
+                    raw = getattr(per_arm, attr.value, "")
                 value = (raw or "").strip()
                 arm_result[attr] = ExtractedAttribute(
                     attribute_type=attr,

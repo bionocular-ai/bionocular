@@ -43,6 +43,8 @@ from ..infrastructure.cost_calculator import CostCalculator
 from ..infrastructure.cost_tracking_llm_service import CostTrackingLLMService
 from ..infrastructure.drug_enricher import enrich_result
 from ..infrastructure.family_extractor import FamilyExtractor
+from ..infrastructure.family_section_router import slice_for_family
+from ..infrastructure.markdown_section_parser import parse_markdown
 from ..infrastructure.file_path_extractor import FilePathExtractor
 from ..infrastructure.gemini_service import GeminiLLMService
 from ..infrastructure.prompt_templates import ExtractionPromptTemplateProvider
@@ -220,17 +222,51 @@ class EnhancedExtractionService:
                 a.arm_id: {} for a in arms
             }
 
-            families = self._families_for_doc_type(doc_type)
+            if doc_type == DocumentType.ABSTRACT:
+                families = self._families_for_doc_type(doc_type)
+                family_inputs: dict[AttributeFamily, str] = {f: doc_text for f in families}
+            else:
+                parsed = parse_markdown(doc_text)
+                if parsed.unclassified:
+                    logger.info(
+                        "section_parser_unclassified doc_id=%s headers=%s",
+                        doc_id, parsed.unclassified[:10],
+                    )
+                candidate_families = self._families_for_doc_type(doc_type)
+                family_inputs = {}
+                skipped: list[str] = []
+                for fam in candidate_families:
+                    sliced = slice_for_family(fam, parsed, raw_md=doc_text)
+                    if sliced is None:
+                        skipped.append(fam.value)
+                    else:
+                        family_inputs[fam] = sliced
+                if skipped:
+                    logger.info("section_route_skipped doc_id=%s skipped=%s", doc_id, skipped)
+                families = tuple(family_inputs.keys())
+
             family_results = await asyncio.gather(
                 *[
-                    self.family_extractor.extract(cache_id, doc_text, family, arms)
-                    for family in families
+                    self.family_extractor.extract(cache_id, family_inputs[fam], fam, arms)
+                    for fam in families
                 ]
             )
             for fr in family_results:
                 for arm_id, attrs in fr.items():
                     if arm_id in per_arm:
                         per_arm[arm_id].update(attrs)
+
+            # NUMBER_OF_PATIENTS comes from the arm separator, not the LLM.
+            for arm in arms:
+                n = arm.patient_count
+                per_arm[arm.arm_id][AttributeType.NUMBER_OF_PATIENTS] = ExtractedAttribute(
+                    attribute_type=AttributeType.NUMBER_OF_PATIENTS,
+                    value=str(n) if n else "",
+                    source_quote="",
+                    confidence=1.0 if n else 0.0,
+                    source="arm_separator",
+                    validation_status=ValidationStatus.VALID if n else ValidationStatus.EMPTY,
+                )
 
             # Validate-then-verify pass.
             for arm_id, attrs in per_arm.items():
