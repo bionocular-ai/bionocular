@@ -271,53 +271,73 @@ _CANCER_TYPES: frozenset[str] = frozenset(
 
 _LINES_OF_TREATMENT: frozenset[str] = frozenset(
     {
-        # Prompt canonical values (IDENTIFICATION prompt instructs LLM to output these)
-        "first_line",
-        "second_line",
-        "third_line_plus",
-        "adjuvant",
-        "neoadjuvant",
-        "maintenance",
-        "unknown",
-        # Short-form aliases the LLM may also produce
-        "1L",
-        "2L",
-        "3L",
-        "4L",
-        "1L+",
-        "2L+",
-        "3L+",
-        "4L+",
-        "first-line",
-        "second-line",
-        "third-line",
-        "fourth-line",
-        "perioperative",
+        "Neoadjuvant",
+        "Adjuvant",
+        "1L (First Line)",
+        "2L (Second Line)",
+        "2L+ (Refractory)",
+        "3L+ (Third Line+)",
     }
 )
 
-# Normalization patterns: map verbose/messy LLM output to a canonical value.
-# Ordered most-specific first (neoadjuvant before adjuvant, third before second/first).
+# Normalization patterns mapping verbose/keyword-rich LLM output to canonical values.
+# Order: most-specific first. Neoadjuvant before Adjuvant; 3L+ before 2L+ before 2L before 1L.
 _LINE_NORMALIZE: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"\bneo[- ]?adjuvant\b", re.I), "neoadjuvant"),
-    (re.compile(r"\badjuvant\b", re.I), "adjuvant"),
-    (re.compile(r"\bmaintenance\b", re.I), "maintenance"),
-    (
-        re.compile(r"\b(?:third|3rd)[- ]?line\b|\b[34]L\+?\b", re.I),
-        "third_line_plus",
-    ),
+    # Neoadjuvant: pre-operative, induction, resectable (treatment setting), neoadjuvant
     (
         re.compile(
-            r"\b(?:second|2nd)[- ]?line\b|\b2L\+?\b|\br/?r\b|relapsed.{0,5}refractory",
+            r"\bneo[- ]?adjuvant\b|\bpre[- ]?operati(?:ve|on)\b"
+            r"|\binduction\b|\bresectable\b",
             re.I,
         ),
-        "second_line",
+        "Neoadjuvant",
     ),
+    # Adjuvant: post-operative, consolidation, maintenance (post-resection), adjuvant
     (
-        re.compile(r"\b(?:first|1st|1)[- ]?line\b|\b1L\b", re.I),
-        "first_line",
+        re.compile(
+            r"\badjuvant\b|\bpost[- ]?operati(?:ve|on)\b"
+            r"|\bconsolidation\b|\bmaintenance\b",
+            re.I,
+        ),
+        "Adjuvant",
     ),
-    (re.compile(r"\bunknown\b", re.I), "unknown"),
+    # 3L+ (Third Line+): salvage, triple-refractory, heavily pre-treated, ≥2 prior lines
+    (
+        re.compile(
+            r"\bsalvage\b|\btriple[- ]?refractor\w*\b|\bheavily[- ]?pre[- ]?treated\b"
+            r"|\b[34]L\+|\b(?:third|3rd)[- ]?line\b"
+            r"|\bat\s+least\s+two\s+prior|\b≥\s*2\s*prior",
+            re.I,
+        ),
+        "3L+ (Third Line+)",
+    ),
+    # 2L+ (Refractory): relapsed, refractory, previously/pre-treated, multi-line, R/R, 2L+
+    (
+        re.compile(
+            r"\brelapsed\b|\brefractory\b|\br/?r\b"
+            r"|\bpreviously[- ]?treated\b|\bpre[- ]?treated\b|\bmulti[- ]?line\b"
+            r"|\b2L\+",
+            re.I,
+        ),
+        "2L+ (Refractory)",
+    ),
+    # 2L (Second Line): second-line, 2nd-line, failed 1L, 2L (without +)
+    (
+        re.compile(
+            r"\b(?:second|2nd)[- ]?line\b|\bfailed\s+1L\b|\b2L\b",
+            re.I,
+        ),
+        "2L (Second Line)",
+    ),
+    # 1L (First Line): treatment-naive, front-line, untreated, de novo, first-line, 1L
+    (
+        re.compile(
+            r"\btreatment[- ]?na[iï]ve\b|\bfront[- ]?line\b|\buntreated\b|\bde\s+novo\b"
+            r"|\b(?:first|1st|1)[- ]?line\b|\b1L\b",
+            re.I,
+        ),
+        "1L (First Line)",
+    ),
 ]
 
 
