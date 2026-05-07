@@ -271,6 +271,15 @@ _CANCER_TYPES: frozenset[str] = frozenset(
 
 _LINES_OF_TREATMENT: frozenset[str] = frozenset(
     {
+        # Prompt canonical values (IDENTIFICATION prompt instructs LLM to output these)
+        "first_line",
+        "second_line",
+        "third_line_plus",
+        "adjuvant",
+        "neoadjuvant",
+        "maintenance",
+        "unknown",
+        # Short-form aliases the LLM may also produce
         "1L",
         "2L",
         "3L",
@@ -283,12 +292,33 @@ _LINES_OF_TREATMENT: frozenset[str] = frozenset(
         "second-line",
         "third-line",
         "fourth-line",
-        "neoadjuvant",
-        "adjuvant",
         "perioperative",
-        "maintenance",
     }
 )
+
+# Normalization patterns: map verbose/messy LLM output to a canonical value.
+# Ordered most-specific first (neoadjuvant before adjuvant, third before second/first).
+_LINE_NORMALIZE: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\bneo[- ]?adjuvant\b", re.I), "neoadjuvant"),
+    (re.compile(r"\badjuvant\b", re.I), "adjuvant"),
+    (re.compile(r"\bmaintenance\b", re.I), "maintenance"),
+    (
+        re.compile(r"\b(?:third|3rd)[- ]?line\b|\b[34]L\+?\b", re.I),
+        "third_line_plus",
+    ),
+    (
+        re.compile(
+            r"\b(?:second|2nd)[- ]?line\b|\b2L\+?\b|\br/?r\b|relapsed.{0,5}refractory",
+            re.I,
+        ),
+        "second_line",
+    ),
+    (
+        re.compile(r"\b(?:first|1st|1)[- ]?line\b|\b1L\b", re.I),
+        "first_line",
+    ),
+    (re.compile(r"\bunknown\b", re.I), "unknown"),
+]
 
 
 def validate_year(v: str) -> Result:
@@ -319,6 +349,11 @@ def validate_line_of_treatment(v: str) -> Result:
     s = v.strip()
     if s in _LINES_OF_TREATMENT:
         return (True, s, "")
+    # LLMs often emit verbose strings like "1Line (1L) / First-Line Modalities"
+    # or "1st line / first of care". Try normalization patterns before rejecting.
+    for pat, canonical in _LINE_NORMALIZE:
+        if pat.search(s):
+            return (True, canonical, "")
     return (False, v, "line_of_treatment not in controlled vocabulary")
 
 

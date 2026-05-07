@@ -309,3 +309,29 @@ def test_validate_line_of_treatment_rejects_freeform() -> None:
 def test_validate_line_of_treatment_accepts_canonical() -> None:
     ok, normalized, _ = validate_for_attribute(AttributeType.LINE_OF_TREATMENT, "1L")
     assert ok is True and normalized == "1L"
+
+
+def test_validate_line_of_treatment_accepts_prompt_canonical() -> None:
+    ok, normalized, _ = validate_for_attribute(
+        AttributeType.LINE_OF_TREATMENT, "first_line"
+    )
+    assert ok is True and normalized == "first_line"
+
+
+@pytest.mark.parametrize(
+    "verbose,expected_canonical",
+    [
+        ("1Line (1L) / First-Line Modalities", "first_line"),
+        ("1st line / first of care", "first_line"),
+        ("1 line (prior therapies, max, min) | 1 line", "first_line"),
+        ("second-line therapy", "second_line"),
+        ("2nd-line setting", "second_line"),
+        ("neoadjuvant treatment", "neoadjuvant"),
+        ("adjuvant phase", "adjuvant"),
+    ],
+)
+def test_validate_line_of_treatment_normalizes_verbose(
+    verbose: str, expected_canonical: str
+) -> None:
+    ok, normalized, _ = validate_for_attribute(AttributeType.LINE_OF_TREATMENT, verbose)
+    assert ok is True and normalized == expected_canonical
