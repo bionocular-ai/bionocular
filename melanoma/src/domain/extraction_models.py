@@ -340,6 +340,22 @@ DERIVED_ATTRIBUTES: frozenset[AttributeType] = frozenset(
     }
 )
 
+SEPARATOR_SOURCED_ATTRIBUTES: frozenset[AttributeType] = frozenset({
+    AttributeType.NUMBER_OF_PATIENTS,
+})
+
+TRIAL_LEVEL_ATTRIBUTES: frozenset[AttributeType] = frozenset({
+    AttributeType.NCT_NUMBER,
+    AttributeType.TRIAL_NAME,
+    AttributeType.CANCER_TYPE,
+    AttributeType.PUBLICATION_NAME,
+    AttributeType.PUBLICATION_YEAR,
+    AttributeType.PDF_NUMBER,
+    AttributeType.ABSTRACT_NUMBER,
+    AttributeType.CONFERENCE,
+    AttributeType.PUBLISHED_YEAR,
+})
+
 FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, tuple[AttributeType, ...]] = {
     AttributeFamily.IDENTIFICATION: (
         # Publication identification (PUBLICATION_ATTRIBUTES)
@@ -349,7 +365,6 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, tuple[AttributeType, ...]] = {
         AttributeType.TRIAL_NAME,
         AttributeType.CANCER_TYPE,
         AttributeType.NCT_NUMBER,
-        AttributeType.NUMBER_OF_PATIENTS,
         AttributeType.LINE_OF_TREATMENT,
         # Abstract-specific identification (ABSTRACT_ATTRIBUTES General block)
         AttributeType.ABSTRACT_NUMBER,

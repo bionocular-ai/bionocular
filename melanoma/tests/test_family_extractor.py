@@ -12,6 +12,7 @@ from src.domain.extraction_models import (
     FAMILY_TO_ATTRIBUTES,
     AttributeFamily,
     AttributeType,
+    TRIAL_LEVEL_ATTRIBUTES,
 )
 from src.domain.treatment_arm_models import ArmType, LineOfTreatment, TreatmentArm
 from src.infrastructure.family_extractor import FamilyExtractor
@@ -33,6 +34,13 @@ def _arm(arm_id: str, name: str, n: int = 100) -> TreatmentArm:
 # ---------------------------------------------------------------------------
 # Pure helpers
 # ---------------------------------------------------------------------------
+
+
+def test_number_of_patients_excluded_from_identification_schema() -> None:
+    fe = FamilyExtractor(gemini=AsyncMock())
+    schema = fe._build_response_schema(AttributeFamily.IDENTIFICATION, ["arm_1"])
+    per_arm = _per_arm_model(schema, "arm_1")
+    assert AttributeType.NUMBER_OF_PATIENTS.value not in per_arm.model_fields
 
 
 def test_max_tokens_budget_formula() -> None:
@@ -284,3 +292,62 @@ async def test_does_not_retry_on_non_transient_error() -> None:
         await fe.extract(None, "doc", family, arms)
 
     assert calls["n"] == 1
+
+
+# ---------------------------------------------------------------------------
+# IDENTIFICATION trial-level schema (Task 8)
+# ---------------------------------------------------------------------------
+
+
+def test_identification_schema_has_trial_level_block() -> None:
+    fe = FamilyExtractor(gemini=AsyncMock())
+    schema = fe._build_response_schema(
+        AttributeFamily.IDENTIFICATION, ["arm_1", "arm_2"]
+    )
+    assert "trial" in schema.model_fields
+    trial_model = schema.model_fields["trial"].annotation
+    assert AttributeType.NCT_NUMBER.value in trial_model.model_fields
+    per_arm = _per_arm_model(schema, "arm_1")
+    assert AttributeType.NCT_NUMBER.value not in per_arm.model_fields
+    assert AttributeType.LINE_OF_TREATMENT.value in per_arm.model_fields
+
+
+@pytest.mark.asyncio
+async def test_identification_trial_level_broadcast_to_all_arms() -> None:
+    family = AttributeFamily.IDENTIFICATION
+    arms = [_arm("arm_1", "Nivo"), _arm("arm_2", "Ipi")]
+    gemini = AsyncMock()
+
+    async def fake_call(cache_id, doc_text, prompt, response_schema, **_):
+        payload = {
+            "trial": {
+                "nct_number": "NCT01234567",
+                "trial_name": "CheckMate-XYZ",
+                "cancer_type": "Melanoma",
+                "publication_name": "NEJM",
+                "publication_year": "2024",
+                "pdf_number": "",
+                "abstract_number": "",
+                "conference": "",
+                "published_year": "2024",
+            },
+            "arms": {
+                "arm_1": {"line_of_treatment": "1L"},
+                "arm_2": {"line_of_treatment": "1L"},
+            },
+        }
+        return response_schema.model_validate(payload)
+
+    gemini.cached_or_inline_generate = fake_call
+    fe = FamilyExtractor(gemini=gemini)
+    result = await fe.extract(None, "doc", family, arms)
+
+    for arm_id in ("arm_1", "arm_2"):
+        assert result[arm_id][AttributeType.NCT_NUMBER].value == "NCT01234567"
+        assert result[arm_id][AttributeType.CANCER_TYPE].value == "Melanoma"
+
+
+def test_non_identification_schema_has_no_trial_block() -> None:
+    fe = FamilyExtractor(gemini=AsyncMock())
+    schema = fe._build_response_schema(AttributeFamily.OS_FAMILY, ["arm_1"])
+    assert "trial" not in schema.model_fields
