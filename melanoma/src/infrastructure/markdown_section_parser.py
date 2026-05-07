@@ -25,10 +25,12 @@ class SectionCategory(str, Enum):
     ABSTRACT = "abstract"
     METHODS = "methods"
     RESULTS = "results"
-    SAFETY = "safety"       # often a sub-header under results — promoted to top-level
+    SAFETY = "safety"  # often a sub-header under results — promoted to top-level
     DISCUSSION = "discussion"  # captured but not used by router (drop semantically)
-    DROP = "drop"           # explicit boilerplate — Research-in-context, Funding, References, etc.
-    OTHER = "other"         # unclassified — kept for fallback
+    DROP = (
+        "drop"  # explicit boilerplate — Research-in-context, Funding, References, etc.
+    )
+    OTHER = "other"  # unclassified — kept for fallback
 
 
 # Per-category keyword weights. Tokens that strongly identify a category get higher weight.
@@ -36,36 +38,87 @@ class SectionCategory(str, Enum):
 # header. Tie or all zero → OTHER. DROP wins over OTHER even on a single hit.
 _LEXICONS: dict[SectionCategory, dict[str, int]] = {
     SectionCategory.METHODS: {
-        "method": 5, "methodology": 5, "patient": 2, "study": 2, "design": 3,
-        "procedure": 4, "intervention": 3, "statistical": 4, "analysis": 2,
-        "eligibility": 5, "treatment": 1, "oversight": 3, "randomi": 4,
-        "blind": 3, "endpoint": 4, "end-point": 4, "outcome": 1, "protocol": 4,
-        "assessment": 2, "selection": 2, "monitoring": 2, "specimen": 3,
+        "method": 5,
+        "methodology": 5,
+        "patient": 2,
+        "study": 2,
+        "design": 3,
+        "procedure": 4,
+        "intervention": 3,
+        "statistical": 4,
+        "analysis": 2,
+        "eligibility": 5,
+        "treatment": 1,
+        "oversight": 3,
+        "randomi": 4,
+        "blind": 3,
+        "endpoint": 4,
+        "end-point": 4,
+        "outcome": 1,
+        "protocol": 4,
+        "assessment": 2,
+        "selection": 2,
+        "monitoring": 2,
+        "specimen": 3,
     },
     SectionCategory.RESULTS: {
-        "result": 5, "finding": 5, "outcome": 3, "efficacy": 5, "response": 2,
-        "activity": 3, "baseline": 2, "demographic": 3, "characteristic": 2,
-        "follow-up": 2, "followup": 2, "survival": 2,
+        "result": 5,
+        "finding": 5,
+        "outcome": 3,
+        "efficacy": 5,
+        "response": 2,
+        "activity": 3,
+        "baseline": 2,
+        "demographic": 3,
+        "characteristic": 2,
+        "follow-up": 2,
+        "followup": 2,
+        "survival": 2,
     },
     SectionCategory.SAFETY: {
-        "safety": 5, "adverse": 5, "toxicity": 5, "tolerability": 5,
-        "ae": 4, "teae": 4, "trae": 4, "grade": 1,
+        "safety": 5,
+        "adverse": 5,
+        "toxicity": 5,
+        "tolerability": 5,
+        "ae": 4,
+        "teae": 4,
+        "trae": 4,
+        "grade": 1,
     },
     SectionCategory.ABSTRACT: {
-        "abstract": 6, "summary": 6,
+        "abstract": 6,
+        "summary": 6,
     },
     SectionCategory.DISCUSSION: {
-        "discussion": 6, "interpretation": 5, "conclusion": 4,
-        "implication": 4, "perspective": 3,
+        "discussion": 6,
+        "interpretation": 5,
+        "conclusion": 4,
+        "implication": 4,
+        "perspective": 3,
     },
     SectionCategory.DROP: {
-        "research in context": 10, "evidence before": 10, "knowledge generated": 10,
-        "what is already known": 10, "what this study adds": 10,
-        "how this study might affect": 10, "added value": 10, "key objective": 10,
-        "relevance": 6, "context": 3, "introduction": 6, "background": 5,
-        "funding": 6, "role of the funding": 8, "acknowledg": 5, "reference": 5,
-        "appendix": 4, "supplementary": 3, "competing interest": 6,
-        "author contribution": 6, "data sharing": 5, "ethics": 4,
+        "research in context": 10,
+        "evidence before": 10,
+        "knowledge generated": 10,
+        "what is already known": 10,
+        "what this study adds": 10,
+        "how this study might affect": 10,
+        "added value": 10,
+        "key objective": 10,
+        "relevance": 6,
+        "context": 3,
+        "introduction": 6,
+        "background": 5,
+        "funding": 6,
+        "role of the funding": 8,
+        "acknowledg": 5,
+        "reference": 5,
+        "appendix": 4,
+        "supplementary": 3,
+        "competing interest": 6,
+        "author contribution": 6,
+        "data sharing": 5,
+        "ethics": 4,
     },
 }
 
@@ -114,7 +167,9 @@ class TableBlock:
 
 @dataclass
 class ParsedDoc:
-    by_category: dict[SectionCategory, list[str]] = field(default_factory=lambda: defaultdict(list))
+    by_category: dict[SectionCategory, list[str]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
     tables: list[TableBlock] = field(default_factory=list)
     unclassified: list[str] = field(default_factory=list)  # raw header text for tuning
 
@@ -192,7 +247,10 @@ def parse_markdown(md: str) -> ParsedDoc:
         # H2+: stays in the active H1 bucket (sub-section content, e.g. ## Efficacy under # Results),
         # UNLESS the H2 itself classifies as a different canonical category — promote it.
         # This handles publications whose results sub-blocks live under a generic # ABSTRACT or # Summary.
-        if current is None and category not in {SectionCategory.OTHER, SectionCategory.DROP}:
+        if current is None and category not in {
+            SectionCategory.OTHER,
+            SectionCategory.DROP,
+        }:
             current = category
             continue
         buf.append(ln)
@@ -203,6 +261,7 @@ def parse_markdown(md: str) -> ParsedDoc:
     if out.unclassified:
         logger.info(
             "markdown_section_parser_unclassified count=%d headers=%s",
-            len(out.unclassified), out.unclassified[:10],
+            len(out.unclassified),
+            out.unclassified[:10],
         )
     return out

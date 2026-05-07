@@ -12,14 +12,18 @@ from src.domain.extraction_models import (
 
 def test_every_extractable_publication_attribute_has_a_family() -> None:
     mapped = {a for attrs in FAMILY_TO_ATTRIBUTES.values() for a in attrs}
-    extractable = set(PUBLICATION_ATTRIBUTES) - DERIVED_ATTRIBUTES - SEPARATOR_SOURCED_ATTRIBUTES
+    extractable = (
+        set(PUBLICATION_ATTRIBUTES) - DERIVED_ATTRIBUTES - SEPARATOR_SOURCED_ATTRIBUTES
+    )
     missing = extractable - mapped
     assert not missing, f"unmapped extractable attrs: {missing}"
 
 
 def test_every_extractable_abstract_attribute_has_a_family() -> None:
     mapped = {a for attrs in FAMILY_TO_ATTRIBUTES.values() for a in attrs}
-    extractable = set(ABSTRACT_ATTRIBUTES) - DERIVED_ATTRIBUTES - SEPARATOR_SOURCED_ATTRIBUTES
+    extractable = (
+        set(ABSTRACT_ATTRIBUTES) - DERIVED_ATTRIBUTES - SEPARATOR_SOURCED_ATTRIBUTES
+    )
     missing = extractable - mapped
     assert not missing, f"unmapped extractable abstract attrs: {missing}"
 

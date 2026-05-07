@@ -62,7 +62,9 @@ def test_methods_fallback_positional_when_missing() -> None:
     # Build a parsed doc with empty Methods.
     parsed = ParsedDoc()
     parsed.by_category[SectionCategory.TITLE].append("Title here")
-    parsed.by_category[SectionCategory.ABSTRACT].append("Abstract content. NCT99999999.")
+    parsed.by_category[SectionCategory.ABSTRACT].append(
+        "Abstract content. NCT99999999."
+    )
     parsed.by_category[SectionCategory.RESULTS].append("Results content with PFS data.")
     raw_md = (
         "# Title here\n\n# Abstract\nAbstract content. NCT99999999.\n\n"

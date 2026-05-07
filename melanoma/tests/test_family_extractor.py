@@ -12,7 +12,6 @@ from src.domain.extraction_models import (
     FAMILY_TO_ATTRIBUTES,
     AttributeFamily,
     AttributeType,
-    TRIAL_LEVEL_ATTRIBUTES,
 )
 from src.domain.treatment_arm_models import ArmType, LineOfTreatment, TreatmentArm
 from src.infrastructure.family_extractor import FamilyExtractor

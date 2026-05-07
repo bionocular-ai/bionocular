@@ -257,17 +257,38 @@ def _build_percentage_attrs() -> frozenset[AttributeType]:
 
 _PERCENTAGE_ATTRS: frozenset[AttributeType] = _build_percentage_attrs()
 
-_CANCER_TYPES: frozenset[str] = frozenset({
-    "melanoma", "uveal melanoma", "cutaneous melanoma", "mucosal melanoma",
-    "merkel cell carcinoma", "cutaneous squamous cell carcinoma",
-    "basal cell carcinoma",
-})
+_CANCER_TYPES: frozenset[str] = frozenset(
+    {
+        "melanoma",
+        "uveal melanoma",
+        "cutaneous melanoma",
+        "mucosal melanoma",
+        "merkel cell carcinoma",
+        "cutaneous squamous cell carcinoma",
+        "basal cell carcinoma",
+    }
+)
 
-_LINES_OF_TREATMENT: frozenset[str] = frozenset({
-    "1L", "2L", "3L", "4L", "1L+", "2L+", "3L+", "4L+",
-    "first-line", "second-line", "third-line", "fourth-line",
-    "neoadjuvant", "adjuvant", "perioperative", "maintenance",
-})
+_LINES_OF_TREATMENT: frozenset[str] = frozenset(
+    {
+        "1L",
+        "2L",
+        "3L",
+        "4L",
+        "1L+",
+        "2L+",
+        "3L+",
+        "4L+",
+        "first-line",
+        "second-line",
+        "third-line",
+        "fourth-line",
+        "neoadjuvant",
+        "adjuvant",
+        "perioperative",
+        "maintenance",
+    }
+)
 
 
 def validate_year(v: str) -> Result:

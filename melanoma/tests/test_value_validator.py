@@ -300,7 +300,9 @@ def test_validate_cancer_type_accepts_melanoma() -> None:
 
 
 def test_validate_line_of_treatment_rejects_freeform() -> None:
-    ok, _, _ = validate_for_attribute(AttributeType.LINE_OF_TREATMENT, "second-ish line")
+    ok, _, _ = validate_for_attribute(
+        AttributeType.LINE_OF_TREATMENT, "second-ish line"
+    )
     assert ok is False
 
 

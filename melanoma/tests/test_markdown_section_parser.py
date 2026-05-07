@@ -24,7 +24,10 @@ def _read(name: str) -> str:
         ("Patients and Methods", SectionCategory.METHODS),
         ("Study Design and Treatment", SectionCategory.METHODS),
         ("Statistical Analysis", SectionCategory.METHODS),
-        ("Trial Methodology", SectionCategory.METHODS),  # novel synonym must still classify
+        (
+            "Trial Methodology",
+            SectionCategory.METHODS,
+        ),  # novel synonym must still classify
         ("Results", SectionCategory.RESULTS),
         ("Findings", SectionCategory.RESULTS),
         ("Clinical Activity", SectionCategory.RESULTS),
@@ -55,7 +58,13 @@ def test_classify_header(header: str, expected: SectionCategory) -> None:
 # ---- Parser integration tests against real fixtures ----
 @pytest.mark.parametrize(
     "fname",
-    ["Batch-II_1.md", "Batch-I_22.md", "Batch-III_3.md", "Batch-III_30.md", "Batch-III_25.md"],
+    [
+        "Batch-II_1.md",
+        "Batch-I_22.md",
+        "Batch-III_3.md",
+        "Batch-III_30.md",
+        "Batch-III_25.md",
+    ],
 )
 def test_required_categories_detected(fname: str) -> None:
     parsed = parse_markdown(_read(fname))
@@ -88,8 +97,13 @@ def test_drop_categories_not_in_canonical_text() -> None:
 def test_tables_captured_with_keywords() -> None:
     parsed = parse_markdown(_read("Batch-II_1.md"))
     assert any("baseline" in t.keywords for t in parsed.tables)
-    assert any("survival" in t.keywords or "outcomes" in t.keywords for t in parsed.tables)
-    assert any("treatment-related" in t.keywords or "adverse" in t.keywords for t in parsed.tables)
+    assert any(
+        "survival" in t.keywords or "outcomes" in t.keywords for t in parsed.tables
+    )
+    assert any(
+        "treatment-related" in t.keywords or "adverse" in t.keywords
+        for t in parsed.tables
+    )
 
 
 def test_other_buckets_preserved_for_fallback() -> None:

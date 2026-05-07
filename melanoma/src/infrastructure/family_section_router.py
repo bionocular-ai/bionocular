@@ -30,8 +30,12 @@ _OPTIONAL_FAMILIES = {
 }
 
 _TABLE_KEYWORDS_BY_FAMILY: dict[AttributeFamily, re.Pattern[str]] = {
-    AttributeFamily.RESPONSE_RATES: re.compile(r"\b(response|cr|pr|orr|dcr|outcome|efficacy)\b", re.I),
-    AttributeFamily.PFS_FAMILY: re.compile(r"\b(progression|pfs|outcome|efficacy|survival)\b", re.I),
+    AttributeFamily.RESPONSE_RATES: re.compile(
+        r"\b(response|cr|pr|orr|dcr|outcome|efficacy)\b", re.I
+    ),
+    AttributeFamily.PFS_FAMILY: re.compile(
+        r"\b(progression|pfs|outcome|efficacy|survival)\b", re.I
+    ),
     AttributeFamily.OS_FAMILY: re.compile(r"\b(survival|os|outcome|efficacy)\b", re.I),
     AttributeFamily.EFS_RFS_MFS: re.compile(
         r"\b(efs|rfs|mfs|event[-\s]?free|recurrence[-\s]?free|relapse[-\s]?free|metastasis[-\s]?free)\b",
@@ -41,12 +45,22 @@ _TABLE_KEYWORDS_BY_FAMILY: dict[AttributeFamily, re.Pattern[str]] = {
         r"\b(ttr|ttp|ttnt|ttf|time[-\s]?to[-\s]?(response|progression|next|treatment|failure))\b",
         re.I,
     ),
-    AttributeFamily.AE_GENERAL: re.compile(r"\b(adverse|grade|treatment-related|tolerability|safety)\b", re.I),
+    AttributeFamily.AE_GENERAL: re.compile(
+        r"\b(adverse|grade|treatment-related|tolerability|safety)\b", re.I
+    ),
     AttributeFamily.AE_GRADE3_SPECIFIC: re.compile(r"\b(adverse|grade)\b", re.I),
-    AttributeFamily.TEAE_GENERAL: re.compile(r"\b(teae|treatment[-\s]?emergent|adverse|grade)\b", re.I),
-    AttributeFamily.TEAE_GRADE3_SPECIFIC: re.compile(r"\b(teae|treatment[-\s]?emergent|adverse|grade)\b", re.I),
-    AttributeFamily.TRAE_GENERAL: re.compile(r"\b(trae|treatment[-\s]?related|drug[-\s]?related|adverse)\b", re.I),
-    AttributeFamily.TRAE_GRADE3_SPECIFIC: re.compile(r"\b(trae|treatment[-\s]?related|drug[-\s]?related|adverse)\b", re.I),
+    AttributeFamily.TEAE_GENERAL: re.compile(
+        r"\b(teae|treatment[-\s]?emergent|adverse|grade)\b", re.I
+    ),
+    AttributeFamily.TEAE_GRADE3_SPECIFIC: re.compile(
+        r"\b(teae|treatment[-\s]?emergent|adverse|grade)\b", re.I
+    ),
+    AttributeFamily.TRAE_GENERAL: re.compile(
+        r"\b(trae|treatment[-\s]?related|drug[-\s]?related|adverse)\b", re.I
+    ),
+    AttributeFamily.TRAE_GRADE3_SPECIFIC: re.compile(
+        r"\b(trae|treatment[-\s]?related|drug[-\s]?related|adverse)\b", re.I
+    ),
 }
 
 
@@ -76,7 +90,13 @@ def _positional_fallback(raw_md: str, lo: float, hi: float) -> str:
 
 
 def _other_blocks_matching(parsed: ParsedDoc, regex: re.Pattern[str]) -> str:
-    return _join([b for b in parsed.by_category.get(SectionCategory.OTHER, []) if regex.search(b)])
+    return _join(
+        [
+            b
+            for b in parsed.by_category.get(SectionCategory.OTHER, [])
+            if regex.search(b)
+        ]
+    )
 
 
 def _grep_paragraphs(text: str, regex: re.Pattern[str]) -> str:
@@ -90,7 +110,10 @@ def _resolve_methods(parsed: ParsedDoc, raw_md: str) -> str:
     text = parsed.text_for(SectionCategory.METHODS)
     if text:
         return text
-    methods_re = re.compile(r"\b(method|study design|protocol|eligibility|statistical|endpoint|randomi)\b", re.I)
+    methods_re = re.compile(
+        r"\b(method|study design|protocol|eligibility|statistical|endpoint|randomi)\b",
+        re.I,
+    )
     other_hits = _other_blocks_matching(parsed, methods_re)
     positional = _positional_fallback(raw_md, 0.25, 0.55)
     return _join([other_hits, positional])
@@ -100,7 +123,9 @@ def _resolve_results(parsed: ParsedDoc, raw_md: str) -> str:
     text = parsed.text_for(SectionCategory.RESULTS)
     if text:
         return text
-    results_re = re.compile(r"\b(result|finding|efficacy|response|orr|median|survival|activity)\b", re.I)
+    results_re = re.compile(
+        r"\b(result|finding|efficacy|response|orr|median|survival|activity)\b", re.I
+    )
     other_hits = _other_blocks_matching(parsed, results_re)
     positional = _positional_fallback(raw_md, 0.55, 0.95)
     return _join([other_hits, positional])
@@ -110,7 +135,9 @@ def _resolve_safety(parsed: ParsedDoc, raw_md: str) -> str:
     text = parsed.text_for(SectionCategory.SAFETY)
     if text:
         return text
-    safety_re = re.compile(r"\b(adverse|safety|grade|toxicity|tolerability|teae|trae)\b", re.I)
+    safety_re = re.compile(
+        r"\b(adverse|safety|grade|toxicity|tolerability|teae|trae)\b", re.I
+    )
     pieces: list[str] = [_other_blocks_matching(parsed, safety_re)]
     pieces.append(_grep_paragraphs(parsed.text_for(SectionCategory.RESULTS), safety_re))
     if not any(pieces):
@@ -158,8 +185,11 @@ def slice_for_family(
     if family is AttributeFamily.IDENTIFICATION:
         return _join([f"# Title\n{title}", abstract, methods])
 
-    if family in {AttributeFamily.RESPONSE_RATES, AttributeFamily.PFS_FAMILY,
-                  AttributeFamily.OS_FAMILY}:
+    if family in {
+        AttributeFamily.RESPONSE_RATES,
+        AttributeFamily.PFS_FAMILY,
+        AttributeFamily.OS_FAMILY,
+    }:
         return _join([abstract, results, table_text])
 
     if family in {AttributeFamily.EFS_RFS_MFS, AttributeFamily.TIME_TO_METRICS}:
@@ -170,9 +200,12 @@ def slice_for_family(
         return _join([results, table_text])
 
     if family in {
-        AttributeFamily.AE_GENERAL, AttributeFamily.AE_GRADE3_SPECIFIC,
-        AttributeFamily.TEAE_GENERAL, AttributeFamily.TEAE_GRADE3_SPECIFIC,
-        AttributeFamily.TRAE_GENERAL, AttributeFamily.TRAE_GRADE3_SPECIFIC,
+        AttributeFamily.AE_GENERAL,
+        AttributeFamily.AE_GRADE3_SPECIFIC,
+        AttributeFamily.TEAE_GENERAL,
+        AttributeFamily.TEAE_GRADE3_SPECIFIC,
+        AttributeFamily.TRAE_GENERAL,
+        AttributeFamily.TRAE_GRADE3_SPECIFIC,
     }:
         ae_methods = _ae_classification_sentence(methods)
         anchor_pat = _TABLE_KEYWORDS_BY_FAMILY[family]
