@@ -1,5 +1,9 @@
 """Tests for deterministic value validators."""
 
+import datetime as _dt
+
+import pytest
+
 from src.domain.extraction_models import AttributeType
 from src.infrastructure.value_validator import (
     validate_ci,
@@ -263,3 +267,43 @@ def test_dispatch_empty_always_valid():
     ):
         ok, n, _ = validate_for_attribute(attr, "")
         assert ok and n == "", attr
+
+
+# ---- year / cancer_type / line_of_treatment ----------------------------
+
+
+@pytest.mark.parametrize("v", ["1989", "2099", "20-25", "twenty twenty-four"])
+def test_validate_year_rejects_out_of_range(v: str) -> None:
+    ok, _, _ = validate_for_attribute(AttributeType.PUBLICATION_YEAR, v)
+    assert ok is False
+
+
+def test_validate_year_empty_passes_through() -> None:
+    ok, normalized, _ = validate_for_attribute(AttributeType.PUBLICATION_YEAR, "")
+    assert ok is True and normalized == ""
+
+
+def test_validate_year_accepts_current_window() -> None:
+    cur = _dt.date.today().year
+    ok, normalized, _ = validate_for_attribute(AttributeType.PUBLICATION_YEAR, str(cur))
+    assert ok is True and normalized == str(cur)
+
+
+def test_validate_cancer_type_rejects_unknown() -> None:
+    ok, _, _ = validate_for_attribute(AttributeType.CANCER_TYPE, "Hogwarts Tumor")
+    assert ok is False
+
+
+def test_validate_cancer_type_accepts_melanoma() -> None:
+    ok, normalized, _ = validate_for_attribute(AttributeType.CANCER_TYPE, "Melanoma")
+    assert ok is True and normalized.lower() == "melanoma"
+
+
+def test_validate_line_of_treatment_rejects_freeform() -> None:
+    ok, _, _ = validate_for_attribute(AttributeType.LINE_OF_TREATMENT, "second-ish line")
+    assert ok is False
+
+
+def test_validate_line_of_treatment_accepts_canonical() -> None:
+    ok, normalized, _ = validate_for_attribute(AttributeType.LINE_OF_TREATMENT, "1L")
+    assert ok is True and normalized == "1L"

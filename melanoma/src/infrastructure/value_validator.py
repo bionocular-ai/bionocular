@@ -13,6 +13,7 @@ Conventions:
 
 from __future__ import annotations
 
+import datetime as _dt
 import re
 
 from ..domain.extraction_models import AttributeType
@@ -256,6 +257,49 @@ def _build_percentage_attrs() -> frozenset[AttributeType]:
 
 _PERCENTAGE_ATTRS: frozenset[AttributeType] = _build_percentage_attrs()
 
+_CANCER_TYPES: frozenset[str] = frozenset({
+    "melanoma", "uveal melanoma", "cutaneous melanoma", "mucosal melanoma",
+    "merkel cell carcinoma", "cutaneous squamous cell carcinoma",
+    "basal cell carcinoma",
+})
+
+_LINES_OF_TREATMENT: frozenset[str] = frozenset({
+    "1L", "2L", "3L", "4L", "1L+", "2L+", "3L+", "4L+",
+    "first-line", "second-line", "third-line", "fourth-line",
+    "neoadjuvant", "adjuvant", "perioperative", "maintenance",
+})
+
+
+def validate_year(v: str) -> Result:
+    if v == "":
+        return (True, "", "")
+    s = v.strip()
+    if not re.fullmatch(r"\d{4}", s):
+        return (False, v, "year is not a 4-digit integer")
+    y = int(s)
+    cur = _dt.date.today().year
+    if 1990 <= y <= cur + 1:
+        return (True, s, "")
+    return (False, v, f"year {y} outside [1990, {cur + 1}]")
+
+
+def validate_cancer_type(v: str) -> Result:
+    if v == "":
+        return (True, "", "")
+    s = v.strip()
+    if s.lower() in _CANCER_TYPES:
+        return (True, s, "")
+    return (False, v, "cancer_type not in controlled vocabulary")
+
+
+def validate_line_of_treatment(v: str) -> Result:
+    if v == "":
+        return (True, "", "")
+    s = v.strip()
+    if s in _LINES_OF_TREATMENT:
+        return (True, s, "")
+    return (False, v, "line_of_treatment not in controlled vocabulary")
+
 
 def validate_for_attribute(attr: AttributeType, v: str) -> Result:
     """Dispatch to the correct validator based on attribute family.
@@ -273,6 +317,12 @@ def validate_for_attribute(attr: AttributeType, v: str) -> Result:
         return validate_p_value(v)
     if attr is AttributeType.NCT_NUMBER:
         return validate_nct(v)
+    if attr in (AttributeType.PUBLICATION_YEAR, AttributeType.PUBLISHED_YEAR):
+        return validate_year(v)
+    if attr is AttributeType.CANCER_TYPE:
+        return validate_cancer_type(v)
+    if attr is AttributeType.LINE_OF_TREATMENT:
+        return validate_line_of_treatment(v)
     if attr in _MEDIAN_MONTHS_ATTRS:
         return validate_median_months(v)
     if attr in _PERCENTAGE_ATTRS:
