@@ -49,13 +49,22 @@ def test_arms_block_rendering_lists_each_arm() -> None:
     assert "arm_2" in block and "Ipilimumab" in block
 
 
+def _per_arm_model(schema: type[BaseModel], arm_id: str) -> type[BaseModel]:
+    """Drill into wrapper -> Arms_<family> -> PerArm_<family> for arm_id."""
+    arms_model = schema.model_fields["arms"].annotation
+    return arms_model.model_fields[arm_id].annotation
+
+
 def test_dynamic_schema_includes_only_family_attrs() -> None:
     fe = FamilyExtractor(gemini=AsyncMock())
     schema = fe._build_response_schema(AttributeFamily.OS_FAMILY, ["arm_1", "arm_2"])
-    arm_model = schema.model_fields["arms"].annotation.__args__[1]
-    field_keys = set(arm_model.model_fields.keys())
+    per_arm = _per_arm_model(schema, "arm_1")
+    field_keys = set(per_arm.model_fields.keys())
     expected = {a.value for a in FAMILY_TO_ATTRIBUTES[AttributeFamily.OS_FAMILY]}
     assert field_keys == expected
+    # All per-arm fields must be plain str (not nested objects)
+    for field_info in per_arm.model_fields.values():
+        assert field_info.annotation is str
 
 
 def test_dynamic_schema_excludes_derived_attrs() -> None:
@@ -63,10 +72,20 @@ def test_dynamic_schema_excludes_derived_attrs() -> None:
     fe = FamilyExtractor(gemini=AsyncMock())
     for family in AttributeFamily:
         schema = fe._build_response_schema(family, ["arm_1"])
-        arm_model = schema.model_fields["arms"].annotation.__args__[1]
-        keys = set(arm_model.model_fields.keys())
+        per_arm = _per_arm_model(schema, "arm_1")
+        keys = set(per_arm.model_fields.keys())
         assert AttributeType.MODALITY.value not in keys
         assert AttributeType.TARGET.value not in keys
+
+
+def test_dynamic_schema_has_explicit_arm_id_fields() -> None:
+    """Gemini's types.Schema disallows additionalProperties; arms must be explicit fields."""
+    fe = FamilyExtractor(gemini=AsyncMock())
+    schema = fe._build_response_schema(
+        AttributeFamily.OS_FAMILY, ["arm_1", "arm_2", "arm_3"]
+    )
+    arms_model = schema.model_fields["arms"].annotation
+    assert set(arms_model.model_fields.keys()) == {"arm_1", "arm_2", "arm_3"}
 
 
 # ---------------------------------------------------------------------------
@@ -93,17 +112,11 @@ async def test_extract_calls_gemini_and_maps_response() -> None:
         payload = {
             "arms": {
                 "arm_1": {
-                    "median_os": {
-                        "value": "32.7",
-                        "quote": "median OS was 32.7 months",
-                    },
-                    "hr_os": {"value": "", "quote": ""},
+                    "median_os": "32.7",
+                    "hr_os": "",
                 },
                 "arm_2": {
-                    "median_os": {
-                        "value": "20.0",
-                        "quote": "median OS was 20.0 months",
-                    },
+                    "median_os": "20.0",
                 },
             }
         }
@@ -120,7 +133,7 @@ async def test_extract_calls_gemini_and_maps_response() -> None:
     assert AttributeType.MEDIAN_OS in arm1
     median_os = arm1[AttributeType.MEDIAN_OS]
     assert median_os.value == "32.7"
-    assert median_os.source_quote == "median OS was 32.7 months"
+    assert median_os.source_quote == ""
     assert median_os.confidence == 0.9
     assert median_os.source == family.value
 
@@ -144,8 +157,8 @@ async def test_extract_skips_unknown_arm_id_from_llm() -> None:
     ):
         payload = {
             "arms": {
-                "arm_1": {"median_os": {"value": "10.0", "quote": "ten months"}},
-                "arm_99_hallucinated": {"median_os": {"value": "X", "quote": "Y"}},
+                "arm_1": {"median_os": "10.0"},
+                "arm_99_hallucinated": {"median_os": "X"},
             }
         }
         return response_schema.model_validate(payload)
@@ -160,7 +173,10 @@ async def test_extract_skips_unknown_arm_id_from_llm() -> None:
 
 
 @pytest.mark.asyncio
-async def test_extract_returns_empty_dict_for_omitted_arm() -> None:
+async def test_extract_yields_empty_cells_for_unset_arm() -> None:
+    """Schema now materializes one field per arm_id, so an arm the LLM left
+    unfilled comes back with all cells defaulted to empty strings (not absent).
+    Downstream validators treat empty strings as VALIDATED-empty."""
     family = AttributeFamily.OS_FAMILY
     arms = [_arm("arm_1", "Nivolumab"), _arm("arm_2", "Ipilimumab")]
 
@@ -171,7 +187,8 @@ async def test_extract_returns_empty_dict_for_omitted_arm() -> None:
     ):
         payload = {
             "arms": {
-                "arm_1": {"median_os": {"value": "10.0", "quote": "ten months"}},
+                "arm_1": {"median_os": "10.0"},
+                "arm_2": {},
             }
         }
         return response_schema.model_validate(payload)
@@ -181,7 +198,9 @@ async def test_extract_returns_empty_dict_for_omitted_arm() -> None:
     fe = FamilyExtractor(gemini=gemini)
     result = await fe.extract(None, "doc", family, arms)
 
-    assert result["arm_2"] == {}
+    expected_attrs = set(FAMILY_TO_ATTRIBUTES[family])
+    assert set(result["arm_2"].keys()) == expected_attrs
+    assert all(extracted.value == "" for extracted in result["arm_2"].values())
 
 
 # ---------------------------------------------------------------------------
@@ -233,11 +252,7 @@ async def test_retries_on_transient_429() -> None:
         calls["n"] += 1
         if calls["n"] == 1:
             raise RuntimeError("429 Too Many Requests: RATE_LIMIT_EXCEEDED")
-        payload = {
-            "arms": {
-                "arm_1": {"median_os": {"value": "12.0", "quote": "twelve months"}}
-            }
-        }
+        payload = {"arms": {"arm_1": {"median_os": "12.0"}}}
         return response_schema.model_validate(payload)
 
     gemini = AsyncMock()

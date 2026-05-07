@@ -408,7 +408,127 @@ def _serialize_arm_results(arm_results: dict[str, Any]) -> dict[str, dict[str, A
     return out
 
 
+def _load_legacy_arm_results(doc_id: str, doc_type: str) -> dict[str, Any]:
+    """Load pre-extracted arm_results from the deployed legacy files."""
+    data_dir = REPO_ROOT / "data" / "deployed"
+    if doc_type == "abstract":
+        path = data_dir / "extraction_results_ASCO_2024.json"
+        raw: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+        for entry in raw.get("abstracts", []):
+            if entry["abstract_id"] == doc_id:
+                return entry.get("arm_results") or {}
+    else:
+        path = data_dir / "extraction_results_Publications_20260412_102203.json"
+        raw = json.loads(path.read_text(encoding="utf-8"))
+        for entry in raw.get("publications", []):
+            if entry["pub_id"] == doc_id:
+                return entry.get("arm_results") or {}
+    return {}
+
+
+def _emit_output(
+    pipeline: str,
+    per_family_totals: dict[str, dict[str, int]],
+    per_doc: list[dict[str, Any]],
+    arms_expected_total: int,
+    arms_matched_total: int,
+    total_latency_ms: int = 0,
+    total_tokens_in: int = 0,
+    total_tokens_out: int = 0,
+    total_cost: float = 0.0,
+    out_path: Path | None = None,
+) -> None:
+    fixtures = _load_manifest()
+    per_family_out: dict[str, dict[str, float | int]] = {}
+    for fam, counts in per_family_totals.items():
+        n_exp = counts["n_expected"]
+        n_ext = counts["n_extracted"]
+        n_cor = counts["n_correct"]
+        per_family_out[fam] = {
+            "precision": round(n_cor / n_ext, 4) if n_ext else 0.0,
+            "recall": round(n_cor / n_exp, 4) if n_exp else 0.0,
+            "n_expected": n_exp,
+            "n_extracted": n_ext,
+            "n_correct": n_cor,
+        }
+    arm_mapping_accuracy = (
+        round(arms_matched_total / arms_expected_total, 4) if arms_expected_total else 0.0
+    )
+    output = {
+        "pipeline": pipeline,
+        "git_sha": _git_sha(),
+        "prompt_version": "v2.0",
+        "totals": {
+            "docs": len(fixtures),
+            "arms_expected": arms_expected_total,
+            "arms_matched": arms_matched_total,
+            "arm_mapping_accuracy": arm_mapping_accuracy,
+        },
+        "per_family": per_family_out,
+        "per_doc": per_doc,
+        "summary": {
+            "total_latency_ms": total_latency_ms,
+            "total_tokens_in": total_tokens_in,
+            "total_tokens_out": total_tokens_out,
+            "total_cost_usd": round(total_cost, 6),
+        },
+    }
+    if out_path is not None:
+        out_path.write_text(json.dumps(output, indent=2), encoding="utf-8")
+        print(f"\nResults written to {out_path}")
+    _print_summary(output)
+
+
+async def _run_eval_legacy_cached(out_path: Path | None) -> int:
+    sys.path.insert(0, str(REPO_ROOT))
+    fixtures = _load_manifest()
+    per_doc: list[dict[str, Any]] = []
+    per_family_totals: dict[str, dict[str, int]] = {}
+    arms_expected_total = arms_matched_total = 0
+
+    for entry in fixtures:
+        doc_id = entry["doc_id"]
+        doc_type = entry["doc_type"]
+        _, expected = _load_fixture(doc_id)
+        expected_arms = expected.get("arms") or {}
+
+        extracted_arms = _load_legacy_arm_results(doc_id, doc_type)
+        if not extracted_arms:
+            print(f"[WARN] {doc_id}: no legacy arm_results found — skipping")
+            continue
+
+        scored = _score_doc(extracted_arms, expected_arms)
+        arms_expected_total += scored["arms_expected"]
+        arms_matched_total += scored["arms_matched"]
+        for fam, counts in scored["per_family"].items():
+            agg = per_family_totals.setdefault(
+                fam, {"n_expected": 0, "n_extracted": 0, "n_correct": 0}
+            )
+            for k, v in counts.items():
+                agg[k] += v
+        per_doc.append({
+            "doc_id": doc_id,
+            "doc_type": doc_type,
+            "latency_ms": 0,
+            "tokens_in": 0,
+            "tokens_out": 0,
+            "estimated_cost_usd": 0.0,
+            "arms_expected": scored["arms_expected"],
+            "arms_matched": scored["arms_matched"],
+        })
+
+    _emit_output(
+        "legacy-cached", per_family_totals, per_doc,
+        arms_expected_total, arms_matched_total,
+        out_path=out_path,
+    )
+    return 0
+
+
 async def _run_eval(pipeline: str, out_path: Path | None) -> int:
+    if pipeline == "legacy-cached":
+        return await _run_eval_legacy_cached(out_path)
+
     from src.domain.models import DocumentType
 
     if pipeline == "legacy":
@@ -491,6 +611,7 @@ async def _run_eval(pipeline: str, out_path: Path | None) -> int:
                 "estimated_cost_usd": round(cost_usd, 6),
                 "arms_expected": scored["arms_expected"],
                 "arms_matched": scored["arms_matched"],
+                "extracted_arms": extracted_arms,
             }
         )
         total_latency_ms += latency_ms
@@ -504,50 +625,15 @@ async def _run_eval(pipeline: str, out_path: Path | None) -> int:
         except (RuntimeError, AttributeError):
             pass
 
-    per_family_out: dict[str, dict[str, float | int]] = {}
-    for fam, counts in per_family_totals.items():
-        n_exp = counts["n_expected"]
-        n_ext = counts["n_extracted"]
-        n_cor = counts["n_correct"]
-        per_family_out[fam] = {
-            "precision": round(n_cor / n_ext, 4) if n_ext else 0.0,
-            "recall": round(n_cor / n_exp, 4) if n_exp else 0.0,
-            "n_expected": n_exp,
-            "n_extracted": n_ext,
-            "n_correct": n_cor,
-        }
-
-    arm_mapping_accuracy = (
-        round(arms_matched_total / arms_expected_total, 4)
-        if arms_expected_total
-        else 0.0
+    _emit_output(
+        pipeline, per_family_totals, per_doc,
+        arms_expected_total, arms_matched_total,
+        total_latency_ms=total_latency_ms,
+        total_tokens_in=total_tokens_in,
+        total_tokens_out=total_tokens_out,
+        total_cost=total_cost,
+        out_path=out_path,
     )
-
-    output = {
-        "pipeline": pipeline,
-        "git_sha": _git_sha(),
-        "prompt_version": "v2.0",
-        "totals": {
-            "docs": len(fixtures),
-            "arms_expected": arms_expected_total,
-            "arms_matched": arms_matched_total,
-            "arm_mapping_accuracy": arm_mapping_accuracy,
-        },
-        "per_family": per_family_out,
-        "per_doc": per_doc,
-        "summary": {
-            "total_latency_ms": total_latency_ms,
-            "total_tokens_in": total_tokens_in,
-            "total_tokens_out": total_tokens_out,
-            "total_cost_usd": round(total_cost, 6),
-        },
-    }
-
-    if out_path is not None:
-        out_path.write_text(json.dumps(output, indent=2), encoding="utf-8")
-        print(f"\nResults written to {out_path}")
-
-    _print_summary(output)
     return 0
 
 
@@ -594,9 +680,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--pipeline",
-        choices=["new", "legacy"],
+        choices=["new", "legacy", "legacy-cached"],
         default="new",
-        help="Which extraction path to run.",
+        help="Which extraction path to run. 'legacy-cached' scores pre-extracted deployed data without LLM calls.",
     )
     parser.add_argument(
         "--out",

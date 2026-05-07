@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from src.infrastructure.gemini_service import (
     GEMINI_CACHE_MIN_TOKENS,
     GeminiLLMService,
+    _inline_pydantic_schema,
 )
 
 
@@ -222,3 +223,42 @@ async def test_cache_lifecycle_smoke() -> None:
         assert isinstance(result, _DummySchema)
     finally:
         await svc.delete_cache(cache_id)
+
+
+# ---------------------------------------------------------------------------
+# _inline_pydantic_schema
+# ---------------------------------------------------------------------------
+
+
+def test_inline_pydantic_schema_resolves_refs_and_drops_defs() -> None:
+    """$ref entries must be inlined and $defs must be absent in the result."""
+    from pydantic import BaseModel as BM
+
+    class Inner(BM):
+        x: str
+
+    class Outer(BM):
+        inner: Inner
+        tag: str
+
+    result = _inline_pydantic_schema(Outer)
+    assert "$defs" not in result
+    assert "$ref" not in str(result)
+    # 'inner' property should be inlined as an object with 'x'
+    inner_prop = result["properties"]["inner"]
+    assert inner_prop["type"] == "object"
+    assert "x" in inner_prop["properties"]
+
+
+def test_inline_pydantic_schema_idempotent_on_flat_schema() -> None:
+    """Flat schemas with no $ref/$defs should pass through unchanged."""
+    from pydantic import BaseModel as BM
+
+    class Flat(BM):
+        a: str
+        b: str
+
+    result = _inline_pydantic_schema(Flat)
+    assert "$defs" not in result
+    assert "$ref" not in str(result)
+    assert set(result["properties"].keys()) == {"a", "b"}

@@ -29,10 +29,10 @@ def test_no_inference_clause_present() -> None:
 def test_orr_fallback_only_in_response_rates() -> None:
     rr = FAMILY_PROMPTS[AttributeFamily.RESPONSE_RATES]
     assert "(CR + PR)" in rr or "CR + PR" in rr
-    assert "computed_orr" in rr
+    assert "SANCTIONED EXCEPTION" in rr
     for fam, p in FAMILY_PROMPTS.items():
         if fam != AttributeFamily.RESPONSE_RATES:
-            assert "computed_orr" not in p
+            assert "SANCTIONED EXCEPTION" not in p
 
 
 def test_shared_rules_not_inlined() -> None:

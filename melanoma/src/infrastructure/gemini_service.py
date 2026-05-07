@@ -35,6 +35,35 @@ GEMINI_CACHE_MIN_TOKENS = 32_768
 _CHARS_PER_TOKEN_ESTIMATE = 4
 
 
+def _inline_pydantic_schema(schema_cls: type[BaseModel]) -> dict[str, Any]:
+    """Render a Pydantic JSON schema with all ``$ref`` / ``$defs`` inlined.
+
+    Gemini's ``types.Schema`` validator does not understand ``$ref``; it
+    expects every nested sub-schema to be inlined. Pydantic's default
+    ``model_json_schema()`` emits ``$ref`` for nested models — including the
+    ``additionalProperties`` shape produced by ``dict[str, NestedModel]``.
+    Resolve refs once at the API boundary so callers can keep using Pydantic
+    models naturally for both schema declaration and response validation.
+    """
+    schema = schema_cls.model_json_schema()
+    defs: dict[str, Any] = schema.get("$defs", {})
+
+    def _resolve(node: Any) -> Any:
+        if isinstance(node, dict):
+            ref = node.get("$ref")
+            if isinstance(ref, str) and ref.startswith("#/$defs/"):
+                target = defs.get(ref.removeprefix("#/$defs/"))
+                if target is None:
+                    raise ValueError(f"Unresolvable $ref in schema: {ref}")
+                return _resolve(target)
+            return {k: _resolve(v) for k, v in node.items() if k != "$defs"}
+        if isinstance(node, list):
+            return [_resolve(v) for v in node]
+        return node
+
+    return _resolve(schema)
+
+
 def _repair_truncated_json(text: str) -> str:
     in_string = False
     escape_next = False
@@ -293,7 +322,7 @@ class GeminiLLMService(LLMService):
             temperature=temperature,
             max_output_tokens=effective_max_tokens,
             response_mime_type="application/json",
-            response_schema=response_schema,
+            response_schema=_inline_pydantic_schema(response_schema),
         )
 
         def _sync_call() -> Any:
@@ -435,7 +464,7 @@ class GeminiLLMService(LLMService):
             temperature=temperature,
             max_output_tokens=max_tokens,
             response_mime_type="application/json",
-            response_schema=response_schema,
+            response_schema=_inline_pydantic_schema(response_schema),
             cached_content=cache_id,
         )
 

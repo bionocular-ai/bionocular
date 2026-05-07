@@ -324,12 +324,12 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — context says 'KEYNOTE-716 (NCT03553836); pembrolizumab arm n=487, placebo arm n=489; "
         "N Engl J Med 2022.' Output:\n"
         "{\n"
-        '  "Pembrolizumab": {"nct_number": {"value": "NCT03553836", "quote": "..."}, '
-        '"trial_name": {"value": "KEYNOTE-716", "quote": "..."}, '
-        '"number_of_patients": {"value": "487", "quote": "..."}},\n'
-        '  "Placebo": {"nct_number": {"value": "NCT03553836", "quote": "..."}, '
-        '"trial_name": {"value": "KEYNOTE-716", "quote": "..."}, '
-        '"number_of_patients": {"value": "489", "quote": "..."}}\n'
+        '  "Pembrolizumab": {"nct_number": "NCT03553836", '
+        '"trial_name": "KEYNOTE-716", '
+        '"number_of_patients": "487"},\n'
+        '  "Placebo": {"nct_number": "NCT03553836", '
+        '"trial_name": "KEYNOTE-716", '
+        '"number_of_patients": "489"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -351,14 +351,13 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "SANCTIONED EXCEPTION (ORR ONLY): If `OBJECTIVE_RESPONSE_RATE` is not explicitly stated "
         "for THIS arm but both `COMPLETE_RESPONSE` (CR) and Partial Response (PR) counts/percentages "
         "ARE explicitly stated for THIS arm, compute `ORR = (CR + PR) / NUMBER_OF_PATIENTS`. "
-        "Return percentage to one decimal. Set `quote` to the verbatim sentence(s) you used "
-        "(CR sentence + PR sentence + N sentence). Set `source` to `computed_orr`. "
-        "Apply ONLY to ORR. No other attribute may be computed.\n\n"
+        "Return percentage to one decimal. Apply ONLY to ORR. "
+        "No other attribute may be computed.\n\n"
         "EXAMPLE — 'In the nivolumab arm (n=200), CR was 12 (6.0%) and PR was 48 (24.0%). ORR was not reported.' Output:\n"
         "{\n"
         '  "Nivolumab": {\n'
-        '    "complete_response": {"value": "6.0", "quote": "CR was 12 (6.0%)"},\n'
-        '    "objective_response_rate": {"value": "30.0", "quote": "CR was 12 (6.0%) and PR was 48 (24.0%) ... n=200", "source": "computed_orr"}\n'
+        '    "complete_response": "6.0",\n'
+        '    "objective_response_rate": "30.0"\n'
         "  }\n"
         "}\n\n"
         "{arms_block}"
@@ -381,12 +380,12 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — 'Median PFS was 14.7 months (95% CI 10.2-19.8) vs 5.6 months; HR 0.45 (0.33-0.61), p<0.001. "
         "12-month PFS rate was 56% vs 24%.' Output (per arm):\n"
         "{\n"
-        '  "Experimental": {"median_pfs": {"value": "14.7", "quote": "Median PFS was 14.7 months"}, '
-        '"hr_pfs": {"value": "0.45", "quote": "HR 0.45 (0.33-0.61)"}, '
-        '"ci_hr_pfs": {"value": "0.33-0.61", "quote": "(0.33-0.61)"}, '
-        '"pfs_rate_12m": {"value": "56", "quote": "12-month PFS rate was 56%"}},\n'
-        '  "Control": {"median_pfs": {"value": "5.6", "quote": "vs 5.6 months"}, '
-        '"pfs_rate_12m": {"value": "24", "quote": "vs 24%"}}\n'
+        '  "Experimental": {"median_pfs": "14.7", '
+        '"hr_pfs": "0.45", '
+        '"ci_hr_pfs": "0.33-0.61", '
+        '"pfs_rate_12m": "56"},\n'
+        '  "Control": {"median_pfs": "5.6", '
+        '"pfs_rate_12m": "24"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -408,12 +407,12 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — 'Median OS in the pembrolizumab group was not reached vs 16.9 months in the chemotherapy "
         "group; HR 0.63 (95% CI 0.50-0.79), p<0.001. 24-month OS was 55% vs 38%.' Output:\n"
         "{\n"
-        '  "Pembrolizumab": {"median_os": {"value": "NR", "quote": "Median OS in the pembrolizumab group was not reached"}, '
-        '"hr_os": {"value": "0.63", "quote": "HR 0.63 (95% CI 0.50-0.79)"}, '
-        '"ci_hr_os": {"value": "0.50-0.79", "quote": "(95% CI 0.50-0.79)"}, '
-        '"os_rate_24m": {"value": "55", "quote": "24-month OS was 55%"}},\n'
-        '  "Chemotherapy": {"median_os": {"value": "16.9", "quote": "vs 16.9 months in the chemotherapy group"}, '
-        '"os_rate_24m": {"value": "38", "quote": "vs 38%"}}\n'
+        '  "Pembrolizumab": {"median_os": "NR", '
+        '"hr_os": "0.63", '
+        '"ci_hr_os": "0.50-0.79", '
+        '"os_rate_24m": "55"},\n'
+        '  "Chemotherapy": {"median_os": "16.9", '
+        '"os_rate_24m": "38"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -437,10 +436,10 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — 'Median RFS was not reached in the dabrafenib+trametinib arm vs 16.6 months in placebo; "
         "HR 0.47 (95% CI 0.39-0.58).' Output:\n"
         "{\n"
-        '  "Dabrafenib+Trametinib": {"rfs": {"value": "NR", "quote": "Median RFS was not reached"}, '
-        '"hr_rfs": {"value": "0.47", "quote": "HR 0.47 (95% CI 0.39-0.58)"}, '
-        '"ci_hr_rfs": {"value": "0.39-0.58", "quote": "(95% CI 0.39-0.58)"}},\n'
-        '  "Placebo": {"rfs": {"value": "16.6", "quote": "vs 16.6 months in placebo"}}\n'
+        '  "Dabrafenib+Trametinib": {"rfs": "NR", '
+        '"hr_rfs": "0.47", '
+        '"ci_hr_rfs": "0.39-0.58"},\n'
+        '  "Placebo": {"rfs": "16.6"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -462,9 +461,9 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — 'Median time to response was 2.8 months in arm A and 3.1 months in arm B. "
         "Median TTP in arm A was 9.4 months.' Output:\n"
         "{\n"
-        '  "Arm A": {"ttr": {"value": "2.8", "quote": "Median time to response was 2.8 months in arm A"}, '
-        '"ttp": {"value": "9.4", "quote": "Median TTP in arm A was 9.4 months"}},\n'
-        '  "Arm B": {"ttr": {"value": "3.1", "quote": "and 3.1 months in arm B"}}\n'
+        '  "Arm A": {"ttr": "2.8", '
+        '"ttp": "9.4"},\n'
+        '  "Arm B": {"ttr": "3.1"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -483,9 +482,9 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — 'Any-grade AEs occurred in 196/200 (98%) in arm A. Grade 3+ AEs in 80 (40%). "
         "Discontinuations due to AE: 12 (6%).' Output:\n"
         "{\n"
-        '  "Arm A": {"ae": {"value": "98", "quote": "Any-grade AEs occurred in 196/200 (98%)"}, '
-        '"grade_3_plus_ae": {"value": "40", "quote": "Grade 3+ AEs in 80 (40%)"}, '
-        '"ae_leading_to_discontinuation": {"value": "6", "quote": "Discontinuations due to AE: 12 (6%)"}}\n'
+        '  "Arm A": {"ae": "98", '
+        '"grade_3_plus_ae": "40", '
+        '"ae_leading_to_discontinuation": "6"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -505,10 +504,10 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — any-cause AE table: 'Grade 3-4 colitis: arm A 5 (2.5%), arm B 1 (0.5%). "
         "Grade 3-4 ALT increased: arm A 8 (4.0%), arm B 2 (1.0%).' Output:\n"
         "{\n"
-        '  "Arm A": {"grade_3_plus_ae_colitis": {"value": "2.5", "quote": "Grade 3-4 colitis: arm A 5 (2.5%)"}, '
-        '"grade_3_plus_ae_alanine_aminotransferase": {"value": "4.0", "quote": "Grade 3-4 ALT increased: arm A 8 (4.0%)"}},\n'
-        '  "Arm B": {"grade_3_plus_ae_colitis": {"value": "0.5", "quote": "arm B 1 (0.5%)"}, '
-        '"grade_3_plus_ae_alanine_aminotransferase": {"value": "1.0", "quote": "arm B 2 (1.0%)"}}\n'
+        '  "Arm A": {"grade_3_plus_ae_colitis": "2.5", '
+        '"grade_3_plus_ae_alanine_aminotransferase": "4.0"},\n'
+        '  "Arm B": {"grade_3_plus_ae_colitis": "0.5", '
+        '"grade_3_plus_ae_alanine_aminotransferase": "1.0"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -527,9 +526,9 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — 'TEAEs of any grade occurred in 95% of patients in arm A. Grade 3+ TEAEs in 38%. "
         "Serious TEAEs in 22%.' Output:\n"
         "{\n"
-        '  "Arm A": {"teae": {"value": "95", "quote": "TEAEs of any grade occurred in 95% of patients in arm A"}, '
-        '"grade_3_plus_teae": {"value": "38", "quote": "Grade 3+ TEAEs in 38%"}, '
-        '"serious_teae": {"value": "22", "quote": "Serious TEAEs in 22%"}}\n'
+        '  "Arm A": {"teae": "95", '
+        '"grade_3_plus_teae": "38", '
+        '"serious_teae": "22"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -549,8 +548,8 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — TEAE table: 'Grade 3-4 TEAE neutropenia: arm A 18 (9.0%), arm B 4 (2.0%).' Output:\n"
         "{\n"
-        '  "Arm A": {"grade_3_plus_teae_neutropenia": {"value": "9.0", "quote": "Grade 3-4 TEAE neutropenia: arm A 18 (9.0%)"}},\n'
-        '  "Arm B": {"grade_3_plus_teae_neutropenia": {"value": "2.0", "quote": "arm B 4 (2.0%)"}}\n'
+        '  "Arm A": {"grade_3_plus_teae_neutropenia": "9.0"},\n'
+        '  "Arm B": {"grade_3_plus_teae_neutropenia": "2.0"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -569,9 +568,9 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "EXAMPLE — 'Treatment-related AEs of any grade occurred in 78% of arm A. Grade 3+ TRAEs in 25%. "
         "TRAEs leading to discontinuation in 7%.' Output:\n"
         "{\n"
-        '  "Arm A": {"trae": {"value": "78", "quote": "Treatment-related AEs of any grade occurred in 78% of arm A"}, '
-        '"grade_3_plus_trae": {"value": "25", "quote": "Grade 3+ TRAEs in 25%"}, '
-        '"trae_leading_to_discontinuation": {"value": "7", "quote": "TRAEs leading to discontinuation in 7%"}}\n'
+        '  "Arm A": {"trae": "78", '
+        '"grade_3_plus_trae": "25", '
+        '"trae_leading_to_discontinuation": "7"}\n'
         "}\n\n"
         "{arms_block}"
     ),
@@ -591,8 +590,8 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EXAMPLE — TRAE table: 'Grade 3-4 drug-related rash: arm A 6 (3.0%), arm B 1 (0.5%).' Output:\n"
         "{\n"
-        '  "Arm A": {"grade_3_plus_trae_rash": {"value": "3.0", "quote": "Grade 3-4 drug-related rash: arm A 6 (3.0%)"}},\n'
-        '  "Arm B": {"grade_3_plus_trae_rash": {"value": "0.5", "quote": "arm B 1 (0.5%)"}}\n'
+        '  "Arm A": {"grade_3_plus_trae_rash": "3.0"},\n'
+        '  "Arm B": {"grade_3_plus_trae_rash": "0.5"}\n'
         "}\n\n"
         "{arms_block}"
     ),

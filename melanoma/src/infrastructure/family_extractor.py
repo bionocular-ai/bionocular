@@ -45,9 +45,10 @@ _TOKEN_BUDGET_BASE = 200
 _TOKEN_BUDGET_PER_CELL = 60
 
 # Confidence heuristics for ExtractedAttribute.
-_CONFIDENCE_VALUE_AND_QUOTE = 0.9
+# Values come back from Gemini as plain strings (see _build_response_schema).
+# Source quotes are populated only for verifier-corrected cells (verifier.py).
+_CONFIDENCE_VALUE_PRESENT = 0.9
 _CONFIDENCE_EMPTY_VALUE = 0.3
-_CONFIDENCE_VALUE_NO_QUOTE = 0.0
 
 
 def _is_transient_error(exc: BaseException) -> bool:
@@ -56,13 +57,6 @@ def _is_transient_error(exc: BaseException) -> bool:
     if "429" in msg or "RESOURCE_EXHAUSTED" in msg or "RATE_LIMIT" in msg:
         return True
     return any(code in msg for code in ("500", "502", "503", "504"))
-
-
-class _ValueWithQuote(BaseModel):
-    """One extracted cell: the value and the verbatim sentence it came from."""
-
-    value: str = ""
-    quote: str = ""
 
 
 class FamilyExtractor:
@@ -148,17 +142,23 @@ class FamilyExtractor:
     def _build_response_schema(
         self,
         family: AttributeFamily,
-        arm_ids: list[str],  # noqa: ARG002 — kept for API symmetry / tests
+        arm_ids: list[str],
     ) -> type[BaseModel]:
         """Build the per-call Pydantic response schema.
 
-        The schema mirrors `FAMILY_TO_ATTRIBUTES[family]`: derived attributes
-        (MODALITY, TARGET) live outside that map, so they are naturally absent.
+        Gemini's ``types.Schema`` does not support open-ended maps
+        (``additionalProperties``), so we materialize one explicit field per
+        ``arm_id`` rather than ``dict[str, PerArm]``. The schema mirrors
+        ``FAMILY_TO_ATTRIBUTES[family]``; derived attributes (MODALITY, TARGET)
+        live outside that map and are naturally absent.
         """
         attrs = FAMILY_TO_ATTRIBUTES[family]
+        # Plain strings (not nested {value, quote} objects) keep the
+        # constraint-state count under Gemini's serving budget for the largest
+        # families. Source quotes are still populated downstream by the
+        # verifier on cells that fail first-pass validation.
         per_arm_fields: dict[str, Any] = {
-            attr.value: (_ValueWithQuote, Field(default_factory=_ValueWithQuote))
-            for attr in attrs
+            attr.value: (str, Field(default="")) for attr in attrs
         }
         per_arm_model = create_model(
             f"PerArm_{family.value}",
@@ -166,10 +166,20 @@ class FamilyExtractor:
             **per_arm_fields,
         )
 
+        arms_fields: dict[str, Any] = {
+            arm_id: (per_arm_model, Field(default_factory=per_arm_model))
+            for arm_id in arm_ids
+        }
+        arms_model = create_model(
+            f"Arms_{family.value}",
+            __base__=BaseModel,
+            **arms_fields,
+        )
+
         wrapper = create_model(
             f"FamilyExtractionResponse_{family.value}",
             __base__=BaseModel,
-            arms=(dict[str, per_arm_model], Field(default_factory=dict)),
+            arms=(arms_model, Field(default_factory=arms_model)),
         )
         return wrapper
 
@@ -216,7 +226,17 @@ class FamilyExtractor:
         }
         known = set(arm_ids)
 
-        arms_obj: dict[str, BaseModel] = getattr(response, "arms", {}) or {}
+        arms_model = getattr(response, "arms", None)
+        if arms_model is None:
+            return result
+        # `arms_model` is a dynamic Pydantic model with one field per arm_id
+        # (see _build_response_schema). Walk its declared fields, not __dict__,
+        # so we don't trip on private attrs and so unset arms surface as the
+        # default empty PerArm.
+        arms_obj: dict[str, BaseModel] = {
+            field_name: getattr(arms_model, field_name)
+            for field_name in arms_model.__class__.model_fields
+        }
         for arm_id, per_arm in arms_obj.items():
             if arm_id not in known:
                 logger.warning(
@@ -227,16 +247,13 @@ class FamilyExtractor:
                 continue
             arm_result: dict[AttributeType, ExtractedAttribute] = {}
             for attr in attrs:
-                cell = getattr(per_arm, attr.value, None)
-                if cell is None:
-                    continue
-                value = (cell.value or "").strip()
-                quote = (cell.quote or "").strip()
+                raw = getattr(per_arm, attr.value, "")
+                value = (raw or "").strip()
                 arm_result[attr] = ExtractedAttribute(
                     attribute_type=attr,
                     value=value,
-                    source_quote=quote,
-                    confidence=self._confidence_for(value, quote),
+                    source_quote="",
+                    confidence=self._confidence_for(value),
                     source=family.value,
                     validation_status=ValidationStatus.PENDING,
                 )
@@ -245,9 +262,5 @@ class FamilyExtractor:
         return result
 
     @staticmethod
-    def _confidence_for(value: str, quote: str) -> float:
-        if not value:
-            return _CONFIDENCE_EMPTY_VALUE
-        if not quote:
-            return _CONFIDENCE_VALUE_NO_QUOTE
-        return _CONFIDENCE_VALUE_AND_QUOTE
+    def _confidence_for(value: str) -> float:
+        return _CONFIDENCE_EMPTY_VALUE if not value else _CONFIDENCE_VALUE_PRESENT
