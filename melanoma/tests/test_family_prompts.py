@@ -108,3 +108,16 @@ def test_no_cross_family_attribute_leakage() -> None:
             assert (
                 "teae_" not in post_definitions
             ), f"{fam} prompt leaks teae_* attrs after definitions block"
+
+
+def test_trae_general_has_single_arm_relabel_clause() -> None:
+    p = FAMILY_PROMPTS[AttributeFamily.TRAE_GENERAL]
+    assert "single-arm" in p.lower() or "Phase 1" in p
+    assert "all AEs were considered treatment-related" in p \
+        or "all adverse events were considered" in p.lower()
+
+
+def test_efs_rfs_mfs_has_non_substitution_rule() -> None:
+    p = FAMILY_PROMPTS[AttributeFamily.EFS_RFS_MFS]
+    assert "never copy" in p.lower() or "do not substitute" in p.lower()
+    assert "PFS" in p and "OS" in p
