@@ -122,3 +122,8 @@ def test_other_content_always_included_in_slices() -> None:
         s = slice_for_family(family, parsed, raw_md=raw_md)
         assert s is not None, f"{family}: returned None unexpectedly"
         assert "24.3 months" in s, f"{family}: OTHER content not included in slice"
+
+    # When RESULTS is classified (non-empty), OTHER must appear exactly once — no duplication.
+    s = slice_for_family(AttributeFamily.PFS_FAMILY, parsed, raw_md=raw_md)
+    assert s is not None
+    assert s.count("24.3 months") == 1, "OTHER content duplicated in slice"

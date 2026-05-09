@@ -99,6 +99,21 @@ def _other_blocks_matching(parsed: ParsedDoc, regex: re.Pattern[str]) -> str:
     )
 
 
+def _other_blocks_not_matching(parsed: ParsedDoc, regex: re.Pattern[str]) -> str:
+    """Return OTHER blocks that did NOT match `regex` (complement of _other_blocks_matching).
+
+    Used to append only the unrescued OTHER content when the classified bucket is empty
+    and `_resolve_*` already keyword-rescued the matching blocks, preventing double-emission.
+    """
+    return _join(
+        [
+            b
+            for b in parsed.by_category.get(SectionCategory.OTHER, [])
+            if not regex.search(b)
+        ]
+    )
+
+
 def _grep_paragraphs(text: str, regex: re.Pattern[str]) -> str:
     if not text:
         return ""
@@ -170,10 +185,21 @@ def _ae_classification_sentence(methods_text: str) -> str:
     return " ".join(keep)
 
 
+_RESULTS_RESCUE_RE = re.compile(
+    r"\b(result|finding|efficacy|response|orr|median|survival|activity)\b", re.I
+)
+_SAFETY_RESCUE_RE = re.compile(
+    r"\b(adverse|safety|grade|toxicity|tolerability|teae|trae)\b", re.I
+)
+
+
 def slice_for_family(
     family: AttributeFamily, parsed: ParsedDoc, *, raw_md: str
 ) -> str | None:
     """Return the slice for `family`, or `None` to skip (optional families only)."""
+    results_raw = parsed.text_for(SectionCategory.RESULTS)
+    safety_raw = parsed.text_for(SectionCategory.SAFETY)
+
     title = parsed.text_for(SectionCategory.TITLE)
     abstract = _resolve_abstract(parsed, raw_md)
     methods = _resolve_methods(parsed, raw_md)
@@ -183,6 +209,13 @@ def slice_for_family(
     table_text = "\n\n".join(t.text for t in tables)
     other = parsed.text_for(SectionCategory.OTHER)
 
+    # When a classified bucket is non-empty, its resolver returns the bucket text
+    # directly without touching OTHER — so `other` can be appended in full.
+    # When the bucket is empty, the resolver keyword-rescues matching OTHER blocks,
+    # so we only append the non-matching remainder to avoid double-emission.
+    other_for_results = other if results_raw else _other_blocks_not_matching(parsed, _RESULTS_RESCUE_RE)
+    other_for_safety = other if safety_raw else _other_blocks_not_matching(parsed, _SAFETY_RESCUE_RE)
+
     if family is AttributeFamily.IDENTIFICATION:
         return _join([f"# Title\n{title}", abstract, methods, other])
 
@@ -191,14 +224,14 @@ def slice_for_family(
         AttributeFamily.PFS_FAMILY,
         AttributeFamily.OS_FAMILY,
     }:
-        return _join([abstract, results, table_text, other])
+        return _join([abstract, results, table_text, other_for_results])
 
     if family in {AttributeFamily.EFS_RFS_MFS, AttributeFamily.TIME_TO_METRICS}:
         anchor_pat = _TABLE_KEYWORDS_BY_FAMILY[family]
         haystack = _join([results, table_text, other])
         if not anchor_pat.search(haystack):
             return None
-        return _join([results, table_text, other])
+        return _join([results, table_text, other_for_results])
 
     if family in {
         AttributeFamily.AE_GENERAL,
@@ -213,6 +246,6 @@ def slice_for_family(
         signal = _join([safety, results, table_text, other])
         if family in _OPTIONAL_FAMILIES and not anchor_pat.search(signal):
             return None
-        return _join([ae_methods, safety, results, table_text, other])
+        return _join([ae_methods, safety, results, table_text, other_for_safety])
 
-    return _join([abstract, results, table_text, other])
+    return _join([abstract, results, table_text, other_for_results])
