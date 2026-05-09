@@ -98,3 +98,27 @@ def test_safety_fallback_grep_when_no_safety_section() -> None:
     s = slice_for_family(AttributeFamily.AE_GENERAL, parsed, raw_md=raw_md)
     assert "adverse events" in s.lower()
     assert "22%" in s
+
+
+def test_other_content_always_included_in_slices() -> None:
+    """OTHER-bucketed content must appear in every family slice regardless of keyword match."""
+    parsed = ParsedDoc()
+    parsed.by_category[SectionCategory.TITLE].append("Some Trial")
+    parsed.by_category[SectionCategory.ABSTRACT].append("Abstract text.")
+    parsed.by_category[SectionCategory.RESULTS].append("ORR was 45%.")
+    parsed.by_category[SectionCategory.OTHER].append(
+        "Key Points\n\nFindings: Median OS was 24.3 months (95% CI 18.1–31.2)."
+    )
+    raw_md = ""
+
+    for family in [
+        AttributeFamily.IDENTIFICATION,
+        AttributeFamily.RESPONSE_RATES,
+        AttributeFamily.PFS_FAMILY,
+        AttributeFamily.OS_FAMILY,
+        AttributeFamily.AE_GENERAL,
+        AttributeFamily.AE_GRADE3_SPECIFIC,
+    ]:
+        s = slice_for_family(family, parsed, raw_md=raw_md)
+        assert s is not None, f"{family}: returned None unexpectedly"
+        assert "24.3 months" in s, f"{family}: OTHER content not included in slice"

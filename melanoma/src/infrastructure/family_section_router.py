@@ -181,23 +181,24 @@ def slice_for_family(
     safety = _resolve_safety(parsed, raw_md)
     tables = _matching_tables(parsed, family)
     table_text = "\n\n".join(t.text for t in tables)
+    other = parsed.text_for(SectionCategory.OTHER)
 
     if family is AttributeFamily.IDENTIFICATION:
-        return _join([f"# Title\n{title}", abstract, methods])
+        return _join([f"# Title\n{title}", abstract, methods, other])
 
     if family in {
         AttributeFamily.RESPONSE_RATES,
         AttributeFamily.PFS_FAMILY,
         AttributeFamily.OS_FAMILY,
     }:
-        return _join([abstract, results, table_text])
+        return _join([abstract, results, table_text, other])
 
     if family in {AttributeFamily.EFS_RFS_MFS, AttributeFamily.TIME_TO_METRICS}:
         anchor_pat = _TABLE_KEYWORDS_BY_FAMILY[family]
-        haystack = _join([results, table_text, parsed.text_for(SectionCategory.OTHER)])
+        haystack = _join([results, table_text, other])
         if not anchor_pat.search(haystack):
             return None
-        return _join([results, table_text])
+        return _join([results, table_text, other])
 
     if family in {
         AttributeFamily.AE_GENERAL,
@@ -209,9 +210,9 @@ def slice_for_family(
     }:
         ae_methods = _ae_classification_sentence(methods)
         anchor_pat = _TABLE_KEYWORDS_BY_FAMILY[family]
-        signal = _join([safety, results, table_text])
+        signal = _join([safety, results, table_text, other])
         if family in _OPTIONAL_FAMILIES and not anchor_pat.search(signal):
             return None
-        return _join([ae_methods, safety, results, table_text])
+        return _join([ae_methods, safety, results, table_text, other])
 
-    return _join([abstract, results, table_text])
+    return _join([abstract, results, table_text, other])
