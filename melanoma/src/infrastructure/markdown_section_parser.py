@@ -154,7 +154,7 @@ def _norm(text: str) -> str:
 
 
 def classify_header(header_text: str) -> SectionCategory:
-    """Score a header against each category's lexicon; return argmax (tie → OTHER)."""
+    """Score a header against each category's lexicon; return argmax. Ties: DROP > SAFETY > OTHER."""
     norm = _norm(header_text)
     if not norm:
         return SectionCategory.OTHER
