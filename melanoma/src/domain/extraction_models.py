@@ -451,6 +451,7 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, tuple[AttributeType, ...]] = {
         # Safety — Specific AEs
         AttributeType.CRS,
         AttributeType.IRR,
+        AttributeType.WBC_DECREASED,
     ),
     AttributeFamily.AE_GRADE3_SPECIFIC: (
         AttributeType.GRADE_3_PLUS_AE_IMMUNE_RELATED,
@@ -480,6 +481,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, tuple[AttributeType, ...]] = {
         AttributeType.GRADE_3_PLUS_AE_HYPERTHYROIDISM,
         AttributeType.GRADE_3_PLUS_AE_AST_INCREASED,
         AttributeType.GRADE_3_PLUS_AE_VOMITING,
+        AttributeType.GRADE_3_PLUS_AE_NEUTROPHIL_COUNT_DECREASED,
+        AttributeType.GRADE_3_PLUS_AE_WBC_DECREASED,
     ),
     AttributeFamily.TEAE_GENERAL: (
         AttributeType.TEAE,
@@ -523,6 +526,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, tuple[AttributeType, ...]] = {
         AttributeType.GRADE_3_PLUS_TEAE_HYPERTHYROIDISM,
         AttributeType.GRADE_3_PLUS_TEAE_AST_INCREASED,
         AttributeType.GRADE_3_PLUS_TEAE_VOMITING,
+        AttributeType.GRADE_3_PLUS_TEAE_NEUTROPHIL_COUNT_DECREASED,
+        AttributeType.GRADE_3_PLUS_TEAE_WBC_DECREASED,
     ),
     AttributeFamily.TRAE_GENERAL: (
         AttributeType.TRAE,
@@ -566,6 +571,8 @@ FAMILY_TO_ATTRIBUTES: dict[AttributeFamily, tuple[AttributeType, ...]] = {
         AttributeType.GRADE_3_PLUS_TRAE_HYPERTHYROIDISM,
         AttributeType.GRADE_3_PLUS_TRAE_AST_INCREASED,
         AttributeType.GRADE_3_PLUS_TRAE_VOMITING,
+        AttributeType.GRADE_3_PLUS_TRAE_NEUTROPHIL_COUNT_DECREASED,
+        AttributeType.GRADE_3_PLUS_TRAE_WBC_DECREASED,
     ),
 }
 

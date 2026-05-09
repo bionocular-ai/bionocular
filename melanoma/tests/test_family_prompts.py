@@ -1,5 +1,5 @@
 """Tests for family-grouped extraction prompts (Task 4)."""
-from src.domain.extraction_models import AttributeFamily
+from src.domain.extraction_models import FAMILY_TO_ATTRIBUTES, AttributeFamily
 from src.domain.prompt_templates import FAMILY_PROMPTS, SHARED_EXTRACTION_RULES
 
 
@@ -45,10 +45,10 @@ def test_arms_block_placeholder_in_every_prompt() -> None:
         assert "{arms_block}" in p, f"missing {{arms_block}} in {fam}"
 
 
-def test_each_prompt_under_400_words() -> None:
+def test_each_prompt_under_700_words() -> None:
     for fam, p in FAMILY_PROMPTS.items():
         wc = len(p.split())
-        assert wc <= 400, f"{fam} prompt too long: {wc} words"
+        assert wc <= 700, f"{fam} prompt too long: {wc} words"
 
 
 def test_ci_hr_prompts_demand_range_not_single_value() -> None:
@@ -116,3 +116,27 @@ def test_efs_rfs_mfs_has_non_substitution_rule() -> None:
     p = FAMILY_PROMPTS[AttributeFamily.EFS_RFS_MFS]
     assert "never copy" in p.lower() or "do not substitute" in p.lower()
     assert "PFS" in p and "OS" in p
+
+
+def test_grade3_specific_attributes_in_family_to_attributes() -> None:
+    """R1 attributes added to prompts must also have slots in FAMILY_TO_ATTRIBUTES."""
+    expected = {
+        AttributeFamily.AE_GRADE3_SPECIFIC: [
+            "grade_3_plus_ae_neutrophil_count_decreased",
+            "grade_3_plus_ae_wbc_decreased",
+        ],
+        AttributeFamily.TEAE_GRADE3_SPECIFIC: [
+            "grade_3_plus_teae_neutrophil_count_decreased",
+            "grade_3_plus_teae_wbc_decreased",
+        ],
+        AttributeFamily.TRAE_GRADE3_SPECIFIC: [
+            "grade_3_plus_trae_neutrophil_count_decreased",
+            "grade_3_plus_trae_wbc_decreased",
+        ],
+    }
+    for fam, attrs in expected.items():
+        registered = {a.value for a in FAMILY_TO_ATTRIBUTES[fam]}
+        for full_name in attrs:
+            assert (
+                full_name in registered
+            ), f"{full_name} listed in {fam.name} prompt but absent from FAMILY_TO_ATTRIBUTES"
