@@ -49,6 +49,29 @@ def _read(name: str) -> str:
         ("Introduction", SectionCategory.DROP),
         ("Background", SectionCategory.DROP),
         ("Random nonsense header", SectionCategory.OTHER),
+        # METHODS additions
+        ("Purpose", SectionCategory.METHODS),
+        ("Participants", SectionCategory.METHODS),
+        ("Objectives", SectionCategory.METHODS),
+        ("Correlative Studies", SectionCategory.METHODS),
+        ("Pharmacokinetics", SectionCategory.METHODS),
+        ("Pharmacodynamics", SectionCategory.METHODS),
+        ("End Points", SectionCategory.METHODS),
+        ("Trial Registration", SectionCategory.METHODS),
+        ("Clinical Trial Registration", SectionCategory.METHODS),
+        # RESULTS additions
+        ("Patient Characteristics", SectionCategory.RESULTS),
+        ("Patient Disposition", SectionCategory.RESULTS),
+        ("Health-Related Quality of Life (QoL)", SectionCategory.RESULTS),
+        # SAFETY tie-break
+        ("Efficacy and Safety Assessments", SectionCategory.SAFETY),
+        ("Management of Toxic Effects", SectionCategory.SAFETY),
+        # DROP additions
+        ("Keywords", SectionCategory.DROP),
+        ("Key Words", SectionCategory.DROP),
+        ("Abbreviations", SectionCategory.DROP),
+        ("Conflict of Interest", SectionCategory.DROP),
+        ("Article Information", SectionCategory.DROP),
     ],
 )
 def test_classify_header(header: str, expected: SectionCategory) -> None:

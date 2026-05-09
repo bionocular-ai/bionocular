@@ -30,6 +30,7 @@ class SectionCategory(str, Enum):
     DROP = (
         "drop"  # explicit boilerplate — Research-in-context, Funding, References, etc.
     )
+    METADATA = "metadata"  # injected by add_publication_metadata.py
     OTHER = "other"  # unclassified — kept for fallback
 
 
@@ -60,6 +61,15 @@ _LEXICONS: dict[SectionCategory, dict[str, int]] = {
         "selection": 2,
         "monitoring": 2,
         "specimen": 3,
+        "purpose": 2,
+        "participants": 2,
+        "objective": 2,
+        "correlative": 2,
+        "pharmacokinetics": 2,
+        "pharmacodynamics": 2,
+        "end points": 4,
+        "trial registration": 3,
+        "registration": 2,
     },
     SectionCategory.RESULTS: {
         "result": 5,
@@ -74,6 +84,9 @@ _LEXICONS: dict[SectionCategory, dict[str, int]] = {
         "follow-up": 2,
         "followup": 2,
         "survival": 2,
+        "characteristics": 3,
+        "disposition": 3,
+        "qol": 2,
     },
     SectionCategory.SAFETY: {
         "safety": 5,
@@ -84,6 +97,7 @@ _LEXICONS: dict[SectionCategory, dict[str, int]] = {
         "teae": 4,
         "trae": 4,
         "grade": 1,
+        "management": 3,
     },
     SectionCategory.ABSTRACT: {
         "abstract": 6,
@@ -119,6 +133,14 @@ _LEXICONS: dict[SectionCategory, dict[str, int]] = {
         "author contribution": 6,
         "data sharing": 5,
         "ethics": 4,
+        "keywords": 4,
+        "key words": 4,
+        "abbreviations": 3,
+        "conflict of interest": 6,
+        "article information": 4,
+    },
+    SectionCategory.METADATA: {
+        "metadata": 10,
     },
 }
 
@@ -155,6 +177,8 @@ def classify_header(header_text: str) -> SectionCategory:
         # Tie that includes DROP → DROP wins (boilerplate is louder than canonical here).
         if SectionCategory.DROP in top_categories:
             return SectionCategory.DROP
+        if SectionCategory.SAFETY in top_categories:
+            return SectionCategory.SAFETY
         return SectionCategory.OTHER
     return best[0]
 
