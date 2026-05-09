@@ -17,10 +17,7 @@ import argparse
 import sys
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from app.publication_postprocessing_service import PublicationPostprocessingService
+from src.app.publication_postprocessing_service import PublicationPostprocessingService
 
 
 def main():

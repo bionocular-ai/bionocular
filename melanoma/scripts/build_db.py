@@ -10,11 +10,7 @@ import gzip
 import json
 import logging
 import sqlite3
-import sys
 from pathlib import Path
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.app.json_trials_service import JSONTrialsService
 
@@ -236,13 +232,6 @@ def transform_web_scrape_to_abstract(trial: dict, source_file: str) -> dict:
     from datetime import datetime
 
     trial_id = trial.get("trial_id", "")
-    nct_numbers = trial.get("nct_numbers", []) or trial.get("nct_number", "")
-
-    # Handle both list and string NCT numbers
-    if isinstance(nct_numbers, list):
-        nct_number = nct_numbers[0] if nct_numbers else trial_id
-    else:
-        nct_number = nct_numbers or trial_id
 
     # Get arm results
     arm_results = trial.get("arm_results", {})
@@ -334,7 +323,9 @@ def build_database(
                 cursor = conn.cursor()
                 for i in range(0, len(filtered_items), batch_size):
                     chunk = filtered_items[i : i + batch_size]
-                    cursor.executemany(abstract_sql, [_abstract_to_row(item) for item in chunk])
+                    cursor.executemany(
+                        abstract_sql, [_abstract_to_row(item) for item in chunk]
+                    )
                 total_inserted += len(filtered_items)
 
                 logger.info(
@@ -560,16 +551,16 @@ def build_database(
         # Load trial_categorization seed (Modality, Target, Trial_Name) if present
         cat_seed_file = deployed_dir / "trial_categorization_seed.json"
         if cat_seed_file.exists():
-            logger.info(f"Loading trial_categorization seed from {cat_seed_file.name}...")
+            logger.info(
+                f"Loading trial_categorization seed from {cat_seed_file.name}..."
+            )
             try:
                 with open(cat_seed_file, encoding="utf-8") as f:
                     cat_list = json.load(f)
                 if cat_list:
                     conn.execute("DELETE FROM trial_categorization")
                     cursor = conn.cursor()
-                    cursor.execute(
-                        "PRAGMA table_info(trial_categorization)"
-                    )
+                    cursor.execute("PRAGMA table_info(trial_categorization)")
                     table_cols = [r[1] for r in cursor.fetchall()]
 
                     # Insert using the intersection of:
@@ -613,7 +604,9 @@ def build_database(
                         """
                     )
                     conn.commit()
-                    logger.info(f"Loaded {len(cat_list)} rows into trial_categorization")
+                    logger.info(
+                        f"Loaded {len(cat_list)} rows into trial_categorization"
+                    )
             except Exception as e:
                 logger.error(f"Error loading trial_categorization seed: {e}")
 

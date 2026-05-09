@@ -10,7 +10,7 @@ Nivolumab (a programmed death 1 [PD-1] checkpoint inhibitor) and ipilimumab (a c
 
 We assigned, in a 1:1:1 ratio, 945 previously untreated patients with unresectable stage III or IV melanoma to nivolumab alone, nivolumab plus ipilimumab, or ipilimumab alone. Progression-free survival and overall survival were coprimary end points. Results regarding progression-free survival are presented here.
 
-# **RESULTS**
+## **RESULTS**
 
 The median progression-free survival was 11.5 months (95% confidence interval [CI], 8.9 to 16.7) with nivolumab plus ipilimumab, as compared with 2.9 months (95% CI, 2.8 to 3.4) with ipilimumab (hazard ratio for death or disease progression, 0.42; 99.5% CI, 0.31 to 0.57; P<0.001), and 6.9 months (95% CI, 4.3 to 9.5) with nivolumab (hazard ratio for the comparison with ipilimumab, 0.57; 99.5% CI, 0.43 to 0.76; P<0.001). In patients with tumors positive for the PD-1 ligand (PD-L1), the median progression-free survival was 14.0 months in the nivolumab-plus-ipilimumab group and in the nivolumab group, but in patients with PD-L1–negative tumors, progression-free survival was longer with the combination therapy than with nivolumab alone (11.2 months [95% CI, 8.0 to not reached] vs. 5.3 months [95% CI, 2.8 to 7.1]). Treatment-related adverse events of grade 3 or 4 occurred in 16.3% of the patients in the nivolumab group, 55.0% of those in the nivolumab-plus-ipilimumab group, and 27.3% of those in the ipilimumab group.
 

@@ -294,9 +294,9 @@ def test_validate_cancer_type_rejects_unknown() -> None:
     assert ok is False
 
 
-def test_validate_cancer_type_accepts_melanoma() -> None:
+def test_validate_cancer_type_normalizes_melanoma() -> None:
     ok, normalized, _ = validate_for_attribute(AttributeType.CANCER_TYPE, "Melanoma")
-    assert ok is True and normalized.lower() == "melanoma"
+    assert ok is True and normalized == "Cutaneous Melanoma"
 
 
 def test_validate_line_of_treatment_rejects_freeform() -> None:

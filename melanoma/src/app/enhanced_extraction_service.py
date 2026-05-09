@@ -46,7 +46,7 @@ from ..infrastructure.family_extractor import FamilyExtractor
 from ..infrastructure.family_section_router import slice_for_family
 from ..infrastructure.file_path_extractor import FilePathExtractor
 from ..infrastructure.gemini_service import GeminiLLMService
-from ..infrastructure.markdown_section_parser import parse_markdown
+from ..infrastructure.markdown_section_parser import SectionCategory, parse_markdown
 from ..infrastructure.prompt_templates import ExtractionPromptTemplateProvider
 from ..infrastructure.treatment_arm_separator import TreatmentArmSeparator
 from ..infrastructure.value_validator import validate_for_attribute
@@ -54,7 +54,27 @@ from ..infrastructure.verifier import verify_low_confidence
 
 logger = logging.getLogger(__name__)
 
+
 # ── Module constants ─────────────────────────────────────────────────────────
+def _parse_metadata_section(text: str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for line in text.splitlines():
+        if ":" in line:
+            k, _, v = line.partition(":")
+            out[k.strip()] = v.strip()
+    return out
+
+
+_CONFERENCE_DOC_ID_RE = re.compile(r"^(ASCO|ESMO)_(\d{4})", re.IGNORECASE)
+
+
+def _parse_conference_from_doc_id(doc_id: str) -> dict[str, str]:
+    m = _CONFERENCE_DOC_ID_RE.match(doc_id)
+    if not m:
+        return {}
+    return {"conference": m.group(1).upper(), "published_year": m.group(2)}
+
+
 PROMPT_VERSION = "v2.0"
 LEGACY_FLAG_ENV = "USE_LEGACY_RAG_EXTRACTION"
 LEGACY_FLAG_ENABLED_VALUE = "1"
@@ -221,6 +241,7 @@ class EnhancedExtractionService:
             per_arm: dict[str, dict[AttributeType, ExtractedAttribute]] = {
                 a.arm_id: {} for a in arms
             }
+            pub_meta: dict[str, str] = {}
 
             if doc_type == DocumentType.ABSTRACT:
                 families = self._families_for_doc_type(doc_type)
@@ -229,6 +250,9 @@ class EnhancedExtractionService:
                 }
             else:
                 parsed = parse_markdown(doc_text)
+                pub_meta = _parse_metadata_section(
+                    parsed.text_for(SectionCategory.METADATA)
+                )
                 if parsed.unclassified:
                     logger.info(
                         "section_parser_unclassified doc_id=%s headers=%s",
@@ -278,6 +302,48 @@ class EnhancedExtractionService:
                     if n
                     else ValidationStatus.EMPTY,
                 )
+                # PDF_NUMBER is the document filename — never extracted by LLM.
+                per_arm[arm.arm_id][AttributeType.PDF_NUMBER] = ExtractedAttribute(
+                    attribute_type=AttributeType.PDF_NUMBER,
+                    value=doc_id,
+                    source_quote="",
+                    confidence=1.0,
+                    source="file_path",
+                    validation_status=ValidationStatus.VALID,
+                )
+                # PUBLICATION_NAME / PUBLICATION_YEAR from injected # Metadata section.
+                for attr_type, meta_key in (
+                    (AttributeType.PUBLICATION_NAME, "citation"),
+                    (AttributeType.PUBLICATION_YEAR, "year"),
+                ):
+                    val = pub_meta.get(meta_key, "")
+                    per_arm[arm.arm_id][attr_type] = ExtractedAttribute(
+                        attribute_type=attr_type,
+                        value=val,
+                        source_quote="",
+                        confidence=1.0 if val else 0.0,
+                        source="metadata_section",
+                        validation_status=ValidationStatus.VALID
+                        if val
+                        else ValidationStatus.EMPTY,
+                    )
+                # CONFERENCE / PUBLISHED_YEAR from doc_id (e.g. ASCO_2024).
+                conf_meta = _parse_conference_from_doc_id(doc_id)
+                for attr_type, meta_key in (
+                    (AttributeType.CONFERENCE, "conference"),
+                    (AttributeType.PUBLISHED_YEAR, "published_year"),
+                ):
+                    val = conf_meta.get(meta_key, "")
+                    per_arm[arm.arm_id][attr_type] = ExtractedAttribute(
+                        attribute_type=attr_type,
+                        value=val,
+                        source_quote="",
+                        confidence=1.0 if val else 0.0,
+                        source="file_path",
+                        validation_status=ValidationStatus.VALID
+                        if val
+                        else ValidationStatus.EMPTY,
+                    )
 
             # Validate-then-verify pass.
             for arm_id, attrs in per_arm.items():

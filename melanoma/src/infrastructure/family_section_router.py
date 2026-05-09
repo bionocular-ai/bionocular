@@ -213,8 +213,12 @@ def slice_for_family(
     # directly without touching OTHER — so `other` can be appended in full.
     # When the bucket is empty, the resolver keyword-rescues matching OTHER blocks,
     # so we only append the non-matching remainder to avoid double-emission.
-    other_for_results = other if results_raw else _other_blocks_not_matching(parsed, _RESULTS_RESCUE_RE)
-    other_for_safety = other if safety_raw else _other_blocks_not_matching(parsed, _SAFETY_RESCUE_RE)
+    other_for_results = (
+        other if results_raw else _other_blocks_not_matching(parsed, _RESULTS_RESCUE_RE)
+    )
+    other_for_safety = (
+        other if safety_raw else _other_blocks_not_matching(parsed, _SAFETY_RESCUE_RE)
+    )
 
     if family is AttributeFamily.IDENTIFICATION:
         return _join([f"# Title\n{title}", abstract, methods, other])

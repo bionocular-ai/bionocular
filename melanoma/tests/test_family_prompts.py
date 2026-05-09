@@ -51,13 +51,6 @@ def test_each_prompt_under_400_words() -> None:
         assert wc <= 400, f"{fam} prompt too long: {wc} words"
 
 
-def test_identification_prompt_has_citation_location_hint() -> None:
-    p = FAMILY_PROMPTS[AttributeFamily.IDENTIFICATION]
-    assert "below the article title" in p.lower()
-    assert "N Engl J Med" in p
-    assert "year fallback" in p.lower() or "line immediately above" in p.lower()
-
-
 def test_ci_hr_prompts_demand_range_not_single_value() -> None:
     for fam in [
         AttributeFamily.PFS_FAMILY,

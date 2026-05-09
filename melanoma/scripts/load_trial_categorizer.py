@@ -30,7 +30,10 @@ DEFAULT_INPUT = (
 )
 DEFAULT_DB = Path(__file__).parent.parent / "data" / "trials_db" / "trials.db"
 DEFAULT_SEED_OUT = (
-    Path(__file__).parent.parent / "data" / "deployed" / "trial_categorization_seed.json"
+    Path(__file__).parent.parent
+    / "data"
+    / "deployed"
+    / "trial_categorization_seed.json"
 )
 
 
@@ -152,7 +155,9 @@ def _backfill_cancer_type_from_api_discovery(conn: sqlite3.Connection) -> None:
 def _parse_categorizer_file(input_path: Path) -> list[tuple[str, str | None]]:
     rows: list[tuple[str, str | None]] = []
     with open(input_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f, fieldnames=("NCT", "Modality", "Target", "Trial_Name"))
+        reader = csv.DictReader(
+            f, fieldnames=("NCT", "Modality", "Target", "Trial_Name")
+        )
         for rec in reader:
             nct = (rec.get("NCT") or "").strip().strip('"')
             if not nct or nct.upper() == "NCT":
@@ -203,10 +208,7 @@ def main() -> int:
 
     if args.export_seed:
         args.seed_out.parent.mkdir(parents=True, exist_ok=True)
-        seed_data = [
-            {"nct_number": r[0], "modality": r[1]}
-            for r in rows
-        ]
+        seed_data = [{"nct_number": r[0], "modality": r[1]} for r in rows]
         with open(args.seed_out, "w", encoding="utf-8") as f:
             json.dump(seed_data, f, indent=2)
         logger.info("Wrote %s rows to %s", len(seed_data), args.seed_out)
@@ -229,7 +231,9 @@ def main() -> int:
         conn.commit()
         conn.close()
 
-        logger.info("Loaded %s rows into trial_categorization at %s", len(rows), args.db)
+        logger.info(
+            "Loaded %s rows into trial_categorization at %s", len(rows), args.db
+        )
         return 0
 
     except (sqlite3.Error, OSError) as e:

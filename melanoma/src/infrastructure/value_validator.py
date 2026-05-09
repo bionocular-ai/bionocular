@@ -257,17 +257,18 @@ def _build_percentage_attrs() -> frozenset[AttributeType]:
 
 _PERCENTAGE_ATTRS: frozenset[AttributeType] = _build_percentage_attrs()
 
-_CANCER_TYPES: frozenset[str] = frozenset(
-    {
-        "melanoma",
-        "uveal melanoma",
-        "cutaneous melanoma",
-        "mucosal melanoma",
-        "merkel cell carcinoma",
-        "cutaneous squamous cell carcinoma",
-        "basal cell carcinoma",
-    }
-)
+_CANCER_TYPE_CANONICAL: dict[str, str] = {
+    "cutaneous melanoma": "Cutaneous Melanoma",
+    "melanoma": "Cutaneous Melanoma",  # normalize generic → default subtype
+    "cutaneous melanoma with brain/cns metastasis": "Cutaneous Melanoma with Brain/CNS Metastasis",
+    "uveal melanoma": "Uveal Melanoma",
+    "acral melanoma": "Acral Melanoma",
+    "mucosal melanoma": "Mucosal Melanoma",
+    "cutaneous squamous cell carcinoma": "Cutaneous Squamous Cell Carcinoma",
+    "basal cell carcinoma": "Basal Cell Carcinoma",
+    "merkel cell carcinoma": "Merkel Cell Carcinoma",
+}
+_CANCER_TYPES: frozenset[str] = frozenset(_CANCER_TYPE_CANONICAL.keys())
 
 _LINES_OF_TREATMENT: frozenset[str] = frozenset(
     {
@@ -358,8 +359,9 @@ def validate_cancer_type(v: str) -> Result:
     if v == "":
         return (True, "", "")
     s = v.strip()
-    if s.lower() in _CANCER_TYPES:
-        return (True, s, "")
+    canonical = _CANCER_TYPE_CANONICAL.get(s.lower())
+    if canonical is not None:
+        return (True, canonical, "")
     return (False, v, "cancer_type not in controlled vocabulary")
 
 

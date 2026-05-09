@@ -19,10 +19,6 @@ import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-# Add project root for imports
-project_root = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(project_root))
-
 from src.infrastructure.config import CLINICAL_TRIAL_DB_PATH
 
 
@@ -59,9 +55,7 @@ def main() -> int:
         cursor = conn.cursor()
 
         # When was our cache last updated? (end of 30-day window – all dates from API)
-        cursor.execute(
-            "SELECT max(updated_at) as t FROM clinical_trials_cache"
-        )
+        cursor.execute("SELECT max(updated_at) as t FROM clinical_trials_cache")
         row = cursor.fetchone()
         if row and row["t"]:
             try:

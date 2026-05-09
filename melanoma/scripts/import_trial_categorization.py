@@ -72,18 +72,21 @@ def main() -> int:
                 if not nct:
                     skipped += 1
                     continue
-                conn.execute(_UPSERT, (
-                    nct,
-                    _cell(row, "cancer_type"),
-                    _cell(row, "treatment_name"),
-                    _cell(row, "modality"),
-                    _cell(row, "biomarker"),
-                    _cell(row, "stage"),
-                    _cell(row, "line_of_therapy"),
-                    _cell(row, "previous_treatment_criteria"),
-                    _cell(row, "extraction_status"),
-                    _cell(row, "error_message"),
-                ))
+                conn.execute(
+                    _UPSERT,
+                    (
+                        nct,
+                        _cell(row, "cancer_type"),
+                        _cell(row, "treatment_name"),
+                        _cell(row, "modality"),
+                        _cell(row, "biomarker"),
+                        _cell(row, "stage"),
+                        _cell(row, "line_of_therapy"),
+                        _cell(row, "previous_treatment_criteria"),
+                        _cell(row, "extraction_status"),
+                        _cell(row, "error_message"),
+                    ),
+                )
                 inserted += 1
 
             print(f"  {inserted:>4} inserted  {skipped:>3} skipped  ← {rel}")
@@ -100,4 +103,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

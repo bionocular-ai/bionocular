@@ -34,7 +34,6 @@ import asyncio
 import json
 import os
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -91,6 +90,10 @@ def _dry_run() -> int:
     failures: list[str] = []
     for entry in fixtures:
         doc_id = entry.get("doc_id")
+        if not isinstance(doc_id, str) or not doc_id:
+            failures.append(f"manifest entry missing doc_id: {entry}")
+            print(f"  [FAIL] manifest entry missing doc_id: {entry}")
+            continue
         expected_arm_count = entry.get("expected_arm_count")
         try:
             text, expected = _load_fixture(doc_id)
@@ -112,7 +115,9 @@ def _dry_run() -> int:
     if failures:
         print(f"\nDRY RUN FAILED: {len(failures)} issue(s)")
         return 1
-    print(f"\nDRY RUN OK: {len(fixtures)} fixtures found, all parseable, ready to eval.")
+    print(
+        f"\nDRY RUN OK: {len(fixtures)} fixtures found, all parseable, ready to eval."
+    )
     return 0
 
 
@@ -193,7 +198,6 @@ def _score_doc(
     """
     from src.domain.extraction_models import (
         FAMILY_TO_ATTRIBUTES,
-        AttributeType,
     )
 
     attr_to_family: dict[str, str] = {}
@@ -452,7 +456,9 @@ def _emit_output(
             "n_correct": n_cor,
         }
     arm_mapping_accuracy = (
-        round(arms_matched_total / arms_expected_total, 4) if arms_expected_total else 0.0
+        round(arms_matched_total / arms_expected_total, 4)
+        if arms_expected_total
+        else 0.0
     )
     output = {
         "pipeline": pipeline,
@@ -480,7 +486,6 @@ def _emit_output(
 
 
 async def _run_eval_legacy_cached(out_path: Path | None) -> int:
-    sys.path.insert(0, str(REPO_ROOT))
     fixtures = _load_manifest()
     per_doc: list[dict[str, Any]] = []
     per_family_totals: dict[str, dict[str, int]] = {}
@@ -506,20 +511,25 @@ async def _run_eval_legacy_cached(out_path: Path | None) -> int:
             )
             for k, v in counts.items():
                 agg[k] += v
-        per_doc.append({
-            "doc_id": doc_id,
-            "doc_type": doc_type,
-            "latency_ms": 0,
-            "tokens_in": 0,
-            "tokens_out": 0,
-            "estimated_cost_usd": 0.0,
-            "arms_expected": scored["arms_expected"],
-            "arms_matched": scored["arms_matched"],
-        })
+        per_doc.append(
+            {
+                "doc_id": doc_id,
+                "doc_type": doc_type,
+                "latency_ms": 0,
+                "tokens_in": 0,
+                "tokens_out": 0,
+                "estimated_cost_usd": 0.0,
+                "arms_expected": scored["arms_expected"],
+                "arms_matched": scored["arms_matched"],
+            }
+        )
 
     _emit_output(
-        "legacy-cached", per_family_totals, per_doc,
-        arms_expected_total, arms_matched_total,
+        "legacy-cached",
+        per_family_totals,
+        per_doc,
+        arms_expected_total,
+        arms_matched_total,
         out_path=out_path,
     )
     return 0
@@ -573,8 +583,14 @@ async def _run_eval(pipeline: str, out_path: Path | None) -> int:
         except (RuntimeError, ValueError) as exc:
             print(f"[ERROR] {doc_id}: {exc}")
             per_doc.append(
-                {"doc_id": doc_id, "error": str(exc), "latency_ms": 0,
-                 "tokens_in": 0, "tokens_out": 0, "estimated_cost_usd": 0.0}
+                {
+                    "doc_id": doc_id,
+                    "error": str(exc),
+                    "latency_ms": 0,
+                    "tokens_in": 0,
+                    "tokens_out": 0,
+                    "estimated_cost_usd": 0.0,
+                }
             )
             continue
         latency_ms = int((time.perf_counter() - t0) * 1000)
@@ -626,8 +642,11 @@ async def _run_eval(pipeline: str, out_path: Path | None) -> int:
             pass
 
     _emit_output(
-        pipeline, per_family_totals, per_doc,
-        arms_expected_total, arms_matched_total,
+        pipeline,
+        per_family_totals,
+        per_doc,
+        arms_expected_total,
+        arms_matched_total,
         total_latency_ms=total_latency_ms,
         total_tokens_in=total_tokens_in,
         total_tokens_out=total_tokens_out,
@@ -700,9 +719,6 @@ def main() -> int:
     if args.dry_run:
         return _dry_run()
 
-    # Add repo root to sys.path so `src.*` imports resolve when run via
-    # `poetry run python3 scripts/eval_holdout.py`.
-    sys.path.insert(0, str(REPO_ROOT))
     return asyncio.run(_run_eval(args.pipeline, args.out))
 
 

@@ -15,10 +15,12 @@ import json
 import sqlite3
 from pathlib import Path
 
-
 DEFAULT_DB = Path(__file__).parent.parent / "data" / "trials_db" / "trials.db"
 DEFAULT_OUT = (
-    Path(__file__).parent.parent / "data" / "deployed" / "trial_categorization_seed.json"
+    Path(__file__).parent.parent
+    / "data"
+    / "deployed"
+    / "trial_categorization_seed.json"
 )
 
 
@@ -44,10 +46,7 @@ def export_seed(db_path: Path, out_path: Path) -> int:
             """
         )
         rows = cur.fetchall()
-        payload = [
-            {col: r[col] for col in table_cols}
-            for r in rows
-        ]
+        payload = [{col: r[col] for col in table_cols} for r in rows]
     finally:
         conn.close()
 
@@ -81,4 +80,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
