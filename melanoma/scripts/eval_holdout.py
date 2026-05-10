@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import datetime
 import json
 import os
 import subprocess
@@ -535,7 +536,7 @@ async def _run_eval_legacy_cached(out_path: Path | None) -> int:
     return 0
 
 
-async def _run_eval(pipeline: str, out_path: Path | None) -> int:
+async def _run_eval(pipeline: str, out_path: Path | None, doc_filter: str | None = None) -> int:
     if pipeline == "legacy-cached":
         return await _run_eval_legacy_cached(out_path)
 
@@ -560,6 +561,8 @@ async def _run_eval(pipeline: str, out_path: Path | None) -> int:
 
     for entry in fixtures:
         doc_id = entry["doc_id"]
+        if doc_filter and doc_id != doc_filter:
+            continue
         doc_type_str = entry["doc_type"]
         doc_type = (
             DocumentType.PUBLICATION
@@ -703,23 +706,30 @@ def main() -> int:
         default="new",
         help="Which extraction path to run. 'legacy-cached' scores pre-extracted deployed data without LLM calls.",
     )
+    _ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
+    _default_out = Path("data/output/Eval_holdout_May_2026") / f"eval_new_pipeline_{_ts}.json"
     parser.add_argument(
         "--out",
         type=Path,
-        default=None,
-        help="Optional path to write the full JSON report.",
+        default=_default_out,
+        help="Path to write the full JSON report (default: data/output/eval_new_pipeline_YYYY-MM-DD_HH-MM.json).",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Validate fixtures + manifest only; no Gemini calls.",
     )
+    parser.add_argument(
+        "--doc",
+        metavar="DOC_ID",
+        help="Run eval for a single fixture (e.g. ASCO_2024_9525).",
+    )
     args = parser.parse_args()
 
     if args.dry_run:
         return _dry_run()
 
-    return asyncio.run(_run_eval(args.pipeline, args.out))
+    return asyncio.run(_run_eval(args.pipeline, args.out, doc_filter=args.doc))
 
 
 if __name__ == "__main__":

@@ -1,5 +1,10 @@
 # Combined Nivolumab and Ipilimumab or Monotherapy in Untreated Melanoma
 
+# Metadata
+journal: N Engl J Med
+citation: N Engl J Med 2015;373:23-34.
+year: 2015
+
 # ABSTRACT
 
 ## **BACKGROUND**
@@ -20,11 +25,11 @@ Among previously untreated patients with metastatic melanoma, nivolumab alone or
 
 This article was published on May 31, 2015, at NEJM.org.
 
-N Engl J Med 2015;373:23-34.
+N Engl J Med 2015;373:23-34. 
 
 DOI: 10.1056/NEJMoa1504030 
 
-*Copyright © 2015 Massachusetts Medical Society.* 
+# **INTRODUCTION**
 
 CONSIDERABLE PROGRESS IN THE TREATment of metastatic melanoma has been made in the past 5 years, with the approval of immune checkpoint–blocking antibodies and, in parallel, agents targeting aberrant signaling in the 40 to 50% of melanomas with *BRAF* mutations. <sup>1-6</sup> Ipilimumab, an anti–cytotoxic T-lymphocyte–associated antigen 4 (CTLA-4) antibody, acts to up-regulate antitumor immunity and was the first agent to be associated with an improvement in overall survival in a phase 3 study involving patients with metastatic melanoma. <sup>5,6</sup> Ipilimumab was associated with responses in 10% and 15% of patients <sup>5,6</sup>; approximately 20% of treated patients had long-term survival. <sup>7,8</sup>
 
@@ -176,7 +181,7 @@ In this randomized, double-blind, phase 3 study involving patients with previous
 
 The median progression-free survival that was observed with the combination of nivolumab and ipilimumab in this study (11.7 months in patients with *BRAF* mutation) is similar to that recently reported with combined BRAF and MEK inhibition in patients with *BRAF*-mutated metastatic melanoma (9.9 months with vemurafenib and cobimetinib2 and 9.3 to 11.4 months with dabrafenib and trametinib3,4). However, it remains unclear how the duration of response with nivolumab and ipilimumab compares with that observed with combined BRAF and MEK inhibition. The rate of objective response in the nivolumab-plus-ipilimumab group (57.6%) is numerically higher than that observed with PD-1 blockade alone in patients with advanced melanoma (40% with nivolumab in previously untreated patients with wild-type *BRAF*<sup>9</sup> or 33% with pembrolizumab in previously treated patients and previously untreated patients12). Given the results of a phase 1 trial in which nivolumab plus ipilimumab was associated with a survival rate of 79% at 2 years,18 as well as the long-term survival data reported for ipilimumab,7,8 it will be interesting to determine whether the efficacy results reported here will be reflected in an overall survival benefit.
 
-| **Table 3. Adverse Events.**\* | | | | | | |
+| **Table 3. Adverse Events.**\* | | | | | | | 
 |---------------------------------------------------------------|-----------------------------------------|--------------|--------------------------------------|--------------|-----------------------|--------------|
 | Event                                                         | Nivolumab<br>(N=313)                    |              | Nivolumab plus Ipilimumab<br>(N=313) |              | Ipilimumab<br>(N=311) |              |
 |                                                               | Any                                     | Grade 3 or 4 | Any                                  | Grade 3 or 4 | Any                   | Grade 3 or 4 |

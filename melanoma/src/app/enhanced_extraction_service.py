@@ -79,11 +79,7 @@ PROMPT_VERSION = "v2.0"
 LEGACY_FLAG_ENV = "USE_LEGACY_RAG_EXTRACTION"
 LEGACY_FLAG_ENABLED_VALUE = "1"
 
-# Families excluded from abstract extraction. Abstracts rarely report these
-# longer-horizon endpoints, so spending an LLM call on them is wasted.
-_ABSTRACT_EXCLUDED_FAMILIES: frozenset[AttributeFamily] = frozenset(
-    {AttributeFamily.EFS_RFS_MFS, AttributeFamily.TIME_TO_METRICS}
-)
+_ABSTRACT_EXCLUDED_FAMILIES: frozenset[AttributeFamily] = frozenset()
 
 
 class EnhancedExtractionService:

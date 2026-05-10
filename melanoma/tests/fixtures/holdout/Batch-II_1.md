@@ -1,5 +1,10 @@
 # **Dabrafenib and trametinib versus dabrafenib and placebo for Val600 BRAF-mutant melanoma: a multicentre, double-blind, phase 3 randomised controlled trial**
 
+# Metadata
+journal: Lancet
+citation: Lancet 2015; 386: 444–51
+year: 2015
+
 # **Summary**
 
 ## **Background**
@@ -22,7 +27,7 @@ The improvement in overall survival establishes the combination of dabrafenib an
 
 GlaxoSmithKline.
 
-Published **Online** May 31, 2015 http://dx.doi.org/10.1016/ S0140-6736(15)60898-4
+Published **Online** May 31, 2015 http://dx.doi.org/10.1016/S0140-6736(15)60898-4
 
 Lancet 2015; 386: 444–51
 

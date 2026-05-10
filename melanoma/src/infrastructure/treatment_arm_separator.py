@@ -133,7 +133,7 @@ RULES:
 FIELDS:
 - arm_id: "arm_1", "arm_2", ... (sequential)
 - arm_name: drug or treatment name(s) as referred to in the text
-- generic_name: strict pharmacological/generic name without doses or "arm" suffix (e.g., "Nivolumab", "Dabrafenib + Trametinib", "Placebo")
+- generic_name: strict pharmacological/generic name of the DEFINING treatment for this arm only. Do NOT include drugs from shared continuation phases or crossover treatments received by all arms. (e.g., "Nivolumab", "Dabrafenib + Trametinib", "Placebo"). For lead-in/run-in designs where each arm differs only in induction, use the induction drug(s) — not the shared subsequent regimen.
 - combination_drugs: list of individual drugs for combination arms; [] for monotherapy/placebo/non-drug
 - arm_type: one of [monotherapy, combination, placebo, control, dose_variation, unknown]
 - line_of_treatment: one of [first_line, second_line, third_line_plus, adjuvant, neoadjuvant, maintenance, unknown]. Infer from Methods (e.g., "previously untreated" -> first_line; "after failure of >=1 prior therapy" -> second_line).
