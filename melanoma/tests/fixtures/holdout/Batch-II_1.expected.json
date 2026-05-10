@@ -6,8 +6,8 @@
       "arm_id": "arm_1",
       "arm_name": "Dabrafenib + Trametinib",
       "generic_name": "Dabrafenib + Trametinib",
-      "dose": "",
-      "dosing_schedule": "",
+      "dose": "Dabrafenib 150 mg + Trametinib 2 mg",
+      "dosing_schedule": "Dabrafenib BID + Trametinib OD",
       "patient_count": 211,
       "arm_type": "combination",
       "combination_drugs": [
@@ -23,7 +23,7 @@
       "warnings": [],
       "attributes": {
         "publication_name": {
-          "value": "Lancet 2015; 386: 444\u201351",
+          "value": "Lancet 2015; 386: 444–51",
           "confidence": 1.0,
           "validation_status": "validated",
           "source_chunks": [
@@ -1189,8 +1189,8 @@
       "arm_id": "arm_2",
       "arm_name": "Dabrafenib",
       "generic_name": "Dabrafenib",
-      "dose": "",
-      "dosing_schedule": "",
+      "dose": "150 mg",
+      "dosing_schedule": "BID",
       "patient_count": 212,
       "arm_type": "monotherapy",
       "combination_drugs": [],
@@ -1203,7 +1203,7 @@
       "warnings": [],
       "attributes": {
         "publication_name": {
-          "value": "Lancet 2015; 386: 444\u201351",
+          "value": "Lancet 2015; 386: 444–51",
           "confidence": 1.0,
           "validation_status": "validated",
           "source_chunks": [

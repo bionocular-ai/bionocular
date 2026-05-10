@@ -137,8 +137,20 @@ FIELDS:
 - combination_drugs: list of individual drugs for combination arms; [] for monotherapy/placebo/non-drug
 - arm_type: one of [monotherapy, combination, placebo, control, dose_variation, unknown]
 - line_of_treatment: one of [first_line, second_line, third_line_plus, adjuvant, neoadjuvant, maintenance, unknown]. Infer from Methods (e.g., "previously untreated" -> first_line; "after failure of >=1 prior therapy" -> second_line).
-- dose: dose with units if specified, else null
-- dosing_schedule: schedule (e.g., "Q3W", "every 2 weeks") if specified, else null
+- dose: Dose with units.
+    Monotherapy: "<value> <unit>" (e.g., "480 mg", "3 mg/kg", "150 mg").
+    Combination: "<Drug1> <dose1> <unit> + <Drug2> <dose2> <unit>" — always include the drug name or abbreviation from the source text before each dose value (e.g., "Nivo 1 mg/kg + Ipi 3 mg/kg", "Dabrafenib 150 mg + Trametinib 2 mg", "NIVO 480 mg + RELA 160 mg + IPI 1 mg/kg").
+    Cross-arm inference: if this arm's dose is not stated explicitly but each component drug's dose appears in a sibling arm of this document, derive it in the same "Drug dose + Drug dose" format.
+    null if not specified and not derivable.
+- dosing_schedule: Schedule using standard abbreviations only — never prose ("every 2 weeks" → "Q2W"; "twice daily" → "BID"; "once daily" → "OD").
+    Abbreviations: QD/OD, BID, TID, QW, Q2W, Q3W, Q4W, Q6W, Q8W, Q12W.
+    Cycles: "Q3W x4" (not "Q3W for 4 cycles").
+    Sequential: "Q3W x4, then Q2W".
+    Combination same schedule for all drugs: single abbrev with no drug prefix (e.g., "Q4W" when all drugs are Q4W).
+    Combination with any differing schedules: "<Drug1> <sched> + <Drug2> <sched>" for every drug (e.g., "Nivo Q4W + Rela Q4W + Ipi Q8W").
+    Include route (IV, SC, oral) only when explicitly stated in source text.
+    Cross-arm inference: same logic as dose — derive from sibling arms if not explicit.
+    null if not specified and not derivable.
 - patient_count: integer N for this arm if explicitly stated, else 0
 - nct_number: NCT identifier if found in the document, else ""
 - source_text: the verbatim sentence from the document that defines this arm
@@ -158,7 +170,7 @@ OUTPUT FORMAT (JSON ONLY - no markdown, no explanations):
       "arm_type": "combination",
       "line_of_treatment": "first_line",
       "dose": "Nivo 1 mg/kg + Ipi 3 mg/kg",
-      "dosing_schedule": "Q3W x 4 then Nivo Q2W",
+      "dosing_schedule": "Q3W x4, then Nivo Q2W",
       "patient_count": 314,
       "nct_number": "NCT01844505",
       "source_text": "Patients were randomly assigned to receive nivolumab plus ipilimumab...",

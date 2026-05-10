@@ -6,8 +6,8 @@
       "arm_id": "arm_1",
       "arm_name": "Dabrafenib + Trametinib",
       "generic_name": "Dabrafenib + Trametinib",
-      "dose": "150 mg (Dabrafenib), 2 mg (Trametinib)",
-      "dosing_schedule": "BD (Dabrafenib), OD (Trametinib)",
+      "dose": "Dabrafenib 150 mg + Trametinib 2 mg",
+      "dosing_schedule": "Dabrafenib BD + Trametinib OD",
       "patient_count": 438,
       "arm_type": "combination",
       "combination_drugs": [

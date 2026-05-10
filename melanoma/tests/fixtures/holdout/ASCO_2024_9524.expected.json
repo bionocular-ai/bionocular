@@ -7,7 +7,7 @@
       "arm_name": "Nivolumab + Relatlimab",
       "generic_name": "Nivolumab + Relatlimab",
       "dose": "NIVO 480 mg + RELA 160 mg",
-      "dosing_schedule": "Fixed-dose combination (FDC)",
+      "dosing_schedule": "Q4W",
       "patient_count": 355,
       "arm_type": "combination",
       "combination_drugs": [
