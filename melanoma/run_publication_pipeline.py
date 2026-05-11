@@ -24,22 +24,12 @@ os.environ.setdefault("EXTRACTION_MODEL", "gemini-3.1-pro-preview")
 load_dotenv()
 
 from src.app.enhanced_extraction_service import EnhancedExtractionService
-from src.domain.constants import get_ordered_attribute_list, get_ordered_attributes
-from src.domain.extraction_models import AttributeType, PUBLICATION_ATTRIBUTES
-from src.domain.models import (
-    ChunkingConfiguration,
-    ChunkWithEmbedding,
-    EmbeddingConfiguration,
-)
-from src.infrastructure.arm_aware_rag_provider import ArmAwareRAGContextProvider
-from src.infrastructure.attribute_extractor import LLMAttributeExtractor
+from src.domain.constants import get_ordered_attributes
+from src.domain.extraction_models import PUBLICATION_ATTRIBUTES
+from src.domain.models import DocumentType
 from src.infrastructure.cost_calculator import CostCalculator, ModelType
 from src.infrastructure.family_extractor import FamilyExtractor
 from src.infrastructure.gemini_service import GeminiLLMService
-from src.infrastructure.langchain.chunking import LangChainChunkingService
-from src.infrastructure.langchain.embeddings import LangChainEmbeddingService
-from src.infrastructure.langchain.vector_store import LangChainVectorStore
-from src.infrastructure.prompt_templates import ExtractionPromptTemplateProvider
 from src.infrastructure.treatment_arm_separator import TreatmentArmSeparator
 
 # Configure logging
@@ -51,17 +41,15 @@ logger = logging.getLogger(__name__)
 
 # ── Pipeline configuration ────────────────────────────────────────────────────
 TEST_MODE = False          # Set False for full processing
-MAX_PUBLICATIONS_TEST = 3  # Number of publications to process in test mode
-TEST_FILE_OVERRIDE = "Batch-I_3.md"  # Set to "" to use MAX_PUBLICATIONS_TEST instead
+MAX_PUBLICATIONS_TEST = 2  # Number of publications to process in test mode
+TEST_FILE_OVERRIDE = ""    # Set to "" to use MAX_PUBLICATIONS_TEST instead
 
 PUBLICATIONS_DIR = Path("data/postprocessed/Publications")
 
-# Concurrent LLM requests for attribute extraction.
-# Vertex AI Standard PayGo Tier 1: 500k TPM, 30k RPM for Gemini Pro.
-# 20 concurrent attributes generates ~240–400 RPM and ~150k tokens per
-# publication — well within limits. Increase toward 30–50 for faster runs;
-# GeminiLLMService retries on 429 as a safety net.
-CONCURRENT_ATTRIBUTE_REQUESTS = 20
+# Resume from a previous partial run. Set to the path of an existing
+# extraction_results_Publications_*.json to skip already-processed pubs
+# and append new results into that same file.
+RESUME_FILE: str = "data/extraction_results_Publications_final_70.json"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -196,7 +184,7 @@ async def main():
     logger.info("Starting Publication Extraction Pipeline")
 
     try:
-        # Clean vector database to avoid conflicts/duplicates
+        # Clean any stale vector database from previous runs
         chroma_db_path = Path("chroma_db")
         if chroma_db_path.exists():
             logger.info(f"Cleaning existing vector database: {chroma_db_path}")
@@ -219,41 +207,13 @@ async def main():
             cost_calculator=cost_calculator,
         )
 
-        # ── RAG infrastructure ────────────────────────────────────────────────
-        embedding_service = LangChainEmbeddingService()
-        vector_store_service = LangChainVectorStore(
-            embedding_service=embedding_service,
-            collection_name="publication_pipeline_trials",
-        )
-        chunking_config = ChunkingConfiguration(
-            max_chunk_size=1000,
-            chunk_overlap=200,
-            preserve_tables=True,
-            include_headers=True,
-        )
-        chunking_strategy = LangChainChunkingService(chunking_config)
-        rag_provider = ArmAwareRAGContextProvider(
-            vector_store=vector_store_service,
-            embedding_service=embedding_service,
-        )
-
         # ── Extraction components ─────────────────────────────────────────────
         arm_separator = TreatmentArmSeparator(llm_service=llm_service)
-        prompt_provider = ExtractionPromptTemplateProvider()
-        attribute_extractor = LLMAttributeExtractor(
-            llm_service=llm_service,
-            prompt_provider=prompt_provider,
-        )
-
         family_extractor = FamilyExtractor(gemini=llm_service)
         extraction_service = EnhancedExtractionService(
             treatment_arm_separator=arm_separator,
-            arm_aware_rag_provider=rag_provider,
-            attribute_extractor=attribute_extractor,
-            llm_service=llm_service,
             clinical_trials_api_service=None,
             enable_cost_tracking=False,  # GeminiLLMService tracks costs internally
-            max_concurrent_attributes=CONCURRENT_ATTRIBUTE_REQUESTS,
             family_extractor=family_extractor,
             gemini=llm_service,
         )
@@ -290,14 +250,18 @@ async def main():
 
         logger.info(f"Loaded content for {len(all_publications_metadata)} publication(s)")
 
-        # ── Ordered attribute list (spec-only) ────────────────────────────────
-        attributes_to_extract = get_ordered_attribute_list(PUBLICATION_ATTRIBUTES)
         allowed_fields = {attr.value for attr in PUBLICATION_ATTRIBUTES}
 
-        logger.info(
-            f"Extracting {len(attributes_to_extract)} attributes for "
-            f"{len(all_publications_metadata)} publication(s)"
-        )
+        logger.info(f"Processing {len(all_publications_metadata)} publication(s)")
+
+        # ── Resume from prior partial run ──────────────────────────────────────
+        already_done: set[str] = set()
+        resume_path = Path(RESUME_FILE) if RESUME_FILE else None
+        if resume_path and resume_path.exists():
+            with open(resume_path, encoding="utf-8") as f:
+                prior = json.load(f)
+            already_done = {p["pub_id"] for p in prior.get("publications", [])}
+            logger.info(f"Resuming — skipping {len(already_done)} pub(s) already in {resume_path.name}")
 
         # ── Extract attributes ─────────────────────────────────────────────────
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -305,67 +269,36 @@ async def main():
         data_dir.mkdir(exist_ok=True)
         output_file = data_dir / f"extraction_results_Publications_{timestamp}.json"
         cost_report_file = data_dir / f"cost_report_Publications_{timestamp}.json"
-        embedding_config = EmbeddingConfiguration()
 
-        all_results = []
+        all_results: list = []
+        processed_metadata: list = []  # parallel to all_results — only actually-processed pubs
 
         for idx, pub_meta in enumerate(all_publications_metadata):
             pub_id = pub_meta["pub_id"]
             content = pub_meta["content"]
-            pub_file = pub_meta["file"]
+
+            if pub_id in already_done:
+                logger.info(f"Skipping {pub_id} (already processed)")
+                continue
 
             logger.info(f"\n{'=' * 60}")
             logger.info(f"PROCESSING PUBLICATION {idx + 1}/{len(all_publications_metadata)}: {pub_id}")
             logger.info(f"{'=' * 60}")
 
-            # Embed this publication into a fresh vector store
-            logger.info(f"  Embedding {pub_id} into vector store...")
-            chunks = await chunking_strategy.chunk_content(
-                content=content,
-                configuration=chunking_config,
-                document_id=pub_id,
-                filename=str(pub_file),
-            )
-            if chunks:
-                chunk_texts = [chunk.content for chunk in chunks]
-                embeddings = await embedding_service.generate_embeddings_batch(chunk_texts, embedding_config)
-                chunks_with_embeddings = [
-                    ChunkWithEmbedding(
-                        id=chunk.id,
-                        document_id=chunk.document_id,
-                        content=chunk.content,
-                        chunk_type=chunk.chunk_type,
-                        metadata=chunk.metadata,
-                        sequence_number=chunk.sequence_number,
-                        token_count=chunk.token_count,
-                        created_at=chunk.created_at,
-                        embedding=embedding,
-                    )
-                    for chunk, embedding in zip(chunks, embeddings)
-                ]
-                await vector_store_service.upsert_chunks(chunks_with_embeddings)
-                logger.info(f"  Embedded {len(chunks_with_embeddings)} chunks")
-
-            result = await extraction_service.extract_attributes_from_abstract_batch(
-                abstract_text=content,
-                abstract_id=pub_id,
-                attributes=attributes_to_extract,
-                context_chunks_per_arm=10,
-                similarity_threshold=0.1,
-                include_api_data=False,
-                file_path=str(pub_file),
-            )
+            try:
+                result = await extraction_service.extract(content, pub_id, DocumentType.PUBLICATION)
+            except Exception as exc:
+                logger.error(f"Publication {pub_id} failed — skipping: {exc}")
+                continue
 
             all_results.append(result)
+            processed_metadata.append(pub_meta)
 
             # Save incrementally so progress is not lost on crash/kill
-            _save_results(all_results, all_publications_metadata, output_file, TEST_MODE, allowed_fields)
+            _save_results(all_results, processed_metadata, output_file, TEST_MODE, allowed_fields)
             cost_calculator.save_detailed_report(str(cost_report_file))
-            logger.info(f"  [incremental] Saved {len(all_results)}/{len(all_publications_metadata)} pub(s) → {output_file.name}")
-
-            # Clear vector store ready for next publication
-            await vector_store_service.clear_store()
-            logger.info(f"  Vector store cleared")
+            remaining = len(all_publications_metadata) - len(already_done)
+            logger.info(f"  [incremental] Saved {len(all_results)}/{remaining} pub(s) → {output_file.name}")
 
             logger.info(f"Publication {pub_id} completed!")
             logger.info(f"  Arms: {len(result.arm_results)}")

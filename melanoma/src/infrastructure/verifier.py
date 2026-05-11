@@ -68,7 +68,7 @@ async def verify_low_confidence(
             'If the document does not state this for this arm, return value="", quote="".'
         )
         result = await gemini.cached_or_inline_generate(
-            cache_id, doc_text, prompt, VerifierSchema, max_tokens=500
+            cache_id, doc_text, prompt, VerifierSchema, max_tokens=2000
         )
         ok, normalized, _ = validate_for_attribute(attribute, result.value)
         if ok or result.value == "":

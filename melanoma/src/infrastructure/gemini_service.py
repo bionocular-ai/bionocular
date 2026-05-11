@@ -8,7 +8,7 @@ import random
 import re
 from typing import Any, Optional, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from ..domain.extraction_interfaces import LLMService
 from .cost_calculator import CostCalculator
@@ -153,7 +153,7 @@ class GeminiLLMService(LLMService):
         api_key: str,
         model: str = _DEFAULT_MODEL,
         temperature: float = 0.0,
-        max_tokens: int = 8192,
+        max_tokens: int = 16384,
         cost_calculator: Optional[CostCalculator] = None,
     ) -> None:
         if not api_key:
@@ -350,7 +350,16 @@ class GeminiLLMService(LLMService):
                 # Fallback: parse from JSON text (covers SDK versions that don't
                 # populate `parsed` reliably).
                 text = response.text or ""
-                return response_schema.model_validate_json(text)
+                try:
+                    return response_schema.model_validate_json(text)
+                except ValidationError:
+                    # Gemini may return truncated JSON when output is long (e.g.
+                    # a verbatim quote that hits max_tokens). Try the repair path
+                    # before treating this as a hard failure.
+                    repaired = _parse_json_response(text)
+                    if repaired:
+                        return response_schema.model_validate(repaired)
+                    raise
             except Exception as exc:
                 last_exc = exc
                 if self._is_rate_limit_error(exc) and attempt < max_retries - 1:
@@ -462,7 +471,7 @@ class GeminiLLMService(LLMService):
 
         config = types.GenerateContentConfig(
             temperature=temperature,
-            max_output_tokens=max_tokens,
+            max_output_tokens=max(max_tokens, self._max_tokens),
             response_mime_type="application/json",
             response_schema=_inline_pydantic_schema(response_schema),
             cached_content=cache_id,
@@ -486,7 +495,13 @@ class GeminiLLMService(LLMService):
         if isinstance(parsed, response_schema):
             return parsed
         text = response.text or ""
-        return response_schema.model_validate_json(text)
+        try:
+            return response_schema.model_validate_json(text)
+        except ValidationError:
+            repaired = _parse_json_response(text)
+            if repaired:
+                return response_schema.model_validate(repaired)
+            raise
 
     async def delete_cache(self, cache_id: str | None) -> None:
         """Delete a previously created context cache. No-op when `cache_id` is None."""

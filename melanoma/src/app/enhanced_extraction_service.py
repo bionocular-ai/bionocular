@@ -276,9 +276,18 @@ class EnhancedExtractionService:
                         cache_id, family_inputs[fam], fam, arms
                     )
                     for fam in families
-                ]
+                ],
+                return_exceptions=True,
             )
-            for fr in family_results:
+            for fam, fr in zip(families, family_results):
+                if isinstance(fr, BaseException):
+                    logger.error(
+                        "family_extraction_failed doc_id=%s family=%s error=%s",
+                        doc_id,
+                        fam.value,
+                        fr,
+                    )
+                    continue
                 for arm_id, attrs in fr.items():
                     if arm_id in per_arm:
                         per_arm[arm_id].update(attrs)
@@ -379,8 +388,7 @@ class EnhancedExtractionService:
     ) -> tuple[AttributeFamily, ...]:
         """Return the families to extract for a given document type.
 
-        Abstracts skip ``EFS_RFS_MFS`` and ``TIME_TO_METRICS`` (rarely
-        reported in conference abstracts). Publications get all 12 families.
+        Currently returns all 12 families for both abstracts and publications.
         """
         all_families = tuple(FAMILY_TO_ATTRIBUTES.keys())
         if doc_type == DocumentType.ABSTRACT:

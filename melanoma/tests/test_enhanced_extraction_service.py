@@ -119,13 +119,11 @@ async def test_extract_raises_when_legacy_flag_set_without_legacy_deps(
 # ── Family selection ────────────────────────────────────────────────────────
 
 
-def test_families_for_doc_type_abstract_excludes_efs_and_ttm() -> None:
+def test_families_for_doc_type_abstract_includes_all_families() -> None:
     service = _make_service()
     families = service._families_for_doc_type(DocumentType.ABSTRACT)
-    assert AttributeFamily.EFS_RFS_MFS not in families
-    assert AttributeFamily.TIME_TO_METRICS not in families
-    # Sanity: still returns the rest (12 - 2 = 10)
-    assert len(families) == len(FAMILY_TO_ATTRIBUTES) - 2
+    assert set(families) == set(FAMILY_TO_ATTRIBUTES.keys())
+    assert len(families) == 12
 
 
 def test_families_for_doc_type_publication_includes_all_12() -> None:
