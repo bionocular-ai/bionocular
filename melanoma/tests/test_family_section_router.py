@@ -11,7 +11,7 @@ from src.infrastructure.markdown_section_parser import (
     parse_markdown,
 )
 
-PUBS = Path(__file__).parents[1] / "data" / "postprocessed" / "Publications"
+PUBS = Path(__file__).parent / "fixtures" / "holdout"
 
 
 @pytest.fixture

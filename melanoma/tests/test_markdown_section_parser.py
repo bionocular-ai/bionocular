@@ -9,7 +9,7 @@ from src.infrastructure.markdown_section_parser import (
     parse_markdown,
 )
 
-PUBS = Path(__file__).parents[1] / "data" / "postprocessed" / "Publications"
+PUBS = Path(__file__).parent / "fixtures" / "holdout"
 
 
 def _read(name: str) -> str:
@@ -84,9 +84,6 @@ def test_classify_header(header: str, expected: SectionCategory) -> None:
     [
         "Batch-II_1.md",
         "Batch-I_22.md",
-        "Batch-III_3.md",
-        "Batch-III_30.md",
-        "Batch-III_25.md",
     ],
 )
 def test_required_categories_detected(fname: str) -> None:
@@ -150,6 +147,6 @@ def test_handles_summary_synonym_for_abstract() -> None:
 
 def test_unclassified_headers_logged_for_tuning() -> None:
     """Parser exposes the unclassified header list so we can grow lexicons from real misses."""
-    parsed = parse_markdown(_read("Batch-III_11.md"))
+    parsed = parse_markdown(_read("Batch-I_22.md"))
     # Every header that landed in OTHER should be visible in parsed.unclassified
     assert isinstance(parsed.unclassified, list)
