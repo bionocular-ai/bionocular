@@ -20,8 +20,12 @@ import re
 import sys
 from pathlib import Path
 
-DEFAULT_EXPORT_DIR = Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_exports"
-DEFAULT_MERGED_DIR = Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_merged"
+DEFAULT_EXPORT_DIR = (
+    Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_exports"
+)
+DEFAULT_MERGED_DIR = (
+    Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_merged"
+)
 NCT_PATTERN = re.compile(r"^NCT\d+$", re.IGNORECASE)
 
 
@@ -54,7 +58,8 @@ def main() -> int:
         return 1
 
     trial_files = sorted(
-        f for f in args.export_dir.iterdir()
+        f
+        for f in args.export_dir.iterdir()
         if f.is_file() and f.suffix == ".txt" and NCT_PATTERN.match(f.stem)
     )
     if not trial_files:
@@ -64,7 +69,11 @@ def main() -> int:
     args.out_dir.mkdir(parents=True, exist_ok=True)
     # Remove existing batch files so the merged dir only contains batches from this run
     for path in args.out_dir.iterdir():
-        if path.is_file() and path.name.startswith("trials_batch_") and path.suffix == ".txt":
+        if (
+            path.is_file()
+            and path.name.startswith("trials_batch_")
+            and path.suffix == ".txt"
+        ):
             path.unlink()
     batch_size = max(1, args.trials_per_file)
     batch_num = 1

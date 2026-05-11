@@ -2,20 +2,34 @@
 
 This service integrates RAG-enhanced extraction with Clinical Trials API
 data for comprehensive clinical trial data extraction.
+
+Two extraction paths are supported:
+
+* The new family-grouped path (default), driven by
+  :class:`FamilyExtractor` + verifier + drug enricher with Gemini context
+  caching.
+* The legacy RAG + per-attribute path, kept behind the
+  ``USE_LEGACY_RAG_EXTRACTION`` env flag for fallback during the rollout.
 """
 
 import asyncio
 import logging
+import os
 import re
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from ..domain.extraction_interfaces import AttributeExtractor, LLMService
 from ..domain.extraction_models import (
+    FAMILY_TO_ATTRIBUTES,
     AttributeConfigurationFactory,
+    AttributeFamily,
     AttributeType,
     ExtractedAttribute,
+    ValidationStatus,
 )
+from ..domain.models import DocumentType
+from ..domain.prompt_templates import SHARED_EXTRACTION_RULES
 from ..domain.treatment_arm_models import (
     ArmSpecificContext,
     TreatmentArm,
@@ -27,11 +41,45 @@ from ..infrastructure.batch_attribute_extractor import BatchAttributeExtractor
 from ..infrastructure.clinical_trials_api_service import ClinicalTrialsAPIService
 from ..infrastructure.cost_calculator import CostCalculator
 from ..infrastructure.cost_tracking_llm_service import CostTrackingLLMService
+from ..infrastructure.drug_enricher import enrich_result
+from ..infrastructure.family_extractor import FamilyExtractor
+from ..infrastructure.family_section_router import slice_for_family
 from ..infrastructure.file_path_extractor import FilePathExtractor
+from ..infrastructure.gemini_service import GeminiLLMService
+from ..infrastructure.markdown_section_parser import SectionCategory, parse_markdown
 from ..infrastructure.prompt_templates import ExtractionPromptTemplateProvider
 from ..infrastructure.treatment_arm_separator import TreatmentArmSeparator
+from ..infrastructure.value_validator import validate_for_attribute
+from ..infrastructure.verifier import verify_low_confidence
 
 logger = logging.getLogger(__name__)
+
+
+# ── Module constants ─────────────────────────────────────────────────────────
+def _parse_metadata_section(text: str) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for line in text.splitlines():
+        if ":" in line:
+            k, _, v = line.partition(":")
+            out[k.strip()] = v.strip()
+    return out
+
+
+_CONFERENCE_DOC_ID_RE = re.compile(r"^(ASCO|ESMO)_(\d{4})", re.IGNORECASE)
+
+
+def _parse_conference_from_doc_id(doc_id: str) -> dict[str, str]:
+    m = _CONFERENCE_DOC_ID_RE.match(doc_id)
+    if not m:
+        return {}
+    return {"conference": m.group(1).upper(), "published_year": m.group(2)}
+
+
+PROMPT_VERSION = "v2.0"
+LEGACY_FLAG_ENV = "USE_LEGACY_RAG_EXTRACTION"
+LEGACY_FLAG_ENABLED_VALUE = "1"
+
+_ABSTRACT_EXCLUDED_FAMILIES: frozenset[AttributeFamily] = frozenset()
 
 
 class EnhancedExtractionService:
@@ -48,23 +96,35 @@ class EnhancedExtractionService:
     def __init__(
         self,
         treatment_arm_separator: TreatmentArmSeparator,
-        arm_aware_rag_provider: ArmAwareRAGContextProvider,
-        attribute_extractor: AttributeExtractor,
-        llm_service: LLMService,
+        arm_aware_rag_provider: Optional[ArmAwareRAGContextProvider] = None,
+        attribute_extractor: Optional[AttributeExtractor] = None,
+        llm_service: Optional[LLMService] = None,
         clinical_trials_api_service: Optional[ClinicalTrialsAPIService] = None,
         enable_cost_tracking: bool = True,
         max_concurrent_attributes: int = 20,
+        family_extractor: Optional[FamilyExtractor] = None,
+        gemini: Optional[GeminiLLMService] = None,
     ):
         """Initialize enhanced extraction service.
 
+        Both extraction paths share the treatment arm separator. The legacy
+        deps (``arm_aware_rag_provider``, ``attribute_extractor``,
+        ``llm_service``) are optional so a deployment can wire only the new
+        path; if the legacy flag is set without those deps, ``extract`` raises.
+
         Args:
             treatment_arm_separator: Service for separating treatment arms
-            arm_aware_rag_provider: RAG provider for arm-aware context retrieval
-            attribute_extractor: Service for extracting attributes
-            llm_service: LLM service for text generation
+            arm_aware_rag_provider: Legacy RAG provider for arm-aware context
+            attribute_extractor: Legacy per-attribute LLM extractor
+            llm_service: LLM service used by the legacy path
             clinical_trials_api_service: Service for Clinical Trials API data
-            enable_cost_tracking: Whether to enable cost tracking
+            enable_cost_tracking: Whether to enable cost tracking on the
+                legacy LLM service
             max_concurrent_attributes: Max simultaneous LLM attribute requests
+                in the legacy per-attribute path
+            family_extractor: New-path family-grouped extractor
+            gemini: New-path Gemini service used for context caching and
+                verifier calls
         """
         self.treatment_arm_separator = treatment_arm_separator
         self.arm_aware_rag_provider = arm_aware_rag_provider
@@ -72,10 +132,17 @@ class EnhancedExtractionService:
         self.clinical_trials_api_service = clinical_trials_api_service
         self.max_concurrent_attributes = max_concurrent_attributes
 
-        # Set up cost tracking if enabled
-        if enable_cost_tracking:
+        # New-path deps.
+        self.family_extractor = family_extractor
+        self.gemini = gemini
+
+        # Set up cost tracking if enabled (only meaningful when legacy
+        # llm_service is wired).
+        if enable_cost_tracking and llm_service is not None:
             self.cost_calculator = CostCalculator()
-            self.llm_service = CostTrackingLLMService(llm_service, self.cost_calculator)
+            self.llm_service: Optional[LLMService] = CostTrackingLLMService(
+                llm_service, self.cost_calculator
+            )
             self.cost_tracking_enabled = True
         else:
             self.llm_service = llm_service
@@ -87,12 +154,16 @@ class EnhancedExtractionService:
         self.file_path_extractor = FilePathExtractor()
 
         # Get preferred model from environment or use default
-        import os
-
         preferred_model = os.getenv("EXTRACTION_MODEL", "gpt-4o")
 
-        self.batch_extractor = BatchAttributeExtractor(
-            self.llm_service, self.prompt_provider, preferred_model=preferred_model
+        self.batch_extractor: Optional[BatchAttributeExtractor] = (
+            BatchAttributeExtractor(
+                cast(CostTrackingLLMService, self.llm_service),
+                self.prompt_provider,
+                preferred_model=preferred_model,
+            )
+            if self.llm_service is not None
+            else None
         )
 
         # Get attribute configurations
@@ -105,6 +176,351 @@ class EnhancedExtractionService:
 
         if self.cost_tracking_enabled:
             logger.info("Cost tracking enabled")
+
+    # ------------------------------------------------------------------ #
+    # New family-grouped extraction entry point
+    # ------------------------------------------------------------------ #
+
+    async def extract(
+        self,
+        doc_text: str,
+        doc_id: str,
+        doc_type: DocumentType,
+    ) -> TreatmentArmExtractionResult:
+        """Extract attributes from ``doc_text`` using the new family-grouped path.
+
+        Routes to the legacy RAG path when ``USE_LEGACY_RAG_EXTRACTION=1`` is
+        set in the environment. The new path: separates arms once, runs all
+        applicable family extractions concurrently against a single Gemini
+        context cache, deterministically validates each value, sends low-
+        confidence values through the verifier, then enriches the assembled
+        result with drug-knowledge-derived MODALITY / TARGET attributes.
+        """
+        if os.getenv(LEGACY_FLAG_ENV) == LEGACY_FLAG_ENABLED_VALUE:
+            return await self._legacy_rag_extract(doc_text, doc_id, doc_type)
+
+        if self.family_extractor is None or self.gemini is None:
+            raise RuntimeError(
+                "EnhancedExtractionService new-path requires both "
+                "`family_extractor` and `gemini` to be provided. Either "
+                f"wire them in the constructor or set {LEGACY_FLAG_ENV}=1 "
+                "to use the legacy RAG path."
+            )
+
+        start_time = datetime.now()
+        cache_id = await self.gemini.create_context_cache(
+            doc_text, system_instruction=SHARED_EXTRACTION_RULES
+        )
+        try:
+            arm_result = await self.treatment_arm_separator.separate_treatment_arms(
+                doc_text, doc_id
+            )
+            arms = arm_result.treatment_arms
+            if not arms:
+                logger.warning(
+                    "No treatment arms identified for %s — returning empty result",
+                    doc_id,
+                )
+                processing_time = int(
+                    (datetime.now() - start_time).total_seconds() * 1000
+                )
+                return TreatmentArmExtractionResult(
+                    abstract_id=doc_id,
+                    arm_results={},
+                    overall_confidence=0.0,
+                    processing_time_ms=processing_time,
+                    errors=["No treatment arms identified"],
+                    prompt_version=PROMPT_VERSION,
+                )
+
+            arms_by_id = {a.arm_id: a for a in arms}
+            per_arm: dict[str, dict[AttributeType, ExtractedAttribute]] = {
+                a.arm_id: {} for a in arms
+            }
+            pub_meta: dict[str, str] = {}
+
+            if doc_type == DocumentType.ABSTRACT:
+                families = self._families_for_doc_type(doc_type)
+                family_inputs: dict[AttributeFamily, str] = {
+                    f: doc_text for f in families
+                }
+            else:
+                parsed = parse_markdown(doc_text)
+                pub_meta = _parse_metadata_section(
+                    parsed.text_for(SectionCategory.METADATA)
+                )
+                if parsed.unclassified:
+                    logger.info(
+                        "section_parser_unclassified doc_id=%s headers=%s",
+                        doc_id,
+                        parsed.unclassified[:10],
+                    )
+                candidate_families = self._families_for_doc_type(doc_type)
+                family_inputs = {}
+                skipped: list[str] = []
+                for fam in candidate_families:
+                    sliced = slice_for_family(fam, parsed, raw_md=doc_text)
+                    if sliced is None:
+                        skipped.append(fam.value)
+                    else:
+                        family_inputs[fam] = sliced
+                if skipped:
+                    logger.info(
+                        "section_route_skipped doc_id=%s skipped=%s", doc_id, skipped
+                    )
+                families = tuple(family_inputs.keys())
+
+            family_results = await asyncio.gather(
+                *[
+                    self.family_extractor.extract(
+                        cache_id, family_inputs[fam], fam, arms
+                    )
+                    for fam in families
+                ],
+                return_exceptions=True,
+            )
+            for fam, fr in zip(families, family_results):
+                if isinstance(fr, BaseException):
+                    logger.error(
+                        "family_extraction_failed doc_id=%s family=%s error=%s",
+                        doc_id,
+                        fam.value,
+                        fr,
+                    )
+                    continue
+                for arm_id, attrs in fr.items():
+                    if arm_id in per_arm:
+                        per_arm[arm_id].update(attrs)
+
+            # NUMBER_OF_PATIENTS comes from the arm separator, not the LLM.
+            for arm in arms:
+                n = arm.patient_count
+                per_arm[arm.arm_id][
+                    AttributeType.NUMBER_OF_PATIENTS
+                ] = ExtractedAttribute(
+                    attribute_type=AttributeType.NUMBER_OF_PATIENTS,
+                    value=str(n) if n else "",
+                    source_quote="",
+                    confidence=1.0 if n else 0.0,
+                    source="arm_separator",
+                    validation_status=ValidationStatus.VALID
+                    if n
+                    else ValidationStatus.EMPTY,
+                )
+                # PDF_NUMBER is the document filename — never extracted by LLM.
+                per_arm[arm.arm_id][AttributeType.PDF_NUMBER] = ExtractedAttribute(
+                    attribute_type=AttributeType.PDF_NUMBER,
+                    value=doc_id,
+                    source_quote="",
+                    confidence=1.0,
+                    source="file_path",
+                    validation_status=ValidationStatus.VALID,
+                )
+                # PUBLICATION_NAME / PUBLICATION_YEAR from injected # Metadata section.
+                for attr_type, meta_key in (
+                    (AttributeType.PUBLICATION_NAME, "citation"),
+                    (AttributeType.PUBLICATION_YEAR, "year"),
+                ):
+                    val = pub_meta.get(meta_key, "")
+                    per_arm[arm.arm_id][attr_type] = ExtractedAttribute(
+                        attribute_type=attr_type,
+                        value=val,
+                        source_quote="",
+                        confidence=1.0 if val else 0.0,
+                        source="metadata_section",
+                        validation_status=ValidationStatus.VALID
+                        if val
+                        else ValidationStatus.EMPTY,
+                    )
+                # CONFERENCE / PUBLISHED_YEAR from doc_id (e.g. ASCO_2024).
+                conf_meta = _parse_conference_from_doc_id(doc_id)
+                for attr_type, meta_key in (
+                    (AttributeType.CONFERENCE, "conference"),
+                    (AttributeType.PUBLISHED_YEAR, "published_year"),
+                ):
+                    val = conf_meta.get(meta_key, "")
+                    per_arm[arm.arm_id][attr_type] = ExtractedAttribute(
+                        attribute_type=attr_type,
+                        value=val,
+                        source_quote="",
+                        confidence=1.0 if val else 0.0,
+                        source="file_path",
+                        validation_status=ValidationStatus.VALID
+                        if val
+                        else ValidationStatus.EMPTY,
+                    )
+
+            # Validate-then-verify pass.
+            for arm_id, attrs in per_arm.items():
+                for attr_type, extracted in list(attrs.items()):
+                    raw_value = extracted.value if extracted.value is not None else ""
+                    ok, normalized, reason = validate_for_attribute(
+                        attr_type, str(raw_value)
+                    )
+                    if ok:
+                        extracted.value = normalized
+                        extracted.validation_status = ValidationStatus.VALID
+                    else:
+                        attrs[attr_type] = await verify_low_confidence(
+                            self.gemini,
+                            cache_id,
+                            doc_text,
+                            arms_by_id[arm_id],
+                            attr_type,
+                            str(raw_value),
+                            reason,
+                        )
+
+            processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
+            result = self._assemble_result(
+                doc_id=doc_id,
+                arms=arms,
+                per_arm=per_arm,
+                processing_time_ms=processing_time,
+                prompt_version=PROMPT_VERSION,
+            )
+            return enrich_result(result)
+        finally:
+            await self.gemini.delete_cache(cache_id)
+
+    def _families_for_doc_type(
+        self, doc_type: DocumentType
+    ) -> tuple[AttributeFamily, ...]:
+        """Return the families to extract for a given document type.
+
+        Currently returns all 12 families for both abstracts and publications.
+        """
+        all_families = tuple(FAMILY_TO_ATTRIBUTES.keys())
+        if doc_type == DocumentType.ABSTRACT:
+            return tuple(
+                f for f in all_families if f not in _ABSTRACT_EXCLUDED_FAMILIES
+            )
+        return all_families
+
+    def _assemble_result(
+        self,
+        doc_id: str,
+        arms: list[TreatmentArm],
+        per_arm: dict[str, dict[AttributeType, ExtractedAttribute]],
+        processing_time_ms: int,
+        prompt_version: str,
+    ) -> TreatmentArmExtractionResult:
+        """Build a :class:`TreatmentArmExtractionResult` from the new-path data.
+
+        Mirrors the JSON shape produced by ``extract_attributes_from_abstract_batch``
+        so downstream serializers and the drug-enricher work unchanged.
+        """
+        arm_results: dict[str, dict[str, Any]] = {}
+        total_attributes = 0
+
+        for arm in arms:
+            attrs_for_arm = per_arm.get(arm.arm_id, {})
+            attribute_dicts: dict[str, dict[str, Any]] = {}
+            for attr_type, extracted in attrs_for_arm.items():
+                attribute_dicts[attr_type.value] = {
+                    "value": extracted.value,
+                    "confidence": extracted.confidence,
+                    "validation_status": (
+                        extracted.validation_status.value
+                        if hasattr(extracted.validation_status, "value")
+                        else str(extracted.validation_status)
+                    ),
+                    "source_chunks": list(extracted.source_chunks),
+                    "source": extracted.source,
+                }
+                if str(extracted.value or "").strip():
+                    total_attributes += 1
+
+            arm_results[arm.arm_id] = {
+                "arm_id": arm.arm_id,
+                "arm_name": arm.arm_name,
+                "generic_name": arm.generic_name,
+                "brand_name": arm.brand_name,
+                "dose": arm.dose,
+                "dosing_schedule": arm.dosing_schedule,
+                "patient_count": arm.patient_count,
+                "line_of_treatment": (
+                    arm.line_of_treatment.value
+                    if hasattr(arm.line_of_treatment, "value")
+                    else arm.line_of_treatment
+                ),
+                "arm_type": (
+                    arm.arm_type.value
+                    if hasattr(arm.arm_type, "value")
+                    else arm.arm_type
+                ),
+                "combination_drugs": arm.combination_drugs,
+                "confidence_score": arm.confidence_score,
+                "source_text": arm.source_text,
+                "attributes": attribute_dicts,
+                "errors": [],
+                "warnings": [],
+                "total_attributes": sum(
+                    1
+                    for a in attribute_dicts.values()
+                    if str(a.get("value") or "").strip()
+                ),
+                "api_attributes": 0,
+                "abstract_attributes": sum(
+                    1
+                    for a in attribute_dicts.values()
+                    if str(a.get("value") or "").strip()
+                ),
+            }
+
+        confidences = [
+            a["confidence"]
+            for arm_result in arm_results.values()
+            for a in arm_result["attributes"].values()
+            if isinstance(a, dict) and "confidence" in a
+        ]
+        overall_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+
+        return TreatmentArmExtractionResult(
+            abstract_id=doc_id,
+            arm_results=arm_results,
+            overall_confidence=overall_confidence,
+            processing_time_ms=processing_time_ms,
+            total_attributes_extracted=total_attributes,
+            prompt_version=prompt_version,
+        )
+
+    async def _legacy_rag_extract(
+        self,
+        doc_text: str,
+        doc_id: str,
+        doc_type: DocumentType,
+    ) -> TreatmentArmExtractionResult:
+        """Legacy entry-point: delegate to the existing per-attribute RAG path.
+
+        Preserved verbatim behaviour by routing through
+        :meth:`extract_attributes_from_abstract_batch`. The legacy path
+        derives publication vs. abstract from heuristics on the text /
+        file path, so ``doc_type`` is informational only.
+        """
+        del doc_type  # behaviour preserved by the legacy heuristics
+        logger.warning(
+            "Legacy RAG extraction path used — scheduled for removal 2026-08-04"
+        )
+        if self.batch_extractor is None or self.arm_aware_rag_provider is None:
+            raise RuntimeError(
+                f"{LEGACY_FLAG_ENV}=1 was set but the legacy dependencies "
+                "(arm_aware_rag_provider, attribute_extractor, llm_service) "
+                "are not wired into EnhancedExtractionService."
+            )
+        # Use the comprehensive set of attributes the legacy path already
+        # supports — callers wishing a smaller set should use the legacy
+        # API directly.
+        attributes = list(self.attribute_configs.keys())
+        return await self.extract_attributes_from_abstract_batch(
+            abstract_text=doc_text,
+            abstract_id=doc_id,
+            attributes=attributes,
+        )
+
+    # ------------------------------------------------------------------ #
+    # Legacy detection helpers (used by both paths' arm separation step)
+    # ------------------------------------------------------------------ #
 
     def _is_publication(self, content: str, file_path: Optional[str] = None) -> bool:
         """Detect if content is a full publication (not an abstract).
@@ -301,6 +717,9 @@ class EnhancedExtractionService:
         Returns:
             Treatment arm extraction result
         """
+        assert self.arm_aware_rag_provider is not None  # legacy path
+        assert self.attribute_extractor is not None  # legacy path
+        assert self.batch_extractor is not None  # legacy path
         start_time = datetime.now()
 
         try:
@@ -463,6 +882,9 @@ class EnhancedExtractionService:
         Returns:
             Treatment arm extraction result
         """
+        assert self.arm_aware_rag_provider is not None  # legacy path
+        assert self.attribute_extractor is not None  # legacy path
+        assert self.batch_extractor is not None  # legacy path
         start_time = datetime.now()
 
         try:
@@ -987,6 +1409,8 @@ class EnhancedExtractionService:
         Returns:
             Dictionary containing extracted attributes and metadata
         """
+        assert self.arm_aware_rag_provider is not None  # legacy path
+        assert self.attribute_extractor is not None  # legacy path
         extracted_attributes: dict[AttributeType, Any] = {}
         errors = []
         warnings = []
@@ -1463,6 +1887,8 @@ class EnhancedExtractionService:
         Returns:
             Dictionary mapping attribute types to arm results (same value for all arms)
         """
+        assert self.arm_aware_rag_provider is not None  # legacy path
+        assert self.attribute_extractor is not None  # legacy path
         logger.info(
             f"Extracting {len(attributes)} abstract-level attributes (shared across all arms)"
         )
@@ -1587,6 +2013,8 @@ class EnhancedExtractionService:
         Returns:
             Dictionary mapping attribute types to arm results
         """
+        assert self.arm_aware_rag_provider is not None  # legacy path
+        assert self.batch_extractor is not None  # legacy path
         logger.info(
             f"Starting per-attribute extraction with 3-tier RAG for {len(attributes)} attributes across {len(arms)} arms"
         )
@@ -1600,6 +2028,9 @@ class EnhancedExtractionService:
         metadata_filters = {"filename": file_path} if file_path else None
 
         sem = asyncio.Semaphore(self.max_concurrent_attributes)
+
+        rag_provider = self.arm_aware_rag_provider
+        batch_extractor = self.batch_extractor
 
         async def _process_attribute(
             attribute: AttributeType,
@@ -1615,26 +2046,26 @@ class EnhancedExtractionService:
                     for arm in arms
                 }
                 try:
-                    context_texts = (
-                        await self.arm_aware_rag_provider.get_context_for_attribute(
-                            document_id=abstract_id,
-                            attribute_type=attribute,
-                            context_chunks=3,
-                            similarity_threshold=similarity_threshold,
-                            metadata_filters=metadata_filters,
-                        )
+                    context_texts = await rag_provider.get_context_for_attribute(
+                        document_id=abstract_id,
+                        attribute_type=attribute,
+                        context_chunks=3,
+                        similarity_threshold=similarity_threshold,
+                        metadata_filters=metadata_filters,
                     )
                     if not context_texts:
                         logger.debug(
                             f"No chunks retrieved for {attribute.value} after 3-tier filtering - skipping LLM call"
                         )
                         return (attribute, not_found)
-                    single_attr_results = await self.batch_extractor._extract_single_attribute_for_all_arms(
-                        arms=arms,
-                        attribute=attribute,
-                        context=context_texts,
-                        document_id=abstract_id,
-                        source=extraction_source,
+                    single_attr_results = (
+                        await batch_extractor._extract_single_attribute_for_all_arms(
+                            arms=arms,
+                            attribute=attribute,
+                            context=context_texts,
+                            document_id=abstract_id,
+                            source=extraction_source,
+                        )
                     )
                     return (attribute, single_attr_results)
                 except Exception as e:

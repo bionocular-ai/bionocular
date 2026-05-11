@@ -13,11 +13,6 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from pathlib import Path
-
-# Allow running from the repo root or scripts/ subdirectory
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_REPO_ROOT))
 
 from src.infrastructure.config import CLINICAL_TRIAL_DB_PATH
 from src.infrastructure.open_targets_service import (
@@ -34,8 +29,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DELAY_BETWEEN_PAGES = 0.3   # seconds — polite, not enforced by API
-BATCH_WRITE_SIZE = 200       # upsert in batches to avoid large transactions
+DELAY_BETWEEN_PAGES = 0.3  # seconds — polite, not enforced by API
+BATCH_WRITE_SIZE = 200  # upsert in batches to avoid large transactions
 
 
 def fetch_cancer_type(
@@ -131,7 +126,9 @@ def main() -> None:
         if args.cancer_type not in CANCER_TYPE_EFO_MAP:
             available = "\n  ".join(CANCER_TYPE_EFO_MAP.keys())
             logger.error(
-                "Unknown cancer type %r. Available types:\n  %s", args.cancer_type, available
+                "Unknown cancer type %r. Available types:\n  %s",
+                args.cancer_type,
+                available,
             )
             sys.exit(1)
         to_fetch = {args.cancer_type: CANCER_TYPE_EFO_MAP[args.cancer_type]}

@@ -11,7 +11,7 @@ data/processed/Publications/*
 # Postprocessed data directories (generated from processed data)
 data/postprocessed/ASCO_Abstracts/
 data/postprocessed/ESMO_Abstracts/
-data/postprocessed/Publications/*.md
+data/postprocessed/Publications/
 data/processed/ASCO_Abstracts/
 data/processed/ESMO_Abstracts/
 
@@ -196,3 +196,4 @@ config.local.*
 # Private key files (but not source code files with "key" in name)
 *.private.key
 *.secret.key
+tests/fixtures/holdout/csv/

@@ -1,0 +1,219 @@
+# Combined Nivolumab and Ipilimumab or Monotherapy in Untreated Melanoma
+
+# Metadata
+journal: N Engl J Med
+citation: N Engl J Med 2015;373:23-34.
+year: 2015
+
+# ABSTRACT
+
+## **BACKGROUND**
+
+Nivolumab (a programmed death 1 [PD-1] checkpoint inhibitor) and ipilimumab (a cytotoxic T-lymphocyte–associated antigen 4 [CTLA-4] checkpoint inhibitor) have been shown to have complementary activity in metastatic melanoma. In this randomized, double-blind, phase 3 study, nivolumab alone or nivolumab plus ipilimumab was compared with ipilimumab alone in patients with metastatic melanoma.
+
+## **METHODS**
+
+We assigned, in a 1:1:1 ratio, 945 previously untreated patients with unresectable stage III or IV melanoma to nivolumab alone, nivolumab plus ipilimumab, or ipilimumab alone. Progression-free survival and overall survival were coprimary end points. Results regarding progression-free survival are presented here.
+
+## **RESULTS**
+
+The median progression-free survival was 11.5 months (95% confidence interval [CI], 8.9 to 16.7) with nivolumab plus ipilimumab, as compared with 2.9 months (95% CI, 2.8 to 3.4) with ipilimumab (hazard ratio for death or disease progression, 0.42; 99.5% CI, 0.31 to 0.57; P<0.001), and 6.9 months (95% CI, 4.3 to 9.5) with nivolumab (hazard ratio for the comparison with ipilimumab, 0.57; 99.5% CI, 0.43 to 0.76; P<0.001). In patients with tumors positive for the PD-1 ligand (PD-L1), the median progression-free survival was 14.0 months in the nivolumab-plus-ipilimumab group and in the nivolumab group, but in patients with PD-L1–negative tumors, progression-free survival was longer with the combination therapy than with nivolumab alone (11.2 months [95% CI, 8.0 to not reached] vs. 5.3 months [95% CI, 2.8 to 7.1]). Treatment-related adverse events of grade 3 or 4 occurred in 16.3% of the patients in the nivolumab group, 55.0% of those in the nivolumab-plus-ipilimumab group, and 27.3% of those in the ipilimumab group.
+
+## **CONCLUSIONS**
+
+Among previously untreated patients with metastatic melanoma, nivolumab alone or combined with ipilimumab resulted in significantly longer progression-free survival than ipilimumab alone. In patients with PD-L1–negative tumors, the combination of PD-1 and CTLA-4 blockade was more effective than either agent alone. (Funded by Bristol-Myers Squibb; CheckMate 067 ClinicalTrials.gov number, NCT01844505.)
+
+This article was published on May 31, 2015, at NEJM.org.
+
+N Engl J Med 2015;373:23-34. 
+
+DOI: 10.1056/NEJMoa1504030 
+
+# **INTRODUCTION**
+
+CONSIDERABLE PROGRESS IN THE TREATment of metastatic melanoma has been made in the past 5 years, with the approval of immune checkpoint–blocking antibodies and, in parallel, agents targeting aberrant signaling in the 40 to 50% of melanomas with *BRAF* mutations. <sup>1-6</sup> Ipilimumab, an anti–cytotoxic T-lymphocyte–associated antigen 4 (CTLA-4) antibody, acts to up-regulate antitumor immunity and was the first agent to be associated with an improvement in overall survival in a phase 3 study involving patients with metastatic melanoma. <sup>5,6</sup> Ipilimumab was associated with responses in 10% and 15% of patients <sup>5,6</sup>; approximately 20% of treated patients had long-term survival. <sup>7,8</sup>
+
+Two anti-programmed death 1 (PD-1) antibodies, nivolumab and pembrolizumab, were approved by the Food and Drug Administration in 2014 for the treatment of metastatic melanoma after progression during ipilimumab treatment and, in patients with BRAF-mutated melanoma, after progression during treatment with a BRAF inhibitor. These antibodies were associated with objective responses in 30 to 40% of patients, with the majority of responses being durable. Two phase 3 trials have shown superior efficacy of nivolumab, as compared with chemotherapy, in previously untreated patients with wild-type BRAF tumors9 or in patients with either mutant or wildtype BRAF tumors after progression during ipilimumab therapy and, in patients with tumors positive for BRAF mutation, after progression during treatment with a BRAF inhibitor. 10 Similar results were observed in a phase 2 trial of pembrolizumab versus chemotherapy.11 Recently, pembrolizumab was associated with longer progression-free survival and overall survival and higher response rates than those associated with ipilimumab in a phase 3 trial involving patients with advanced melanoma.12
+
+The results of a phase 2 study that compared combined nivolumab and ipilimumab with ipilimumab alone in patients with *BRAF* wild-type melanoma showed objective response rates of 61% with the combination therapy and 11% with the monotherapy, with complete responses in 22% and 0% of patients, respectively.<sup>13</sup> Treatment-related adverse events of grade 3 or 4 were reported in 54% of the patients in the combination group and in 24% of those in the ipilimumab group. Expression of the PD-1 ligand, PD-L1, has been reported to result in greater benefit with anti–PD-1 monotherapy<sup>9,10</sup> but not with the combination of anti–PD-1 and anti–CTLA-4 therapy.<sup>13,14</sup> However, effective cutoff points for defining PD-L1 expression and clinical usefulness have not yet been established.
+
+To confirm and extend these findings, we report one of the coprimary end points (progression-free survival) of a randomized, double-blind, multicenter, phase 3 trial (CheckMate 067) that was conducted to evaluate the safety and efficacy of nivolumab alone or nivolumab combined with ipilimumab in comparison with ipilimumab alone in patients with previously untreated metastatic melanoma. Data on overall survival are insufficiently mature to present.
+
+# METHODS
+
+## **PATIENTS**
+
+Eligible patients had histologically confirmed stage III (unresectable) or stage IV melanoma and had received no prior systemic treatment for advanced disease. Other eligibility criteria included an age of at least 18 years; an Eastern Cooperative Oncology Group (ECOG) performance-status score of 0, indicating no symptoms, or 1, indicating mild symptoms (on a scale from 0 to 5, with higher scores indicating greater disability); measurable disease as assessed by means of computed tomography or magnetic resonance imaging according to Response Evaluation Criteria in Solid Tumors (RECIST), version 1.1<sup>15</sup>; availability of tissue collected from metastatic or unresectable tumors (archival or recently biopsied samples) for the assessment of PD-L1 status; and known BRAF V600 mutation status. Key exclusion criteria were an ECOG performance-status score of 2 (indicating moderate symptoms, with the patient being ambulatory and capable of all self-care but unable to carry out any work activities) or higher and the presence of active brain metastases, ocular melanoma, or autoimmune disease.
+
+## STUDY DESIGN AND TREATMENT
+
+In this double-blind, phase 3 study, enrolled patients were randomly assigned in a 1:1:1 ratio to receive one of the following regimens: 3 mg of nivolumab per kilogram of body weight every 2 weeks (plus ipilimumab-matched placebo); 1 mg of nivolumab per kilogram every 3 weeks plus 3 mg of ipilimumab per kilogram every 3 weeks for 4 doses, followed by 3 mg of nivolumab per kilogram every 2 weeks for cycle 3 and beyond; or 3 mg of ipilimumab per kilogram every 3 weeks for 4 doses (plus nivolumab-matched placebo). Both nivolumab and ipilimumab were administered by means of intravenous infusion.
+
+Randomization was stratified according to tumor PD-L1 status (positive vs. negative or indeterminate), *BRAF* mutation status (V600 mutation–positive vs. wild-type), and American Joint Committee on Cancer metastasis stage (M0, M1a, or M1b vs. M1c). Treatment continued until disease progression (as defined by RECIST, version 1.1), development of unacceptable toxic events, or withdrawal of consent. Patients could be treated after progression, provided that they had a clinical benefit and did not have substantial adverse effects, as assessed by the investigator (further details are provided in the study protocol, available with the full text of this article at NEJM.org).
+
+Progression-free survival and overall survival were coprimary end points; results regarding progression-free survival are presented here. Secondary and other end points included objective response rate, tumor PD-L1 expression as a predictive biomarker for efficacy outcomes, and safety.
+
+## **Assessments**
+
+Patients were assessed for tumor response, according to RECIST, version 1.1,15 at 12 weeks after randomization, then every 6 weeks for 49 weeks, and then every 12 weeks until progression or treatment discontinuation, whichever occurred later. Progression-free survival was defined as the time between the date of randomization and the date of documented progression or death, whichever occurred first. Patients treated after progression were considered to have had progressive disease at the time of the initial progression event, as assessed by the investigator, regardless of subsequent tumor responses.
+
+Expression of PD-L1 on the surface of the tumor cells was assessed in a central laboratory by means of immunohistochemical testing in formalin-fixed, paraffin-embedded tumor specimens with the use of a rabbit monoclonal antihuman PD-L1 antibody (clone 28–8) and an analytically validated automated assay developed by Dako. PD-L1 positivity was defined as at least 5% of tumor cells showing PD-L1 staining of any intensity on the cell surface in a section containing at least 100 tumor cells that could be evaluated.
+
+Any patient who received at least one dose of study drug was included in the assessment of safety. The severity of adverse events was graded according to the National Cancer Institute Common Terminology Criteria for Adverse Events, version 4.0.16 Safety assessments were made continuously during the treatment phase and up to 100 days after the last dose of study drug. Guidelines for the management of adverse events were provided by the sponsor and have been published previously.9,10,13
+
+## **Study Oversight**
+
+The study protocol and all amendments were approved by the institutional review board at each participating study site and are available (along with the statistical analysis plan) at NEJM.org. The study was conducted in accordance with the provisions of the Declaration of Helsinki and with Good Clinical Practice guidelines as defined by the International Conference on Harmonisation. All the patients (or their legal representatives) provided written informed consent before enrollment. The trial was designed as a collaboration between the senior academic authors and the sponsor, Bristol-Myers Squibb. Data were collected by the sponsor and analyzed in collaboration with all the authors.
+
+All the authors vouch for the accuracy and completeness of the data and analyses reported and for the fidelity of the study to the protocol. The first draft of the manuscript was prepared by the first and last authors. All the authors contributed to subsequent drafts and provided final approval to submit the manuscript for publication. Medical-writing support, funded by the sponsor, was provided by StemScientific.
+
+A data and safety monitoring committee was established to provide oversight of safety and efficacy considerations, in order to assess the benefit–risk profile of nivolumab combined with ipilimumab. As per the statistical analysis plan, the results of the coprimary end point of progression-free-survival were released by the monitoring committee on March 17, 2015, after a positive statistical outcome. The study remains blinded with respect to overall survival because followup of the patients is planned to continue until the specified number of events have occurred.
+
+## **Statistical Analysis**
+
+A study sample of approximately 915 patients was planned. For the comparison of progression-free survival, we estimated that the number of events that was projected to be observed at a follow-up of at least 9 months would give the study approximately 83% power to detect an average hazard ratio of 0.71 at a type I error rate of 0.005 (twosided) for all comparisons. Progression-free survival was compared between the nivolumab group or the nivolumab-plus-ipilimumab group and the ipilimumab group, with the use of a two-sided logrank test with stratification as described above. The study was not designed for a formal statistical comparison between the nivolumab group and the nivolumab-plus-ipilimumab group.
+
+Hazard ratios and corresponding two-sided 99.5% confidence intervals were estimated with the use of a Cox proportional-hazards model, with treatment group as a single covariate, stratified according to the factors listed above. Progressionfree survival curves, medians with 95% confidence intervals, and progression-free survival rates at 6, 12, and 18 months with 95% confidence intervals were estimated with the use of the Kaplan– Meier method.
+
+# Results
+
+## **Patients and Treatment**
+
+From July 2013 through March 2014, a total of 1296 patients were enrolled at 137 centers in Australia, Europe, Israel, New Zealand, and North America. A total of 945 patients underwent randomization: 316 patients were assigned to the nivolumab group, 314 to the nivolumab-plusipilimumab group, and 315 to the ipilimumab group (Fig. S1 in the Supplementary Appendix, available at NEJM.org). Baseline characteristics were balanced across the three groups. A total of 58.0% of the patients had stage M1c disease, 36.1% had an elevated lactate dehydrogenase level, 31.5% had a *BRAF* mutation, and 23.6% had positive PD-L1 status (Table 1).
+
+The database lock occurred on February 17, 2015. At a median follow-up ranging from 12.2 to 12.5 months across the three groups, 117 of 313 patients (37.4%) in the nivolumab group, 93 of 313 (29.7%) in the nivolumab-plus-ipilimumab group, and 50 of 311 (16.1%) in the ipilimumab group were continuing study treatment (Table S1 in the Supplementary Appendix). The most frequent reason for discontinuation was disease progression in the nivolumab and ipilimumab monotherapy groups (154 of 313 patients [49.2%] and 202 of 311 [65.0%], respectively) and toxic effects of the study drug in the nivolumab-plusipilimumab group (120 of 313 [38.3%]).
+
+The median number of doses was 15 (range, 1 to 38) in the patients who received nivolumab alone and 4 (range, 1 to 4) in those who received ipilimumab alone. In the nivolumab-plus-ipilimumab group, the median number of doses was 4 (range, 1 to 39) of nivolumab and 4 (range, 1 to 4) of ipilimumab; 147 of 313 patients (47.0%) received more than 4 doses of nivolumab monotherapy.
+
+## **Efficacy**
+
+The median progression-free survival was 6.9 months (95% confidence interval [CI], 4.3 to 9.5) in the nivolumab group, 11.5 months (95% CI, 8.9 to 16.7) in the nivolumab-plus-ipilimumab group, and 2.9 months (95% CI, 2.8 to 3.4) in the ipilimumab group. Significantly longer progression-free survival was observed in the nivolumabplus-ipilimumab group than in the ipilimumab group (hazard ratio for death or disease progression, 0.42; 99.5% CI, 0.31 to 0.57; P<0.001) and in the nivolumab group than in the ipilimumab group (hazard ratio, 0.57; 99.5% CI, 0.43 to 0.76; P<0.001) (Fig. 1A). The hazard ratio for the comparison between the nivolumab-plus-ipilimumab group and the nivolumab group was 0.74 (95% CI, 0.60 to 0.92).
+
+Analyses of progression-free survival in prespecified subgroups showed consistently longer progression-free survival with nivolumab or with nivolumab plus ipilimumab than with ipilimumab, including in subgroups defined according to PD-L1 status, *BRAF* mutation status, and metastasis stage (Fig. 1B and 1C, and Fig. S2 in the Supplementary Appendix). In the nivolumab-plusipilimumab group, the median progression-free survival was 11.7 months (95% CI, 8.0 to not reached) among patients with a *BRAF* mutation and 11.2 months (95% CI, 8.3 to not reached) among patients with wild-type *BRAF*.
+
+Among patients with a positive PD-L1 tumor status, the median progression-free survival was 14.0 months (95% CI, 9.1 to not reached) in the nivolumab group, 14.0 months (95% CI, 9.7 to not reached) in the nivolumab-plus-ipilimumab group, and 3.9 months (95% CI, 2.8 to 4.2) in the ipilimumab group (Fig. 1B). Among patients with a negative PD-L1 tumor status, the median progression-free survival was 5.3 months (95% CI, 2.8 to 7.1), 11.2 months (95% CI, 8.0 to not reached), and 2.8 months (95% CI, 2.8 to 3.1), respectively (Fig. 1C).
+
+| **Table 1. Characteristics of the Patients at Baseline.**\* | | | | |
+|---------------------------------------------|----------------------|-----------------------------------------|-----------------------|------------------|
+| Characteristic                              | Nivolumab<br>(N=316) | Nivolumab plus<br>Ipilimumab<br>(N=314) | Ipilimumab<br>(N=315) | Total<br>(N=945) |
+| Age — yr                                    |                      |                                         |                       |                  |
+| Mean                                        | 59                   | 59                                      | 61                    | 60               |
+| Range                                       | 25–90                | 18–88                                   | 18–89                 | 18–90            |
+| Age category — no. (%)                      |                      |                                         |                       |                  |
+| <65 yr                                      | 198 (62.7)           | 185 (58.9)                              | 182 (57.8)            | 565 (59.8)       |
+| ≥65 to <75 yr                               | 79 (25.0)            | 94 (29.9)                               | 89 (28.3)             | 262 (27.7)       |
+| ≥75 yr                                      | 39 (12.3)            | 35 (11.1)                               | 44 (14.0)             | 118 (12.5)       |
+| Sex — no. (%)                               |                      |                                         |                       |                  |
+| Male                                        | 202 (63.9)           | 206 (65.6)                              | 202 (64.1)            | 610 (64.6)       |
+| Female                                      | 114 (36.1)           | 108 (34.4)                              | 113 (35.9)            | 335 (35.4)       |
+| ECOG performance-status score —<br>no. (%)† |                      |                                         |                       |                  |
+| 0                                           | 238 (75.3)           | 230 (73.2)                              | 224 (71.1)            | 692 (73.2)       |
+| 1                                           | 77 (24.4)            | 83 (26.4)                               | 91 (28.9)             | 251 (26.6)       |
+| 2                                           | 1 (0.3)              | 0                                       | 0                     | 1 (0.1)          |
+| Not reported                                | 0                    | 1 (0.3)                                 | 0                     | 1 (0.1)          |
+| Metastasis stage — no. (%)                  |                      |                                         |                       |                  |
+| M1c                                         | 184 (58.2)           | 181 (57.6)                              | 183 (58.1)            | 548 (58.0)       |
+| M0, M1a, or M1b                             | 132 (41.8)           | 133 (42.4)                              | 132 (41.9)            | 397 (42.0)       |
+| Lactate dehydrogenase — no. (%)             |                      |                                         |                       |                  |
+| ≤ULN                                        | 196 (62.0)           | 199 (63.4)                              | 194 (61.6)            | 589 (62.3)       |
+| >ULN                                        | 112 (35.4)           | 114 (36.3)                              | 115 (36.5)            | 341 (36.1)       |
+| ≤2× ULN                                     | 271 (85.8)           | 276 (87.9)                              | 279 (88.6)            | 826 (87.4)       |
+| >2× ULN                                     | 37 (11.7)            | 37 (11.8)                               | 30 (9.5)              | 104 (11.0)       |
+| Unknown                                     | 8 (2.5)              | 1 (0.3)                                 | 6 (1.9)               | 15 (1.6)         |
+| Brain metastases — no. (%)                  |                      |                                         |                       |                  |
+| Yes                                         | 8 (2.5)              | 11 (3.5)                                | 15 (4.8)              | 34 (3.6)         |
+| No                                          | 308 (97.5)           | 303 (96.5)                              | 300 (95.2)            | 911 (96.4)       |
+| PD-L1 status — no. (%)                      |                      |                                         |                       |                  |
+| Positive                                    | 80 (25.3)            | 68 (21.7)                               | 75 (23.8)             | 223 (23.6)       |
+| Negative                                    | 208 (65.8)           | 210 (66.9)                              | 202 (64.1)            | 620 (65.6)       |
+| Could not be determined or<br>evaluated     | 28 (8.9)             | 36 (11.5)                               | 38 (12.1)             | 102 (10.8)       |
+| BRAF status — no. (%)                       |                      |                                         |                       |                  |
+| Mutation                                    | 100 (31.6)           | 101 (32.2)                              | 97 (30.8)             | 298 (31.5)       |
+| No mutation                                 | 216 (68.4)           | 213 (67.8)                              | 218 (69.2)            | 647 (68.5)       |
+| **\*There were no significant between-group differences at baseline. PD-L1 denotes programmed death 1 ligand, and ULN upper limit of the normal range. &dagger;Eastern Cooperative Oncology Group (ECOG) performance-status scores range from 0 to 5, with higher scores indicating greater disability. A score of 0 indicates no symptoms, 1 mild symptoms, and 2 moderate symptoms, with the patient being ambulatory and capable of all self-care but unable to carry out any work activities. Two patients were inadvertently enrolled in the study: one patient with an ECOG performance-status score of 2 was randomly assigned to the nivolumab group, and one whose ECOG performance-status score was not reported was randomly assigned to the nivolumab-plus-ipilimumab group.** | | | | |
+
+**Figure 1 (facing page). Progression-free Survival.**
+
+Panel A shows the Kaplan–Meier curves for progres‑ sion-free survival in the intention-to-treat population. Patients were followed for a minimum of 9 months. The median progression-free survival was 6.9 months (95% CI, 4.3 to 9.5) in the nivolumab group, 11.5 months (95% CI, 8.9 to 16.7) in the nivolumab-plusipilimumab group, and 2.9 months (95% CI, 2.8 to 3.4) in the ipilimumab group. Significantly longer pro‑ gression-free survival was observed in the nivolumabplus-ipilimumab group than in the ipilimumab group (hazard ratio for death or disease progression, 0.42; 99.5% CI, 0.31 to 0.57; P<0.001) and in the nivolumab group than in the ipilimumab group (hazard ratio, 0.57; 99.5% CI, 0.43 to 0.76; P<0.001). Panels B and C show the Kaplan–Meier curves for progression-free survival among patients with tumors that were posi‑ tive for the programmed death 1 ligand (PD-L1) and among those with PD-L1–negative tumors, respectively.
+
+The rates of investigator-assessed objective response were 43.7% (95% CI, 38.1 to 49.3) in the nivolumab group, 57.6% (95% CI, 52.0 to 63.2) in the nivolumab-plus-ipilimumab group, and 19.0% (95% CI, 14.9 to 23.8) in the ipilimumab group (Table 2). The percentage of patients with a complete response was higher in the nivolumab-plusipilimumab group (11.5%) than in either the nivolumab group (8.9%) or the ipilimumab group (2.2%) (Table 2). The time to an objective response was similar in the three groups (Table 2), and the median duration of response was not reached in any group.
+
+The tumor-burden change was assessed as the change from baseline in the sum of the longest diameters of the target tumor lesions. The median change was −34.5% (interquartile range, −75.4 to 15.4) in the nivolumab group, −51.9% (interquartile range, −75.8 to −10.2) in the nivolumabplus-ipilimumab group, and 5.9% (interquartile range, −28.0 to 33.3) in the ipilimumab group (Fig. 2).
+
+Among patients with PD-L1–positive tumors, the objective response rates were 57.5% (95% CI, 45.9 to 68.5) in the nivolumab group, 72.1% (95% CI, 59.9 to 82.3) in the nivolumab-plus-ipilimumab group, and 21.3% (95% CI, 12.7 to 32.3) in the ipilimumab group. Among patients with PD-L1– negative tumors, the objective response rates were 41.3% (95% CI, 34.6 to 48.4), 54.8% (95% CI, 47.8 to 61.6), and 17.8% (95% CI, 12.8 to 23.8), respectively (Table S2 in the Supplementary Appendix).
+
+| **Table 2. Response to Treatment.** | | | |
+|----------------------------------|----------------------|-----------------------------------------|-----------------------|
+| Variable                         | Nivolumab<br>(N=316) | Nivolumab plus<br>Ipilimumab<br>(N=314) | Ipilimumab<br>(N=315) |
+| Best overall response — no. (%)* |                      |                                         |                       |
+| Complete response                | 28 (8.9)             | 36 (11.5)                               | 7 (2.2)               |
+| Partial response                 | 110 (34.8)           | 145 (46.2)                              | 53 (16.8)             |
+| Stable disease                   | 34 (10.8)            | 41 (13.1)                               | 69 (21.9)             |
+| Progressive disease              | 119 (37.7)           | 71 (22.6)                               | 154 (48.9)            |
+| Could not be determined          | 25 (7.9)             | 21 (6.7)                                | 32 (10.2)             |
+| Objective response†              |                      |                                         |                       |
+| No. of patients with response    | 138                  | 181                                     | 60                    |
+| % of patients (95% CI)           | 43.7 (38.1–49.3)     | 57.6 (52.0–63.2)                        | 19.0 (14.9–23.8)      |
+| Estimated odds ratio (95% CI)‡   | 3.40 (2.02–5.72)     | 6.11 (3.59–10.38)                       | —                     |
+| Two-sided P value                | <0.001               | <0.001                                  | —                     |
+| Time to objective response — mo  |                      |                                         |                       |
+| Median                           | 2.78                 | 2.76                                    | 2.79                  |
+| Range                            | 2.3–12.5             | 1.1–11.6                                | 2.5–12.4              |
+| **\*The best overall response was assessed by the investigator according to the Response Evaluation Criteria in Solid Tumors, version 1.1. &dagger;Data included patients with a complete response and those with a partial response. The calculation of the confidence interval was based on the Clopper–Pearson method. These analyses were conducted with the use of a two-sided Cochran–Mantel–Haenszel test stratified according to PD-L1 status, BRAF mutation status, and metastasis stage. &Dagger;The comparison is with the ipilimumab group.** | | | |
+
+## **Adverse Events**
+
+Treatment-related adverse events of any grade occurred in 82.1% of the patients in the nivolumab group, 95.5% of those in the nivolumabplus-ipilimumab group, and 86.2% of those in the ipilimumab group (Table 3). The most common adverse events in the nivolumab-plus-ipilimumab group were diarrhea (in 44.1% of patients), fatigue (in 35.1%), and pruritus (in 33.2%). The incidence of treatment-related adverse events of grade 3 or 4 was also higher in the nivolumabplus-ipilimumab group (55.0%) than in the nivolumab group (16.3%) or the ipilimumab group (27.3%).
+
+**Figure 2 (facing page). Tumor-Burden Change in Target Lesions.**
+
+The waterfall plots show the maximum change from baseline in the sum of the reference diameters of the target lesion in patients receiving nivolumab (Panel A), nivolumab plus ipilimumab (Panel B), or ipilimum‑ ab (Panel C). Data are shown for all the patients who had target lesions evaluated at baseline and who un‑ derwent at least one tumor assessment during treat‑ ment. The percentage increase was truncated at 100% (rectangles). Asterisks indicate patients who had a re‑ sponse to treatment according to the Response Evalu‑ ation Criteria in Solid Tumors (RECIST), version 1.1. The horizontal dashed lines indicate a 30% reduction in the tumor burden in the target lesion, and the verti‑ cal dashed lines indicate the inflection point for the nivolumab-plus-ipilimumab group. The change in tu‑ mor burden was defined as the percentage decrease in the sum of the reference diameters of the target le‑ sion from baseline to nadir, observed up until the date of progression, as assessed by the investigator per RE‑ CIST, version 1.1, the date of subsequent anticancer therapy (including tumor-directed radiotherapy and tumor-directed surgery), or death, whichever occurred first.
+
+Treatment-related adverse events of any grade that led to discontinuation of the study drug occurred in 7.7% of the patients in the nivolumab group, 36.4% of those in the nivolumab-plusipilimumab group, and 14.8% of those in the ipilimumab group, with the most common events being diarrhea (in 1.9%, 8.3%, and 4.5%, respectively) and colitis (in 0.6%, 8.3%, and 7.7%, respectively). One death due to toxic effects of the study drug was reported in the nivolumab group (neutropenia) and one in the ipilimumab group (cardiac arrest), but none were reported in the nivolumab-plus-ipilimumab group.
+
+Select adverse events — defined as those with a potential immunologic cause — were analyzed according to organ category, as in previous studies.9,10 The most frequent treatment-related select adverse events of grade 3 or 4 were diarrhea (in 2.2% of patients in the nivolumab group, 9.3% of those in the nivolumab-plus-ipilimumab group, and 6.1% of those in the ipilimumab group), colitis (in 0.6%, 7.7%, and 8.7%, respectively), and increased alanine aminotransferase level (in 1.3%, 8.3%, and 1.6%, respectively) (Table S3 in the Supplementary Appendix).
+
+Immune modulatory agents, including topical agents, to manage adverse events were used in 47.0% of the patients in the nivolumab group, 83.4% of those in the nivolumab-plus-ipilimumab group, and 55.9% of those in the ipilimumab group, with secondary immunosuppressive agents (e.g., infliximab) used in 0.6%, 6.1%, and 5.1% of the patients, respectively. Resolution rates for select adverse events of grade 3 or 4 were between 85 and 100% in the nivolumab-plus-ipilimumab group for most organ categories (Table S4 in the Supplementary Appendix). As in prior studies, most endocrine events did not resolve.
+
+# Discussion
+
+In this randomized, double-blind, phase 3 study involving patients with previously untreated advanced melanoma, treatment with nivolumab alone or with the combination of nivolumab and ipilimumab resulted in significantly longer progression-free survival and higher objective response rates than did treatment with ipilimumab alone. In the two nivolumab-containing groups, as compared with ipilimumab, these results were observed independently of PD-L1 tumor status, *BRAF* mutation status, or metastasis stage. The characteristics of the study participants at baseline were typical of patients with advanced melanoma, although the proportion of patients with *BRAF* mutation (31.5%) was lower than the 40 to 50% that is generally reported for patients with advanced disease.17 Although the study was not designed for a formal statistical comparison between the nivolumab group and the nivolumabplus-ipilimumab group, the combination of nivolumab and ipilimumab resulted in numerically longer progression-free survival and a higher rate of response than did nivolumab alone in the overall study population.
+
+The median progression-free survival that was observed with the combination of nivolumab and ipilimumab in this study (11.7 months in patients with *BRAF* mutation) is similar to that recently reported with combined BRAF and MEK inhibition in patients with *BRAF*-mutated metastatic melanoma (9.9 months with vemurafenib and cobimetinib2 and 9.3 to 11.4 months with dabrafenib and trametinib3,4). However, it remains unclear how the duration of response with nivolumab and ipilimumab compares with that observed with combined BRAF and MEK inhibition. The rate of objective response in the nivolumab-plus-ipilimumab group (57.6%) is numerically higher than that observed with PD-1 blockade alone in patients with advanced melanoma (40% with nivolumab in previously untreated patients with wild-type *BRAF*<sup>9</sup> or 33% with pembrolizumab in previously treated patients and previously untreated patients12). Given the results of a phase 1 trial in which nivolumab plus ipilimumab was associated with a survival rate of 79% at 2 years,18 as well as the long-term survival data reported for ipilimumab,7,8 it will be interesting to determine whether the efficacy results reported here will be reflected in an overall survival benefit.
+
+| **Table 3. Adverse Events.**\* | | | | | | | 
+|---------------------------------------------------------------|-----------------------------------------|--------------|--------------------------------------|--------------|-----------------------|--------------|
+| Event                                                         | Nivolumab<br>(N=313)                    |              | Nivolumab plus Ipilimumab<br>(N=313) |              | Ipilimumab<br>(N=311) |              |
+|                                                               | Any                                     | Grade 3 or 4 | Any                                  | Grade 3 or 4 | Any                   | Grade 3 or 4 |
+|                                                               | number of patients with event (percent) |              |                                      |              |                       |              |
+| Any adverse event                                             | 311 (99.4)                              | 136 (43.5)   | 312 (99.7)                           | 215 (68.7)   | 308 (99.0)            | 173 (55.6)   |
+| Treatment-related adverse event†                              | 257 (82.1)                              | 51 (16.3)    | 299 (95.5)                           | 172 (55.0)   | 268 (86.2)            | 85 (27.3)    |
+| Diarrhea                                                      | 60 (19.2)                               | 7 (2.2)      | 138 (44.1)                           | 29 (9.3)     | 103 (33.1)            | 19 (6.1)     |
+| Fatigue                                                       | 107 (34.2)                              | 4 (1.3)      | 110 (35.1)                           | 13 (4.2)     | 87 (28.0)             | 3 (1.0)      |
+| Pruritus                                                      | 59 (18.8)                               | 0            | 104 (33.2)                           | 6 (1.9)      | 110 (35.4)            | 1 (0.3)      |
+| Rash                                                          | 81 (25.9)                               | 2 (0.6)      | 126 (40.3)                           | 15 (4.8)     | 102 (32.8)            | 6 (1.9)      |
+| Nausea                                                        | 41 (13.1)                               | 0            | 81 (25.9)                            | 7 (2.2)      | 50 (16.1)             | 2 (0.6)      |
+| Pyrexia                                                       | 18 (5.8)                                | 0            | 58 (18.5)                            | 2 (0.6)      | 21 (6.8)              | 1 (0.3)      |
+| Decreased appetite                                            | 34 (10.9)                               | 0            | 56 (17.9)                            | 4 (1.3)      | 39 (12.5)             | 1 (0.3)      |
+| Increase in alanine amino<br>transferase level                | 12 (3.8)                                | 4 (1.3)      | 55 (17.6)                            | 26 (8.3)     | 12 (3.9)              | 5 (1.6)      |
+| Vomiting                                                      | 20 (6.4)                                | 1 (0.3)      | 48 (15.3)                            | 8 (2.6)      | 23 (7.4)              | 1 (0.3)      |
+| Increase in aspartate amino<br>transferase level              | 12 (3.8)                                | 3 (1.0)      | 48 (15.3)                            | 19 (6.1)     | 11 (3.5)              | 2 (0.6)      |
+| Hypothyroidism                                                | 27 (8.6)                                | 0            | 47 (15.0)                            | 1 (0.3)      | 13 (4.2)              | 0            |
+| Colitis                                                       | 4 (1.3)                                 | 2 (0.6)      | 37 (11.8)                            | 24 (7.7)     | 36 (11.6)             | 27 (8.7)     |
+| Arthralgia                                                    | 24 (7.7)                                | 0            | 33 (10.5)                            | 1 (0.3)      | 19 (6.1)              | 0            |
+| Headache                                                      | 23 (7.3)                                | 0            | 32 (10.2)                            | 1 (0.3)      | 24 (7.7)              | 1 (0.3)      |
+| Dyspnea                                                       | 14 (4.5)                                | 1 (0.3)      | 32 (10.2)                            | 2 (0.6)      | 13 (4.2)              | 0            |
+| Treatment-related adverse event<br>leading to discontinuation | 24 (7.7)                                | 16 (5.1)     | 114 (36.4)                           | 92 (29.4)    | 46 (14.8)             | 41 (13.2)    |
+| **\*The safety population included all the patients who received at least one dose of study drug. The severity of adverse events was graded according to the National Cancer Institute Common Terminology Criteria for Adverse Events, version 4.0. &dagger;The treatment-related adverse events listed here were those reported in at least 10% of the patients in any of the three study groups.** | | | | | | |
+
+The results of subgroup analyses suggest that the greatest benefit with the combination of nivolumab and ipilimumab versus nivolumab alone may occur in the context of negative PD-L1 tumor expression. In the subgroup of patients with PD-L1–positive tumors, both nivolumab alone and nivolumab plus ipilimumab resulted in a similar prolongation of progression-free survival as compared with ipilimumab alone, although objective response rates were numerically higher in the combination group than in either monotherapy group. Thus, the use of PD-L1 as a biomarker may allow clinicians to make more informed decisions about the benefit–risk ratio of combination therapy versus monotherapy. However, caution is warranted in interpreting these data because the effects on overall survival are not yet known and because the most effective method and cutoff point for assaying PD-L1 expression remain to be determined. Nonetheless, the observation of at least additive activity of the combination of ipilimumab and nivolumab in the context of negative PD-L1 expression is of interest in melanoma as well as in other tumor types in which PD-1 checkpoint inhibitors are under evaluation.
+
+The incidence of adverse events in this study was, in general, lowest in the nivolumab group and highest in the combination group. The overall incidence of treatment-related adverse events of grade 3 or 4 was higher in the combination group than in either monotherapy group, as a result of a higher incidence of most adverse events — in particular, hepatic toxic events, for which the rates of grade 3 or 4 elevations of the aminotransferase levels were 6.1% (for aspartate aminotransferase) and 8.3% (for alanine aminotransferase) in the combination group and approximately 1 to 2% in each of the monotherapy groups. In general, the safety profile of the combination therapy was consistent with previous experience with nivolumab or ipilimumab alone.5,9,10 No new safety signals were identified, and there were no drug-related deaths in the combination group. Adverse events were manageable with established treatment guidelines, and most select adverse events resolved with the use of immunemodulatory agents.
+
+In conclusion, among patients with previously untreated advanced melanoma, we found longer progression-free survival and higher rates of objective response with nivolumab alone and with the combination of nivolumab and ipilimumab than with ipilimumab alone. The management of adverse events with the combination therapy suggests that it can be used safely in a broad range of clinical settings.
+
+Supported by Bristol-Myers Squibb.
+
+Disclosure forms provided by the authors are available with the full text of this article at NEJM.org.
+
+We thank the patients who volunteered to participate in this study and the staff members at the study sites who cared for them; the members of the data and safety monitoring committee; representatives of the sponsors who were involved in data collection and analyses (particularly, Amy Ronczka, B.S., and Susan Parker, Ph.D.); and Ward A. Pedersen, Ph.D., C.M.P.P., of StemScientific for writing and editorial assistance with an earlier version of the manuscript.

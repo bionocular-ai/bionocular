@@ -35,8 +35,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trials.db"
-DEFAULT_OUT_DIR = Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_exports"
+DEFAULT_DB_PATH = (
+    Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trials.db"
+)
+DEFAULT_OUT_DIR = (
+    Path(__file__).resolve().parent.parent / "data" / "trials_db" / "trial_api_exports"
+)
 
 NCT_PATTERN = re.compile(r"^NCT\d+$", re.IGNORECASE)
 
@@ -289,7 +293,9 @@ def main() -> int:
                     "\t".join(
                         [
                             (f.get("nct_number") or ""),
-                            (f.get("briefTitle") or "").replace("\t", " ").replace("\n", " "),
+                            (f.get("briefTitle") or "")
+                            .replace("\t", " ")
+                            .replace("\n", " "),
                         ]
                     )
                     for f in all_fields
@@ -302,7 +308,9 @@ def main() -> int:
                     "\t".join(
                         [
                             (f.get("nct_number") or ""),
-                            (f.get("briefTitle") or "").replace("\t", " ").replace("\n", " "),
+                            (f.get("briefTitle") or "")
+                            .replace("\t", " ")
+                            .replace("\n", " "),
                             ",".join(f.get("keywords") or []),
                         ]
                     )
@@ -311,7 +319,12 @@ def main() -> int:
             ]
         index_path = args.out_dir / "_index.txt"
         index_path.write_text("\n".join(index_lines), encoding="utf-8")
-        logger.info("Wrote index %s (%d trials, %s)", index_path, len(all_fields), args.index_style)
+        logger.info(
+            "Wrote index %s (%d trials, %s)",
+            index_path,
+            len(all_fields),
+            args.index_style,
+        )
 
     # Remove trial files in out_dir that were not exported this run (e.g. non-Industry when --industry-only)
     if exported_ncts:
@@ -322,7 +335,11 @@ def main() -> int:
                     path.unlink()
                     removed += 1
         if removed:
-            logger.info("Removed %d trial files not matching current filters from %s", removed, args.out_dir)
+            logger.info(
+                "Removed %d trial files not matching current filters from %s",
+                removed,
+                args.out_dir,
+            )
 
     logger.info("Wrote %d trial files to %s", written, args.out_dir)
     return 0

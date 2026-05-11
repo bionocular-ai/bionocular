@@ -33,6 +33,7 @@ from src.domain.models import (
 from src.infrastructure.arm_aware_rag_provider import ArmAwareRAGContextProvider
 from src.infrastructure.attribute_extractor import LLMAttributeExtractor
 from src.infrastructure.cost_calculator import CostCalculator, ModelType
+from src.infrastructure.family_extractor import FamilyExtractor
 from src.infrastructure.gemini_service import GeminiLLMService
 from src.infrastructure.langchain.chunking import LangChainChunkingService
 from src.infrastructure.langchain.embeddings import LangChainEmbeddingService
@@ -224,6 +225,7 @@ async def _process_conference_year(
         vector_store=vector_store_service,
         embedding_service=embedding_service,
     )
+    family_extractor = FamilyExtractor(gemini=llm_service)
     extraction_service = EnhancedExtractionService(
         treatment_arm_separator=arm_separator,
         arm_aware_rag_provider=rag_provider,
@@ -231,6 +233,8 @@ async def _process_conference_year(
         llm_service=llm_service,
         clinical_trials_api_service=None,
         enable_cost_tracking=False,
+        family_extractor=family_extractor,
+        gemini=llm_service,
     )
 
     # --- Chunk all abstracts for this year ---

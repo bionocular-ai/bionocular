@@ -85,7 +85,9 @@ def main() -> int:
         cur = conn.cursor()
 
         if not _table_exists(cur, "clinical_trials_cache"):
-            logger.error("Source database missing required table: clinical_trials_cache")
+            logger.error(
+                "Source database missing required table: clinical_trials_cache"
+            )
             conn.close()
             return 1
 

@@ -10,15 +10,8 @@ This script:
 
 import json
 import logging
-import sys
 from pathlib import Path
 
-# Add src to path - need to add parent directory to make relative imports work
-project_root = Path(__file__).parent.parent
-src_path = project_root / "src"
-sys.path.insert(0, str(project_root))
-
-# Import with proper path structure (using absolute imports from src)
 from src.infrastructure.clinical_trials.cancer_type_mapping import (
     ACTIVE_STATUSES,
     SKIN_CANCER_TYPES,

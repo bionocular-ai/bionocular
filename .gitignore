@@ -138,6 +138,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# superpowers docs (plans, specs)
+/docs/
+
 # mypy
 .mypy_cache/
 .dmypy.json

@@ -23,7 +23,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-DEFAULT_SOURCE = Path(__file__).parent.parent / "data" / "clinical_trial_api" / "clinical_trial_api.db"
+DEFAULT_SOURCE = (
+    Path(__file__).parent.parent
+    / "data"
+    / "clinical_trial_api"
+    / "clinical_trial_api.db"
+)
 DEFAULT_TARGET = Path(__file__).parent.parent / "data" / "trials_db" / "trials.db"
 
 
@@ -105,7 +110,9 @@ def main() -> int:
         discovery_count = src_cur.fetchone()[0]
 
         if cache_count == 0 and discovery_count == 0:
-            logger.warning("Source has no rows in clinical_trials_cache or api_discovery. Nothing to copy.")
+            logger.warning(
+                "Source has no rows in clinical_trials_cache or api_discovery. Nothing to copy."
+            )
             src_conn.close()
             tgt_conn.close()
             return 0
@@ -145,7 +152,10 @@ def main() -> int:
         src_conn.close()
         tgt_conn.close()
 
-        logger.info("Done. Dashboard trials will use this data when backend points at %s", target_abs)
+        logger.info(
+            "Done. Dashboard trials will use this data when backend points at %s",
+            target_abs,
+        )
         return 0
 
     except sqlite3.Error as e:

@@ -29,6 +29,8 @@ class LineOfTreatment(str, Enum):
     FIRST_LINE = "first_line"
     SECOND_LINE = "second_line"
     THIRD_LINE_PLUS = "third_line_plus"
+    ADJUVANT = "adjuvant"
+    MAINTENANCE = "maintenance"
     UNKNOWN = "unknown"
 
 
@@ -138,6 +140,29 @@ class TreatmentArmSeparationResult(BaseModel):
         return [arm for arm in self.treatment_arms if arm.arm_type == arm_type]
 
 
+class TreatmentArmSchemaItem(BaseModel):
+    """One arm in the LLM's structured output. Mirrors the JSON shape in the prompt's OUTPUT FORMAT."""
+
+    arm_id: str = ""
+    arm_name: str = ""
+    generic_name: str = ""
+    combination_drugs: list[str] = Field(default_factory=list)
+    arm_type: ArmType = ArmType.UNKNOWN
+    line_of_treatment: LineOfTreatment = LineOfTreatment.UNKNOWN
+    dose: Optional[str] = None
+    dosing_schedule: Optional[str] = None
+    patient_count: int = 0
+    nct_number: str = ""
+    source_text: str = ""
+    confidence_score: float = Field(default=0.0, ge=0.0, le=1.0)
+
+
+class TreatmentArmSeparationSchema(BaseModel):
+    """Top-level structured-output schema returned by Gemini for arm separation."""
+
+    treatment_arms: list[TreatmentArmSchemaItem] = Field(default_factory=list)
+
+
 class ArmSpecificContext(BaseModel):
     """Context information specific to a treatment arm."""
 
@@ -200,6 +225,10 @@ class TreatmentArmExtractionResult(BaseModel):
     )
     errors: list[str] = Field(default_factory=list, description="Processing errors")
     warnings: list[str] = Field(default_factory=list, description="Processing warnings")
+    prompt_version: str = Field(
+        default="",
+        description="Prompt-pipeline version that produced this result. Empty means legacy v1.",
+    )
     created_at: datetime = Field(default_factory=datetime.now)
 
     @property

@@ -9,13 +9,8 @@ This script:
 
 import json
 import logging
-import sys
 from pathlib import Path
 from typing import Any
-
-# Add src to path
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
 
 from src.infrastructure.clinical_trials.factory import create_clinical_trials_service
 
@@ -90,7 +85,7 @@ def extract_nct_numbers_from_json_file(
                 continue
 
             arm_results = abstract.get("arm_results", {})
-            for arm_key, arm_data in arm_results.items():
+            for _, arm_data in arm_results.items():
                 attributes = arm_data.get("attributes", {})
                 nct_number = extract_nct_from_attributes(attributes)
                 if nct_number:
@@ -108,7 +103,7 @@ def extract_nct_numbers_from_json_file(
                 continue
 
             arm_results = publication.get("arm_results", {})
-            for arm_key, arm_data in arm_results.items():
+            for _, arm_data in arm_results.items():
                 attributes = arm_data.get("attributes", {})
                 nct_number = extract_nct_from_attributes(attributes)
                 if nct_number:
@@ -125,7 +120,7 @@ def extract_nct_numbers_from_json_file(
         return []
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     logger.info("Starting extraction provenance population...")
 
@@ -173,11 +168,11 @@ def main():
     print(f"Total (NCT, source) pairs: {len(unique_records)}")
 
     # Count unique NCT numbers
-    unique_ncts = set(nct for nct, _ in unique_records)
+    unique_ncts = {nct for nct, _ in unique_records}
     print(f"Total unique NCT numbers: {len(unique_ncts)}")
 
     # Count unique sources (abstracts/publications)
-    unique_sources = set(src for _, src in unique_records)
+    unique_sources = {src for _, src in unique_records}
     print(f"Total unique sources (abstracts/publications): {len(unique_sources)}")
 
     # Count by source type
