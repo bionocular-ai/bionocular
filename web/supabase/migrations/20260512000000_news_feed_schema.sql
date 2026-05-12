@@ -18,11 +18,11 @@ ALTER TABLE news_feed
   ADD COLUMN IF NOT EXISTS safety_data   jsonb,
   ADD COLUMN IF NOT EXISTS extracted_at  timestamptz;
 
--- Deduplicate existing rows by URL before adding unique index, keep latest id
-DELETE FROM news_feed
-WHERE id NOT IN (
-  SELECT MAX(id) FROM news_feed GROUP BY url
-);
+-- Deduplicate existing rows by URL before adding unique index, keep last-inserted per URL
+DELETE FROM news_feed a
+USING news_feed b
+WHERE a.url = b.url
+  AND a.ctid < b.ctid;
 
 -- Unique index for idempotent upsert on URL (ON CONFLICT url)
 CREATE UNIQUE INDEX IF NOT EXISTS news_feed_url_key ON news_feed (url);
