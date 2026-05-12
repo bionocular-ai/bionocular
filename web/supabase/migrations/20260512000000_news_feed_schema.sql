@@ -18,6 +18,5 @@ ALTER TABLE news_feed
   ADD COLUMN IF NOT EXISTS safety_data   jsonb,
   ADD COLUMN IF NOT EXISTS extracted_at  timestamptz;
 
--- Unique constraint for idempotent upsert on URL
-ALTER TABLE news_feed
-  ADD CONSTRAINT IF NOT EXISTS news_feed_url_key UNIQUE (url);
+-- Unique index for idempotent upsert on URL (ON CONFLICT url)
+CREATE UNIQUE INDEX IF NOT EXISTS news_feed_url_key ON news_feed (url);
