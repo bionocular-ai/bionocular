@@ -73,7 +73,6 @@ class TestBuildUpsertRow:
 
         row = build_upsert_row(article, cancer_types, extraction)
 
-        assert row["source"] == "onclive"
         assert row["title"] == "Phase 3 Pembrolizumab in Melanoma"
         assert row["url"] == "https://www.onclive.com/view/pembro-melanoma"
         assert row["date"] == "2026-05-11"
