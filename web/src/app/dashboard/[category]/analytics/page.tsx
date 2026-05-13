@@ -67,22 +67,6 @@ const CATEGORY_SLUG_MAP: Record<string, string> = {
 };
 
 // Normalize cancer type names to handle legacy data
-function normalizeCancerType(cancerType: string | null | undefined): string | null {
-  if (!cancerType) return null;
-  const normalized = cancerType.trim();
-
-  // Map old names to new names
-  if (normalized === 'Resected Cutaneous Melanoma' || normalized === 'Unresectable Cutaneous Melanoma') {
-    return 'Cutaneous/Metastatic Melanoma';
-  }
-  if (normalized === 'Cutaneous Melanoma with Brain metastasis' ||
-    normalized === 'Cutaneous Melanoma with CNS metastasis' ||
-    normalized === 'Cutaneous Melanoma with Brain/CNS Metastasis') {
-    return 'Cutaneous Melanoma with Brain/CNS Metastasis';
-  }
-
-  return normalized;
-}
 
 function slugToCategory(slug: string): string {
   return CATEGORY_SLUG_MAP[slug] || slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
@@ -94,13 +78,20 @@ function slugToCategory(slug: string): string {
 
 // Note: Funding type filtering is now handled by the backend API
 
-const THERAPY_TYPE_OPTIONS = [
+const MODALITY_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: 'Immunotherapy', label: 'Immunotherapy' },
-  { value: 'Cellular therapy', label: 'Cellular therapy' },
-  { value: 'Targeted Therapy', label: 'Targeted Therapy' },
+  { value: 'Monoclonal Antibody', label: 'Monoclonal Antibody' },
+  { value: 'Vaccine', label: 'Vaccine' },
+  { value: 'Immunostimulant/Cytokine', label: 'Immunostimulant/Cytokine' },
+  { value: 'Bispecific', label: 'Bispecific' },
+  { value: 'CAR-T', label: 'CAR-T' },
+  { value: 'NK or Myeloid Cell Therapy', label: 'NK or Myeloid Cell Therapy' },
+  { value: 'TIL Therapy', label: 'TIL Therapy' },
+  { value: 'Small Molecule', label: 'Small Molecule' },
+  { value: 'Antibody-Drug Conjugate', label: 'Antibody-Drug Conjugate' },
   { value: 'Oncolytic Virus', label: 'Oncolytic Virus' },
   { value: 'Chemotherapy', label: 'Chemotherapy' },
+  { value: 'Other', label: 'Other' },
 ];
 
 const RESOURCE_TYPE_OPTIONS = [
@@ -295,21 +286,7 @@ const SAFETY_BUBBLE_XY_OPTIONS = [
 ];
 
 // Advanced filters: options from Landscape page (separate filters, not "Group by")
-const ADVANCED_MODALITY_OPTIONS = [
-  { value: 'all', label: 'All' },
-  { value: 'Monoclonal Antibody', label: 'Monoclonal Antibody' },
-  { value: 'Vaccine', label: 'Vaccine' },
-  { value: 'Immunostimulant/Cytokine', label: 'Immunostimulant/Cytokine' },
-  { value: 'Bispecific', label: 'Bispecific' },
-  { value: 'CAR-T', label: 'CAR-T' },
-  { value: 'NK or Myeloid Cell Therapy', label: 'NK or Myeloid Cell Therapy' },
-  { value: 'TIL Therapy', label: 'TIL Therapy' },
-  { value: 'Small Molecule', label: 'Small Molecule' },
-  { value: 'Antibody-Drug Conjugate', label: 'Antibody-Drug Conjugate' },
-  { value: 'Oncolytic Virus', label: 'Oncolytic Virus' },
-  { value: 'Chemotherapy', label: 'Chemotherapy' },
-  { value: 'Other', label: 'Other' },
-];
+
 const ADVANCED_STAGE_OPTIONS = [
   { value: 'all', label: 'All' },
   { value: 'Stage I', label: 'Stage I' },
@@ -347,12 +324,12 @@ const ADVANCED_BIOMARKER_OPTIONS = [
 ];
 const ADVANCED_LINE_OF_THERAPY_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: '1L', label: '1L' },
-  { value: '2L', label: '2L' },
-  { value: '3L', label: '3L' },
-  { value: 'R/R', label: 'R/R' },
-  { value: 'Adjuvant', label: 'Adjuvant' },
   { value: 'Neoadjuvant', label: 'Neoadjuvant' },
+  { value: 'Adjuvant', label: 'Adjuvant' },
+  { value: '1L (First Line)', label: '1L (First Line)' },
+  { value: '2L (Second Line)', label: '2L (Second Line)' },
+  { value: '2L+ (Refractory)', label: '2L+ (Refractory)' },
+  { value: '3L+ (Third Line+)', label: '3L+ (Third Line+)' },
 ];
 // ============================================================================
 // Filter Select Component
@@ -533,14 +510,13 @@ export default function CategoryAnalyticsPage() {
     modeParam === 'all' ? 'all' : modeParam === 'safety' ? 'safety' : 'efficacy';
 
   // Filter states - initialized based on mode
-  const [therapyType, setTherapyType] = useState('all');
+  const [modality, setModality] = useState('all');
   const [resourceType, setResourceType] = useState<'all' | 'conference' | 'publication'>('all');
   const [fundingType, setFundingType] = useState<'all' | 'industry' | 'non-industry'>('industry');
   const [advancedLineOfTherapy, setAdvancedLineOfTherapy] = useState('all');
   // Store raw treatment selections (merged approved + non-approved)
   const [rawSelectedTreatments, setRawSelectedTreatments] = useState<string[]>([]);
   // Advanced filters
-  const [advancedModality, setAdvancedModality] = useState('all');
   const [advancedStage, setAdvancedStage] = useState('all');
   const [advancedBiomarker, setAdvancedBiomarker] = useState('all');
 
@@ -684,9 +660,8 @@ export default function CategoryAnalyticsPage() {
       // Pass the URL slug, not the display name — getDbCancerType() maps slugs to DB values.
       // e.g. 'cutaneous-melanoma' → 'Cutaneous Melanoma' (not 'Cutaneous/Metastatic Melanoma')
       cancer_type: categorySlug || undefined,
-      therapy_type: therapyType,
+      modality: modality !== 'all' ? modality : undefined,
       funding_type: fundingType as 'all' | 'industry' | 'non-industry',
-      modality: advancedModality !== 'all' ? advancedModality : undefined,
       limit: 2000, // Request all matching records
     };
 
@@ -696,7 +671,7 @@ export default function CategoryAnalyticsPage() {
     }
 
     return filters;
-  }, [resourceType, categorySlug, therapyType, fundingType, safetyParam, efficacyParam, advancedModality]);
+  }, [resourceType, categorySlug, modality, fundingType, safetyParam, efficacyParam]);
 
   // Fetch analytics data from backend with filters
   const { data: analyticsData, isLoading, error } = useQuery({
@@ -841,34 +816,10 @@ export default function CategoryAnalyticsPage() {
       return { approved: [] as string[], nonApproved: [] as string[] };
     }
 
-    // Filter by cancer type first
-    let categoryTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
+    // The API already pre-filters by cancer type, so no need to re-filter client-side.
+    const categoryTrials: TrialDataFile['abstracts'] = (analyticsData.abstracts as unknown as TrialDataFile['abstracts']) || [];
 
-    if (categoryName) {
-      categoryTrials = categoryTrials.filter(trial => {
-        for (const arm of Object.values(trial.arm_results)) {
-          // Check both key formats: abstracts use 'AttributeType.CANCER_TYPE', publications use 'cancer_type'
-          const cancerTypeAttr = arm.attributes['AttributeType.CANCER_TYPE'] || arm.attributes['cancer_type'];
-          if (cancerTypeAttr === null || cancerTypeAttr === undefined) continue;
-
-          const cancerType = typeof cancerTypeAttr === 'object' && 'value' in cancerTypeAttr
-            ? String(cancerTypeAttr.value || '')
-            : String(cancerTypeAttr || '');
-
-          // Normalize both values for comparison
-          const normalizedTrialType = normalizeCancerType(cancerType);
-          const normalizedCategory = normalizeCancerType(categoryName);
-
-          if (normalizedTrialType && normalizedCategory &&
-            normalizedTrialType.toLowerCase() === normalizedCategory.toLowerCase()) {
-            return true;
-          }
-        }
-        return false;
-      });
-    }
-
-    // Extract unique treatment names from filtered trials
+    // Extract unique treatment names from all returned trials
     const treatmentSet = new Set<string>();
     for (const trial of categoryTrials) {
       for (const arm of Object.values(trial.arm_results)) {
@@ -881,7 +832,6 @@ export default function CategoryAnalyticsPage() {
     const allTreatments = Array.from(treatmentSet).sort();
 
     // Classify treatments as approved or non-approved
-    // Using the same logic as chart-transformers
     const APPROVED_TREATMENTS_SET = new Set([
       'pembrolizumab', 'nivolumab', 'ipilimumab', 'dabrafenib', 'trametinib',
       'vemurafenib', 'cobimetinib', 'encorafenib', 'binimetinib', 'atezolizumab',
@@ -895,7 +845,6 @@ export default function CategoryAnalyticsPage() {
       const normalized = treatment.toLowerCase();
       let isApproved = false;
 
-      // Check if any approved treatment is in the name
       for (const approvedDrug of APPROVED_TREATMENTS_SET) {
         if (normalized.includes(approvedDrug)) {
           isApproved = true;
@@ -903,15 +852,12 @@ export default function CategoryAnalyticsPage() {
         }
       }
 
-      // Check for combination therapies with approved drugs
       if (!isApproved && normalized.includes('+')) {
         const parts = normalized.split('+').map(p => p.trim());
         const hasApproved = parts.some(part =>
           Array.from(APPROVED_TREATMENTS_SET).some(approved => part.includes(approved))
         );
-        if (hasApproved) {
-          isApproved = true;
-        }
+        if (hasApproved) isApproved = true;
       }
 
       if (isApproved) {
@@ -922,7 +868,7 @@ export default function CategoryAnalyticsPage() {
     }
 
     return { approved, nonApproved };
-  }, [analyticsData, categoryName]);
+  }, [analyticsData]);
 
   // All available treatments (approved + non-approved merged)
   const allAvailableTreatments = useMemo(
@@ -1688,7 +1634,7 @@ export default function CategoryAnalyticsPage() {
               />
             </div>
             <div className="w-40">
-              <FilterSelect label="Therapy" value={therapyType} options={THERAPY_TYPE_OPTIONS} onChange={setTherapyType} />
+              <FilterSelect label="Modality" value={modality} options={MODALITY_OPTIONS} onChange={setModality} />
             </div>
             <div className="w-40">
               <FilterSelect label="Line of treatment" value={advancedLineOfTherapy} options={ADVANCED_LINE_OF_THERAPY_OPTIONS} onChange={setAdvancedLineOfTherapy} />
@@ -1733,7 +1679,6 @@ export default function CategoryAnalyticsPage() {
                       Advanced filters
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <FilterSelect label="Modality" value={advancedModality} options={ADVANCED_MODALITY_OPTIONS} onChange={setAdvancedModality} />
                       <FilterSelect label="Stage" value={advancedStage} options={ADVANCED_STAGE_OPTIONS} onChange={setAdvancedStage} />
                       <FilterSelect label="Biomarker" value={advancedBiomarker} options={ADVANCED_BIOMARKER_OPTIONS} onChange={setAdvancedBiomarker} />
                     </div>
@@ -1746,12 +1691,11 @@ export default function CategoryAnalyticsPage() {
               variant="outline"
               className="h-10 border-[var(--brand-border)] text-[var(--brand-primary)] hover:bg-[var(--brand-accent-light)]"
               onClick={() => {
-                setTherapyType('all');
+                setModality('all');
                 setResourceType('all');
                 setFundingType('industry');
                 setAdvancedLineOfTherapy('all');
                 setRawSelectedTreatments([]);
-                setAdvancedModality('all');
                 setAdvancedStage('all');
                 setAdvancedBiomarker('all');
                 setEfficacyParamY('none');

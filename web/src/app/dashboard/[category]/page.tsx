@@ -507,9 +507,9 @@ export default function CancerDashboardSnapshot() {
                         latestTrialUpdates.trials.slice(0, 5).map((trial, idx) => (
                           <div
                             key={trial.nct_id}
-                            className={`grid grid-cols-[5rem_1fr_minmax(4.5rem,auto)_2rem] gap-2 px-3 py-[clamp(0.375rem,0.45vh,0.625rem)] border-b border-slate-100 text-xs items-center ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/80"}`}
+                            className={`grid grid-cols-[5rem_1fr_minmax(4.5rem,auto)_2rem] gap-2 px-3 py-[clamp(0.375rem,0.45vh,0.625rem)] border-b border-slate-100 items-center ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/80"}`}
                           >
-                            <span className="text-slate-500 font-medium tabular-nums whitespace-nowrap">
+                            <span className="text-slate-500 font-medium tabular-nums whitespace-nowrap text-[clamp(0.6rem,1.1cqi,0.8125rem)]">
                               {trial.date_iso
                                 ? new Date(trial.date_iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                                 : '—'}
@@ -517,15 +517,15 @@ export default function CancerDashboardSnapshot() {
                             <div className="min-w-0">
                               <Link
                                 href={`/trial/nct/${trial.nct_id}?category=${categorySlug}`}
-                                className="font-medium text-blue-600 hover:text-blue-800 hover:underline line-clamp-2"
+                                className="font-semibold text-blue-600 hover:text-blue-800 hover:underline line-clamp-2 text-[clamp(0.7rem,1.4cqi,1rem)] leading-snug"
                               >
                                 {trial.title || trial.nct_id}
                               </Link>
-                              <div className="text-[10px] text-slate-500 mt-0.5 line-clamp-2">
+                              <div className="text-[clamp(0.55rem,1.1cqi,0.75rem)] text-slate-500 mt-0.5 line-clamp-2 font-medium">
                                 {trial.sponsor_name || "Unknown Sponsor"}
                               </div>
                             </div>
-                            <span className="text-slate-700 min-w-0 block pl-3">
+                            <span className="text-slate-700 min-w-0 block pl-3 text-[clamp(0.6rem,1.2cqi,0.875rem)]">
                               {trial.update_type === "new" ? "New trial added." : "Updated."}
                             </span>
                             <span className="w-9" aria-hidden />
@@ -865,7 +865,11 @@ export default function CancerDashboardSnapshot() {
 
             <div className="flex-1 min-h-0 @container/timeline">
               <SnapshotModule
-                title="Regulatory Timeline"
+                title={
+                  <>
+                    Regulatory Timeline <span className="text-slate-400">(Upcoming)</span>
+                  </>
+                }
                 href={`/dashboard/${categorySlug}/regulatory-timeline`}
                 hideNav
               >
@@ -1027,7 +1031,7 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="@container/agent h-[clamp(140px,18vh,230px)] shrink-0">
+            <div className="flex-1 min-h-0 @container/agent">
               <SnapshotModule
                 title={
                   <>
