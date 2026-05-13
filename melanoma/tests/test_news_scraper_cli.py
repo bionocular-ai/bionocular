@@ -11,6 +11,7 @@ from scripts.scrape_news_supabase import (
     fetch_full_text,
     build_upsert_row,
     compute_since,
+    main,
 )
 from src.infrastructure.news_scraper.base import NewsArticleRaw
 from src.infrastructure.news_scraper.gemini_extractor import NewsExtractionResult
@@ -100,3 +101,32 @@ class TestBuildUpsertRow:
         assert row["nct_ids"] == []
         assert row["has_efficacy"] is False
         assert row["extracted_at"] is None
+
+
+class TestPipelineWithoutGeminiKey:
+    def test_pipeline_runs_without_gemini_key(self, monkeypatch):
+        """Pipeline should proceed without GEMINI_API_KEY — skips extraction."""
+        from unittest.mock import MagicMock, patch
+
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        monkeypatch.setenv("SUPABASE_URL", "https://fake.supabase.co")
+        monkeypatch.setenv("SUPABASE_KEY", "fake-key")
+        monkeypatch.setattr(sys, "argv", ["scrape_news_supabase.py", "--days", "1"])
+
+        with (
+            patch("scripts.scrape_news_supabase.load_dotenv"),  # prevent .env from overwriting delenv
+            patch("scripts.scrape_news_supabase.OncLiveScraper") as mock_onclive,
+            patch("scripts.scrape_news_supabase.CancerNetworkScraper") as mock_cn,
+            patch("scripts.scrape_news_supabase.TargetedOncScraper") as mock_to,
+            patch("scripts.scrape_news_supabase.BioSpaceScraper") as mock_bs,
+            patch("scripts.scrape_news_supabase.create_client") as mock_create_client,
+            patch("scripts.scrape_news_supabase.CostCalculator"),
+        ):
+            for m in [mock_onclive, mock_cn, mock_to, mock_bs]:
+                m.return_value.fetch_articles.return_value = []
+            mock_create_client.return_value = MagicMock()
+
+            result = main()
+
+        assert result != 2, "Should not fail with GEMINI_API_KEY error"

@@ -37,6 +37,7 @@ from src.infrastructure.news_scraper.gemini_extractor import (
 )
 from src.infrastructure.news_scraper.onclive import OncLiveScraper
 from src.infrastructure.news_scraper.targetedonc import TargetedOncScraper
+from src.infrastructure.cost_calculator import CostCalculator, ModelType
 
 logging.basicConfig(
     level=logging.INFO,
@@ -114,17 +115,15 @@ def main() -> int:
     if not args.dry_run and (not supabase_url or not supabase_key):
         logger.error("SUPABASE_URL and SUPABASE_KEY must be set (or use --dry-run)")
         return 2
-    if not args.dry_run and not gemini_key:
-        logger.error("GEMINI_API_KEY must be set (or use --dry-run)")
-        return 2
 
     supabase: Optional[Client] = (
         create_client(supabase_url, supabase_key)
         if (supabase_url and supabase_key and not args.dry_run)
         else None
     )
+    cost_calculator = CostCalculator(default_model=ModelType.GEMINI_25_FLASH_DIRECT)
     extractor: Optional[GeminiNewsExtractor] = (
-        GeminiNewsExtractor(api_key=gemini_key) if gemini_key else None
+        GeminiNewsExtractor(api_key=gemini_key, cost_calculator=cost_calculator) if gemini_key else None
     )
 
     since = compute_since(days=args.days, since_str=args.since_str)
@@ -164,13 +163,13 @@ def main() -> int:
     total = len(matched)
 
     for idx, (article, cancer_types) in enumerate(matched, start=1):
-        full_text = fetch_full_text(article.url, http_session)
+        full_text: Optional[str] = None
+        if extractor:
+            full_text = fetch_full_text(article.url, http_session)
 
         extraction: Optional[NewsExtractionResult] = None
         if extractor and full_text:
             extraction = extractor.extract(article.title, full_text, cancer_types)
-        elif full_text is None:
-            logger.warning("Skipping extraction for %s — full text unavailable", article.url)
 
         row = build_upsert_row(article, cancer_types, extraction)
 
@@ -194,6 +193,7 @@ def main() -> int:
             logger.info("Progress: %d/%d | %s", idx, total, counts)
 
     logger.info("Scrape complete: %s", counts)
+    cost_calculator.print_summary()
     return 0 if counts["error"] == 0 else 1
 
 
