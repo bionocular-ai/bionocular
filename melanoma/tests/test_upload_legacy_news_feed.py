@@ -48,6 +48,11 @@ class TestClassifyEfficacySafety:
         assert has_eff is True
         assert has_saf is True
 
+    def test_ae_abbreviation_is_safety(self):
+        has_eff, has_saf = _classify_efficacy_safety("ORR; AE-related Permanent Discontinuation")
+        assert has_eff is True
+        assert has_saf is True
+
     def test_unknown_defaults_to_efficacy(self):
         has_eff, has_saf = _classify_efficacy_safety("Some unrecognised metric")
         assert has_eff is True

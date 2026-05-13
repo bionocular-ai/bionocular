@@ -41,7 +41,7 @@ _CANCER_TYPE_MAP: dict[str, str] = {
 
 _LEGACY_EXTRACTED_AT = "2026-01-01T00:00:00+00:00"
 
-_SAFETY_KEYWORDS = {"safety", "adverse", "toxicity", "dlt", "trae", "grade"}
+_SAFETY_KEYWORDS = {"safety", "adverse", "toxicity", "dlt", "trae", "grade", "ae"}
 _EFFICACY_KEYWORDS = {"orr", "pfs", "dor", "dcr", "efficacy", "survival", "clearance",
                       "response", "progression", "overall"}
 
