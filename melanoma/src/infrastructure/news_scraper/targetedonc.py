@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 import feedparser
 import requests
+from googlenewsdecoder import gnewsdecoder
 
 from .base import NewsArticleRaw, NewsSourceBase
 
@@ -46,9 +47,12 @@ class TargetedOncScraper(NewsSourceBase):
         resp.raise_for_status()
         return resp.text
 
-    def _resolve_redirect(self, url: str) -> str:
-        resp = self._session.get(url, timeout=self._timeout, allow_redirects=True)
-        return resp.url
+    def _resolve_url(self, google_url: str) -> str:
+        result = gnewsdecoder(google_url, interval=1)
+        if result.get("status"):
+            return result["decoded_url"]
+        logger.warning("gnewsdecoder returned no URL for %s: %s", google_url, result)
+        return google_url
 
     def fetch_articles(self, since: date) -> list[NewsArticleRaw]:
         seen_urls: set[str] = set()
@@ -69,9 +73,9 @@ class TargetedOncScraper(NewsSourceBase):
 
                 google_url: str = entry.get("link", "")
                 try:
-                    resolved_url = self._resolve_redirect(google_url)
+                    resolved_url = self._resolve_url(google_url)
                 except Exception as exc:
-                    logger.warning("Redirect resolution failed for %s: %s", google_url, exc)
+                    logger.warning("URL decode failed for %s: %s", google_url, exc)
                     resolved_url = google_url
 
                 if resolved_url in seen_urls:

@@ -23,7 +23,7 @@ class TestTargetedOncScraper:
 
         with (
             patch.object(scraper, "_fetch_gnews_text", return_value=xml),
-            patch.object(scraper, "_resolve_redirect", side_effect=mock_resolve),
+            patch.object(scraper, "_resolve_url", side_effect=mock_resolve),
         ):
             articles = scraper.fetch_articles(since=date(2026, 2, 7))
 
@@ -37,7 +37,7 @@ class TestTargetedOncScraper:
         scraper = TargetedOncScraper()
         with (
             patch.object(scraper, "_fetch_gnews_text", return_value=xml),
-            patch.object(scraper, "_resolve_redirect", side_effect=lambda url: url),
+            patch.object(scraper, "_resolve_url", side_effect=lambda url: url),
         ):
             articles = scraper.fetch_articles(since=date(2026, 2, 7))
         assert all(a.source == "targetedonc" for a in articles)
@@ -47,7 +47,7 @@ class TestTargetedOncScraper:
         scraper = TargetedOncScraper()
         with (
             patch.object(scraper, "_fetch_gnews_text", return_value=xml),
-            patch.object(scraper, "_resolve_redirect", side_effect=lambda url: url),
+            patch.object(scraper, "_resolve_url", side_effect=lambda url: url),
         ):
             articles = scraper.fetch_articles(since=date(2026, 5, 1))
 
@@ -59,7 +59,7 @@ class TestTargetedOncScraper:
         scraper = TargetedOncScraper()
         with (
             patch.object(scraper, "_fetch_gnews_text", return_value=xml),
-            patch.object(scraper, "_resolve_redirect", side_effect=lambda url: url),
+            patch.object(scraper, "_resolve_url", side_effect=lambda url: url),
         ):
             articles = scraper.fetch_articles(since=date(2026, 2, 7))
         urls = [a.url for a in articles]
@@ -74,7 +74,7 @@ class TestTargetedOncScraper:
 
         with (
             patch.object(scraper, "_fetch_gnews_text", return_value=xml),
-            patch.object(scraper, "_resolve_redirect", side_effect=raise_on_resolve),
+            patch.object(scraper, "_resolve_url", side_effect=raise_on_resolve),
         ):
             articles = scraper.fetch_articles(since=date(2026, 2, 7))
 
