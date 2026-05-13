@@ -62,7 +62,9 @@ class BioSpaceScraper(NewsSourceBase):
             try:
                 xml = self._fetch_gnews_text(keyword)
             except Exception as exc:
-                logger.warning("BioSpace Google News fetch failed for %s: %s", keyword, exc)
+                logger.warning(
+                    "BioSpace Google News fetch failed for %s: %s", keyword, exc
+                )
                 continue
 
             feed = feedparser.parse(xml)

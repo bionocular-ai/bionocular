@@ -19,10 +19,14 @@ class TestGeminiNewsExtractor:
         extractor = _make_extractor()
         mock_result = NewsExtractionResult(
             nct_ids=["NCT12345678"],
-            efficacy_data={"Cutaneous Melanoma": {"orr": "68%", "median_pfs": "12.3 months"}},
+            efficacy_data={
+                "Cutaneous Melanoma": {"orr": "68%", "median_pfs": "12.3 months"}
+            },
             safety_data={},
         )
-        with patch.object(extractor._service, "generate_structured", new=_mock_response(mock_result)):
+        with patch.object(
+            extractor._service, "generate_structured", new=_mock_response(mock_result)
+        ):
             result = extractor.extract(
                 title="Phase 3 Pembrolizumab in Melanoma",
                 full_text="NCT12345678 met primary endpoint. ORR 68%. Median PFS 12.3 months.",
@@ -58,9 +62,16 @@ class TestGeminiNewsExtractor:
         mock_result = NewsExtractionResult(
             nct_ids=[],
             efficacy_data={},
-            safety_data={"Cutaneous Melanoma": {"grade_3_plus_ae_pct": "23%", "serious_ae": "12%"}},
+            safety_data={
+                "Cutaneous Melanoma": {
+                    "grade_3_plus_ae_pct": "23%",
+                    "serious_ae": "12%",
+                }
+            },
         )
-        with patch.object(extractor._service, "generate_structured", new=_mock_response(mock_result)):
+        with patch.object(
+            extractor._service, "generate_structured", new=_mock_response(mock_result)
+        ):
             result = extractor.extract(
                 title="Safety Profile of Pembrolizumab in Melanoma",
                 full_text="Grade 3+ AEs occurred in 23% of patients.",
@@ -81,11 +92,16 @@ class TestGeminiNewsExtractor:
             },
             safety_data={},
         )
-        with patch.object(extractor._service, "generate_structured", new=_mock_response(mock_result)):
+        with patch.object(
+            extractor._service, "generate_structured", new=_mock_response(mock_result)
+        ):
             result = extractor.extract(
                 title="BCC and cSCC Treatment Advances",
                 full_text="ORR 45% in BCC. ORR 68% in cSCC.",
-                cancer_types=["Basal Cell Carcinoma", "Cutaneous Squamous Cell Carcinoma"],
+                cancer_types=[
+                    "Basal Cell Carcinoma",
+                    "Cutaneous Squamous Cell Carcinoma",
+                ],
             )
 
         assert result.has_efficacy is True

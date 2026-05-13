@@ -50,7 +50,9 @@ class GeminiNewsExtractor:
         model: str = "gemini-2.5-flash",
         cost_calculator: Optional[CostCalculator] = None,
     ) -> None:
-        self._service = GeminiLLMService(api_key=api_key, model=model, cost_calculator=cost_calculator)
+        self._service = GeminiLLMService(
+            api_key=api_key, model=model, cost_calculator=cost_calculator
+        )
         self.cost_calculator = cost_calculator
 
     def extract(

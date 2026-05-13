@@ -32,7 +32,15 @@ def assign_cancer_types(article: NewsArticleRaw) -> list[str]:
     has_melanoma = "melanoma" in text
     has_brain_cns = any(kw in text for kw in _BRAIN_CNS_KEYWORDS) or (
         has_melanoma
-        and any(kw in text for kw in ["brain metastasis", "cns metastasis", "brain met", "intracranial"])
+        and any(
+            kw in text
+            for kw in [
+                "brain metastasis",
+                "cns metastasis",
+                "brain met",
+                "intracranial",
+            ]
+        )
     )
     if has_brain_cns:
         matched.append("Cutaneous Melanoma with Brain/CNS Metastasis")

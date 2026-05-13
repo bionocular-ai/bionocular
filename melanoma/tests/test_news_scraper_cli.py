@@ -1,16 +1,13 @@
 import sys
-import pathlib
 from datetime import date
 from unittest.mock import MagicMock
 
 import pytest
 
-sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
-
 from scripts.scrape_news_supabase import (
-    fetch_full_text,
     build_upsert_row,
     compute_since,
+    fetch_full_text,
     main,
 )
 from src.infrastructure.news_scraper.base import NewsArticleRaw
@@ -20,6 +17,7 @@ from src.infrastructure.news_scraper.gemini_extractor import NewsExtractionResul
 class TestComputeSince:
     def test_days_flag(self):
         from datetime import timedelta
+
         result = compute_since(days=3, since_str=None)
         assert result == date.today() - timedelta(days=3)
 
@@ -113,7 +111,9 @@ class TestPipelineWithoutGoogleApiKey:
         monkeypatch.setattr(sys, "argv", ["scrape_news_supabase.py", "--days", "1"])
 
         with (
-            patch("scripts.scrape_news_supabase.load_dotenv"),  # prevent .env from overwriting delenv
+            patch(
+                "scripts.scrape_news_supabase.load_dotenv"
+            ),  # prevent .env from overwriting delenv
             patch("scripts.scrape_news_supabase.OncLiveScraper") as mock_onclive,
             patch("scripts.scrape_news_supabase.CancerNetworkScraper") as mock_cn,
             patch("scripts.scrape_news_supabase.TargetedOncScraper") as mock_to,

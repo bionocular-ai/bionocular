@@ -90,7 +90,6 @@ def build_upsert_row(
     extraction: Optional[NewsExtractionResult],
 ) -> dict[str, Any]:
     return {
-        "source": article.source,
         "title": article.title,
         "url": article.url,
         "date": article.published_date.isoformat(),

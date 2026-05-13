@@ -15,7 +15,8 @@ class TestBioSpaceScraper:
         with (
             patch.object(scraper, "_fetch_gnews_text", return_value=xml),
             patch.object(
-                scraper, "_resolve_url",
+                scraper,
+                "_resolve_url",
                 return_value="https://www.biospace.com/some-article",
             ),
         ):
@@ -29,7 +30,9 @@ class TestBioSpaceScraper:
 
         with (
             patch.object(scraper, "_fetch_gnews_text", return_value=xml),
-            patch.object(scraper, "_resolve_url", side_effect=Exception("decode failed")),
+            patch.object(
+                scraper, "_resolve_url", side_effect=Exception("decode failed")
+            ),
         ):
             articles = scraper.fetch_articles(since=date(2026, 4, 1))
 
@@ -54,6 +57,8 @@ class TestBioSpaceScraper:
 
     def test_returns_empty_on_fetch_failure(self):
         scraper = BioSpaceScraper()
-        with patch.object(scraper, "_fetch_gnews_text", side_effect=Exception("timeout")):
+        with patch.object(
+            scraper, "_fetch_gnews_text", side_effect=Exception("timeout")
+        ):
             articles = scraper.fetch_articles(since=date(2026, 4, 1))
         assert articles == []

@@ -21,9 +21,15 @@ class TestOncLiveSitemapScraper:
 
         assert len(articles) == 2
         urls = [a.url for a in articles]
-        assert "https://www.onclive.com/view/nivolumab-ipilimumab-melanoma-os-update" in urls
+        assert (
+            "https://www.onclive.com/view/nivolumab-ipilimumab-melanoma-os-update"
+            in urls
+        )
         nivo = next(a for a in articles if "nivolumab" in a.url)
-        assert nivo.title == "Nivolumab Plus Ipilimumab Demonstrates Durable OS in Advanced Melanoma"
+        assert (
+            nivo.title
+            == "Nivolumab Plus Ipilimumab Demonstrates Durable OS in Advanced Melanoma"
+        )
         assert nivo.published_date == date(2026, 5, 7)
         assert nivo.source == "onclive"
 
@@ -63,4 +69,6 @@ class TestCancerNetworkScraper:
         assert len(articles) == 2
         assert articles[0].source == "cancernetwork"
         urls = [a.url for a in articles]
-        assert "https://www.cancernetwork.com/view/til-therapy-metastatic-melanoma" in urls
+        assert (
+            "https://www.cancernetwork.com/view/til-therapy-metastatic-melanoma" in urls
+        )

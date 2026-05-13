@@ -1,8 +1,6 @@
 import pathlib
 from datetime import date
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from src.infrastructure.news_scraper.targetedonc import TargetedOncScraper
 

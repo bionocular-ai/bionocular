@@ -15,4 +15,5 @@ class NewsArticleRaw:
 
 class NewsSourceBase(ABC):
     @abstractmethod
-    def fetch_articles(self, since: date) -> list[NewsArticleRaw]: ...
+    def fetch_articles(self, since: date) -> list[NewsArticleRaw]:
+        ...

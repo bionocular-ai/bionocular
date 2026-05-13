@@ -1,7 +1,5 @@
 from datetime import date
 
-import pytest
-
 from src.infrastructure.news_scraper.base import NewsArticleRaw
 from src.infrastructure.news_scraper.cancer_filter import assign_cancer_types
 
@@ -79,9 +77,7 @@ def test_discards_unrelated():
 
 
 def test_multiple_types():
-    article = _article(
-        "Rare Skin Cancers: BCC and cSCC Treatment Advances"
-    )
+    article = _article("Rare Skin Cancers: BCC and cSCC Treatment Advances")
     types = assign_cancer_types(article)
     assert "Basal Cell Carcinoma" in types
     assert "Cutaneous Squamous Cell Carcinoma" in types
