@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import date, datetime
 
 import feedparser
@@ -9,6 +10,12 @@ from .base import NewsArticleRaw, NewsSourceBase
 logger = logging.getLogger(__name__)
 
 _RSS_URL = "https://www.cancernetwork.com/rss"
+_CDATA_RE = re.compile(r"<!\[CDATA\[(.*?)\]\]>", re.DOTALL)
+
+
+def _strip_cdata(text: str) -> str:
+    m = _CDATA_RE.match(text)
+    return m.group(1).strip() if m else text
 
 
 def _parse_feed_date(entry: object) -> date | None:
@@ -46,7 +53,7 @@ class CancerNetworkScraper(NewsSourceBase):
             articles.append(
                 NewsArticleRaw(
                     source="cancernetwork",
-                    title=entry.get("title", ""),
+                    title=_strip_cdata(entry.get("title", "")),
                     url=entry.get("link", ""),
                     published_date=pub_date,
                     description=entry.get("summary", ""),

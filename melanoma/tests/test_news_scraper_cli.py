@@ -103,12 +103,11 @@ class TestBuildUpsertRow:
         assert row["extracted_at"] is None
 
 
-class TestPipelineWithoutGeminiKey:
-    def test_pipeline_runs_without_gemini_key(self, monkeypatch):
-        """Pipeline should proceed without GEMINI_API_KEY — skips extraction."""
+class TestPipelineWithoutGoogleApiKey:
+    def test_pipeline_runs_without_google_api_key(self, monkeypatch):
+        """Pipeline should proceed without GOOGLE_API_KEY — skips extraction."""
         from unittest.mock import MagicMock, patch
 
-        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
         monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
         monkeypatch.setenv("SUPABASE_URL", "https://fake.supabase.co")
         monkeypatch.setenv("SUPABASE_KEY", "fake-key")
@@ -129,4 +128,4 @@ class TestPipelineWithoutGeminiKey:
 
             result = main()
 
-        assert result != 2, "Should not fail with GEMINI_API_KEY error"
+        assert result != 2

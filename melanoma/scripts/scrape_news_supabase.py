@@ -110,7 +110,7 @@ def main() -> int:
 
     supabase_url = os.environ.get("SUPABASE_URL")
     supabase_key = os.environ.get("SUPABASE_KEY")
-    gemini_key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
+    gemini_key = os.environ.get("GOOGLE_API_KEY", "")
 
     if not args.dry_run and (not supabase_url or not supabase_key):
         logger.error("SUPABASE_URL and SUPABASE_KEY must be set (or use --dry-run)")
@@ -175,8 +175,8 @@ def main() -> int:
 
         if args.dry_run:
             logger.info(
-                "[dry-run] %s | cancer_types=%s | nct_ids=%s | efficacy=%s | safety=%s",
-                row["url"], row["cancer_type"], row["nct_ids"],
+                "[dry-run] %s | title=%s | date=%s | cancer_types=%s | nct_ids=%s | efficacy=%s | safety=%s",
+                row["url"], row["title"], row["date"], row["cancer_type"], row["nct_ids"],
                 row["has_efficacy"], row["has_safety"],
             )
             counts["upserted"] += 1
