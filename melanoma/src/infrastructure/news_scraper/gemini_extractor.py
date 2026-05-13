@@ -1,8 +1,10 @@
 import asyncio
 import logging
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from ..cost_calculator import CostCalculator
 from ..gemini_service import GeminiLLMService
 
 logger = logging.getLogger(__name__)
@@ -21,13 +23,15 @@ Extract:
    - Efficacy metrics: ORR, PFS, OS, DOR, hazard ratios, p-values, response rates, survival rates
    - Safety metrics: AE rates, Grade 3+ adverse events, serious AEs, TRAEs, discontinuation rates
 
-Return a JSON object with:
+Return ONLY valid JSON, no prose, no markdown fences. JSON structure:
+{{
+  "nct_ids": ["NCT12345678"],
+  "efficacy_data": {{"Cutaneous Melanoma": {{"orr": "68%", "median_pfs": "12.3 months"}}}},
+  "safety_data": {{"Cutaneous Melanoma": {{"grade_3_plus_ae_pct": "23%"}}}}
+}}
 - nct_ids: array of NCT ID strings (empty array if none found)
-- efficacy_data: object keyed by cancer type name, each value is an object of metric name to string value.
-  Example: {{"Cutaneous Melanoma": {{"orr": "68%", "median_pfs": "12.3 months"}}, "Basal Cell Carcinoma": {{"orr": "45%"}}}}
-  Only include cancer types that have efficacy data in this article. Omit types with no data.
-- safety_data: same structure as efficacy_data but for safety metrics.
-  Example: {{"Cutaneous Melanoma": {{"grade_3_plus_ae_pct": "23%", "serious_ae": "12%"}}}}
+- efficacy_data: object keyed by cancer type name, each value is metric name to string value. Omit cancer types with no data.
+- safety_data: same structure as efficacy_data but for safety metrics. Omit cancer types with no data.
 """
 
 
@@ -40,8 +44,14 @@ class NewsExtractionResult(BaseModel):
 
 
 class GeminiNewsExtractor:
-    def __init__(self, api_key: str, model: str = "gemini-2.5-flash") -> None:
-        self._service = GeminiLLMService(api_key=api_key, model=model)
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "gemini-2.5-flash",
+        cost_calculator: Optional[CostCalculator] = None,
+    ) -> None:
+        self._service = GeminiLLMService(api_key=api_key, model=model, cost_calculator=cost_calculator)
+        self.cost_calculator = cost_calculator
 
     def extract(
         self, title: str, full_text: str, cancer_types: list[str]
@@ -54,14 +64,13 @@ class GeminiNewsExtractor:
             full_text=capped,
         )
         try:
-            result = asyncio.run(
-                self._service.generate_structured(
+            raw = asyncio.run(
+                self._service.extract_json(
                     prompt=prompt,
-                    response_schema=NewsExtractionResult,
                     operation="news_extraction",
-                    max_tokens=2048,
                 )
             )
+            result = NewsExtractionResult.model_validate(raw)
             result.has_efficacy = any(bool(v) for v in result.efficacy_data.values())
             result.has_safety = any(bool(v) for v in result.safety_data.values())
             return result
