@@ -11,7 +11,7 @@ def _make_extractor() -> GeminiNewsExtractor:
 
 
 def _mock_response(result: NewsExtractionResult) -> AsyncMock:
-    return AsyncMock(return_value=result)
+    return AsyncMock(return_value=result.model_dump())
 
 
 class TestGeminiNewsExtractor:
@@ -25,7 +25,7 @@ class TestGeminiNewsExtractor:
             safety_data={},
         )
         with patch.object(
-            extractor._service, "generate_structured", new=_mock_response(mock_result)
+            extractor._service, "extract_json", new=_mock_response(mock_result)
         ):
             result = extractor.extract(
                 title="Phase 3 Pembrolizumab in Melanoma",
@@ -42,7 +42,7 @@ class TestGeminiNewsExtractor:
         extractor = _make_extractor()
         with patch.object(
             extractor._service,
-            "generate_structured",
+            "extract_json",
             side_effect=Exception("API error"),
         ):
             result = extractor.extract(
@@ -70,7 +70,7 @@ class TestGeminiNewsExtractor:
             },
         )
         with patch.object(
-            extractor._service, "generate_structured", new=_mock_response(mock_result)
+            extractor._service, "extract_json", new=_mock_response(mock_result)
         ):
             result = extractor.extract(
                 title="Safety Profile of Pembrolizumab in Melanoma",
@@ -93,7 +93,7 @@ class TestGeminiNewsExtractor:
             safety_data={},
         )
         with patch.object(
-            extractor._service, "generate_structured", new=_mock_response(mock_result)
+            extractor._service, "extract_json", new=_mock_response(mock_result)
         ):
             result = extractor.extract(
                 title="BCC and cSCC Treatment Advances",
@@ -112,11 +112,11 @@ class TestGeminiNewsExtractor:
         extractor = _make_extractor()
         captured: list[str] = []
 
-        async def capture(prompt: str, **kwargs: object) -> NewsExtractionResult:
+        async def capture(prompt: str, **kwargs: object) -> dict:
             captured.append(prompt)
-            return NewsExtractionResult()
+            return NewsExtractionResult().model_dump()
 
-        with patch.object(extractor._service, "generate_structured", new=capture):
+        with patch.object(extractor._service, "extract_json", new=capture):
             extractor.extract(
                 title="Unique Title For Testing",
                 full_text="Article body.",
