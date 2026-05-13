@@ -596,18 +596,49 @@ export const trialsApi = {
 
     if (error) throw error;
 
-    const articles = (data ?? []).map(d => ({
-      title: d.title as string,
-      date: d.date as string,
-      url: d.url as string,
-      nct_ids: d.nct_ids as string[] | null,
-      has_efficacy: d.has_efficacy as boolean | null,
-      has_safety: d.has_safety as boolean | null,
-      efficacy_data: d.efficacy_data as Record<string, Record<string, string>> | null,
-      safety_data: d.safety_data as Record<string, Record<string, string>> | null,
-    }));
+    const articles: LiveTickerArticle[] = [];
+    const results: LiveTickerResult[] = [];
 
-    return { articles, results: [] };
+    for (const d of data ?? []) {
+      const base: LiveTickerArticle = {
+        title: d.title as string,
+        date: d.date as string,
+        url: d.url as string,
+        nct_ids: d.nct_ids as string[] | null,
+        has_efficacy: d.has_efficacy as boolean | null,
+        has_safety: d.has_safety as boolean | null,
+        efficacy_data: d.efficacy_data as Record<string, Record<string, string>> | null,
+        safety_data: d.safety_data as Record<string, Record<string, string>> | null,
+      };
+
+      if (d.has_efficacy || d.has_safety) {
+        const ed = d.efficacy_data as Record<string, unknown> | null;
+        const sd = d.safety_data as Record<string, unknown> | null;
+
+        // Legacy flat format: { metric: string, value: string }
+        // Gemini nested format: { "CancerType": { metric_name: value } }
+        const flattenMetrics = (obj: Record<string, unknown>) =>
+          Object.values(obj).flatMap(v =>
+            v && typeof v === 'object'
+              ? Object.entries(v as Record<string, string>).map(([metric, value]) => ({ metric, value }))
+              : []
+          );
+
+        const efficacy_or_safety_data =
+          (ed && 'value' in ed) ? ed
+          : (sd && 'value' in sd) ? sd
+          : {
+              efficacy_metrics: ed ? flattenMetrics(ed) : [],
+              safety_metrics: sd ? flattenMetrics(sd) : [],
+            };
+
+        results.push({ ...base, efficacy_or_safety_data: efficacy_or_safety_data as unknown as LiveTickerEfficacySafety });
+      } else {
+        articles.push(base);
+      }
+    }
+
+    return { articles, results };
   },
 
   /** Full trial detail from the flat clinical_trials columns (post-Supabase migration). */
@@ -1131,6 +1162,7 @@ export const OUTCOME_COL_TO_ATTR: Record<string, string> = {
   phase:                        'CLINICAL_TRIAL_PHASE',
   cancer_type:                  'CANCER_TYPE',
   approval_status:              'APPROVAL_STATUS',
+  generic_name:                 'GENERIC_NAME',
 };
 
 /**
@@ -1154,7 +1186,7 @@ function outcomeRowToClinicalTrialRaw(d: Record<string, unknown>): import('@/typ
   }
 
   const armId = String(d.id ?? d.nct_id ?? Math.random());
-  const armName = String(d.arm_name ?? 'Unknown');
+  const armName = String(d.generic_name || d.arm_name || 'Unknown');
 
   return {
     abstract_id: d.abstract_id as string | undefined,
@@ -1248,7 +1280,7 @@ export const analyticsApi = {
     const dbCancerType = getDbCancerType(cancerType);
     const { data: outcomesData, error: outcomesError } = await supabase
       .from('trial_outcomes')
-      .select('arm_name, nct_id, modality')
+      .select('arm_name, generic_name, nct_id, modality, line_of_treatment')
       .contains('cancer_type', [dbCancerType]);
     if (outcomesError) console.error('[getTreatmentMeta] trial_outcomes query failed:', outcomesError.message);
 
@@ -1272,13 +1304,13 @@ export const analyticsApi = {
     }
 
     return (outcomesData || [])
-      .filter((d: Record<string, unknown>) => d.arm_name)
+      .filter((d: Record<string, unknown>) => d.generic_name || d.arm_name)
       .map((d: Record<string, unknown>) => {
         const landscape = landscapeByNct.get(d.nct_id as string);
         return {
-          treatmentName: d.arm_name as string,
+          treatmentName: (d.generic_name || d.arm_name) as string,
           modality: (d.modality as string) || null,
-          lineOfTreatment: landscape?.line_of_therapy ?? null,
+          lineOfTreatment: landscape?.line_of_therapy ?? (d.line_of_treatment as string) ?? null,
           stage: landscape?.stage ?? null,
           biomarker: landscape?.biomarker ?? null,
           nctId: (d.nct_id as string) || null,
