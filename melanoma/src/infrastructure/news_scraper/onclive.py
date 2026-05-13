@@ -16,9 +16,11 @@ _NEWS_NS = "http://www.google.com/schemas/sitemap-news/0.9"
 class OncLiveScraper(NewsSourceBase):
     def __init__(self, timeout: int = 30) -> None:
         self._timeout = timeout
+        self._session = requests.Session()
+        self._session.headers["User-Agent"] = "Mozilla/5.0 (compatible; Bionocular/1.0)"
 
     def _fetch_sitemap_text(self) -> str:
-        resp = requests.get(_SITEMAP_URL, timeout=self._timeout)
+        resp = self._session.get(_SITEMAP_URL, timeout=self._timeout)
         resp.raise_for_status()
         return resp.text
 
