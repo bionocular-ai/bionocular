@@ -47,8 +47,8 @@ function ArticleCard({ article }: { article: LiveTickerArticle }) {
           </h3>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm text-slate-500">{article.date}</span>
-            {article.nct_id && (
-              <span className="text-xs text-slate-500 font-medium tabular-nums">{article.nct_id}</span>
+            {article.nct_ids?.[0] && (
+              <span className="text-xs text-slate-500 font-medium tabular-nums">{article.nct_ids[0]}</span>
             )}
           </div>
         </div>
@@ -113,8 +113,8 @@ function ResultCard({ result }: { result: LiveTickerResult }) {
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm text-slate-500">{result.date}</span>
-          {result.nct_id && (
-            <span className="text-xs text-slate-500 font-medium tabular-nums">{result.nct_id}</span>
+          {result.nct_ids?.[0] && (
+            <span className="text-xs text-slate-500 font-medium tabular-nums">{result.nct_ids[0]}</span>
           )}
         </div>
         {metricLabel && (

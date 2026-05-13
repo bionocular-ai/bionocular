@@ -589,19 +589,24 @@ export const trialsApi = {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('news_feed')
-      .select('*')
-      .eq('cancer_type', getDbCancerType(category))
+      .select('title, date, url, nct_ids, has_efficacy, has_safety, efficacy_data, safety_data')
+      .contains('cancer_type', [getDbCancerType(category)])
+      .order('date', { ascending: false })
       .limit(100);
-      
+
     if (error) throw error;
-    
-    const articles = data.map(d => ({
-      title: d.title,
-      date: d.date,
-      url: d.url,
-      nct_id: d.nct_id
+
+    const articles = (data ?? []).map(d => ({
+      title: d.title as string,
+      date: d.date as string,
+      url: d.url as string,
+      nct_ids: d.nct_ids as string[] | null,
+      has_efficacy: d.has_efficacy as boolean | null,
+      has_safety: d.has_safety as boolean | null,
+      efficacy_data: d.efficacy_data as Record<string, Record<string, string>> | null,
+      safety_data: d.safety_data as Record<string, Record<string, string>> | null,
     }));
-    
+
     return { articles, results: [] };
   },
 
@@ -1014,7 +1019,11 @@ export interface LiveTickerArticle {
   title: string;
   date: string;
   url: string;
-  nct_id?: string | null;
+  nct_ids?: string[] | null;
+  has_efficacy?: boolean | null;
+  has_safety?: boolean | null;
+  efficacy_data?: Record<string, Record<string, string>> | null;
+  safety_data?: Record<string, Record<string, string>> | null;
 }
 
 export interface LiveTickerEfficacySafety {
