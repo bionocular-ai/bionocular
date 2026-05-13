@@ -1,0 +1,63 @@
+name: Scrape Oncology News
+
+on:
+  schedule:
+    - cron: '0 3 * * *'   # 03:00 UTC daily (~04:00 CET / 05:00 CEST)
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'Backfill from date (YYYY-MM-DD), e.g. 2026-02-06'
+        required: false
+        default: ''
+      source:
+        description: 'Single source to run (onclive|cancernetwork|targetedonc|biospace)'
+        required: false
+        default: ''
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Cache venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v3
+        with:
+          path: melanoma/.venv
+          key: venv-news-${{ runner.os }}-py3.11-${{ hashFiles('melanoma/poetry.lock') }}
+
+      - name: Install dependencies (main only)
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        working-directory: ./melanoma
+        run: poetry install --no-interaction --no-root --only main
+
+      - name: Run news scraper
+        working-directory: ./melanoma
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          ARGS="--days 2"
+          if [ -n "${{ github.event.inputs.since }}" ]; then
+            ARGS="--since ${{ github.event.inputs.since }}"
+          fi
+          if [ -n "${{ github.event.inputs.source }}" ]; then
+            ARGS="$ARGS --source ${{ github.event.inputs.source }}"
+          fi
+          poetry run python3 scripts/scrape_news_supabase.py $ARGS
