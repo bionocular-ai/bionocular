@@ -555,7 +555,7 @@ export default function CancerDashboardSnapshot() {
                     </div>
                   )}
                   {!liveTickerLoading && latestNewsItems.map((item, i) => {
-                    const { title, date, url, nct_id } = item.value;
+                    const { title, date, url, nct_ids } = item.value;
                     const efficacySafetyLabel = item.type === 'result' ? getEfficacySafetyLabel(item.value) : null;
                     const dateLabel = (() => {
                       try {
@@ -586,10 +586,10 @@ export default function CancerDashboardSnapshot() {
                           <span className="text-[clamp(0.7rem,1.7cqw,1.125rem)] font-semibold text-slate-700 line-clamp-2 leading-snug group-hover:text-blue-700 transition-colors">{title}</span>
                           <div className="flex items-center gap-[clamp(0.25rem,0.8cqw,0.625rem)] flex-wrap">
                             <span className="text-[clamp(0.55rem,1.2cqw,0.9375rem)] text-slate-400 font-medium tabular-nums">{dateLabel}</span>
-                            {nct_id && (
+                            {nct_ids?.[0] && (
                               <>
                                 <span className="w-0.5 h-0.5 rounded-full bg-slate-300" />
-                                <span className="text-[clamp(0.55rem,1.2cqw,0.9375rem)] text-slate-500 font-mono">{nct_id}</span>
+                                <span className="text-[clamp(0.55rem,1.2cqw,0.9375rem)] text-slate-500 font-mono">{nct_ids[0]}</span>
                               </>
                             )}
                             {efficacySafetyLabel && (

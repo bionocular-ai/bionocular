@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>CancerNetwork</title>
+    <link>https://www.cancernetwork.com</link>
+    <description>CancerNetwork News</description>
+    <item>
+      <title>What is the Future of TIL Therapy in Metastatic Melanoma?</title>
+      <link>https://www.cancernetwork.com/view/til-therapy-metastatic-melanoma</link>
+      <guid isPermaLink="true">https://www.cancernetwork.com/view/til-therapy-metastatic-melanoma</guid>
+      <description>Muhammad Umair Mushtaq, MD, discussed the evolution of TIL therapy in melanoma, focusing on first-line treatment potential.</description>
+      <pubDate>Mon, 11 May 2026 19:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>cemiplimab Data in Cutaneous Squamous Cell Carcinoma</title>
+      <link>https://www.cancernetwork.com/view/cemiplimab-cscc</link>
+      <guid isPermaLink="true">https://www.cancernetwork.com/view/cemiplimab-cscc</guid>
+      <description>cemiplimab shows durable responses in advanced cutaneous squamous cell carcinoma (cSCC) in phase 2 study.</description>
+      <pubDate>Tue, 28 Apr 2026 10:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

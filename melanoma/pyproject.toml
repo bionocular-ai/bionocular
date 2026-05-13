@@ -25,6 +25,11 @@ langchain-openai = "^0.3.33"
 google-genai = ">=1.4.0"
 supabase = "^2.28.3"
 langchain-google-genai = "<2.0"
+# News scraper dependencies
+feedparser = "^6.0.12"
+beautifulsoup4 = "^4.14.3"
+lxml = "^6.1.0"
+googlenewsdecoder = ">=0.1.7"
 
 [tool.poetry.group.processing]
 optional = true
@@ -115,6 +120,7 @@ strict_equality = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

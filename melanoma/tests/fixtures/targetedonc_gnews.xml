@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Targeted Oncology - melanoma - Google News</title>
+    <link>https://news.google.com/rss/search?q=site:targetedonc.com+melanoma</link>
+    <description>Google News</description>
+    <item>
+      <title>FDA Grants Fast Track Designation to DOC1021 for Cutaneous Melanoma</title>
+      <link>https://news.google.com/rss/articles/CBMiogFBVV95cUxQ</link>
+      <guid>https://news.google.com/rss/articles/CBMiogFBVV95cUxQ</guid>
+      <source url="https://www.targetedonc.com">Targeted Oncology</source>
+      <pubDate>Wed, 07 May 2026 12:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Tebentafusp-tebn Doubles 5-Year Survival in Metastatic Uveal Melanoma</title>
+      <link>https://news.google.com/rss/articles/CBMiogFBVV95cUxR</link>
+      <guid>https://news.google.com/rss/articles/CBMiogFBVV95cUxR</guid>
+      <source url="https://www.targetedonc.com">Targeted Oncology</source>
+      <pubDate>Fri, 24 Apr 2026 10:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

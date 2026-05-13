@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>OncLive articles</title>
+    <link>https://www.onclive.com</link>
+    <description>OncLive News</description>
+    <item>
+      <title>Phase 3 Pembrolizumab Shows PFS Benefit in Cutaneous Melanoma</title>
+      <link>https://www.onclive.com/view/phase-3-pembro-melanoma</link>
+      <guid isPermaLink="true">https://www.onclive.com/view/phase-3-pembro-melanoma</guid>
+      <description>Pembrolizumab demonstrated 12.3-month median PFS in cutaneous melanoma. NCT12345678 met its primary endpoint with ORR of 68%.</description>
+      <pubDate>Mon, 11 May 2026 21:02:31 GMT</pubDate>
+    </item>
+    <item>
+      <title>Avelumab Approved for Merkel Cell Carcinoma</title>
+      <link>https://www.onclive.com/view/avelumab-mcc</link>
+      <guid isPermaLink="true">https://www.onclive.com/view/avelumab-mcc</guid>
+      <description>FDA approval for avelumab in Merkel cell carcinoma based on JAVELIN trial.</description>
+      <pubDate>Wed, 08 Apr 2026 14:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Lung Cancer Immunotherapy Shows OS Benefit</title>
+      <link>https://www.onclive.com/view/lung-cancer-io</link>
+      <guid isPermaLink="true">https://www.onclive.com/view/lung-cancer-io</guid>
+      <description>Atezolizumab in NSCLC extends overall survival in phase 3 trial.</description>
+      <pubDate>Fri, 01 Jan 2026 10:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
