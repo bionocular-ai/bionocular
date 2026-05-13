@@ -29,6 +29,7 @@ langchain-google-genai = "<2.0"
 feedparser = "^6.0.12"
 beautifulsoup4 = "^4.14.3"
 lxml = "^6.1.0"
+googlenewsdecoder = ">=0.1.7"
 
 [tool.poetry.group.processing]
 optional = true
