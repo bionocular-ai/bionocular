@@ -13,6 +13,8 @@ _BRAIN_CNS_KEYWORDS = [
 _UVEAL_KEYWORDS = ["uveal melanoma", "ocular melanoma", "choroidal melanoma"]
 _ACRAL_KEYWORDS = ["acral melanoma", "acral lentiginous melanoma"]
 _MUCOSAL_KEYWORDS = ["mucosal melanoma"]
+# "rare melanoma" refers collectively to uveal/acral/mucosal subtypes
+_RARE_MELANOMA_KEYWORDS = ["rare melanoma"]
 _CSCC_KEYWORDS = ["cutaneous squamous cell carcinoma", "cscc"]
 _BCC_KEYWORDS = ["basal cell carcinoma", "bcc"]
 _MCC_KEYWORDS = ["merkel cell carcinoma", "merkel cell cancer", "merkel cell"]
@@ -22,12 +24,17 @@ def assign_cancer_types(article: NewsArticleRaw) -> list[str]:
     text = (article.title + " " + article.description).lower()
     matched: list[str] = []
 
-    if any(kw in text for kw in _UVEAL_KEYWORDS):
+    if any(kw in text for kw in _RARE_MELANOMA_KEYWORDS):
         matched.append("Uveal Melanoma")
-    if any(kw in text for kw in _ACRAL_KEYWORDS):
         matched.append("Acral Melanoma")
-    if any(kw in text for kw in _MUCOSAL_KEYWORDS):
         matched.append("Mucosal Melanoma")
+    else:
+        if any(kw in text for kw in _UVEAL_KEYWORDS):
+            matched.append("Uveal Melanoma")
+        if any(kw in text for kw in _ACRAL_KEYWORDS):
+            matched.append("Acral Melanoma")
+        if any(kw in text for kw in _MUCOSAL_KEYWORDS):
+            matched.append("Mucosal Melanoma")
 
     has_melanoma = "melanoma" in text
     has_brain_cns = any(kw in text for kw in _BRAIN_CNS_KEYWORDS) or (
@@ -36,6 +43,7 @@ def assign_cancer_types(article: NewsArticleRaw) -> list[str]:
             kw in text
             for kw in [
                 "brain metastasis",
+                "brain-metastatic",
                 "cns metastasis",
                 "brain met",
                 "intracranial",
@@ -45,7 +53,9 @@ def assign_cancer_types(article: NewsArticleRaw) -> list[str]:
     if has_brain_cns:
         matched.append("Cutaneous Melanoma with Brain/CNS Metastasis")
 
-    if has_melanoma:
+    _non_cutaneous_subtypes = {"Uveal Melanoma", "Acral Melanoma", "Mucosal Melanoma"}
+    has_non_cutaneous_subtype = bool(set(matched) & _non_cutaneous_subtypes)
+    if has_melanoma and (not has_non_cutaneous_subtype or "cutaneous" in text):
         matched.append("Cutaneous Melanoma")
 
     if any(kw in text for kw in _CSCC_KEYWORDS):
@@ -55,4 +65,4 @@ def assign_cancer_types(article: NewsArticleRaw) -> list[str]:
     if any(kw in text for kw in _MCC_KEYWORDS):
         matched.append("Merkel Cell Carcinoma")
 
-    return list(dict.fromkeys(matched))
+    return list(dict.fromkeys(matched))  # Remove duplicates, preserve order
