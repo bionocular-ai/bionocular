@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, IBM_Plex_Sans } from "next/font/google";
+import { Inter, IBM_Plex_Sans, Lora } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
@@ -7,6 +7,12 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+const lora = Lora({
+  variable: "--font-lora",
+  subsets: ["latin"],
+  weight: ["600", "700"],
 });
 
 const ibmPlexSans = IBM_Plex_Sans({
@@ -36,7 +42,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={[inter.variable, ibmPlexSans.variable, "antialiased"].join(" ")}
+        className={[inter.variable, ibmPlexSans.variable, lora.variable, "antialiased"].join(" ")}
         style={{ fontFamily: "var(--font-inter)" }}
         suppressHydrationWarning
       >
