@@ -7,12 +7,12 @@ ACTIVE_STATUSES = ["RECRUITING", "ACTIVE_NOT_RECRUITING", "NOT_YET_RECRUITING"]
 SKIN_CANCER_TYPES = [
     "Basal Cell Carcinoma",
     "Cutaneous Squamous Cell Carcinoma",
-    "Cutaneous melanoma",
+    "Cutaneous Melanoma",
     "Uveal Melanoma",
     "Merkel Cell Carcinoma",
     "Acral Melanoma",
     "Mucosal Melanoma",
-    "Cutaneous melanoma with Brain/CNS metastasis",
+    "Cutaneous Melanoma with Brain/CNS Metastasis",
 ]
 
 # Mapping from normalized cancer type to ClinicalTrials.gov search terms.
@@ -20,7 +20,7 @@ SKIN_CANCER_TYPES = [
 # variant phrasings (e.g. "Merkel Cell Carcinoma" matches
 # "Merkel cell carcinoma of the skin").
 CANCER_TYPE_MAPPING = {
-    "Cutaneous melanoma": ["Cutaneous melanoma"],
+    "Cutaneous Melanoma": ["Cutaneous melanoma"],
     "Cutaneous Squamous Cell Carcinoma": ["Cutaneous Squamous Cell Carcinoma"],
     "Uveal Melanoma": ["Uveal Melanoma", "Rare melanoma"],
     "Acral Melanoma": ["Acral Melanoma", "Rare melanoma"],
@@ -28,7 +28,7 @@ CANCER_TYPE_MAPPING = {
     "Basal Cell Carcinoma": ["Basal Cell Carcinoma"],
     "Merkel Cell Carcinoma": ["Merkel Cell Carcinoma"],
     # Brain and CNS are queried separately in the service and merged under this tag
-    "Cutaneous melanoma with Brain/CNS metastasis": [
+    "Cutaneous Melanoma with Brain/CNS Metastasis": [
         "Cutaneous melanoma with Brain metastasis",
         "Cutaneous melanoma with CNS metastasis",
     ],

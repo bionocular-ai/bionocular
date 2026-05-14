@@ -331,7 +331,7 @@ class ClinicalTrialsService:
 
         # Special handling for Brain/CNS metastasis - search Brain and CNS separately
         # for better coverage, but store under one category
-        if cancer_type_tag == "Cutaneous melanoma with Brain/CNS metastasis":
+        if cancer_type_tag == "Cutaneous Melanoma with Brain/CNS Metastasis":
             all_nct_numbers: set[str] = set()
 
             # Split into Brain and CNS queries for separate searches

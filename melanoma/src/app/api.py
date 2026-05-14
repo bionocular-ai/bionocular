@@ -2515,8 +2515,8 @@ async def trigger_landscape_sync() -> dict:
 
 # Slug -> exact cancer_type_tag as stored in api_discovery (must match SKIN_CANCER_TYPES)
 _SLUG_TO_CANCER_TYPE_TAG = {
-    "cutaneous-melanoma": "Cutaneous melanoma",
-    "cutaneous-melanoma-with-brain-cns-metastasis": "Cutaneous melanoma with Brain/CNS metastasis",
+    "cutaneous-melanoma": "Cutaneous Melanoma",
+    "cutaneous-melanoma-with-brain-cns-metastasis": "Cutaneous Melanoma with Brain/CNS Metastasis",
     "uveal-melanoma": "Uveal Melanoma",
     "mucosal-melanoma": "Mucosal Melanoma",
     "acral-melanoma": "Acral Melanoma",
