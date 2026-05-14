@@ -29,26 +29,34 @@ def test_acral_melanoma_not_tagged_as_cutaneous():
 
 
 def test_mucosal_melanoma_not_tagged_as_cutaneous():
-    result = assign_cancer_types(_article("Mucosal melanoma response rates in phase II"))
+    result = assign_cancer_types(
+        _article("Mucosal melanoma response rates in phase II")
+    )
     assert "Mucosal Melanoma" in result
     assert "Cutaneous Melanoma" not in result
 
 
 def test_article_mentioning_both_uveal_and_cutaneous():
-    result = assign_cancer_types(_article("Comparing uveal melanoma vs cutaneous melanoma"))
+    result = assign_cancer_types(
+        _article("Comparing uveal melanoma vs cutaneous melanoma")
+    )
     assert "Uveal Melanoma" in result
     assert "Cutaneous Melanoma" in result
 
 
 def test_generic_melanoma_still_gets_cutaneous():
-    result = assign_cancer_types(_article("Pembrolizumab improves PFS in advanced melanoma"))
+    result = assign_cancer_types(
+        _article("Pembrolizumab improves PFS in advanced melanoma")
+    )
     assert "Cutaneous Melanoma" in result
 
 
 # Bug 2: "rare melanoma" → all three rare subtypes, not Cutaneous
 def test_rare_melanoma_assigns_all_three_rare_subtypes():
     result = assign_cancer_types(
-        _article("Rare Melanoma Trial Serves as Model for Advancing Cancer Immunotherapy")
+        _article(
+            "Rare Melanoma Trial Serves as Model for Advancing Cancer Immunotherapy"
+        )
     )
     assert "Uveal Melanoma" in result
     assert "Acral Melanoma" in result
@@ -59,7 +67,9 @@ def test_rare_melanoma_assigns_all_three_rare_subtypes():
 # Bug 3: "brain-metastatic melanoma" → Brain/CNS tag
 def test_brain_metastatic_melanoma_gets_brain_cns_tag():
     result = assign_cancer_types(
-        _article("Considering Lifileucel Use in Patients With Brain-Metastatic Melanoma")
+        _article(
+            "Considering Lifileucel Use in Patients With Brain-Metastatic Melanoma"
+        )
     )
     assert "Cutaneous Melanoma with Brain/CNS Metastasis" in result
     assert "Cutaneous Melanoma" in result
