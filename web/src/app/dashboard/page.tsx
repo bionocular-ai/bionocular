@@ -51,15 +51,13 @@ export default function MainDashboardPage() {
         style={{ backgroundColor: '#F4F8F6' }}
       >
         <header className="bg-white border-b border-slate-200 shrink-0 z-50 sticky top-0 shadow-sm">
-          <div className="w-full px-10 sm:px-12 lg:px-16 xl:px-20 2xl:px-24">
-            <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
-              <Link href="/" className="brand flex-shrink-0 hover:opacity-80 transition-opacity">
+          <div className="w-full px-8">
+            <div className="flex items-center justify-between h-14 gap-4">
+              <Link href="/" className="brand flex-shrink-0">
                 <Logo height={32} />
-                <span className="brand-text dashboard-brand-text">
-                  bi<span className="brand-o">o</span>nocular
-                </span>
+                <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
               </Link>
-              <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+              <div className="flex items-center gap-2">
                 <AgentNavLink />
                 <DashboardNavLink />
                 {session?.user && (

@@ -1098,7 +1098,7 @@ export default function CategoryAnalyticsPage() {
     <div className="flex flex-col h-screen w-full bg-slate-50 overflow-hidden">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div className="w-full px-4 md:px-6">
+        <div className="w-full px-8">
           <div className="flex items-center justify-between h-14 gap-4">
             <div className="flex items-center gap-4">
               <Link href="/" className="brand flex-shrink-0">

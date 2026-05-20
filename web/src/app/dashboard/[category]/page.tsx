@@ -18,7 +18,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { ArrowUpRight, Loader2, Bell, Send, Newspaper, Zap, Lightbulb, Maximize2 } from 'lucide-react';
+import { ArrowUpRight, Loader2, Send, Newspaper, Zap, Lightbulb, Maximize2, Bell } from 'lucide-react';
 import { trialsApi, analyticsApi, type LiveTickerArticle, type LiveTickerResult } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { PHASE_OPTIONS } from '@/lib/dashboard-constants';
@@ -90,9 +90,8 @@ function SnapshotModule({
 
   return (
     <Card className={`flex flex-col overflow-hidden h-full bg-white border border-[var(--brand-border)] shadow-md ${className}`}>
-      <CardHeader className={`flex flex-row items-center justify-between h-[clamp(30px,3vh,42px)] py-0 px-3 shrink-0 ${headerBg}`}>
-        <CardTitle className={`text-[clamp(10px,0.7vw,12px)] font-bold tracking-[0.1em] uppercase flex items-center gap-1.5 min-w-0 truncate ${dark ? "text-slate-200" : "text-[var(--brand-text)]"}`}>
-           <div className="w-1 h-3 shrink-0 bg-[var(--brand-primary)] rounded-full" />
+      <CardHeader className={`flex flex-row items-center justify-between h-[clamp(36px,3.8vh,48px)] py-0 px-3 shrink-0 space-y-0 ${headerBg}`}>
+        <CardTitle className={`text-[clamp(12px,0.9vw,14px)] font-bold tracking-tight flex items-center gap-1.5 min-w-0 truncate font-(family-name:--font-ibm-plex-sans) ${dark ? "text-slate-200" : "text-(--brand-primary)"}`}>
            <span className="truncate">{title}</span>
         </CardTitle>
         {headerRight ?? (!hideNav && (href || onNavigate) && (
@@ -121,6 +120,7 @@ export default function CancerDashboardSnapshot() {
   const categoryName = slugToCategory(categorySlug);
 
   const [pipelineSponsor, setPipelineSponsor] = React.useState<'Industry' | 'Non-Industry'>('Industry');
+  const [newsEfficacySafetyOnly, setNewsEfficacySafetyOnly] = React.useState(false);
 
   type TrialUpdatesWindow = 7 | 30 | 60 | 90;
   const [trialUpdatesDays, setTrialUpdatesDays] = React.useState<TrialUpdatesWindow>(90);
@@ -168,17 +168,6 @@ export default function CancerDashboardSnapshot() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch latest 5 trial updates (by date from ClinicalTrials.gov API) within selected window
-  const {
-    data: latestTrialUpdates,
-    isLoading: latestUpdatesLoading,
-    isFetching: latestUpdatesFetching,
-  } = useQuery({
-    queryKey: ['latest-trial-updates', categorySlug, 5, trialUpdatesDays],
-    queryFn: () => trialsApi.getLatestTrialUpdates(categorySlug, 5, trialUpdatesDays),
-    enabled: Boolean(categorySlug),
-    refetchOnWindowFocus: false,
-  });
 
   // Fetch live ticker (Latest News)
   const { data: liveTickerData, isLoading: liveTickerLoading } = useQuery({
@@ -205,17 +194,24 @@ export default function CancerDashboardSnapshot() {
 
   const latestNewsItems = React.useMemo(() => {
     if (!liveTickerData) return [];
-    const resultUrls = new Set(liveTickerData.results.map((r) => r.url));
-    const articlesOnly = liveTickerData.articles.filter((a) => !resultUrls.has(a.url));
     type Item = { type: 'result'; value: LiveTickerResult } | { type: 'article'; value: LiveTickerArticle };
     const parseDate = (d: string) => new Date(d).getTime();
     const byDateDesc = (a: Item, b: Item) => parseDate(b.value.date) - parseDate(a.value.date);
+
+    if (newsEfficacySafetyOnly) {
+      const items: Item[] = liveTickerData.results.map((value) => ({ type: 'result' as const, value }));
+      items.sort(byDateDesc);
+      return items.slice(0, 5);
+    }
+
+    const resultUrls = new Set(liveTickerData.results.map((r) => r.url));
+    const articlesOnly = liveTickerData.articles.filter((a) => !resultUrls.has(a.url));
     const results: Item[] = liveTickerData.results.map((value) => ({ type: 'result' as const, value }));
     const articles: Item[] = articlesOnly.map((value) => ({ type: 'article' as const, value }));
     const combined = [...results, ...articles];
     combined.sort(byDateDesc);
     return combined.slice(0, 5);
-  }, [liveTickerData]);
+  }, [liveTickerData, newsEfficacySafetyOnly]);
 
   const { data: snapshotData, isLoading: analyticsLoading } = useQuery({
     queryKey: ['analytics-snapshot', categorySlug],
@@ -385,15 +381,22 @@ export default function CancerDashboardSnapshot() {
     <div className="flex flex-col h-screen w-full bg-[var(--brand-bg)] overflow-hidden relative selection:bg-[var(--brand-accent-light)] selection:text-[var(--brand-primary)]">
       {/* Header */}
       <header className="bg-white border-b border-slate-200 shrink-0 z-50 sticky top-0 shadow-sm">
-        <div className="w-full px-10 sm:px-12 lg:px-16 xl:px-20 2xl:px-24">
-          <div className="flex items-center justify-between h-14 sm:h-16 gap-3">
-            <Link href="/" className="brand flex-shrink-0 hover:opacity-80 transition-opacity">
+        <div className="w-full px-8">
+          <div className="flex items-center justify-between h-14 gap-4">
+            <Link href="/" className="brand flex-shrink-0">
               <Logo height={32} />
-              <span className="brand-text dashboard-brand-text">
-                bi<span className="brand-o">o</span>nocular
-              </span>
+              <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
             </Link>
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-500 bg-white hover:bg-slate-50 hover:text-slate-700 transition-all duration-200 min-h-9 active:scale-[0.98] relative"
+                aria-label="Alerts"
+              >
+                <Bell className="h-4 w-4 shrink-0" aria-hidden />
+                <span>Alerts</span>
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 opacity-80" aria-hidden />
+              </button>
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu
@@ -419,128 +422,37 @@ export default function CancerDashboardSnapshot() {
       <main className="flex-1 min-h-0 flex flex-col px-[clamp(0.75rem,2vw,5rem)] pb-[clamp(0.75rem,1.2vh,2rem)] z-10 relative">
         <div className="flex-1 min-h-0 w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-[clamp(0.5rem,0.6vw,1.25rem)] items-stretch overflow-hidden">
 
-          {/* LEFT COLUMN: Data/Abstract, News, Alerts */}
+          {/* LEFT COLUMN: Latest News, Trial Updates, AI Agent */}
           <div className="lg:col-span-4 flex flex-col gap-[clamp(0.5rem,0.6vw,1rem)] min-h-0 overflow-hidden">
-            <div className="flex flex-col gap-0 flex-1 min-h-0 @container/updates">
-              {landscapeStats?.status?.["Overall Status"] != null && (
-                <div className="shrink-0 px-3 py-[clamp(0.25rem,0.3vh,0.4rem)] bg-slate-50 border border-slate-200 border-b-slate-200 rounded-t-lg flex items-center justify-center">
-                  <span className="text-[clamp(0.625rem,0.7vw,0.75rem)] font-semibold uppercase tracking-[0.08em] text-slate-600">
-                    Total Trials Examined<span className="mx-2 text-slate-300">·</span><span className="tabular-nums text-slate-900 normal-case tracking-normal">{(landscapeStats.status["Overall Status"]).toLocaleString()}</span>
-                  </span>
-                </div>
-              )}
-              <div className="flex-1 min-h-0">
+            <div className="@container/news flex-2 min-h-0">
               <SnapshotModule
-                title="Trial Updates"
-                className="rounded-t-none"
-                href={`/dashboard/${categorySlug}/trial-updates`}
+                title="Latest News"
+                href={`/dashboard/${categorySlug}/live-ticker`}
                 headerRight={
-                  <div role="tablist" aria-label="Time range" className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 border border-slate-200 rounded-lg">
-                    {([7, 30, 60, 90] as const).map((d) => {
-                      const active = trialUpdatesDays === d;
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          role="tab"
-                          aria-selected={active}
-                          onClick={() => setTrialUpdatesDays(d)}
-                          className={cn(
-                            'text-[10px] font-bold tracking-widest px-2 py-1 rounded uppercase transition-colors',
-                            active
-                              ? 'bg-white text-[var(--brand-primary)] shadow-sm'
-                              : 'text-slate-500 hover:text-slate-700',
-                          )}
-                        >
-                          {d}D
-                        </button>
-                      );
-                    })}
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      aria-pressed={newsEfficacySafetyOnly}
+                      onClick={() => setNewsEfficacySafetyOnly((v) => !v)}
+                      className={cn(
+                        'text-[9px] font-bold tracking-widest px-2 py-1 rounded border uppercase transition-colors',
+                        newsEfficacySafetyOnly
+                          ? 'bg-(--brand-accent-light) text-(--brand-primary) border-(--brand-accent) shadow-sm'
+                          : 'bg-transparent text-(--brand-text-muted) border-(--brand-border) hover:bg-(--brand-accent-light)/50',
+                      )}
+                    >
+                      Efficacy &amp; Safety
+                    </button>
+                    <Link
+                      href={`/dashboard/${categorySlug}/live-ticker`}
+                      className="p-1 rounded-full text-(--brand-text-muted) hover:text-(--brand-primary) hover:bg-(--brand-accent-light) transition-all"
+                      aria-label="Open Latest News"
+                    >
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
                 }
               >
-                <div className="flex flex-col h-full gap-[clamp(0.375rem,0.4vh,0.625rem)] min-h-0 -mt-1 -mx-1">
-                  {/* Summary cards */}
-                  <div className={cn('flex w-full gap-2 shrink-0 transition-opacity', trialUpdatesCountFetching && 'opacity-60')}>
-                    <div className="flex-1 flex items-center gap-2 bg-white border border-slate-200 rounded-lg py-[clamp(0.2rem,0.25vh,0.4rem)] px-2 min-w-0">
-                      <div className="flex-shrink-0 w-[clamp(1.125rem,1.3vw,1.375rem)] h-[clamp(1.125rem,1.3vw,1.375rem)] rounded bg-amber-50 flex items-center justify-center">
-                        <Zap className="h-2.5 w-2.5 text-amber-600" />
-                      </div>
-                      <div className="min-w-0 flex items-baseline gap-1.5">
-                        <div className="text-[clamp(0.875rem,1vw,1rem)] font-bold text-slate-900 tabular-nums leading-none">
-                          {trialUpdatesCount == null ? <Loader2 className="h-3 w-3 animate-spin text-blue-400" /> : (trialUpdatesCount.new_records_added.toLocaleString() ?? "0")}
-                        </div>
-                        <div className="text-[clamp(0.5rem,0.55vw,0.5625rem)] font-semibold text-slate-500 uppercase tracking-[0.1em] truncate">New Records</div>
-                      </div>
-                    </div>
-                    <div className="flex-1 flex items-center gap-2 bg-white border border-slate-200 rounded-lg py-[clamp(0.2rem,0.25vh,0.4rem)] px-2 min-w-0">
-                      <div className="flex-shrink-0 w-[clamp(1.125rem,1.3vw,1.375rem)] h-[clamp(1.125rem,1.3vw,1.375rem)] rounded bg-blue-50 flex items-center justify-center">
-                        <Lightbulb className="h-2.5 w-2.5 text-blue-600" />
-                      </div>
-                      <div className="min-w-0 flex items-baseline gap-1.5">
-                        <div className="text-[clamp(0.875rem,1vw,1rem)] font-bold text-slate-900 tabular-nums leading-none">
-                          {trialUpdatesCount == null ? <Loader2 className="h-3 w-3 animate-spin text-blue-400" /> : (trialUpdatesCount.updates.toLocaleString() ?? "0")}
-                        </div>
-                        <div className="text-[clamp(0.5rem,0.55vw,0.5625rem)] font-semibold text-slate-500 uppercase tracking-[0.1em] truncate">Updates</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Data table: 4 columns so "Update Message" and icon have space; label and values align in col 3 */}
-                  <div className="flex-1 flex flex-col min-h-0 border border-slate-200 rounded-xl overflow-hidden bg-white -mb-2">
-                    <div className="grid grid-cols-[5rem_1fr_minmax(4.5rem,auto)_2rem] gap-2 px-3 py-[clamp(0.375rem,0.4vh,0.625rem)] bg-slate-100 border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-600 shrink-0 items-center">
-                      <span>Date</span>
-                      <span>Record Name</span>
-                      <span className="min-w-0 block pl-3">Update Message</span>
-                      <span className="w-9 flex justify-end">
-                        <Link href={`/dashboard/${categorySlug}/trial-updates`} className="p-1 rounded hover:bg-slate-200 text-slate-500" aria-label="Full view"><Maximize2 className="h-3.5 w-3" /></Link>
-                      </span>
-                    </div>
-                    <div className={cn('flex-1 min-h-0 overflow-hidden transition-opacity', latestUpdatesFetching && !latestUpdatesLoading && 'opacity-60')}>
-                      {latestUpdatesLoading ? (
-                        <div className="flex items-center justify-center py-8">
-                          <Loader2 className="h-5 w-5 animate-spin text-blue-400" />
-                        </div>
-                      ) : !latestTrialUpdates?.trials?.length ? (
-                        <div className="py-6 text-center text-sm text-slate-500">No trial updates in the past {trialUpdatesDays} days</div>
-                      ) : (
-                        latestTrialUpdates.trials.slice(0, 5).map((trial, idx) => (
-                          <div
-                            key={trial.nct_id}
-                            className={`grid grid-cols-[5rem_1fr_minmax(4.5rem,auto)_2rem] gap-2 px-3 py-[clamp(0.375rem,0.45vh,0.625rem)] border-b border-slate-100 items-center ${idx % 2 === 0 ? "bg-white" : "bg-slate-50/80"}`}
-                          >
-                            <span className="text-slate-500 font-medium tabular-nums whitespace-nowrap text-[clamp(0.6rem,1.1cqi,0.8125rem)]">
-                              {trial.date_iso
-                                ? new Date(trial.date_iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                : '—'}
-                            </span>
-                            <div className="min-w-0">
-                              <Link
-                                href={`/trial/nct/${trial.nct_id}?category=${categorySlug}`}
-                                className="font-semibold text-blue-600 hover:text-blue-800 hover:underline line-clamp-2 text-[clamp(0.7rem,1.4cqi,1rem)] leading-snug"
-                              >
-                                {trial.title || trial.nct_id}
-                              </Link>
-                              <div className="text-[clamp(0.55rem,1.1cqi,0.75rem)] text-slate-500 mt-0.5 line-clamp-2 font-medium">
-                                {trial.sponsor_name || "Unknown Sponsor"}
-                              </div>
-                            </div>
-                            <span className="text-slate-700 min-w-0 block pl-3 text-[clamp(0.6rem,1.2cqi,0.875rem)]">
-                              {trial.update_type === "new" ? "New trial added." : "Updated."}
-                            </span>
-                            <span className="w-9" aria-hidden />
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </SnapshotModule>
-              </div>
-            </div>
-
-            <div className="@container/news flex-1 min-h-0">
-              <SnapshotModule title="Latest News" href={`/dashboard/${categorySlug}/live-ticker`}>
                 <div className="space-y-[clamp(0.125rem,1cqh,0.625rem)] pt-1 -mx-2 -mt-3 -mb-2 h-full flex flex-col">
                   {liveTickerLoading && (
                     <div className="flex items-center justify-center py-6">
@@ -607,15 +519,108 @@ export default function CancerDashboardSnapshot() {
               </SnapshotModule>
             </div>
 
-            <div className="h-[clamp(140px,18vh,230px)] shrink-0">
-              <SnapshotModule title="Alerts">
-                <div className="flex flex-col items-center justify-center h-full text-center px-3 gap-1.5 text-slate-500">
-                  <div className="h-9 w-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center">
-                    <Bell className="h-4 w-4 text-slate-300" />
+            <div className="flex-[1.2] min-h-0 @container/updates">
+              <SnapshotModule
+                title="Trial Updates"
+                href={`/dashboard/${categorySlug}/trial-updates`}
+                headerRight={
+                  <div className="flex items-center gap-1.5">
+                    <div role="tablist" aria-label="Time range" className="inline-flex items-center gap-0.5 p-0.5 bg-slate-100 border border-slate-200 rounded-lg">
+                      {([7, 30, 60, 90] as const).map((d) => {
+                        const active = trialUpdatesDays === d;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            role="tab"
+                            aria-selected={active}
+                            onClick={() => setTrialUpdatesDays(d)}
+                            className={cn(
+                              'text-[10px] font-bold tracking-widest px-2 py-1 rounded uppercase transition-colors',
+                              active
+                                ? 'bg-white text-(--brand-primary) shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700',
+                            )}
+                          >
+                            {d}D
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <Link href={`/dashboard/${categorySlug}/trial-updates`} className="p-1 rounded hover:bg-slate-200 text-slate-500 transition-colors" aria-label="Full view">
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </Link>
                   </div>
-                  <p className="text-[clamp(0.7rem,0.8vw,0.8125rem)] font-medium text-slate-600">No recent alerts</p>
-                  <p className="text-[clamp(0.6rem,0.65vw,0.6875rem)] text-slate-400 max-w-[220px] leading-snug hidden xl:block">Stay updated on clinical changes by creating a saved search or watchlist.</p>
-                  <button className="mt-1 text-[clamp(0.55rem,0.6vw,0.625rem)] font-bold tracking-[0.1em] uppercase px-3 py-1 bg-white border border-slate-200 text-slate-700 rounded-md hover:bg-slate-50 hover:border-blue-300 hover:text-blue-700 transition-all shadow-sm">Setup Alert</button>
+                }
+              >
+                <div className="flex flex-col h-full min-h-0 -mt-1 -mx-1">
+                  {/* Total Examined header */}
+                  {landscapeStats?.status?.["Overall Status"] != null && (
+                    <div className="shrink-0 flex items-center justify-center px-4 py-[clamp(0.2rem,0.28vh,0.375rem)] border-b border-slate-100">
+                      <span className="text-[clamp(0.7rem,0.8vw,0.875rem)] font-semibold text-slate-600 font-(family-name:--font-ibm-plex-sans)">
+                        Total Examined: <span className="font-medium text-slate-700 tabular-nums">{landscapeStats.status["Overall Status"].toLocaleString()}</span>
+                      </span>
+                    </div>
+                  )}
+                  <div className={cn(
+                    'flex-1 flex flex-row divide-x divide-slate-100 min-h-0 transition-opacity items-center',
+                    trialUpdatesCountFetching && 'opacity-50'
+                  )}>
+                    {/* New Records */}
+                    <div className="flex-1 flex flex-row items-start justify-center px-4 py-2 min-w-0 gap-3">
+                      <div className="rounded-xl bg-amber-50 p-[clamp(0.4rem,0.5vw,0.625rem)] shrink-0 flex items-center justify-center">
+                        <Zap className="h-[clamp(1.25rem,1.4vw,1.625rem)] w-[clamp(1.25rem,1.4vw,1.625rem)] text-amber-500" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <div className="text-[clamp(1.5rem,1.7vw,2.25rem)] font-extrabold tabular-nums text-slate-900 leading-none tracking-tight">
+                          {trialUpdatesCount == null
+                            ? <span className="text-slate-200">—</span>
+                            : trialUpdatesCount.new_records_added.toLocaleString()}
+                        </div>
+                        <span className="text-[clamp(0.5rem,0.54vw,0.5625rem)] font-bold text-slate-600 uppercase tracking-[0.12em] mt-1">New Records</span>
+                      </div>
+                    </div>
+                    {/* Updates */}
+                    <div className="flex-1 flex flex-row items-start justify-center px-4 py-2 min-w-0 gap-3">
+                      <div className="rounded-xl bg-blue-50 p-[clamp(0.4rem,0.5vw,0.625rem)] shrink-0 flex items-center justify-center">
+                        <Lightbulb className="h-[clamp(1.25rem,1.4vw,1.625rem)] w-[clamp(1.25rem,1.4vw,1.625rem)] text-blue-500" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <div className="text-[clamp(1.5rem,1.7vw,2.25rem)] font-extrabold tabular-nums text-slate-900 leading-none tracking-tight">
+                          {trialUpdatesCount == null
+                            ? <span className="text-slate-200">—</span>
+                            : trialUpdatesCount.updates.toLocaleString()}
+                        </div>
+                        <span className="text-[clamp(0.5rem,0.54vw,0.5625rem)] font-bold text-slate-600 uppercase tracking-[0.12em] mt-1">Updates</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </SnapshotModule>
+            </div>
+
+            <div className="flex-[1.2] min-h-0 @container/agent">
+              <SnapshotModule
+                title={
+                  <>
+                    {categoryName} AI Agent <span className="text-slate-400">(Upcoming)</span>
+                  </>
+                }
+              >
+                <div className="h-full flex flex-col justify-end relative overflow-hidden gap-[clamp(0.375rem,0.8cqw,0.625rem)]">
+                  <div className="flex items-stretch bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-lg p-[clamp(0.375rem,1.2cqh,0.75rem)] pl-[clamp(0.625rem,1.6cqh,1rem)] h-[clamp(2.5rem,40cqh,5.5rem)] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]/50 transition-all z-10">
+                    <textarea
+                      rows={1}
+                      className="bg-transparent flex-1 outline-none text-[var(--brand-text)] text-[clamp(0.7rem,1.8cqh,1rem)] placeholder:text-[var(--brand-text-muted)] font-medium resize-none py-[clamp(0.125rem,0.6cqh,0.375rem)]"
+                      placeholder="Ask Bionocular AI Agent..."
+                    />
+                    <button className="h-[clamp(1.5rem,3.6cqh,2.25rem)] w-[clamp(1.5rem,3.6cqh,2.25rem)] self-end rounded-md bg-[var(--brand-primary)] flex items-center justify-center text-white ml-[clamp(0.375rem,1cqh,0.625rem)] hover:bg-[var(--brand-primary-hover)] hover:shadow-md transition-all active:scale-95 shrink-0">
+                      <Send className="h-[clamp(0.75rem,2.2cqh,1.25rem)] w-[clamp(0.75rem,2.2cqh,1.25rem)]" />
+                    </button>
+                  </div>
+                  <div className="text-center text-[clamp(0.55rem,0.85cqw,0.75rem)] font-medium text-[var(--brand-text-muted)] uppercase tracking-[0.1em]">
+                    Validate insights with primary sources
+                  </div>
                 </div>
               </SnapshotModule>
             </div>
@@ -719,7 +724,7 @@ export default function CancerDashboardSnapshot() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Pipeline, Regulatory, AI — full width on md when 2-col */}
+          {/* RIGHT COLUMN: Pipeline Health, Treatment Algorithm, Regulatory Timeline — full width on md when 2-col */}
           <div className="md:col-span-2 lg:col-span-4 flex flex-col gap-[clamp(0.5rem,0.6vw,1rem)] min-h-0 overflow-hidden">
             <div className="flex-1 min-h-0 @container/pipeline">
               <SnapshotModule
@@ -859,6 +864,25 @@ export default function CancerDashboardSnapshot() {
                       );
                     })()}
                   </div>
+                </div>
+              </SnapshotModule>
+            </div>
+
+            <div className="flex-1 min-h-0 @container/treatment">
+              <SnapshotModule
+                title={
+                  <>
+                    Treatment Algorithm <span className="text-slate-400">(Upcoming)</span>
+                  </>
+                }
+                hideNav
+              >
+                <div className="flex flex-col items-center justify-center h-full text-center px-3 gap-1.5 text-slate-500">
+                  <div className="h-9 w-9 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center">
+                    <Lightbulb className="h-4 w-4 text-slate-300" />
+                  </div>
+                  <p className="text-[clamp(0.7rem,0.8vw,0.8125rem)] font-medium text-slate-600">Treatment algorithm coming soon</p>
+                  <p className="text-[clamp(0.6rem,0.65vw,0.6875rem)] text-slate-400 max-w-[240px] leading-snug hidden xl:block">Guideline-aligned decision pathways for {categoryName} will appear here.</p>
                 </div>
               </SnapshotModule>
             </div>
@@ -1026,32 +1050,6 @@ export default function CancerDashboardSnapshot() {
                         No timeline data available
                       </div>
                     ))}
-                  </div>
-                </div>
-              </SnapshotModule>
-            </div>
-
-            <div className="flex-1 min-h-0 @container/agent">
-              <SnapshotModule
-                title={
-                  <>
-                    {categoryName} AI Agent <span className="text-slate-400">(Upcoming)</span>
-                  </>
-                }
-              >
-                <div className="h-full flex flex-col justify-end relative overflow-hidden gap-[clamp(0.375rem,0.8cqw,0.625rem)]">
-                  <div className="flex items-stretch bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-lg p-[clamp(0.375rem,1.2cqh,0.75rem)] pl-[clamp(0.625rem,1.6cqh,1rem)] h-[clamp(2.5rem,40cqh,5.5rem)] focus-within:ring-2 focus-within:ring-[var(--brand-primary)]/30 focus-within:border-[var(--brand-primary)]/50 transition-all z-10">
-                    <textarea
-                      rows={1}
-                      className="bg-transparent flex-1 outline-none text-[var(--brand-text)] text-[clamp(0.7rem,1.8cqh,1rem)] placeholder:text-[var(--brand-text-muted)] font-medium resize-none py-[clamp(0.125rem,0.6cqh,0.375rem)]"
-                      placeholder="Ask Bionocular AI Agent..."
-                    />
-                    <button className="h-[clamp(1.5rem,3.6cqh,2.25rem)] w-[clamp(1.5rem,3.6cqh,2.25rem)] self-end rounded-md bg-[var(--brand-primary)] flex items-center justify-center text-white ml-[clamp(0.375rem,1cqh,0.625rem)] hover:bg-[var(--brand-primary-hover)] hover:shadow-md transition-all active:scale-95 shrink-0">
-                      <Send className="h-[clamp(0.75rem,2.2cqh,1.25rem)] w-[clamp(0.75rem,2.2cqh,1.25rem)]" />
-                    </button>
-                  </div>
-                  <div className="text-center text-[clamp(0.55rem,0.85cqw,0.75rem)] font-medium text-[var(--brand-text-muted)] uppercase tracking-[0.1em]">
-                    Validate insights with primary sources
                   </div>
                 </div>
               </SnapshotModule>

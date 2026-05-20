@@ -38,7 +38,7 @@ function ArticleCard({ article }: { article: LiveTickerArticle }) {
       href={article.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block rounded-xl border border-slate-200 border-l-4 border-l-[var(--primary)] bg-white p-4 shadow-sm transition-all duration-200 hover:border-slate-300 hover:border-l-[var(--accent-dark)] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:ring-offset-2"
+      className="group block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/30 focus:ring-offset-2"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
@@ -77,7 +77,7 @@ function ResultCard({ result }: { result: LiveTickerResult }) {
     ];
   const metricLabel = ed.metric ?? (ed.efficacy_metrics || ed.safety_metrics ? 'Efficacy & Safety' : '');
   return (
-    <Card className="overflow-hidden border border-slate-200 border-l-4 border-l-[var(--primary)] bg-white shadow-sm transition-all duration-200 hover:border-slate-300 hover:border-l-[var(--accent-dark)] hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--primary)]/30 focus-within:ring-offset-2">
+    <Card className="overflow-hidden border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md focus-within:ring-2 focus-within:ring-[var(--primary)]/30 focus-within:ring-offset-2">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-3">
           <CardTitle className="text-base font-semibold leading-snug text-gray-900 min-w-0">
@@ -219,16 +219,16 @@ export default function LiveTickerPage() {
 
   return (
     <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden">
-      <header className="bg-white border-b border-slate-200 shrink-0 z-50">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 gap-3">
-            <Link href="/" className="brand flex-shrink-0 hover:opacity-80 transition-opacity">
-              <Logo height={32} />
-              <span className="brand-text dashboard-brand-text">
-                bi<span className="brand-o">o</span>nocular
-              </span>
-            </Link>
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="w-full px-8">
+          <div className="flex items-center justify-between h-14 gap-4">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="brand flex-shrink-0">
+                <Logo height={32} />
+                <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
+              </Link>
+            </div>
+            <div className="flex items-center gap-2">
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu
