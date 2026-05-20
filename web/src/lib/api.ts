@@ -1210,30 +1210,19 @@ export const analyticsApi = {
   getData: async (filters: AnalyticsFilters = {}): Promise<TrialDataFile> => {
     const supabase = createClient();
 
-    // Funding partition: Industry = trial_outcomes rows whose nct_id matches a
-    // clinical_trials row with lead_sponsor_class='INDUSTRY'. Non-Industry =
-    // strict complement (incl. NCTs missing from clinical_trials and NULL class).
-    let allowedNctIds: string[] | null = null;
-    let excludedNctIds: string[] | null = null;
-    if (filters.funding_type === 'industry' || filters.funding_type === 'non-industry') {
-      const { data: sponsorData, error: sponsorErr } = await supabase
-        .from('clinical_trials')
-        .select('nct_id')
-        .eq('lead_sponsor_class', 'INDUSTRY')
-        .limit(50000);
-      if (sponsorErr) throw sponsorErr;
-      const industryIds = (sponsorData || []).map(r => r.nct_id as string).filter(Boolean);
-      if (filters.funding_type === 'industry') {
-        if (industryIds.length === 0) {
-          return { total_abstracts: 0, total_arms: 0, total_attributes_extracted: 0, average_confidence: 0.9, abstracts: [] };
-        }
-        allowedNctIds = industryIds;
-      } else {
-        excludedNctIds = industryIds;
-      }
-    }
-
-    let query = supabase.from('trial_outcomes').select('*').limit(filters.limit || 200);
+    // Funding partition via relational join on clinical_trials.lead_sponsor_class.
+    // Requires the FK trial_outcomes.nct_id → clinical_trials.nct_id (NOT VALID constraint,
+    // migration 20260518000000_trial_outcomes_nct_fk.sql).
+    // Industry:     !inner join — only rows with a matching INDUSTRY clinical trial.
+    // Non-Industry: !left join + OR — rows absent from clinical_trials or non-INDUSTRY class.
+    const fundingSelectMap: Record<string, string> = {
+      industry: '*, clinical_trials!inner(lead_sponsor_class)',
+      'non-industry': '*, clinical_trials!left(lead_sponsor_class)',
+    };
+    const outcomesSelect = (filters.funding_type && fundingSelectMap[filters.funding_type]) || '*';
+    // any: select string determines Supabase return-type generics, which vary per funding path.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = supabase.from('trial_outcomes').select(outcomesSelect).limit(filters.limit || 200);
     if (filters.skip) query = query.range(filters.skip, filters.skip + (filters.limit || 200) - 1);
 
     if (filters.cancer_type && filters.cancer_type !== 'All') {
@@ -1250,19 +1239,18 @@ export const analyticsApi = {
     } else if (filters.resource_type === 'publication') {
       query = query.eq('source_type', 'publication');
     }
-    if (allowedNctIds) {
-      query = query.in('nct_id', allowedNctIds);
-    }
-    if (excludedNctIds && excludedNctIds.length > 0) {
-      query = query.not('nct_id', 'in', `(${excludedNctIds.join(',')})`);
+    if (filters.funding_type === 'industry') {
+      query = query.eq('clinical_trials.lead_sponsor_class', 'INDUSTRY');
+    } else if (filters.funding_type === 'non-industry') {
+      query = query.or('lead_sponsor_class.neq.INDUSTRY,lead_sponsor_class.is.null', { foreignTable: 'clinical_trials' });
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query as { data: Record<string, unknown>[] | null; error: Error | null };
     if (error) throw error;
 
     // Map each flat row into ClinicalTrialRaw so chart-transformers can read
     // attribute values directly without any JSON parsing.
-    const abstracts = (data || []).map(d => outcomeRowToClinicalTrialRaw(d as Record<string, unknown>));
+    const abstracts = (data || []).map((d: Record<string, unknown>) => outcomeRowToClinicalTrialRaw(d));
 
     return {
       total_abstracts: abstracts.length,
