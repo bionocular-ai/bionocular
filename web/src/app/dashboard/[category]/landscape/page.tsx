@@ -18,6 +18,9 @@ import { Logo } from '@/components/Logo';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DEFAULT_CANCER_TYPE_SLUG, PHASE_OPTIONS, STATUS_OPTIONS } from '@/lib/dashboard-constants';
 import { isOpenStudyStatus, selectTrialsWithOpenBias } from '@/lib/utils/trial-utils';
+import type { GroupByOption } from '@/types/bullseye';
+import { ViewToggle, type ViewMode } from '@/components/dashboard/ViewToggle';
+import { BullseyeView } from '@/components/dashboard/BullseyeView';
 
 /** Modality column headers in display order (reference). */
 const MODALITY_HEADERS = [
@@ -168,7 +171,7 @@ const CARDS_PER_GROUP_LOAD_MORE = 15;
 /** When grouping by modality, fetch this many per category so "Load more" has more to reveal. */
 const CARDS_PER_GROUP_FETCH_MODALITY = 45;
 
-type GroupByOption = 'modality' | 'stage' | 'biomarker' | 'line_of_therapy' | 'previous_treatment';
+// GroupByOption imported from @/types/bullseye
 
 const GROUP_BY_OPTIONS: { value: GroupByOption; label: string }[] = [
   { value: 'modality', label: 'Modality' },
@@ -208,6 +211,16 @@ function DashboardContent() {
   const [groupBy, setGroupBy] = React.useState<GroupByOption>('modality');
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE);
+  const [viewMode, setViewMode] = React.useState<ViewMode>(() =>
+    searchParams.get('view') === 'bullseye' ? 'bullseye' : 'landscape'
+  );
+  const handleViewMode = React.useCallback((m: ViewMode) => {
+    setViewMode(m);
+    const params = new URLSearchParams(window.location.search);
+    if (m === 'bullseye') params.set('view', 'bullseye');
+    else params.delete('view');
+    router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
+  }, [router]);
   const [phaseDropdownOpen, setPhaseDropdownOpen] = React.useState(false);
   const [groupByDropdownOpen, setGroupByDropdownOpen] = React.useState(false);
   /** Subfilter: when Group by is Modality, Stage, or Biomarker, restrict columns to selected values. Empty = show all. */
@@ -642,7 +655,9 @@ function DashboardContent() {
                 <div>
                   <h2 className="text-2xl font-medium tracking-wide text-sky-700">Landscape</h2>
                 </div>
-                <div className="relative shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <ViewToggle value={viewMode} onChange={handleViewMode} />
+                  <div className="relative">
                   <button
                     type="button"
                     onClick={() => setPhaseDropdownOpen((o) => !o)}
@@ -783,6 +798,7 @@ function DashboardContent() {
                       </div>
                     </>
                   )}
+                  </div>
                 </div>
               </div>
 
@@ -932,6 +948,12 @@ function DashboardContent() {
                   <div className="flex items-center justify-center h-full min-h-[200px]">
                     <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
                   </div>
+                ) : viewMode === 'bullseye' ? (
+                  <BullseyeView
+                    trials={trials}
+                    groupBy={groupBy}
+                    cancerTypeSlug={cancerTypeSlug}
+                  />
                 ) : groupBy === 'modality' ? (
                   /* Group by Modality — column layout: top 15 per column, then Load more */
                   <div className="pb-4 min-h-0">
@@ -997,7 +1019,7 @@ function DashboardContent() {
                           return (
                             <div
                               key={groupLabel}
-                              className="flex flex-col shrink-0 w-[320px] min-h-[124px]"
+                              className="flex flex-col shrink-0 w-60 min-h-[124px]"
                             >
                               <h3 className="text-sm font-semibold text-slate-600 mb-3 pb-1.5 border-b border-slate-200 shrink-0">
                                 {groupLabel}
@@ -1008,6 +1030,7 @@ function DashboardContent() {
                                     key={trial.nct_id}
                                     trial={trial}
                                     category={cancerTypeSlug}
+                                    density="compact"
                                   />
                                 ))}
                               </div>
@@ -1119,7 +1142,7 @@ function DashboardContent() {
                           return (
                             <div
                               key={groupLabel}
-                              className="flex flex-col shrink-0 w-[320px] min-h-[124px]"
+                              className="flex flex-col shrink-0 w-60 min-h-[124px]"
                             >
                               <h3 className="text-sm font-semibold text-slate-600 mb-3 pb-1.5 border-b border-slate-200 shrink-0">
                                 {groupLabel}
@@ -1130,6 +1153,7 @@ function DashboardContent() {
                                     key={trial.nct_id}
                                     trial={trial}
                                     category={cancerTypeSlug}
+                                    density="compact"
                                   />
                                 ))}
                               </div>
