@@ -66,6 +66,7 @@ function SnapshotModule({
   dark = false,
   flatDarkHeader = false,
   className = "",
+  contentClassName,
 }: {
   title: React.ReactNode;
   href?: string;
@@ -76,6 +77,7 @@ function SnapshotModule({
   dark?: boolean;
   flatDarkHeader?: boolean;
   className?: string;
+  contentClassName?: string;
 }) {
   const router = useRouter();
 
@@ -105,7 +107,7 @@ function SnapshotModule({
           </button>
         ))}
       </CardHeader>
-      <CardContent className="p-[clamp(8px,1.1vw,16px)] flex-1 flex flex-col min-h-0 overflow-hidden">
+      <CardContent className={`p-[clamp(8px,1.1vw,16px)] flex-1 flex flex-col min-h-0 overflow-hidden ${contentClassName ?? ""}`}>
         {children}
       </CardContent>
     </Card>
@@ -435,10 +437,10 @@ export default function CancerDashboardSnapshot() {
                       aria-pressed={newsEfficacySafetyOnly}
                       onClick={() => setNewsEfficacySafetyOnly((v) => !v)}
                       className={cn(
-                        'text-[9px] font-bold tracking-widest px-2 py-1 rounded border uppercase transition-colors',
+                        'text-[9px] font-bold tracking-widest px-2 py-1 rounded border uppercase transition-all duration-150',
                         newsEfficacySafetyOnly
                           ? 'bg-(--brand-accent-light) text-(--brand-primary) border-(--brand-accent) shadow-sm'
-                          : 'bg-transparent text-(--brand-text-muted) border-(--brand-border) hover:bg-(--brand-accent-light)/50',
+                          : 'bg-white text-slate-500 border-slate-200 shadow-sm hover:bg-(--brand-accent-light) hover:text-(--brand-primary) hover:border-(--brand-accent)',
                       )}
                     >
                       Efficacy &amp; Safety
@@ -629,14 +631,18 @@ export default function CancerDashboardSnapshot() {
           {/* MIDDLE COLUMN: Trial Cards, Results */}
           <div className="lg:col-span-4 flex flex-col gap-[clamp(0.5rem,0.6vw,1rem)] min-h-0 overflow-hidden">
             <div className="flex-1 flex flex-col min-h-0 @container/landscape">
-              <SnapshotModule title="Trial Landscape" href={`/dashboard/${categorySlug}/landscape`}>
-                <div className="flex flex-col gap-[clamp(0.5rem,0.5vw,0.75rem)] h-full min-h-0">
+              <SnapshotModule
+                title="Trial Landscape"
+                href={`/dashboard/${categorySlug}/landscape`}
+                contentClassName="!p-[clamp(4px,0.5vw,8px)]"
+              >
+                <div className="flex flex-col gap-[clamp(0.25rem,0.3vw,0.5rem)] h-full min-h-0">
                   {trialsLoading && (
                     <div className="flex items-center justify-center flex-1">
                       <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
                     </div>
                   )}
-                  <div className="grid grid-cols-3 grid-rows-3 gap-[clamp(0.375rem,0.4vw,0.625rem)] min-h-0 flex-1 overflow-hidden">
+                  <div className="grid grid-cols-3 grid-rows-3 gap-[clamp(0.25rem,0.3vw,0.5rem)] min-h-0 flex-1 overflow-hidden">
                     {(trialsData?.trials ?? []).map((trial) => (
                       <TrialCard
                         key={trial.nct_id}
