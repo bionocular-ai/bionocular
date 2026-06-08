@@ -1376,4 +1376,50 @@ export interface SnapshotResponse {
   totalAbstracts: number;
 }
 
+/** A single reconstructed KM step point (survival 0-100 at a time in months). */
+export interface KmPoint {
+  time: number;
+  surv: number;
+}
+
+/** One row from `km_curves`: a reconstructed digitized-twin curve for one arm/endpoint. */
+export interface KmCurveRow {
+  id: string;
+  publication_id: string;
+  nct_id: string | null;
+  cancer_type: string;
+  comparison_label: string | null;
+  arm_name: string;
+  endpoint: string;
+  twin_coords: KmPoint[];
+  published_median: number | null;
+  twin_median: number | null;
+  rate_timepoint: number | null;
+  published_rate: number | null;
+  twin_rate: number | null;
+  median_follow_up: number | null;
+  match_pct: number | null;
+  n_points: number | null;
+  reference: string | null;
+}
+
+export const kmCurvesApi = {
+  /** All reconstructed KM curves for a cancer type, optionally filtered by endpoint. */
+  getByCancerType: async (slug: string, endpoint?: string): Promise<KmCurveRow[]> => {
+    const supabase = createClient();
+    let query = supabase
+      .from('km_curves')
+      .select('*')
+      .eq('cancer_type', getDbCancerType(slug));
+    if (endpoint) query = query.eq('endpoint', endpoint);
+
+    const { data, error } = await query;
+    if (error) {
+      console.error('[kmCurvesApi.getByCancerType] query failed:', error.message);
+      return [];
+    }
+    return (data ?? []) as KmCurveRow[];
+  },
+};
+
 
