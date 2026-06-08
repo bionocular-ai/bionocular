@@ -1158,6 +1158,13 @@ export default function CategoryAnalyticsPage() {
                   >
                     Head to Head Efficacy : Safety
                   </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/head-to-head-survival`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    KM Curves
+                  </Link>
                 </nav>
                 <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
                 <p className="text-[var(--brand-accent)] text-xs hidden sm:block">Comparative analysis</p>
@@ -1356,6 +1363,13 @@ export default function CategoryAnalyticsPage() {
                   >
                     Head to Head Efficacy : Safety
                   </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/head-to-head-survival`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    KM Curves
+                  </Link>
                 </nav>
                 <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>
                 <p className="text-[var(--brand-accent)] text-xs hidden sm:block">
@@ -1499,6 +1513,13 @@ export default function CategoryAnalyticsPage() {
                     className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
                   >
                     Head to Head Efficacy : Safety
+                  </Link>
+                  <span className="w-px h-4 bg-white/30" aria-hidden />
+                  <Link
+                    href={`/dashboard/${categorySlug}/head-to-head-survival`}
+                    className="px-2 py-1 rounded text-sm font-medium text-white/80 hover:text-white hover:bg-white/15 transition-colors"
+                  >
+                    KM Curves
                   </Link>
                 </nav>
                 <span className="hidden sm:inline-block w-px h-4 bg-white/30"></span>

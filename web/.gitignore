@@ -42,3 +42,9 @@ next-env.d.ts
 
 # Allow lib directory
 !src/lib/
+
+# Local data
+data/
+
+# Seed SQL (proprietary curve data + local fixtures)
+supabase/seed/
