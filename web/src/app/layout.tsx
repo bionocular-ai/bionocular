@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Lora, Fraunces, Public_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Lora, Fraunces, Public_Sans } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
@@ -21,18 +21,11 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
 });
 
-// Kept: still referenced in dashboard/page.tsx and [category]/page.tsx
+// Kept: still referenced via --font-lora in dashboard/page.tsx
 const lora = Lora({
   variable: "--font-lora",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-});
-
-// Kept: still referenced via --font-ibm-plex-sans in [category]/page.tsx
-const ibmPlexSans = IBM_Plex_Sans({
-  variable: "--font-ibm-plex-sans",
-  subsets: ["latin"],
-  weight: ["600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -56,7 +49,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={[fraunces.variable, publicSans.variable, ibmPlexMono.variable, ibmPlexSans.variable, lora.variable, "antialiased"].join(" ")}
+        className={[fraunces.variable, publicSans.variable, ibmPlexMono.variable, lora.variable, "antialiased"].join(" ")}
         style={{ fontFamily: "var(--font-public-sans)" }}
         suppressHydrationWarning
       >
