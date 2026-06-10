@@ -4,12 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
-import { Logo } from '@/components/Logo';
-import { UserMenu } from '@/components/user-menu';
-import { useSession } from '@/lib/supabase/hooks';
-import { DASHBOARD_NAV_ITEMS, slugToCategory } from '@/lib/dashboard-constants';
+import { DASHBOARD_NAV_ITEMS } from '@/lib/dashboard-constants';
 import type { DashboardNavItem } from '@/lib/dashboard-constants';
-import { ROUTES, dashboardRoute } from '@/lib/constants';
+import { dashboardRoute } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 /** Default analytics mode used by the analytics page when no `?mode` is present. */
@@ -116,66 +113,41 @@ export function DashboardSidebar() {
   const slug = useParams().category as string;
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const currentMode = searchParams.get('mode') ?? DEFAULT_ANALYTICS_MODE;
-  const categoryName = slugToCategory(slug);
-
-  const userMenu = session?.user ? (
-    <UserMenu
-      email={session.user.email || null}
-      name={(session.user.user_metadata?.full_name as string) || null}
-      image={undefined}
-    />
-  ) : null;
 
   return (
     <>
-      {/* Desktop icon rail */}
+      {/* Desktop icon rail — sits under the global top nav */}
       <aside
-        className="sticky top-0 hidden h-screen w-24 shrink-0 flex-col border-r border-(--brand-border) bg-(--brand-bg) md:flex"
-        aria-label="Dashboard navigation"
+        className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-24 shrink-0 flex-col border-r border-(--brand-border) bg-(--brand-bg) md:flex"
+        aria-label="Dashboard sections"
       >
-        <Link
-          href={ROUTES.DASHBOARD}
-          title={categoryName}
-          aria-label={`${categoryName} — back to dashboards`}
-          className="flex h-16 shrink-0 items-center justify-center border-b border-(--brand-border) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)"
-        >
-          <Logo height={28} />
-        </Link>
-
         <NavList slug={slug} pathname={pathname} currentMode={currentMode} />
-
-        <div className="flex h-20 shrink-0 items-center justify-center border-t border-(--brand-border)">
-          {userMenu}
-        </div>
       </aside>
 
-      {/* Mobile top bar */}
-      <div className="sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b border-(--brand-border) bg-(--brand-surface) px-4 md:hidden">
+      {/* Mobile section-nav bar — sits under the global top nav */}
+      <div className="fixed inset-x-0 top-14 z-30 flex h-12 items-center border-b border-(--brand-border) bg-(--brand-surface) px-4 md:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          aria-label="Open navigation menu"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)"
+          aria-label="Open section navigation"
+          aria-expanded={mobileOpen}
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)"
         >
           <Menu className="h-5 w-5" aria-hidden />
+          Sections
         </button>
-        <Link href={ROUTES.DASHBOARD} aria-label={`${categoryName} — back to dashboards`}>
-          <Logo height={26} />
-        </Link>
-        <div className="flex h-9 w-9 items-center justify-center">{userMenu}</div>
       </div>
 
       {/* Mobile off-canvas drawer */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 md:hidden"
+          className="fixed inset-0 z-50 md:hidden"
           role="dialog"
           aria-modal="true"
-          aria-label="Dashboard navigation"
+          aria-label="Dashboard sections"
           onKeyDown={(e) => {
             if (e.key === 'Escape') setMobileOpen(false);
           }}
@@ -186,8 +158,7 @@ export function DashboardSidebar() {
             aria-hidden
           />
           <aside className="absolute left-0 top-0 flex h-full w-28 flex-col border-r border-(--brand-border) bg-(--brand-bg) shadow-xl">
-            <div className="flex h-14 shrink-0 items-center justify-between border-b border-(--brand-border) px-2">
-              <Logo height={24} />
+            <div className="flex h-12 shrink-0 items-center justify-end border-b border-(--brand-border) px-2">
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
@@ -203,9 +174,6 @@ export function DashboardSidebar() {
               currentMode={currentMode}
               onNavigate={() => setMobileOpen(false)}
             />
-            <div className="flex h-20 shrink-0 items-center justify-center border-t border-(--brand-border)">
-              {userMenu}
-            </div>
           </aside>
         </div>
       )}
