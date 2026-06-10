@@ -1,30 +1,31 @@
 import type { Metadata } from "next";
-import { Inter, IBM_Plex_Sans, Lora, DM_Serif_Display } from "next/font/google";
+import { IBM_Plex_Mono, Lora, Fraunces, Public_Sans } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
 
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
+// Kept: still referenced via --font-lora in dashboard/page.tsx
 const lora = Lora({
   variable: "--font-lora",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-});
-
-const dmSerifDisplay = DM_Serif_Display({
-  variable: "--font-dm-serif-display",
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
-const ibmPlexSans = IBM_Plex_Sans({
-  variable: "--font-ibm-plex-sans",
-  subsets: ["latin"],
-  weight: ["600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -48,8 +49,8 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={[inter.variable, ibmPlexSans.variable, lora.variable, dmSerifDisplay.variable, "antialiased"].join(" ")}
-        style={{ fontFamily: "var(--font-ibm-plex-sans)" }}
+        className={[fraunces.variable, publicSans.variable, ibmPlexMono.variable, lora.variable, "antialiased"].join(" ")}
+        style={{ fontFamily: "var(--font-public-sans)" }}
         suppressHydrationWarning
       >
         <QueryProvider>{children}</QueryProvider>

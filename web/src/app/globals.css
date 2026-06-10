@@ -49,6 +49,9 @@
   --accent-2:     #f97316;
   --card:         var(--brand-surface);
   --border:       var(--brand-border);
+
+  --font-display: var(--font-fraunces);
+  --font-mono:    var(--font-plex-mono);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth; scroll-padding-top:70px}
@@ -64,8 +67,8 @@ select option {
   padding: 8px 12px;
 }
 body{
-  margin:0; 
-  font-family:var(--font-ibm-plex-sans),system-ui,-apple-system,sans-serif;
+  margin:0;
+  font-family:var(--font-public-sans),system-ui,-apple-system,sans-serif;
   background:var(--bg); 
   color:var(--text); 
   line-height:1.6;

@@ -39,6 +39,8 @@ interface KaplanMeierChartProps {
   /** Endpoint label for the Y-axis, e.g. "PFS". */
   endpoint: string;
   height?: number;
+  /** Approximate HR shown below the legend when exactly 2 arms are selected. */
+  hr?: { value: number; cmpName: string; refName: string } | null;
 }
 
 /** Series color for the arm at a given legend position. */
@@ -74,7 +76,7 @@ function toWideSeries(curves: KmCurveRow[]): Array<Record<string, number | null>
   });
 }
 
-export default function KaplanMeierChart({ curves, endpoint, height = 460 }: KaplanMeierChartProps) {
+export default function KaplanMeierChart({ curves, endpoint, height = 460, hr }: KaplanMeierChartProps) {
   const data = useMemo(() => toWideSeries(curves), [curves]);
 
   if (curves.length === 0) {
@@ -99,6 +101,12 @@ export default function KaplanMeierChart({ curves, endpoint, height = 460 }: Kap
             <span className="text-slate-700">{c.arm_name}</span>
           </div>
         ))}
+        {hr && (
+          <div className="mt-1.5 border-t pt-1.5 flex items-center gap-2" style={{ borderColor: GRID }}>
+            <span className="text-xs font-medium uppercase tracking-wide text-slate-400">HR</span>
+            <span className="text-xs font-bold tabular-nums text-slate-900">{hr.value.toFixed(2)}</span>
+          </div>
+        )}
       </div>
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={data} margin={{ top: 8, right: 24, bottom: 28, left: 8 }}>

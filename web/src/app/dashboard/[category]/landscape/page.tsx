@@ -2,24 +2,21 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import { useSession } from "@/lib/supabase/hooks";
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
-import { UserMenu } from '@/components/user-menu';
-import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
+import { PageHeader } from '@/components/dashboard/PageHeader';
+import { FilterChips } from '@/components/dashboard/FilterChips';
 import { SelectedFilters, type FilterTag } from '@/components/dashboard/SelectedFilters';
 import { TrialCard } from '@/components/dashboard/TrialCard';
 import { trialsApi } from '@/lib/api';
 import type { DashboardTrialCard } from '@/lib/api';
 import { Loader2, Filter, FileDown, FileSpreadsheet, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check } from 'lucide-react';
-import Link from 'next/link';
-import { Logo } from '@/components/Logo';
-import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
-import { DEFAULT_CANCER_TYPE_SLUG, PHASE_OPTIONS, STATUS_OPTIONS } from '@/lib/dashboard-constants';
+import { DEFAULT_CANCER_TYPE_SLUG, PHASE_OPTIONS, STATUS_OPTIONS, slugToCategory } from '@/lib/dashboard-constants';
 import { isOpenStudyStatus, selectTrialsWithOpenBias } from '@/lib/utils/trial-utils';
+import { cn } from '@/lib/utils';
 import type { GroupByOption } from '@/types/bullseye';
-import { ViewToggle, type ViewMode } from '@/components/dashboard/ViewToggle';
+import { type ViewMode } from '@/components/dashboard/ViewToggle';
 import { BullseyeView } from '@/components/dashboard/BullseyeView';
 
 /** Modality column headers in display order (reference). */
@@ -181,6 +178,11 @@ const GROUP_BY_OPTIONS: { value: GroupByOption; label: string }[] = [
   { value: 'previous_treatment', label: 'Previous treatment' },
 ];
 
+const VIEW_OPTIONS: { value: ViewMode; label: string }[] = [
+  { value: 'landscape', label: 'Landscape' },
+  { value: 'bullseye', label: 'Bullseye' },
+];
+
 /** Column order for group-by dimensions; matches trials_extraction_prompts.py vocabulary. */
 function getCanonicalOrderForGroupBy(groupBy: GroupByOption): string[] {
   switch (groupBy) {
@@ -198,12 +200,12 @@ function getCanonicalOrderForGroupBy(groupBy: GroupByOption): string[] {
 }
 
 function DashboardContent() {
-  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const params = useParams();
   const router = useRouter();
 
   const cancerTypeSlug = (params?.category as string) || searchParams.get('cancer_type') || DEFAULT_CANCER_TYPE_SLUG;
+  const categoryName = slugToCategory(cancerTypeSlug);
   const [phaseFilter, setPhaseFilter] = React.useState<string[]>([]);
   const [hasAbstractsOnly, setHasAbstractsOnly] = React.useState(false);
   const [statusFilter, setStatusFilter] = React.useState<string[]>([]);
@@ -323,14 +325,6 @@ function DashboardContent() {
     setExtraTrialsByGroup({});
     setTotalByGroup({});
   }, [groupBy, cancerTypeSlug, phaseFilter, hasAbstractsOnly, statusFilter, sponsorTypeFilter]);
-
-  const setCancerType = React.useCallback(
-    (slug: string) => {
-      // Navigate to the new cancer type's landscape page
-      router.push(`/dashboard/${slug}/landscape`);
-    },
-    [router]
-  );
 
   const { error: statsError } = useQuery({
     queryKey: ['landscape-stats', cancerTypeSlug],
@@ -601,767 +595,772 @@ function DashboardContent() {
   const error = statsError ?? trialsError;
 
   return (
-    <>
-    <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div className="w-full px-8">
-          <div className="flex items-center justify-between h-14 gap-4">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="brand flex-shrink-0">
-                <Logo height={32} />
-                <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
-              </Link>
-            </div>
-            <div className="flex items-center gap-2">
-              <DashboardNavLink />
-              {session?.user && (
-                <UserMenu
-                  email={session.user.email || null}
-                  name={(session.user.user_metadata?.full_name as string) || null}
-                  image={undefined}
-                />
-              )}
-            </div>
+    <div className="min-h-screen bg-(--brand-bg)">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <PageHeader
+          category={categoryName}
+          title="Trial Landscape"
+          description="Active and historical trials across the treatment landscape, grouped by modality, biomarker, stage, and line of therapy."
+          right={
+            <FilterChips
+              label="VIEW"
+              options={VIEW_OPTIONS}
+              value={viewMode}
+              onChange={handleViewMode}
+            />
+          }
+        />
+
+        {error && (
+          <div className="mt-6">
+            <Card className="border-amber-200 bg-amber-50">
+              <CardContent className="pt-4 pb-4">
+                <p className="text-sm text-amber-800">
+                  Unable to connect to the backend API. {error instanceof Error ? error.message : 'Please ensure the backend is running.'}
+                </p>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-      </header>
+        )}
 
-      <main className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden px-2 pt-2 pb-4 md:px-4 md:pt-4 md:pb-6 bg-slate-100 gap-4">
-        <div className="w-full bg-white rounded-lg shadow shrink-0 overflow-visible">
-          {error && (
-            <div className="mx-4 sm:mx-6 lg:mx-8 mt-4 first:mt-0">
-              <Card className="border-yellow-200 bg-yellow-50">
-                <CardContent className="pt-4 pb-4">
-                  <p className="text-sm text-yellow-800">
-                    Unable to connect to the backend API. {error instanceof Error ? error.message : 'Please ensure the backend is running.'}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Top section: stats + global cancer selection only (Level 1) */}
-          <DashboardGlobalHeader
-            cancerTypeSlug={cancerTypeSlug}
-            onCancerTypeChange={setCancerType}
-          />
-        </div>
-
-        {/* Clinical Trials — landscape section (scrolls with main) */}
-        <div className="w-full bg-white rounded-lg shadow min-h-0 min-w-0">
-          <section className="bg-white min-h-0">
-            <div className="px-4 sm:px-6 lg:px-8 pt-3 pb-2 flex flex-col min-h-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 shrink-0 mb-2">
-                <div>
-                  <h2 className="text-2xl font-medium tracking-wide text-sky-700">Landscape</h2>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <ViewToggle value={viewMode} onChange={handleViewMode} />
-                  <div className="relative">
+        {/* Toolbar: filters + group-by + selected filters + export */}
+        <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-(--brand-border) bg-(--brand-surface) p-4 shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Group by */}
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">
+                  Group by
+                </span>
+                <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setPhaseDropdownOpen((o) => !o)}
-                    className="inline-flex items-center gap-2 rounded-sm bg-teal-500 px-3 py-2 sm:px-4 text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2"
+                    onClick={() => setGroupByDropdownOpen((o) => !o)}
+                    aria-label="Group by"
+                    aria-expanded={groupByDropdownOpen}
+                    aria-haspopup="listbox"
+                    className="flex w-44 items-center justify-between rounded-full border border-(--brand-border) bg-(--brand-surface) py-2 pl-3 pr-2.5 text-left text-sm text-(--brand-text) transition-colors hover:border-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)"
                   >
-                    <Filter className="h-4 w-4 shrink-0 fill-white text-white" strokeWidth={2} />
-                    <span className="text-sm font-medium whitespace-nowrap">FILTERS</span>
-                    <ChevronDown className="h-4 w-4 shrink-0" />
+                    <span>
+                      {GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? 'Modality'}
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
                   </button>
-                  {phaseDropdownOpen && (
+                  {groupByDropdownOpen && (
                     <>
-                      <div className="fixed inset-0 z-10" aria-hidden onClick={() => setPhaseDropdownOpen(false)} />
-                      <div className="absolute right-0 top-full z-20 mt-2 flex flex-col min-w-[30rem] max-w-[90vw] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl ring-1 ring-slate-900/5">
-                        <div className="flex overflow-hidden">
-                          {/* Phase */}
-                          <div className="w-[9.5rem] shrink-0 flex flex-col border-r border-slate-200">
-                            <div className="bg-slate-100 px-3 py-2.5 border-b border-slate-200">
-                              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Phase</span>
-                            </div>
-                            <div className="bg-slate-50/60 py-1">
-                              {PHASE_OPTIONS.map((phase) => {
-                                const checked = phaseDraft.includes(phase);
-                                return (
-                                  <label
-                                    key={phase}
-                                    className={`flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors ${checked ? 'bg-teal-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-white/80'}`}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={() =>
-                                        setPhaseDraft((prev) =>
-                                          prev.includes(phase) ? prev.filter((p) => p !== phase) : [...prev, phase]
-                                        )
-                                      }
-                                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/40"
-                                    />
-                                    <span className="min-w-0 break-words">{phase}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          {/* Status */}
-                          <div className="min-w-[13rem] flex-1 flex flex-col border-r border-slate-200">
-                            <div className="bg-slate-100 px-3 py-2.5 border-b border-slate-200">
-                              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Status</span>
-                            </div>
-                            <div className="bg-slate-50/60 py-1 max-h-52 overflow-y-auto">
-                              {STATUS_OPTIONS.map((status) => {
-                                const checked = statusDraft.includes(status);
-                                return (
-                                  <label
-                                    key={status}
-                                    className={`flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors ${checked ? 'bg-teal-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-white/80'}`}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={() =>
-                                        setStatusDraft((prev) =>
-                                          prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
-                                        )
-                                      }
-                                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/40"
-                                    />
-                                    <span className="min-w-0 break-words">{status}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                          </div>
-                          {/* Sponsor Type + Data */}
-                          <div className="min-w-[10rem] w-[11rem] shrink-0 flex flex-col">
-                            <div className="bg-slate-100 px-3 py-2.5 border-b border-slate-200">
-                              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Sponsor Type</span>
-                            </div>
-                            <div className="bg-slate-50/60 py-1">
-                              {['Industry', 'Non-Industry'].map((option) => {
-                                const checked = sponsorTypeDraft.includes(option);
-                                return (
-                                  <label
-                                    key={option}
-                                    className={`flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors ${checked ? 'bg-teal-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-white/80'}`}
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={checked}
-                                      onChange={() =>
-                                        setSponsorTypeDraft((prev) =>
-                                          prev.includes(option) ? prev.filter((s) => s !== option) : [...prev, option]
-                                        )
-                                      }
-                                      className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/40"
-                                    />
-                                    <span className="min-w-0 break-words">{option}</span>
-                                  </label>
-                                );
-                              })}
-                            </div>
-                            <div className="border-t-2 border-slate-200 mt-0.5">
-                              <div className="bg-slate-100 px-3 py-2 border-b border-slate-200">
-                                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-600">Data</span>
-                              </div>
-                              <div className="bg-slate-50/60 py-1">
-                                <label
-                                  className={`flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors ${hasAbstractsDraft ? 'bg-teal-50 text-slate-900 font-medium' : 'text-slate-700 hover:bg-white/80'}`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={hasAbstractsDraft}
-                                    onChange={(e) => setHasAbstractsDraft(e.target.checked)}
-                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-teal-600 focus:ring-2 focus:ring-teal-500/40"
-                                  />
-                                  <span className="min-w-0 break-words">Efficacy & Safety</span>
-                                </label>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        {/* Footer: Reset + Apply */}
-                        <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-4 py-3 rounded-b-xl">
-                          <button
-                            type="button"
-                            onClick={resetFilterDraft}
-                            className="text-sm font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-md hover:bg-slate-200/80"
-                          >
-                            Reset
-                          </button>
-                          <button
-                            type="button"
-                            onClick={applyFilterDraft}
-                            className="inline-flex items-center gap-2 rounded-sm bg-teal-500 px-4 py-2 text-sm font-medium text-white hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:ring-offset-2"
-                          >
-                            Apply filters
-                          </button>
-                        </div>
+                      <div
+                        className="fixed inset-0 z-10"
+                        aria-hidden
+                        onClick={() => setGroupByDropdownOpen(false)}
+                      />
+                      <div
+                        role="listbox"
+                        aria-label="Group by"
+                        className="absolute left-0 top-full z-20 mt-1.5 w-52 rounded-xl border border-(--brand-border) bg-(--brand-surface) py-1 shadow-lg"
+                      >
+                        {GROUP_BY_OPTIONS.map((opt) => {
+                          const selected = groupBy === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              role="option"
+                              aria-selected={selected}
+                              onClick={() => {
+                                setGroupBy(opt.value);
+                                setGroupByDropdownOpen(false);
+                              }}
+                              className={cn(
+                                'flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors',
+                                selected
+                                  ? 'bg-(--brand-accent-light) text-(--brand-text)'
+                                  : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                              )}
+                            >
+                              <span>{opt.label}</span>
+                              {selected && <Check className="h-4 w-4 shrink-0 text-(--brand-primary)" />}
+                            </button>
+                          );
+                        })}
                       </div>
                     </>
                   )}
-                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 py-2 shrink-0 border-y border-slate-100 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 mb-2">
-                <div className="flex flex-wrap items-center gap-6 w-full">
-                  {/* Level 2: Group by, selected filters (left); Export PPT (right) */}
-                  <div className="flex flex-wrap items-center gap-4 flex-1 min-w-0">
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-sm font-medium tracking-wider text-slate-500">Group By:</span>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setGroupByDropdownOpen((o) => !o)}
-                          aria-label="Group by"
-                          aria-expanded={groupByDropdownOpen}
-                          aria-haspopup="listbox"
-                          className="flex w-44 items-center justify-between border-0 border-b-2 border-sky-400 bg-transparent py-2 pl-0 pr-1 text-left text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-0"
+              {hasGroupBySubfilter && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">
+                    Filter
+                  </span>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setGroupBySubfilterOpen((o) => !o)}
+                      aria-label={`Filter ${GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? groupBy} values`}
+                      aria-expanded={groupBySubfilterOpen}
+                      aria-haspopup="listbox"
+                      className="flex min-w-[10rem] max-w-[16rem] items-center justify-between rounded-full border border-(--brand-border) bg-(--brand-surface) py-2 pl-3 pr-2.5 text-left text-sm text-(--brand-text) transition-colors hover:border-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)"
+                    >
+                      <span className="truncate">
+                        {groupByValueFilter.length === 0
+                          ? 'All'
+                          : groupByValueFilter.length <= 2
+                            ? groupByValueFilter.join(', ')
+                            : `${groupByValueFilter.length} selected`}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
+                    </button>
+                    {groupBySubfilterOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          aria-hidden
+                          onClick={() => setGroupBySubfilterOpen(false)}
+                        />
+                        <div
+                          role="listbox"
+                          aria-label={`Filter ${groupBy} values`}
+                          className="absolute left-0 top-full z-20 mt-1.5 max-h-72 min-w-[14rem] overflow-y-auto rounded-xl border border-(--brand-border) bg-(--brand-surface) py-1 shadow-lg"
                         >
-                          <span>
-                            {GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? 'Modality'}
-                          </span>
-                          <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
-                        </button>
-                        {groupByDropdownOpen && (
-                          <>
-                            <div
-                              className="fixed inset-0 z-10"
-                              aria-hidden
-                              onClick={() => setGroupByDropdownOpen(false)}
-                            />
-                            <div
-                              role="listbox"
-                              aria-label="Group by"
-                              className="absolute left-0 top-full z-20 mt-2 w-52 rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
-                            >
-                              {GROUP_BY_OPTIONS.map((opt) => {
-                                const selected = groupBy === opt.value;
-                                return (
-                                  <button
-                                    key={opt.value}
-                                    type="button"
-                                    role="option"
-                                    aria-selected={selected}
-                                    onClick={() => {
-                                      setGroupBy(opt.value);
-                                      setGroupByDropdownOpen(false);
-                                    }}
-                                    className={`flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors ${selected ? 'bg-sky-50 text-slate-900' : 'text-slate-700 hover:bg-slate-50'
-                                      }`}
-                                  >
-                                    <span>{opt.label}</span>
-                                    {selected && <Check className="h-4 w-4 shrink-0 text-sky-600" />}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {hasGroupBySubfilter && (
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-sm font-medium tracking-wider text-slate-500">Filter:</span>
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={() => setGroupBySubfilterOpen((o) => !o)}
-                            aria-label={`Filter ${GROUP_BY_OPTIONS.find((o) => o.value === groupBy)?.label ?? groupBy} values`}
-                            aria-expanded={groupBySubfilterOpen}
-                            aria-haspopup="listbox"
-                            className="flex min-w-[10rem] max-w-[16rem] items-center justify-between border-0 border-b-2 border-sky-400 bg-transparent py-2 pl-0 pr-1 text-left text-sm text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-0"
-                          >
-                            <span className="truncate">
-                              {groupByValueFilter.length === 0
-                                ? 'All'
-                                : groupByValueFilter.length <= 2
-                                  ? groupByValueFilter.join(', ')
-                                  : `${groupByValueFilter.length} selected`}
-                            </span>
-                            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
-                          </button>
-                          {groupBySubfilterOpen && (
-                            <>
-                              <div
-                                className="fixed inset-0 z-10"
-                                aria-hidden
-                                onClick={() => setGroupBySubfilterOpen(false)}
-                              />
-                              <div
-                                role="listbox"
-                                aria-label={`Filter ${groupBy} values`}
-                                className="absolute left-0 top-full z-20 mt-2 max-h-72 min-w-[14rem] overflow-y-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg"
-                              >
-                                {groupBySubfilterOptions.map((value) => {
-                                  const selected = groupByValueFilter.includes(value);
-                                  return (
-                                    <button
-                                      key={value}
-                                      type="button"
-                                      role="option"
-                                      aria-selected={selected}
-                                      onClick={() => {
-                                        setGroupByValueFilter((prev) =>
-                                          prev.includes(value)
-                                            ? prev.filter((v) => v !== value)
-                                            : [...prev, value]
-                                        );
-                                      }}
-                                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors ${selected ? 'bg-sky-50 text-slate-900' : 'text-slate-700 hover:bg-slate-50'}`}
-                                    >
-                                      <span className="min-w-0 truncate">{value}</span>
-                                      {selected && <Check className="h-4 w-4 shrink-0 text-sky-600" />}
-                                    </button>
+                          {groupBySubfilterOptions.map((value) => {
+                            const selected = groupByValueFilter.includes(value);
+                            return (
+                              <button
+                                key={value}
+                                type="button"
+                                role="option"
+                                aria-selected={selected}
+                                onClick={() => {
+                                  setGroupByValueFilter((prev) =>
+                                    prev.includes(value)
+                                      ? prev.filter((v) => v !== value)
+                                      : [...prev, value]
                                   );
-                                })}
-                              </div>
-                            </>
-                          )}
+                                }}
+                                className={cn(
+                                  'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors',
+                                  selected
+                                    ? 'bg-(--brand-accent-light) text-(--brand-text)'
+                                    : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                )}
+                              >
+                                <span className="min-w-0 truncate">{value}</span>
+                                {selected && <Check className="h-4 w-4 shrink-0 text-(--brand-primary)" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Filters panel */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setPhaseDropdownOpen((o) => !o)}
+                  className="inline-flex items-center gap-2 rounded-full bg-(--brand-primary) px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-(--brand-primary-hover) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1"
+                >
+                  <Filter className="h-4 w-4 shrink-0" strokeWidth={2} />
+                  <span className="whitespace-nowrap">Filters</span>
+                  <ChevronDown className="h-4 w-4 shrink-0" />
+                </button>
+                {phaseDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" aria-hidden onClick={() => setPhaseDropdownOpen(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-2 flex min-w-[30rem] max-w-[90vw] flex-col overflow-hidden rounded-2xl border border-(--brand-border) bg-(--brand-surface) shadow-xl">
+                      <div className="flex overflow-hidden">
+                        {/* Phase */}
+                        <div className="flex w-[9.5rem] shrink-0 flex-col border-r border-(--brand-border)">
+                          <div className="border-b border-(--brand-border) bg-(--brand-bg) px-3 py-2.5">
+                            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Phase</span>
+                          </div>
+                          <div className="py-1">
+                            {PHASE_OPTIONS.map((phase) => {
+                              const checked = phaseDraft.includes(phase);
+                              return (
+                                <label
+                                  key={phase}
+                                  className={cn(
+                                    'flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors',
+                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                  )}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() =>
+                                      setPhaseDraft((prev) =>
+                                        prev.includes(phase) ? prev.filter((p) => p !== phase) : [...prev, phase]
+                                      )
+                                    }
+                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-(--brand-border) text-(--brand-primary) focus:ring-2 focus:ring-(--brand-primary)/40"
+                                  />
+                                  <span className="min-w-0 break-words">{phase}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {/* Status */}
+                        <div className="flex min-w-[13rem] flex-1 flex-col border-r border-(--brand-border)">
+                          <div className="border-b border-(--brand-border) bg-(--brand-bg) px-3 py-2.5">
+                            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Status</span>
+                          </div>
+                          <div className="max-h-52 overflow-y-auto py-1">
+                            {STATUS_OPTIONS.map((status) => {
+                              const checked = statusDraft.includes(status);
+                              return (
+                                <label
+                                  key={status}
+                                  className={cn(
+                                    'flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors',
+                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                  )}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() =>
+                                      setStatusDraft((prev) =>
+                                        prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
+                                      )
+                                    }
+                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-(--brand-border) text-(--brand-primary) focus:ring-2 focus:ring-(--brand-primary)/40"
+                                  />
+                                  <span className="min-w-0 break-words">{status}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {/* Sponsor Type + Data */}
+                        <div className="flex w-[11rem] min-w-[10rem] shrink-0 flex-col">
+                          <div className="border-b border-(--brand-border) bg-(--brand-bg) px-3 py-2.5">
+                            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Sponsor Type</span>
+                          </div>
+                          <div className="py-1">
+                            {['Industry', 'Non-Industry'].map((option) => {
+                              const checked = sponsorTypeDraft.includes(option);
+                              return (
+                                <label
+                                  key={option}
+                                  className={cn(
+                                    'flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors',
+                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                  )}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() =>
+                                      setSponsorTypeDraft((prev) =>
+                                        prev.includes(option) ? prev.filter((s) => s !== option) : [...prev, option]
+                                      )
+                                    }
+                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-(--brand-border) text-(--brand-primary) focus:ring-2 focus:ring-(--brand-primary)/40"
+                                  />
+                                  <span className="min-w-0 break-words">{option}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-0.5 border-t border-(--brand-border)">
+                            <div className="border-b border-(--brand-border) bg-(--brand-bg) px-3 py-2">
+                              <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Data</span>
+                            </div>
+                            <div className="py-1">
+                              <label
+                                className={cn(
+                                  'flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors',
+                                  hasAbstractsDraft ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                )}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={hasAbstractsDraft}
+                                  onChange={(e) => setHasAbstractsDraft(e.target.checked)}
+                                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-(--brand-border) text-(--brand-primary) focus:ring-2 focus:ring-(--brand-primary)/40"
+                                />
+                                <span className="min-w-0 break-words">Efficacy &amp; Safety</span>
+                              </label>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    )}
-                    <SelectedFilters tags={filterTags} className="flex-1 min-w-0" />
-                  </div>
-                  <div className="flex items-center gap-2 ml-auto shrink-0">
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-2xl bg-transparent px-4 py-2.5 text-sm font-semibold text-sky-700 transition-colors duration-150 hover:bg-slate-100 hover:text-sky-800"
-                      title="Export Excel (placeholder)"
-                    >
-                      <FileSpreadsheet className="h-4 w-4 text-emerald-700 shrink-0" />
-                      <span>Export Excel</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 rounded-2xl bg-transparent px-4 py-2.5 text-sm font-semibold text-sky-700 transition-colors duration-150 hover:bg-slate-100 hover:text-sky-800"
-                      title="Export PPT (placeholder)"
-                    >
-                      <FileDown className="h-4 w-4 text-emerald-700 shrink-0" />
-                      <span>Export PPT</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                {trialsLoading ? (
-                  <div className="flex items-center justify-center h-full min-h-[200px]">
-                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
-                  </div>
-                ) : viewMode === 'bullseye' ? (
-                  <BullseyeView
-                    trials={trials}
-                    groupBy={groupBy}
-                    cancerTypeSlug={cancerTypeSlug}
-                  />
-                ) : groupBy === 'modality' ? (
-                  /* Group by Modality — column layout: top 15 per column, then Load more */
-                  <div className="pb-4 min-h-0">
-                    <div className="overflow-x-auto pr-4 w-full min-h-0 pb-6">
-                      <div className="flex gap-4 min-w-max">
-                        {(groupByValueFilter.length > 0
-                          ? trialsByModality.order.filter((c) => groupByValueFilter.includes(c))
-                          : trialsByModality.order
-                        ).map((groupLabel) => {
-                          const groupTrials = trialsByModality.map[groupLabel] ?? [];
-                          const visibleCount = visibleCountByGroup[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
-                          const visibleTrials = selectTrialsWithOpenBias(groupTrials, visibleCount);
-                          const hasMoreClient = groupTrials.length > visibleCount;
-                          const totalForModality = totalByModality[groupLabel];
-                          const hasMoreServer = totalForModality != null
-                            ? visibleCount < totalForModality
-                            : groupTrials.length >= CARDS_PER_GROUP_FETCH_MODALITY;
-                          const hasMore = hasMoreClient || hasMoreServer;
-                          const isLoadingMore = loadingMoreModality === groupLabel;
-                          const handleLoadMore = () => {
-                            if (hasMoreClient) {
-                              setVisibleCountByGroup((prev) => {
-                                const current = prev[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
-                                const next = current + CARDS_PER_GROUP_LOAD_MORE;
-                                const capped = Math.min(next, groupTrials.length);
-                                return { ...prev, [groupLabel]: capped };
-                              });
-                              return;
-                            }
-                            if (hasMoreServer && !isLoadingMore) {
-                              setLoadingMoreModality(groupLabel);
-                              const filters = {
-                                phase: phaseFilter.length > 0 ? phaseFilter : undefined,
-                                has_abstracts: hasAbstractsOnly || undefined,
-                                status: statusFilter.length > 0 ? statusFilter : undefined,
-                                sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
-                                modality: groupLabel,
-                                modality_skip: groupTrials.length,
-                                modality_limit: CARDS_PER_GROUP_LOAD_MORE,
-                              };
-                              trialsApi.getDashboardTrials(cancerTypeSlug, filters).then((res) => {
-                                setExtraTrialsByModality((prev) => ({
-                                  ...prev,
-                                  [groupLabel]: [...(prev[groupLabel] ?? []), ...res.trials],
-                                }));
-                                setTotalByModality((prev) => ({ ...prev, [groupLabel]: res.total }));
-                                setVisibleCountByGroup((prev) => ({
-                                  ...prev,
-                                  [groupLabel]: (prev[groupLabel] ?? visibleCount) + res.trials.length,
-                                }));
-                              }).finally(() => setLoadingMoreModality(null));
-                            }
-                          };
-                          const remaining = Math.max(0, totalForModality != null
-                            ? totalForModality - visibleCount
-                            : groupTrials.length - visibleCount);
-                          const nextBatch = hasMoreClient
-                            ? Math.min(CARDS_PER_GROUP_LOAD_MORE, groupTrials.length - visibleCount)
-                            : CARDS_PER_GROUP_LOAD_MORE;
-                          const showCountPill = remaining > 0 || totalForModality != null;
-                          const categoryTotal = totalForModality ?? groupTrials.length;
-                          const loadMoreMainLabel = showCountPill ? `Show next ${nextBatch}` : 'Load more';
-                          return (
-                            <div
-                              key={groupLabel}
-                              className="flex flex-col shrink-0 w-60 min-h-[124px]"
-                            >
-                              <h3 className="text-sm font-semibold text-slate-600 mb-3 pb-1.5 border-b border-slate-200 shrink-0">
-                                {groupLabel}
-                              </h3>
-                              <div className="flex flex-col gap-2">
-                                {visibleTrials.map((trial) => (
-                                  <TrialCard
-                                    key={trial.nct_id}
-                                    trial={trial}
-                                    category={cancerTypeSlug}
-                                    density="compact"
-                                  />
-                                ))}
-                              </div>
-                              {hasMore && (
-                                <div className="mt-5 pt-1 pb-0.5 w-full">
-                                  <button
-                                    type="button"
-                                    disabled={isLoadingMore || loadingMoreAll}
-                                    onClick={handleLoadMore}
-                                    aria-busy={isLoadingMore}
-                                    aria-disabled={isLoadingMore || loadingMoreAll}
-                                    title={showCountPill ? `${categoryTotal.toLocaleString()} in this category` : undefined}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-slate-200 bg-transparent text-slate-700 text-sm font-medium transition-colors hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:ring-offset-1 disabled:opacity-60 disabled:pointer-events-none"
-                                  >
-                                    {isLoadingMore ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                                        <span>Loading…</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
-                                        <span>{loadMoreMainLabel}</span>
-                                        {showCountPill && (
-                                          <span
-                                            className="shrink-0 text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5 tabular-nums"
-                                            aria-hidden
-                                          >
-                                            {categoryTotal.toLocaleString()}
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              )}
-                              {groupTrials.length === 0 && (
-                                <p className="text-sm text-slate-400 py-2">No trials</p>
-                              )}
-                            </div>
-                          );
-                        })}
+                      {/* Footer: Reset + Apply */}
+                      <div className="flex items-center justify-end gap-2 border-t border-(--brand-border) bg-(--brand-bg) px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={resetFilterDraft}
+                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-accent-light) hover:text-(--brand-text)"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          type="button"
+                          onClick={applyFilterDraft}
+                          className="inline-flex items-center gap-2 rounded-full bg-(--brand-primary) px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-(--brand-primary-hover) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1"
+                        >
+                          Apply filters
+                        </button>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  /* Group by Stage / Biomarker / Line of therapy / Previous treatment — same as Modality: top per category, Load more fetches from server */
-                  <div className="pb-4 min-h-0">
-                    <div className="overflow-x-auto pr-4 w-full min-h-0 pb-6">
-                      <div className="flex gap-4 min-w-max">
-                        {(groupByValueFilter.length > 0
-                          ? trialsByCustomGroup.order.filter((c) => groupByValueFilter.includes(c))
-                          : trialsByCustomGroup.order
-                        ).map((groupLabel) => {
-                          const groupTrials = trialsByCustomGroup.map[groupLabel] ?? [];
-                          const visibleCount = visibleCountByGroup[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
-                          const visibleTrials = selectTrialsWithOpenBias(groupTrials, visibleCount);
-                          const hasMoreClient = groupTrials.length > visibleCount;
-                          const totalForCategory = totalByGroup[groupLabel];
-                          const hasMoreServer =
-                            totalForCategory != null
-                              ? visibleCount < totalForCategory
-                              : groupTrials.length >= CARDS_PER_GROUP_FETCH_MODALITY;
-                          const hasMore = hasMoreClient || hasMoreServer;
-                          const isLoadingMore = loadingMoreGroup === groupLabel;
-                          const nextBatch = hasMoreClient
-                            ? Math.min(CARDS_PER_GROUP_LOAD_MORE, groupTrials.length - visibleCount)
-                            : CARDS_PER_GROUP_LOAD_MORE;
-                          const categoryTotal = totalForCategory ?? groupTrials.length;
-                          const showCountPill = (totalForCategory != null) || groupTrials.length > 0;
-                          const handleLoadMore = () => {
-                            if (hasMoreClient) {
-                              setVisibleCountByGroup((prev) => {
-                                const current = prev[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
-                                const next = current + CARDS_PER_GROUP_LOAD_MORE;
-                                const capped = Math.min(next, groupTrials.length);
-                                return { ...prev, [groupLabel]: capped };
-                              });
-                              return;
-                            }
-                            if (hasMoreServer && !isLoadingMore) {
-                              setLoadingMoreGroup(groupLabel);
-                              const baseFilters = {
-                                phase: phaseFilter.length > 0 ? phaseFilter : undefined,
-                                has_abstracts: hasAbstractsOnly || undefined,
-                                status: statusFilter.length > 0 ? statusFilter : undefined,
-                                sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
-                                balance_by_group: groupBy,
-                                category_filter: groupLabel,
-                                category_skip: groupTrials.length,
-                                category_limit: CARDS_PER_GROUP_LOAD_MORE,
-                              };
-                              trialsApi
-                                .getDashboardTrials(cancerTypeSlug, baseFilters)
-                                .then((res) => {
-                                  setExtraTrialsByGroup((prev) => ({
-                                    ...prev,
-                                    [groupLabel]: [...(prev[groupLabel] ?? []), ...res.trials],
-                                  }));
-                                  setTotalByGroup((prev) => ({ ...prev, [groupLabel]: res.total }));
-                                  setVisibleCountByGroup((prev) => ({
-                                    ...prev,
-                                    [groupLabel]: (prev[groupLabel] ?? visibleCount) + res.trials.length,
-                                  }));
-                                })
-                                .finally(() => setLoadingMoreGroup(null));
-                            }
-                          };
-                          return (
-                            <div
-                              key={groupLabel}
-                              className="flex flex-col shrink-0 w-60 min-h-[124px]"
-                            >
-                              <h3 className="text-sm font-semibold text-slate-600 mb-3 pb-1.5 border-b border-slate-200 shrink-0">
-                                {groupLabel}
-                              </h3>
-                              <div className="flex flex-col gap-2">
-                                {visibleTrials.map((trial) => (
-                                  <TrialCard
-                                    key={trial.nct_id}
-                                    trial={trial}
-                                    category={cancerTypeSlug}
-                                    density="compact"
-                                  />
-                                ))}
-                              </div>
-                              {hasMore && (
-                                <div className="mt-5 pt-1 pb-0.5 w-full">
-                                  <button
-                                    type="button"
-                                    disabled={isLoadingMore}
-                                    onClick={handleLoadMore}
-                                    aria-busy={isLoadingMore}
-                                    className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg border border-slate-200 bg-transparent text-slate-700 text-sm font-medium transition-colors hover:bg-slate-50 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:ring-offset-1 disabled:opacity-60 disabled:pointer-events-none"
-                                  >
-                                    {isLoadingMore ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                                        <span>Loading…</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
-                                        <span>{nextBatch > 0 ? `Show next ${nextBatch}` : 'Load more'}</span>
-                                        {showCountPill && (
-                                          <span
-                                            className="shrink-0 text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5 tabular-nums"
-                                            aria-hidden
-                                          >
-                                            {categoryTotal.toLocaleString()}
-                                          </span>
-                                        )}
-                                      </>
-                                    )}
-                                  </button>
-                                </div>
-                              )}
-                              {groupTrials.length === 0 && (
-                                <p className="text-sm text-slate-400 py-2">No trials</p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
+                  </>
                 )}
               </div>
 
-              {/* When grouped by modality/target: show note instead of pagination */}
-              {!trialsLoading && trialsTotal > 0 && groupBy === 'modality' && (
-                <div className="pt-1 mt-0 border-t border-slate-100 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
-                  <div className="flex flex-col items-center gap-2 py-2">
-                    {modalitiesWithMore.length > 0 && (
-                      <button
-                        type="button"
-                        disabled={loadingMoreAll}
-                        onClick={handleLoadMoreAll}
-                        aria-busy={loadingMoreAll}
-                        className="inline-flex items-center gap-2 py-2 px-4 rounded-lg border border-slate-200 bg-slate-100 text-slate-700 text-sm font-medium transition-colors hover:bg-slate-200 hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500/30 focus:ring-offset-1 disabled:opacity-60 disabled:pointer-events-none"
-                      >
-                        {loadingMoreAll ? (
-                          <>
-                            <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                            <span>Loading all…</span>
-                          </>
-                        ) : (
-                          <>
-                            <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" aria-hidden />
-                            <span>Load more in all columns</span>
-                          </>
-                        )}
-                      </button>
-                    )}
-                    <p className="text-xs text-slate-500">
-                      Showing {CARDS_PER_GROUP_LOAD_MORE} trials per category at a time.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Pagination at bottom — industry standard: First / Prev / numbered pages / Next / Last (hidden when grouped by modality/target) */}
-              {!trialsLoading && trialsTotal > 0 && false && (
-                <nav
-                  className="flex flex-wrap items-center justify-between gap-4 py-4 mt-auto border-t border-slate-200 bg-slate-50/50 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8"
-                  aria-label="Trials pagination"
-                >
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <p className="text-sm text-slate-600">
-                      Showing <span className="font-semibold text-slate-800">{startRow}</span>
-                      –<span className="font-semibold text-slate-800">{endRow}</span> of{' '}
-                      <span className="font-semibold text-slate-800">{trialsTotal.toLocaleString()}</span> trials
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-500">per page</span>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setPageSizeDropdownOpen((o) => !o)}
-                          aria-expanded={pageSizeDropdownOpen}
-                          aria-haspopup="listbox"
-                          aria-label="Items per page"
-                          className="flex w-14 items-center justify-between rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50"
-                        >
-                          {pageSize}
-                          <ChevronDown className="h-4 w-4 text-slate-500 shrink-0" />
-                        </button>
-                        {pageSizeDropdownOpen && (
-                          <>
-                            <div className="fixed inset-0 z-10" aria-hidden onClick={() => setPageSizeDropdownOpen(false)} />
-                            <div
-                              role="listbox"
-                              aria-label="Per page options"
-                              className="absolute left-0 bottom-full z-20 mb-1 w-20 rounded-lg border border-slate-200 bg-white py-1 shadow-lg ring-1 ring-slate-900/5"
-                            >
-                              {PAGE_SIZE_OPTIONS.map((size) => (
-                                <button
-                                  key={size}
-                                  type="button"
-                                  role="option"
-                                  aria-selected={pageSize === size}
-                                  onClick={() => {
-                                    setPageSize(size);
-                                    setPage(1);
-                                    setPageSizeDropdownOpen(false);
-                                  }}
-                                  className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${pageSize === size ? 'bg-sky-50 font-medium text-sky-800' : 'text-slate-700 hover:bg-slate-50'}`}
-                                >
-                                  {size}
-                                  {pageSize === size && <Check className="h-4 w-4 text-sky-600 shrink-0" />}
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setPage(1)}
-                      disabled={page <= 1}
-                      aria-label="First page"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
-                    >
-                      <ChevronsLeft className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page <= 1}
-                      aria-label="Previous page"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-
-                    <span className="mx-1 flex items-center gap-0.5">
-                      {getPaginationPages(page, totalPages).map((p, i) =>
-                        p === null ? (
-                          <span key={`ellipsis-${i}`} className="flex h-9 w-9 items-center justify-center text-slate-400" aria-hidden>
-                            …
-                          </span>
-                        ) : (
-                          <button
-                            key={p}
-                            type="button"
-                            onClick={() => setPage(p)}
-                            aria-label={`Page ${p}`}
-                            aria-current={page === p ? 'page' : undefined}
-                            className={`inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-md border px-2 text-sm font-medium transition-colors ${
-                              page === p
-                                ? 'border-sky-500 bg-sky-600 text-white shadow-sm'
-                                : 'border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-50 hover:text-slate-900'
-                            }`}
-                          >
-                            {p}
-                          </button>
-                        )
-                      )}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page >= totalPages}
-                      aria-label="Next page"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPage(totalPages)}
-                      disabled={page >= totalPages}
-                      aria-label="Last page"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 disabled:opacity-40 disabled:pointer-events-none disabled:cursor-not-allowed"
-                    >
-                      <ChevronsRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </nav>
-              )}
+              {/* Export */}
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-accent-light) hover:text-(--brand-primary)"
+                title="Export Excel (placeholder)"
+              >
+                <FileSpreadsheet className="h-4 w-4 shrink-0" />
+                <span>Excel</span>
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-accent-light) hover:text-(--brand-primary)"
+                title="Export PPT (placeholder)"
+              >
+                <FileDown className="h-4 w-4 shrink-0" />
+                <span>PPT</span>
+              </button>
             </div>
-          </section>
+          </div>
+
+          {filterTags.length > 0 && (
+            <div className="border-t border-(--brand-border) pt-3">
+              <SelectedFilters tags={filterTags} />
+            </div>
+          )}
         </div>
-      </main>
+
+        {/* Trials */}
+        <div className="mt-6">
+          {trialsLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-10 w-10 animate-spin text-(--brand-text-muted)" aria-hidden />
+            </div>
+          ) : viewMode === 'bullseye' ? (
+            <BullseyeView
+              trials={trials}
+              groupBy={groupBy}
+              cancerTypeSlug={cancerTypeSlug}
+            />
+          ) : groupBy === 'modality' ? (
+            /* Group by Modality — column layout: top 15 per column, then Load more */
+            <div className="overflow-x-auto pb-6">
+              <div className="flex min-w-max gap-4">
+                {(groupByValueFilter.length > 0
+                  ? trialsByModality.order.filter((c) => groupByValueFilter.includes(c))
+                  : trialsByModality.order
+                ).map((groupLabel) => {
+                  const groupTrials = trialsByModality.map[groupLabel] ?? [];
+                  const visibleCount = visibleCountByGroup[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
+                  const visibleTrials = selectTrialsWithOpenBias(groupTrials, visibleCount);
+                  const hasMoreClient = groupTrials.length > visibleCount;
+                  const totalForModality = totalByModality[groupLabel];
+                  const hasMoreServer = totalForModality != null
+                    ? visibleCount < totalForModality
+                    : groupTrials.length >= CARDS_PER_GROUP_FETCH_MODALITY;
+                  const hasMore = hasMoreClient || hasMoreServer;
+                  const isLoadingMore = loadingMoreModality === groupLabel;
+                  const handleLoadMore = () => {
+                    if (hasMoreClient) {
+                      setVisibleCountByGroup((prev) => {
+                        const current = prev[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
+                        const next = current + CARDS_PER_GROUP_LOAD_MORE;
+                        const capped = Math.min(next, groupTrials.length);
+                        return { ...prev, [groupLabel]: capped };
+                      });
+                      return;
+                    }
+                    if (hasMoreServer && !isLoadingMore) {
+                      setLoadingMoreModality(groupLabel);
+                      const filters = {
+                        phase: phaseFilter.length > 0 ? phaseFilter : undefined,
+                        has_abstracts: hasAbstractsOnly || undefined,
+                        status: statusFilter.length > 0 ? statusFilter : undefined,
+                        sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
+                        modality: groupLabel,
+                        modality_skip: groupTrials.length,
+                        modality_limit: CARDS_PER_GROUP_LOAD_MORE,
+                      };
+                      trialsApi.getDashboardTrials(cancerTypeSlug, filters).then((res) => {
+                        setExtraTrialsByModality((prev) => ({
+                          ...prev,
+                          [groupLabel]: [...(prev[groupLabel] ?? []), ...res.trials],
+                        }));
+                        setTotalByModality((prev) => ({ ...prev, [groupLabel]: res.total }));
+                        setVisibleCountByGroup((prev) => ({
+                          ...prev,
+                          [groupLabel]: (prev[groupLabel] ?? visibleCount) + res.trials.length,
+                        }));
+                      }).finally(() => setLoadingMoreModality(null));
+                    }
+                  };
+                  const remaining = Math.max(0, totalForModality != null
+                    ? totalForModality - visibleCount
+                    : groupTrials.length - visibleCount);
+                  const nextBatch = hasMoreClient
+                    ? Math.min(CARDS_PER_GROUP_LOAD_MORE, groupTrials.length - visibleCount)
+                    : CARDS_PER_GROUP_LOAD_MORE;
+                  const showCountPill = remaining > 0 || totalForModality != null;
+                  const categoryTotal = totalForModality ?? groupTrials.length;
+                  const loadMoreMainLabel = showCountPill ? `Show next ${nextBatch}` : 'Load more';
+                  return (
+                    <div
+                      key={groupLabel}
+                      className="flex w-60 shrink-0 flex-col"
+                    >
+                      <h3 className="mb-3 shrink-0 border-b border-(--brand-border) pb-1.5 text-sm font-semibold text-(--brand-text)">
+                        {groupLabel}
+                      </h3>
+                      <div className="flex flex-col gap-2">
+                        {visibleTrials.map((trial) => (
+                          <TrialCard
+                            key={trial.nct_id}
+                            trial={trial}
+                            category={cancerTypeSlug}
+                            density="compact"
+                          />
+                        ))}
+                      </div>
+                      {hasMore && (
+                        <div className="mt-5 w-full pt-1 pb-0.5">
+                          <button
+                            type="button"
+                            disabled={isLoadingMore || loadingMoreAll}
+                            onClick={handleLoadMore}
+                            aria-busy={isLoadingMore}
+                            aria-disabled={isLoadingMore || loadingMoreAll}
+                            title={showCountPill ? `${categoryTotal.toLocaleString()} in this category` : undefined}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-(--brand-border) bg-transparent px-3 py-2.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
+                          >
+                            {isLoadingMore ? (
+                              <>
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                                <span>Loading…</span>
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" aria-hidden />
+                                <span>{loadMoreMainLabel}</span>
+                                {showCountPill && (
+                                  <span
+                                    className="shrink-0 rounded-full bg-(--brand-bg) px-2 py-0.5 text-xs text-(--brand-text-muted)"
+                                    style={{ fontFamily: 'var(--font-mono)' }}
+                                    aria-hidden
+                                  >
+                                    {categoryTotal.toLocaleString()}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                      {groupTrials.length === 0 && (
+                        <p className="py-2 text-sm text-(--brand-text-muted)">No trials</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            /* Group by Stage / Biomarker / Line of therapy / Previous treatment — same as Modality: top per category, Load more fetches from server */
+            <div className="overflow-x-auto pb-6">
+              <div className="flex min-w-max gap-4">
+                {(groupByValueFilter.length > 0
+                  ? trialsByCustomGroup.order.filter((c) => groupByValueFilter.includes(c))
+                  : trialsByCustomGroup.order
+                ).map((groupLabel) => {
+                  const groupTrials = trialsByCustomGroup.map[groupLabel] ?? [];
+                  const visibleCount = visibleCountByGroup[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
+                  const visibleTrials = selectTrialsWithOpenBias(groupTrials, visibleCount);
+                  const hasMoreClient = groupTrials.length > visibleCount;
+                  const totalForCategory = totalByGroup[groupLabel];
+                  const hasMoreServer =
+                    totalForCategory != null
+                      ? visibleCount < totalForCategory
+                      : groupTrials.length >= CARDS_PER_GROUP_FETCH_MODALITY;
+                  const hasMore = hasMoreClient || hasMoreServer;
+                  const isLoadingMore = loadingMoreGroup === groupLabel;
+                  const nextBatch = hasMoreClient
+                    ? Math.min(CARDS_PER_GROUP_LOAD_MORE, groupTrials.length - visibleCount)
+                    : CARDS_PER_GROUP_LOAD_MORE;
+                  const categoryTotal = totalForCategory ?? groupTrials.length;
+                  const showCountPill = (totalForCategory != null) || groupTrials.length > 0;
+                  const handleLoadMore = () => {
+                    if (hasMoreClient) {
+                      setVisibleCountByGroup((prev) => {
+                        const current = prev[groupLabel] ?? CARDS_PER_GROUP_INITIAL;
+                        const next = current + CARDS_PER_GROUP_LOAD_MORE;
+                        const capped = Math.min(next, groupTrials.length);
+                        return { ...prev, [groupLabel]: capped };
+                      });
+                      return;
+                    }
+                    if (hasMoreServer && !isLoadingMore) {
+                      setLoadingMoreGroup(groupLabel);
+                      const baseFilters = {
+                        phase: phaseFilter.length > 0 ? phaseFilter : undefined,
+                        has_abstracts: hasAbstractsOnly || undefined,
+                        status: statusFilter.length > 0 ? statusFilter : undefined,
+                        sponsor_type: sponsorTypeFilter.length > 0 ? sponsorTypeFilter : undefined,
+                        balance_by_group: groupBy,
+                        category_filter: groupLabel,
+                        category_skip: groupTrials.length,
+                        category_limit: CARDS_PER_GROUP_LOAD_MORE,
+                      };
+                      trialsApi
+                        .getDashboardTrials(cancerTypeSlug, baseFilters)
+                        .then((res) => {
+                          setExtraTrialsByGroup((prev) => ({
+                            ...prev,
+                            [groupLabel]: [...(prev[groupLabel] ?? []), ...res.trials],
+                          }));
+                          setTotalByGroup((prev) => ({ ...prev, [groupLabel]: res.total }));
+                          setVisibleCountByGroup((prev) => ({
+                            ...prev,
+                            [groupLabel]: (prev[groupLabel] ?? visibleCount) + res.trials.length,
+                          }));
+                        })
+                        .finally(() => setLoadingMoreGroup(null));
+                    }
+                  };
+                  return (
+                    <div
+                      key={groupLabel}
+                      className="flex w-60 shrink-0 flex-col"
+                    >
+                      <h3 className="mb-3 shrink-0 border-b border-(--brand-border) pb-1.5 text-sm font-semibold text-(--brand-text)">
+                        {groupLabel}
+                      </h3>
+                      <div className="flex flex-col gap-2">
+                        {visibleTrials.map((trial) => (
+                          <TrialCard
+                            key={trial.nct_id}
+                            trial={trial}
+                            category={cancerTypeSlug}
+                            density="compact"
+                          />
+                        ))}
+                      </div>
+                      {hasMore && (
+                        <div className="mt-5 w-full pt-1 pb-0.5">
+                          <button
+                            type="button"
+                            disabled={isLoadingMore}
+                            onClick={handleLoadMore}
+                            aria-busy={isLoadingMore}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-(--brand-border) bg-transparent px-3 py-2.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
+                          >
+                            {isLoadingMore ? (
+                              <>
+                                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                                <span>Loading…</span>
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" aria-hidden />
+                                <span>{nextBatch > 0 ? `Show next ${nextBatch}` : 'Load more'}</span>
+                                {showCountPill && (
+                                  <span
+                                    className="shrink-0 rounded-full bg-(--brand-bg) px-2 py-0.5 text-xs text-(--brand-text-muted)"
+                                    style={{ fontFamily: 'var(--font-mono)' }}
+                                    aria-hidden
+                                  >
+                                    {categoryTotal.toLocaleString()}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                      {groupTrials.length === 0 && (
+                        <p className="py-2 text-sm text-(--brand-text-muted)">No trials</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* When grouped by modality: show note instead of pagination */}
+        {!trialsLoading && trialsTotal > 0 && groupBy === 'modality' && (
+          <div className="mt-2 border-t border-(--brand-border) pt-2">
+            <div className="flex flex-col items-center gap-2 py-2">
+              {modalitiesWithMore.length > 0 && (
+                <button
+                  type="button"
+                  disabled={loadingMoreAll}
+                  onClick={handleLoadMoreAll}
+                  aria-busy={loadingMoreAll}
+                  className="inline-flex items-center gap-2 rounded-full border border-(--brand-border) bg-(--brand-surface) px-4 py-2 text-sm font-medium text-(--brand-text) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
+                >
+                  {loadingMoreAll ? (
+                    <>
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                      <span>Loading all…</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" aria-hidden />
+                      <span>Load more in all columns</span>
+                    </>
+                  )}
+                </button>
+              )}
+              <p className="text-xs text-(--brand-text-muted)">
+                Showing {CARDS_PER_GROUP_LOAD_MORE} trials per category at a time.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Pagination at bottom — industry standard: First / Prev / numbered pages / Next / Last (hidden when grouped by modality/target) */}
+        {!trialsLoading && trialsTotal > 0 && false && (
+          <nav
+            className="mt-4 flex flex-wrap items-center justify-between gap-4 border-t border-(--brand-border) pt-4"
+            aria-label="Trials pagination"
+          >
+            <div className="flex flex-wrap items-center gap-4">
+              <p className="text-sm text-(--brand-text-muted)">
+                Showing <span className="font-semibold text-(--brand-text)" style={{ fontFamily: 'var(--font-mono)' }}>{startRow}</span>
+                –<span className="font-semibold text-(--brand-text)" style={{ fontFamily: 'var(--font-mono)' }}>{endRow}</span> of{' '}
+                <span className="font-semibold text-(--brand-text)" style={{ fontFamily: 'var(--font-mono)' }}>{trialsTotal.toLocaleString()}</span> trials
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-(--brand-text-muted)">per page</span>
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setPageSizeDropdownOpen((o) => !o)}
+                    aria-expanded={pageSizeDropdownOpen}
+                    aria-haspopup="listbox"
+                    aria-label="Items per page"
+                    className="flex w-14 items-center justify-between rounded-lg border border-(--brand-border) bg-(--brand-surface) px-2.5 py-1.5 text-sm font-medium text-(--brand-text) hover:bg-(--brand-accent-light)"
+                  >
+                    {pageSize}
+                    <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
+                  </button>
+                  {pageSizeDropdownOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" aria-hidden onClick={() => setPageSizeDropdownOpen(false)} />
+                      <div
+                        role="listbox"
+                        aria-label="Per page options"
+                        className="absolute left-0 bottom-full z-20 mb-1 w-20 rounded-xl border border-(--brand-border) bg-(--brand-surface) py-1 shadow-lg"
+                      >
+                        {PAGE_SIZE_OPTIONS.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            role="option"
+                            aria-selected={pageSize === size}
+                            onClick={() => {
+                              setPageSize(size);
+                              setPage(1);
+                              setPageSizeDropdownOpen(false);
+                            }}
+                            className={cn(
+                              'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm',
+                              pageSize === size ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                            )}
+                          >
+                            {size}
+                            {pageSize === size && <Check className="h-4 w-4 shrink-0 text-(--brand-primary)" />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => setPage(1)}
+                disabled={page <= 1}
+                aria-label="First page"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                aria-label="Previous page"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              <span className="mx-1 flex items-center gap-0.5">
+                {getPaginationPages(page, totalPages).map((p, i) =>
+                  p === null ? (
+                    <span key={`ellipsis-${i}`} className="flex h-9 w-9 items-center justify-center text-(--brand-text-muted)" aria-hidden>
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setPage(p)}
+                      aria-label={`Page ${p}`}
+                      aria-current={page === p ? 'page' : undefined}
+                      style={{ fontFamily: 'var(--font-mono)' }}
+                      className={cn(
+                        'inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-lg border px-2 text-sm font-medium transition-colors',
+                        page === p
+                          ? 'border-(--brand-primary) bg-(--brand-primary) text-white'
+                          : 'border-(--brand-border) bg-(--brand-surface) text-(--brand-text) hover:bg-(--brand-accent-light)'
+                      )}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                aria-label="Next page"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage(totalPages)}
+                disabled={page >= totalPages}
+                aria-label="Last page"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </button>
+            </div>
+          </nav>
+        )}
+      </div>
     </div>
-    </>
   );
 }
 
@@ -1369,11 +1368,8 @@ export default function DashboardPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex flex-col min-h-screen w-full bg-white">
-          <header className="bg-white border-b border-gray-200 h-14 sm:h-16" />
-          <main className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </main>
+        <div className="flex min-h-screen w-full items-center justify-center bg-(--brand-bg)">
+          <Loader2 className="h-8 w-8 animate-spin text-(--brand-text-muted)" />
         </div>
       }
     >

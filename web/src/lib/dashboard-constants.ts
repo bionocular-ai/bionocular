@@ -1,3 +1,16 @@
+import type { LucideIcon } from 'lucide-react';
+import {
+  ClipboardList,
+  Newspaper,
+  Target,
+  TrendingUp,
+  ShieldCheck,
+  Scale,
+  Workflow,
+  Landmark,
+  Sparkles,
+} from 'lucide-react';
+
 /** Cancer type options for dashboard dropdown (slug + display label). */
 export const DASHBOARD_CANCER_TYPES = [
   { value: 'cutaneous-melanoma', label: 'Cutaneous/Metastatic Melanoma' },
@@ -9,6 +22,41 @@ export const DASHBOARD_CANCER_TYPES = [
   { value: 'merkel-cell-carcinoma', label: 'Merkel Cell Carcinoma' },
   { value: 'basal-cell-carcinoma', label: 'Basal Cell Carcinoma' },
 ] as const;
+
+/** Slug → display-name map, derived from DASHBOARD_CANCER_TYPES (single source of truth). */
+export const CATEGORY_SLUG_MAP: Record<string, string> = Object.fromEntries(
+  DASHBOARD_CANCER_TYPES.map((t) => [t.value, t.label]),
+);
+
+export function slugToCategory(slug: string): string {
+  return CATEGORY_SLUG_MAP[slug] || slug
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+export type DashboardNavStatus = 'live' | 'upcoming';
+
+export interface DashboardNavItem {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  section?: string;
+  query?: Record<string, string>;
+  status: DashboardNavStatus;
+}
+
+export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
+  { key: 'trial-updates',       label: 'Trial Updates',              icon: ClipboardList, section: 'trial-updates',       status: 'live' },
+  { key: 'live-news',           label: 'Live News',                  icon: Newspaper,     section: 'live-ticker',         status: 'live' },
+  { key: 'landscape',           label: 'Trial Landscape',            icon: Target,        section: 'landscape',           status: 'live' },
+  { key: 'efficacy',            label: 'Efficacy Intelligence Hub',  icon: TrendingUp,    section: 'analytics', query: { mode: 'efficacy' }, status: 'live' },
+  { key: 'safety',              label: 'Safety Intelligence Hub',    icon: ShieldCheck,   section: 'analytics', query: { mode: 'safety' },   status: 'live' },
+  { key: 'index',               label: 'Efficacy vs Safety Index Hub', icon: Scale,       section: 'analytics', query: { mode: 'all' },      status: 'live' },
+  { key: 'treatment-algorithm', label: 'Treatment Algorithm',        icon: Workflow,                                                         status: 'upcoming' },
+  { key: 'regulatory',          label: 'Regulatory Timeline',        icon: Landmark,      section: 'regulatory-timeline',                    status: 'upcoming' },
+  { key: 'ai-agent',            label: 'AI Agent',                   icon: Sparkles,                                                         status: 'upcoming' },
+];
 
 export const DEFAULT_CANCER_TYPE_SLUG = 'cutaneous-melanoma';
 
