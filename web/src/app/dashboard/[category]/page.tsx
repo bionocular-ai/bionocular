@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { dashboardRoute } from '@/lib/constants';
 
 /**
  * The cancer-category landing route has no standalone view — it opens directly
@@ -10,5 +11,5 @@ export default async function CategoryIndexPage({
   params: Promise<{ category: string }>;
 }) {
   const { category } = await params;
-  redirect(`/dashboard/${category}/trial-updates`);
+  redirect(dashboardRoute(category, 'trial-updates'));
 }
