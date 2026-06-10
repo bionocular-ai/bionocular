@@ -162,6 +162,15 @@ export default function LiveTickerPage() {
   const [selectedMonthKey, setSelectedMonthKey] = React.useState<string>('');
   const [monthDropdownOpen, setMonthDropdownOpen] = React.useState(false);
 
+  React.useEffect(() => {
+    if (!monthDropdownOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMonthDropdownOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [monthDropdownOpen]);
+
   const latestItems = React.useMemo(() => {
     if (!data) return [];
     const resultUrls = new Set(data.results.map((r) => r.url));
@@ -219,6 +228,7 @@ export default function LiveTickerPage() {
           description="Latest news, press releases, and efficacy & safety readouts across the treatment landscape."
           right={
             <FilterChips
+              label="VIEW"
               options={FEED_FILTER_OPTIONS}
               value={feedFilter}
               onChange={setFeedFilter}
@@ -332,7 +342,9 @@ export default function LiveTickerPage() {
             </div>
           ) : displayedItems.length === 0 ? (
             <div className="rounded-2xl border border-(--brand-border) bg-(--brand-surface) py-10 text-center">
-              <p className="text-sm text-(--brand-text-muted)">No articles in this month.</p>
+              <p className="text-sm text-(--brand-text-muted)">
+                {efficacyFirst ? 'No efficacy & safety items for this period.' : 'No articles in this month.'}
+              </p>
               <button
                 type="button"
                 onClick={() => setSelectedMonthKey('')}
@@ -350,7 +362,7 @@ export default function LiveTickerPage() {
                   ? ` in ${availableMonths.find((m) => m.key === selectedMonthKey)?.label ?? ''}`
                   : ''}
               </p>
-              <div className="grid gap-5 sm:grid-cols-1 lg:grid-cols-2">
+              <div className="grid gap-5 lg:grid-cols-2">
                 {displayedItems.map((item, i) =>
                   item.type === 'result' ? (
                     <ResultCard key={`result-${item.value.url}-${i}`} result={item.value} />

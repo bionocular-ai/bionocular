@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { trialsApi, type LatestTrialUpdateItem } from '@/lib/api';
-import { Loader2, Zap, Lightbulb } from 'lucide-react';
+import { Loader2, Zap, Lightbulb, FlaskConical } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { FilterChips } from '@/components/dashboard/FilterChips';
@@ -117,7 +117,7 @@ export default function TrialUpdatesPage() {
           <div className="rounded-2xl border border-(--brand-border) bg-(--brand-surface) p-5 shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--brand-accent-light)">
-                <Zap className="h-5 w-5 text-(--brand-primary)" aria-hidden />
+                <FlaskConical className="h-5 w-5 text-(--brand-primary)" aria-hidden />
               </div>
               <div className="min-w-0">
                 <div
@@ -160,7 +160,7 @@ export default function TrialUpdatesPage() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-[110px_1fr_96px] items-center gap-4 border-b border-(--brand-border) bg-(--brand-bg) px-5 py-2.5">
+              <div className="sticky top-0 z-10 grid grid-cols-[110px_1fr_96px] items-center gap-4 border-b border-(--brand-border) bg-(--brand-surface) px-5 py-2.5">
                 <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Date</span>
                 <span className="min-w-0 text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Record</span>
                 <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Type</span>
