@@ -1,22 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Activity, Check, ChevronDown, ListFilter, Loader2 } from 'lucide-react';
-import { useSession } from '@/lib/supabase/hooks';
-import { UserMenu } from '@/components/user-menu';
-import { Logo } from '@/components/Logo';
-import { HomeNavLink } from '@/components/nav/HomeNavLink';
-import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
+import { ChevronDown, ListFilter, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -30,6 +23,9 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
+import { PageHeader } from '@/components/dashboard/PageHeader';
+import { FilterChips } from '@/components/dashboard/FilterChips';
+import { slugToCategory } from '@/lib/dashboard-constants';
 import { kmCurvesApi, type KmCurveRow, type KmPoint } from '@/lib/api';
 import KaplanMeierChart from '@/components/charts/KaplanMeierChart';
 
@@ -113,7 +109,6 @@ function computeApproxHR(cmpArm: KmCurveRow, refArm: KmCurveRow): number | null 
 }
 
 export default function HeadToHeadEfficacyPage() {
-  const { data: session } = useSession();
   const params = useParams();
   const categorySlug = params?.category as string;
 
@@ -218,77 +213,28 @@ export default function HeadToHeadEfficacyPage() {
     setSelectedIds(new Set(armsForEndpoint.slice(0, MAX_ARMS).map((c) => c.id)));
   const clearArms = () => setSelectedIds(new Set());
 
+  const endpointOptions = React.useMemo(
+    () => endpoints.map((e) => ({ value: e, label: e })),
+    [endpoints]
+  );
+
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div className="w-full px-8">
-          <div className="flex items-center justify-between h-14 gap-4">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="brand shrink-0">
-                <Logo height={32} />
-                <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
-              </Link>
-            </div>
+    <div className="min-h-screen bg-(--brand-bg)">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <PageHeader
+          category={slugToCategory(categorySlug)}
+          title="Survival Curves"
+          description="Reconstructed digitized-twin Kaplan–Meier survival curves by treatment arm, head-to-head across publications and cohorts."
+          right={
             <div className="flex items-center gap-2">
-              <HomeNavLink />
-              <DashboardNavLink />
-              {session?.user && (
-                <UserMenu
-                  email={session.user.email || null}
-                  name={(session.user.user_metadata?.full_name as string) || null}
-                  image={undefined}
+              {endpointOptions.length > 0 && (
+                <FilterChips
+                  label="ENDPOINT"
+                  options={endpointOptions}
+                  value={endpoint}
+                  onChange={setEndpoint}
                 />
               )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 flex flex-col items-center overflow-y-auto px-4 py-6 bg-slate-100">
-        <div className="w-full max-w-7xl">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-5">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
-                Head-to-Head Survival
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Reconstructed digitized-twin survival curves by treatment arm.
-              </p>
-            </div>
-
-            {/* Selectors */}
-            <div className="flex items-center gap-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!endpoints.length}
-                    className="h-9 gap-2 bg-white pl-3 pr-2.5 shadow-sm hover:bg-slate-50"
-                  >
-                    <Activity className="h-4 w-4 text-slate-400" />
-                    <span className="text-xs font-medium text-slate-400">Endpoint</span>
-                    <span className="font-semibold text-slate-900">{endpoint || '—'}</span>
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[200px]">
-                  <DropdownMenuLabel className="text-xs font-normal text-slate-500">
-                    Endpoint
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {endpoints.map((e) => (
-                    <DropdownMenuItem
-                      key={e}
-                      onClick={() => setEndpoint(e)}
-                      className="justify-between gap-4"
-                    >
-                      <span>{endpointLabel(e)}</span>
-                      {e === endpoint && <Check className="h-4 w-4 text-slate-900" />}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -296,19 +242,26 @@ export default function HeadToHeadEfficacyPage() {
                     variant="outline"
                     size="sm"
                     disabled={!armsForEndpoint.length}
-                    className="h-9 gap-2 bg-white pl-3 pr-2.5 shadow-sm hover:bg-slate-50"
+                    className="h-9 gap-2 rounded-full border-(--brand-border) bg-(--brand-surface) pl-3 pr-2.5 text-(--brand-text) shadow-sm hover:border-(--brand-primary) hover:bg-(--brand-accent-light)"
                   >
-                    <ListFilter className="h-4 w-4 text-slate-400" />
-                    <span className="font-medium text-slate-700">Treatment arms</span>
-                    <Badge variant="secondary" className="px-1.5 py-0 tabular-nums">
+                    <ListFilter className="h-4 w-4 text-(--brand-text-muted)" />
+                    <span className="font-medium">Treatment arms</span>
+                    <Badge
+                      variant="secondary"
+                      className="bg-(--brand-accent-light) px-1.5 py-0 text-(--brand-primary)"
+                      style={{ fontFamily: 'var(--font-mono)' }}
+                    >
                       {selectedIds.size}
                     </Badge>
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                    <ChevronDown className="h-4 w-4 text-(--brand-text-muted)" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[300px] p-0">
-                  <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
-                    <span className="text-xs text-slate-500 tabular-nums">
+                  <div className="flex items-center justify-between gap-2 border-b border-(--brand-border) px-3 py-2">
+                    <span
+                      className="text-xs text-(--brand-text-muted)"
+                      style={{ fontFamily: 'var(--font-mono)' }}
+                    >
                       {selectedIds.size} of {Math.min(armsForEndpoint.length, MAX_ARMS)} selected (max {MAX_ARMS})
                     </span>
                     <div className="flex items-center gap-0.5">
@@ -316,7 +269,7 @@ export default function HeadToHeadEfficacyPage() {
                         type="button"
                         onClick={selectAllArms}
                         disabled={selectedIds.size === armsForEndpoint.length}
-                        className="rounded px-1.5 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent"
+                        className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
                       >
                         All
                       </button>
@@ -324,7 +277,7 @@ export default function HeadToHeadEfficacyPage() {
                         type="button"
                         onClick={clearArms}
                         disabled={selectedIds.size === 0}
-                        className="rounded px-1.5 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:hover:bg-transparent"
+                        className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
                       >
                         Clear
                       </button>
@@ -334,7 +287,7 @@ export default function HeadToHeadEfficacyPage() {
                     {armGroups.map((g, gi) => (
                       <React.Fragment key={g.key}>
                         {gi > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuLabel className="truncate text-xs font-normal text-slate-400">
+                        <DropdownMenuLabel className="truncate text-xs font-normal text-(--brand-text-muted)">
                           {g.label}
                         </DropdownMenuLabel>
                         {g.arms.map((c) => (
@@ -354,84 +307,84 @@ export default function HeadToHeadEfficacyPage() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-          </div>
+          }
+        />
 
-          {/* Chart */}
-          <Card className="bg-white">
-            <CardHeader className="pb-0">
-              <CardTitle className="text-base font-semibold text-slate-700 text-center">
-                {endpoint ? `${endpointLabel(endpoint)} — Digitized twin` : 'Survival curves'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center h-[400px] text-slate-400">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading curves…
-                </div>
-              ) : (
-                <KaplanMeierChart
-                  curves={visibleCurves}
-                  endpoint={endpoint}
-                  hr={hrInfo ? { value: hrInfo.hr, cmpName: hrInfo.cmpName, refName: hrInfo.refName } : null}
-                />
-              )}
-            </CardContent>
-          </Card>
+        {/* Chart */}
+        <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
+          <CardHeader className="pb-0">
+            <CardTitle className="text-center text-base font-semibold text-(--brand-text)">
+              {endpoint ? `${endpointLabel(endpoint)} — Digitized twin` : 'Survival curves'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex h-[400px] items-center justify-center text-(--brand-text-muted)">
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading curves…
+              </div>
+            ) : (
+              <KaplanMeierChart
+                curves={visibleCurves}
+                endpoint={endpoint}
+                hr={hrInfo ? { value: hrInfo.hr, cmpName: hrInfo.cmpName, refName: hrInfo.refName } : null}
+              />
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Table: published vs digitized-twin */}
-          <Card className="mt-4 bg-white">
-            <CardContent className="pt-6 overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-b-2 bg-slate-50 hover:bg-slate-50">
-                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Treatment Arm</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Median (published)</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Median (twin)</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">{rateLabel} (published)</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">{rateLabel} (twin)</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Med. Follow-up</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Digitized Twin Status</TableHead>
-                    <TableHead className="text-xs font-semibold uppercase tracking-wide text-slate-600">Reference</TableHead>
+        {/* Table: published vs digitized-twin */}
+        <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
+          <CardContent className="overflow-x-auto pt-6">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-(--brand-border) bg-(--brand-bg) hover:bg-(--brand-bg)">
+                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Treatment Arm</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (published)</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (twin)</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">{rateLabel} (published)</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">{rateLabel} (twin)</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Med. Follow-up</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Digitized Twin Status</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Reference</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleCurves.map((c) => (
+                  <TableRow key={c.id} className="border-(--brand-border)">
+                    <TableCell className="font-medium text-(--brand-text)">{c.arm_name}</TableCell>
+                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.published_median, 'm')}</TableCell>
+                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.twin_median, 'm')}</TableCell>
+                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.published_rate, c.rate_timepoint)}</TableCell>
+                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.twin_rate, c.rate_timepoint)}</TableCell>
+                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.median_follow_up, 'm')}</TableCell>
+                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>
+                      {c.match_pct == null
+                        ? '—'
+                        : `${c.match_pct}% Match${c.n_points != null ? ` (${c.n_points} pts)` : ''}`}
+                    </TableCell>
+                    <TableCell className="max-w-[220px] truncate">
+                      {c.reference
+                        ? /^https?:\/\//.test(c.reference)
+                          ? (
+                            <a
+                              href={c.reference}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-(--brand-primary) hover:underline"
+                            >
+                              {c.reference}
+                            </a>
+                          )
+                          : c.reference
+                        : '—'}
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleCurves.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.arm_name}</TableCell>
-                      <TableCell>{fmt(c.published_median, 'm')}</TableCell>
-                      <TableCell>{fmt(c.twin_median, 'm')}</TableCell>
-                      <TableCell>{fmtRate(c.published_rate, c.rate_timepoint)}</TableCell>
-                      <TableCell>{fmtRate(c.twin_rate, c.rate_timepoint)}</TableCell>
-                      <TableCell>{fmt(c.median_follow_up, 'm')}</TableCell>
-                      <TableCell>
-                        {c.match_pct == null
-                          ? '—'
-                          : `${c.match_pct}% Match${c.n_points != null ? ` (${c.n_points} pts)` : ''}`}
-                      </TableCell>
-                      <TableCell className="max-w-[220px] truncate">
-                        {c.reference
-                          ? /^https?:\/\//.test(c.reference)
-                            ? (
-                              <a
-                                href={c.reference}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-sky-600 hover:underline"
-                              >
-                                {c.reference}
-                              </a>
-                            )
-                            : c.reference
-                          : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

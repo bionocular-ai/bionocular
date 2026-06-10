@@ -2,14 +2,10 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import { useParams, useSearchParams, useRouter } from 'next/navigation';
-import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
+import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import Link from 'next/link';
-import { Logo } from '@/components/Logo';
-import { HomeNavLink } from '@/components/nav/HomeNavLink';
-import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
-import { DEFAULT_CANCER_TYPE_SLUG } from '@/lib/dashboard-constants';
+import { PageHeader } from '@/components/dashboard/PageHeader';
+import { DEFAULT_CANCER_TYPE_SLUG, slugToCategory } from '@/lib/dashboard-constants';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Trial {
@@ -123,11 +119,21 @@ function GanttChart({ trials }: { trials: Trial[] }) {
   const chartW = Math.max(containerW - LABEL_W - 32, 300);
 
   return (
-    <div ref={containerRef} className="relative select-none font-sans" style={{ minHeight: CHART_H }}>
+    <div ref={containerRef} className="relative select-none" style={{ minHeight: CHART_H }}>
       {/* Date range labels */}
       <div style={{ marginLeft: LABEL_W }} className="flex justify-between px-0.5 pb-1">
-        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Trial Start Date</span>
-        <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wide">Est. Completion Date</span>
+        <span
+          className="text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          Trial Start Date
+        </span>
+        <span
+          className="text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          Est. Completion Date
+        </span>
       </div>
 
       {/* Scrollable SVG */}
@@ -148,7 +154,10 @@ function GanttChart({ trials }: { trials: Trial[] }) {
           })}
 
           {/* Source label */}
-          <text x={chartW} y={14} textAnchor="end" fontSize={10} fill="#94a3b8">
+          <text
+            x={chartW} y={14} textAnchor="end" fontSize={10} fill="#94a3b8"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
             Data from ClinicalTrials.gov
           </text>
 
@@ -194,6 +203,7 @@ function GanttChart({ trials }: { trials: Trial[] }) {
                 fontSize={11}
                 fill="#94a3b8"
                 fontWeight={500}
+                style={{ fontFamily: 'var(--font-mono)' }}
               >
                 {y}
               </text>
@@ -213,8 +223,13 @@ function GanttChart({ trials }: { trials: Trial[] }) {
             style={{ height: ROW_H }}
             className="flex flex-col justify-center pr-3"
           >
-            <span className="text-[12px] font-semibold text-slate-700 leading-tight">{trial.label}</span>
-            <span className="text-[10px] text-slate-400 leading-tight">({trial.nct})</span>
+            <span className="text-[12px] font-semibold leading-tight text-(--brand-text)">{trial.label}</span>
+            <span
+              className="text-[10px] leading-tight text-(--brand-text-muted)"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              ({trial.nct})
+            </span>
           </div>
         ))}
       </div>
@@ -222,33 +237,38 @@ function GanttChart({ trials }: { trials: Trial[] }) {
       {/* Tooltip */}
       {tooltip && (
         <div
-          className="pointer-events-none absolute z-50 rounded-lg bg-white border border-slate-200 shadow-xl px-3 py-2.5 text-xs min-w-[180px]"
+          className="pointer-events-none absolute z-50 min-w-[180px] rounded-lg border border-(--brand-border) bg-(--brand-surface) px-3 py-2.5 text-xs shadow-xl"
           style={{ left: Math.min(tooltip.x, containerW - 200), top: tooltip.y - 4 }}
         >
-          <p className="font-semibold text-slate-800 mb-1.5">{tooltip.trial.label}</p>
-          <p className="text-slate-500 text-[10px] mb-2">{tooltip.trial.nct}</p>
+          <p className="mb-1.5 font-semibold text-(--brand-text)">{tooltip.trial.label}</p>
+          <p
+            className="mb-2 text-[10px] text-(--brand-text-muted)"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            {tooltip.trial.nct}
+          </p>
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-            <dt className="text-slate-500">Start</dt>
-            <dd className="text-slate-700 font-medium">{formatDate(tooltip.trial.start)}</dd>
-            <dt className="text-slate-500">Est. Completion</dt>
-            <dd className="text-slate-700 font-medium">{formatDate(tooltip.trial.end)}</dd>
-            <dt className="text-slate-500">Duration</dt>
-            <dd className="text-slate-700 font-medium">{durationYears(tooltip.trial.start, tooltip.trial.end)}</dd>
+            <dt className="text-(--brand-text-muted)">Start</dt>
+            <dd className="font-medium text-(--brand-text)" style={{ fontFamily: 'var(--font-mono)' }}>{formatDate(tooltip.trial.start)}</dd>
+            <dt className="text-(--brand-text-muted)">Est. Completion</dt>
+            <dd className="font-medium text-(--brand-text)" style={{ fontFamily: 'var(--font-mono)' }}>{formatDate(tooltip.trial.end)}</dd>
+            <dt className="text-(--brand-text-muted)">Duration</dt>
+            <dd className="font-medium text-(--brand-text)" style={{ fontFamily: 'var(--font-mono)' }}>{durationYears(tooltip.trial.start, tooltip.trial.end)}</dd>
           </dl>
         </div>
       )}
 
       {/* Legend */}
-      <div className="flex items-center gap-3 mt-4 pl-1 flex-wrap">
+      <div className="mt-4 flex flex-wrap items-center gap-3 pl-1">
         <div className="flex items-center gap-1.5">
-          <div className="w-8 h-3 rounded-sm bg-slate-400 opacity-80" />
-          <span className="text-[11px] text-slate-500">Trial duration</span>
+          <div className="h-3 w-8 rounded-sm bg-slate-400 opacity-80" />
+          <span className="text-[11px] text-(--brand-text-muted)">Trial duration</span>
         </div>
         <div className="flex items-center gap-1.5">
           <svg width={14} height={14}>
             <polygon points="7,1 13,7 7,13 1,7" fill="#94a3b8" />
           </svg>
-          <span className="text-[11px] text-slate-500">Estimated completion</span>
+          <span className="text-[11px] text-(--brand-text-muted)">Estimated completion</span>
         </div>
       </div>
     </div>
@@ -259,67 +279,42 @@ function GanttChart({ trials }: { trials: Trial[] }) {
 function RegulatoryTimelineContent() {
   const searchParams = useSearchParams();
   const params = useParams();
-  const router = useRouter();
 
   const cancerTypeSlug =
     (params?.category as string) ||
     searchParams.get('cancer_type') ||
     DEFAULT_CANCER_TYPE_SLUG;
 
-  const setCancerType = React.useCallback(
-    (slug: string) => router.push(`/dashboard/${slug}/regulatory-timeline`),
-    [router]
-  );
-
   const trials = GANTT_BY_SLUG[cancerTypeSlug];
 
   return (
-    <div className="flex flex-col h-screen w-full bg-slate-100 overflow-hidden">
-      <header className="bg-white border-b border-slate-200 shrink-0 z-50">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-14 gap-3">
-            <Link href="/" className="brand flex-shrink-0 hover:opacity-80 transition-opacity">
-              <Logo height={32} />
-              <span className="brand-text dashboard-brand-text">
-                bi<span className="brand-o">o</span>nocular
-              </span>
-            </Link>
-            <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-              <HomeNavLink />
-              <DashboardNavLink />
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-(--brand-bg)">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <PageHeader
+          category={slugToCategory(cancerTypeSlug)}
+          title="Regulatory Timeline"
+          description="Phase 2 & 3 trial start and estimated completion dates across the indication. Hover a bar for details."
+          right={
+            <span
+              className="inline-flex items-center rounded-full border border-(--brand-border) bg-(--brand-accent-light) px-3 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-primary)"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              Preview
+            </span>
+          }
+        />
 
-      <main className="flex-1 flex flex-col min-h-0 overflow-y-auto overflow-x-hidden px-2 pt-2 pb-4 md:px-4 md:pt-4 md:pb-6 bg-slate-100 gap-4">
-        <div className="w-full bg-white rounded-lg shadow shrink-0 overflow-visible">
-          <DashboardGlobalHeader
-            cancerTypeSlug={cancerTypeSlug}
-            onCancerTypeChange={setCancerType}
-          />
-        </div>
-
-        <div className="w-full bg-white rounded-lg shadow px-6 py-6">
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-slate-800 tracking-tight">
-              Clinical Trial Gantt Chart
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Phase 2 &amp; 3 trials · Start and estimated completion dates · Hover for details
-            </p>
-          </div>
-
+        <div className="mt-6 rounded-2xl border border-(--brand-border) bg-(--brand-surface) p-6 shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
           {trials ? (
             <GanttChart trials={trials} />
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-              <p className="text-base font-medium">No timeline data available for this indication.</p>
-              <p className="text-sm mt-1">Timeline data is currently available for Merkel Cell Carcinoma.</p>
+            <div className="flex flex-col items-center justify-center py-20 text-(--brand-text-muted)">
+              <p className="text-base font-medium text-(--brand-text)">No timeline data available for this indication.</p>
+              <p className="mt-1 text-sm">Timeline data is currently available for Merkel Cell Carcinoma.</p>
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
@@ -328,11 +323,8 @@ export default function RegulatoryTimelinePage() {
   return (
     <Suspense
       fallback={
-        <div className="flex flex-col min-h-screen w-full bg-white">
-          <header className="bg-white border-b border-gray-200 h-14 sm:h-16" />
-          <main className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </main>
+        <div className="flex min-h-screen w-full items-center justify-center bg-(--brand-bg)">
+          <Loader2 className="h-8 w-8 animate-spin text-(--brand-text-muted)" />
         </div>
       }
     >
