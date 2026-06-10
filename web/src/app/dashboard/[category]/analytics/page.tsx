@@ -7,6 +7,7 @@ import { useSession } from "@/lib/supabase/hooks";
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import {
   ChevronDown,
@@ -1107,6 +1108,7 @@ export default function CategoryAnalyticsPage() {
               </Link>
             </div>
             <div className="flex items-center gap-2">
+              <HomeNavLink />
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu

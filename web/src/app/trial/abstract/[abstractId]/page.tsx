@@ -13,7 +13,7 @@ import { buildEfficacyRows, buildSafetyRows, type OutcomeRow } from '@/lib/utils
 import { Loader2, ExternalLink, Eye, MoreVertical, Users, Activity, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
-import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { BackNav } from '@/components/nav/BackNav';
 import { AbstractTimeline } from '@/components/timeline/AbstractTimeline';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ function Header({ session }: HeaderProps) {
             </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-            <DashboardNavLink />
+            <HomeNavLink />
             {session?.user && (
               <UserMenu
                 email={session.user.email || null}

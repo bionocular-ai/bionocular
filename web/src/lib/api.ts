@@ -546,8 +546,8 @@ export const trialsApi = {
       buildQuery(),
     ]);
 
-    if (countResult.error) console.error('[getDiseaseLandscapeStats] count error:', countResult.error);
-    if (dataResult.error) console.error('[getDiseaseLandscapeStats] data error:', dataResult.error);
+    if (countResult.error) console.error('[getDiseaseLandscapeStats] count error:', countResult.error.message, countResult.error.code, countResult.error.details);
+    if (dataResult.error) console.error('[getDiseaseLandscapeStats] data error:', dataResult.error.message, dataResult.error.code, dataResult.error.details);
 
     const exactTotal = countResult.count ?? dataResult.data?.length ?? 0;
 

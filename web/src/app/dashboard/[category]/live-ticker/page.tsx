@@ -11,6 +11,7 @@ import { trialsApi, LiveTickerArticle, LiveTickerResult } from '@/lib/api';
 import { Loader2, ExternalLink, Newspaper, BarChart3, Calendar, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
 
@@ -229,6 +230,7 @@ export default function LiveTickerPage() {
               </Link>
             </div>
             <div className="flex items-center gap-2">
+              <HomeNavLink />
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu

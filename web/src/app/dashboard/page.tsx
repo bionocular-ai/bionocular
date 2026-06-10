@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { useSession } from "@/lib/supabase/hooks";
 import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/user-menu';
-import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
-import { AgentNavLink } from '@/components/nav/AgentNavLink';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { Search, ArrowUpRight } from 'lucide-react';
 
 const CANCER_TYPES = [
@@ -58,8 +57,7 @@ export default function MainDashboardPage() {
                 <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
               </Link>
               <div className="flex items-center gap-2">
-                <AgentNavLink />
-                <DashboardNavLink />
+                <HomeNavLink />
                 {session?.user && (
                   <UserMenu
                     email={session.user.email || null}

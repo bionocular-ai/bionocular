@@ -8,6 +8,7 @@ import { Activity, Check, ChevronDown, ListFilter, Loader2 } from 'lucide-react'
 import { useSession } from '@/lib/supabase/hooks';
 import { UserMenu } from '@/components/user-menu';
 import { Logo } from '@/components/Logo';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,7 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
-import { kmCurvesApi, type KmCurveRow } from '@/lib/api';
+import { kmCurvesApi, type KmCurveRow, type KmPoint } from '@/lib/api';
 import KaplanMeierChart from '@/components/charts/KaplanMeierChart';
 
 function fmt(n: number | null | undefined, suffix = ''): string {
@@ -54,6 +55,62 @@ const endpointLabel = (e: string) => ENDPOINT_LABELS[e] ?? e;
 
 // Stable empty reference so query-loading state doesn't churn memo/effect deps.
 const EMPTY_CURVES: KmCurveRow[] = [];
+
+// Sort Relatlimab-Nivolumab first (experimental arm, approved winner in RELATIVITY-047).
+const FIRST_ARM_RE = /relatlimab/i;
+
+// Approximate HR via log-rank O/E (Mantel-Haenszel).
+// cmpArm = numerator, refArm = denominator (higher median = cmp, lower = reference).
+// HR < 1 → cmpArm has lower hazard than refArm (favorable, matches published convention).
+function computeApproxHR(cmpArm: KmCurveRow, refArm: KmCurveRow): number | null {
+  if (!cmpArm.n_points || !refArm.n_points) return null;
+
+  const getSteps = (row: KmCurveRow): Array<{ t: number; d: number }> => {
+    const steps: Array<{ t: number; d: number }> = [];
+    const pts = row.twin_coords;
+    for (let i = 1; i < pts.length; i++) {
+      const drop = pts[i - 1].surv - pts[i].surv;
+      if (drop > 0.1) {
+        steps.push({ t: pts[i].time, d: Math.max(1, Math.round((drop / 100) * row.n_points!)) });
+      }
+    }
+    return steps;
+  };
+
+  const survBefore = (coords: KmPoint[], t: number): number => {
+    let s = 100;
+    for (const pt of coords) {
+      if (pt.time < t) s = pt.surv;
+      else break;
+    }
+    return s;
+  };
+
+  const byTime = new Map<number, { dCmp: number; dRef: number }>();
+  for (const { t, d } of getSteps(cmpArm)) {
+    const e = byTime.get(t) ?? { dCmp: 0, dRef: 0 };
+    e.dCmp += d;
+    byTime.set(t, e);
+  }
+  for (const { t, d } of getSteps(refArm)) {
+    const e = byTime.get(t) ?? { dCmp: 0, dRef: 0 };
+    e.dRef += d;
+    byTime.set(t, e);
+  }
+
+  let OCmp = 0, ECmp = 0;
+  for (const [t, { dCmp, dRef }] of byTime) {
+    const nCmp = Math.round((survBefore(cmpArm.twin_coords, t) / 100) * cmpArm.n_points!);
+    const nRef = Math.round((survBefore(refArm.twin_coords, t) / 100) * refArm.n_points!);
+    const n = nCmp + nRef;
+    if (n === 0) continue;
+    OCmp += dCmp;
+    ECmp += (dCmp + dRef) * (nCmp / n);
+  }
+
+  if (ECmp === 0) return null;
+  return OCmp / ECmp;
+}
 
 export default function HeadToHeadEfficacyPage() {
   const { data: session } = useSession();
@@ -92,7 +149,14 @@ export default function HeadToHeadEfficacyPage() {
       if (!map.has(key)) map.set(key, { key, label: comparisonLabel(c), arms: [] });
       map.get(key)!.arms.push(c);
     }
-    return [...map.values()];
+    return [...map.values()].map((g) => ({
+      ...g,
+      arms: [...g.arms].sort((a, b) => {
+        const aFirst = FIRST_ARM_RE.test(a.arm_name) ? 0 : 1;
+        const bFirst = FIRST_ARM_RE.test(b.arm_name) ? 0 : 1;
+        return aFirst - bFirst;
+      }),
+    }));
   }, [armsForEndpoint]);
 
   // Selected curve ids (default: arms of the first comparison only).
@@ -103,9 +167,29 @@ export default function HeadToHeadEfficacyPage() {
   }, [armGroups]);
 
   const visibleCurves: KmCurveRow[] = React.useMemo(
-    () => armsForEndpoint.filter((c) => selectedIds.has(c.id)),
+    () =>
+      armsForEndpoint
+        .filter((c) => selectedIds.has(c.id))
+        .sort((a, b) => {
+          const aCtrl = FIRST_ARM_RE.test(a.arm_name) ? 0 : 1;
+          const bCtrl = FIRST_ARM_RE.test(b.arm_name) ? 0 : 1;
+          return aCtrl - bCtrl;
+        }),
     [armsForEndpoint, selectedIds]
   );
+
+  // When exactly 2 arms selected, compute approximate HR.
+  // Higher-median arm = cmp (numerator); HR < 1 means cmp has lower hazard (matches published convention).
+  const hrInfo = React.useMemo(() => {
+    if (visibleCurves.length !== 2) return null;
+    const [a, b] = visibleCurves;
+    const medA = a.twin_median ?? a.published_median ?? 0;
+    const medB = b.twin_median ?? b.published_median ?? 0;
+    const [cmp, ref] = medA >= medB ? [a, b] : [b, a];
+    const hr = computeApproxHR(cmp, ref);
+    if (hr == null) return null;
+    return { hr, cmpName: cmp.arm_name, refName: ref.arm_name };
+  }, [visibleCurves]);
 
   // Rate timepoint can differ per arm. When selected arms agree, name it in the
   // column header; when they mix, keep the header generic and annotate each cell.
@@ -120,15 +204,18 @@ export default function HeadToHeadEfficacyPage() {
   const fmtRate = (value: number | null | undefined, tp: number | null | undefined) =>
     value == null ? '—' : `${value}%${rateMixed && tp != null ? ` @ ${tp}m` : ''}`;
 
+  const MAX_ARMS = 4;
+
   const toggleId = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
-      else next.add(id);
+      else if (next.size < MAX_ARMS) next.add(id);
       return next;
     });
   };
-  const selectAllArms = () => setSelectedIds(new Set(armsForEndpoint.map((c) => c.id)));
+  const selectAllArms = () =>
+    setSelectedIds(new Set(armsForEndpoint.slice(0, MAX_ARMS).map((c) => c.id)));
   const clearArms = () => setSelectedIds(new Set());
 
   return (
@@ -143,6 +230,7 @@ export default function HeadToHeadEfficacyPage() {
               </Link>
             </div>
             <div className="flex items-center gap-2">
+              <HomeNavLink />
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu
@@ -221,7 +309,7 @@ export default function HeadToHeadEfficacyPage() {
                 <DropdownMenuContent align="end" className="w-[300px] p-0">
                   <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
                     <span className="text-xs text-slate-500 tabular-nums">
-                      {selectedIds.size} of {armsForEndpoint.length} selected
+                      {selectedIds.size} of {Math.min(armsForEndpoint.length, MAX_ARMS)} selected (max {MAX_ARMS})
                     </span>
                     <div className="flex items-center gap-0.5">
                       <button
@@ -253,6 +341,7 @@ export default function HeadToHeadEfficacyPage() {
                           <DropdownMenuCheckboxItem
                             key={c.id}
                             checked={selectedIds.has(c.id)}
+                            disabled={!selectedIds.has(c.id) && selectedIds.size >= MAX_ARMS}
                             onCheckedChange={() => toggleId(c.id)}
                             onSelect={(e) => e.preventDefault()}
                           >
@@ -280,7 +369,11 @@ export default function HeadToHeadEfficacyPage() {
                   <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading curves…
                 </div>
               ) : (
-                <KaplanMeierChart curves={visibleCurves} endpoint={endpoint} />
+                <KaplanMeierChart
+                  curves={visibleCurves}
+                  endpoint={endpoint}
+                  hr={hrInfo ? { value: hrInfo.hr, cmpName: hrInfo.cmpName, refName: hrInfo.refName } : null}
+                />
               )}
             </CardContent>
           </Card>

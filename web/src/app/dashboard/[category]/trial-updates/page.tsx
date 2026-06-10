@@ -10,6 +10,7 @@ import { trialsApi, type LatestTrialUpdateItem } from '@/lib/api';
 import { Loader2, Zap, Lightbulb } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHeader';
 import { cn } from '@/lib/utils';
@@ -84,6 +85,7 @@ const { data: landscapeStats } = useQuery({
               </Link>
             </div>
             <div className="flex items-center gap-2">
+              <HomeNavLink />
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu

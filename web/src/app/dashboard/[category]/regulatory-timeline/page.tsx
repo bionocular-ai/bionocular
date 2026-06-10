@@ -7,6 +7,7 @@ import { DashboardGlobalHeader } from '@/components/dashboard/DashboardGlobalHea
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DEFAULT_CANCER_TYPE_SLUG } from '@/lib/dashboard-constants';
 
@@ -284,6 +285,7 @@ function RegulatoryTimelineContent() {
               </span>
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+              <HomeNavLink />
               <DashboardNavLink />
             </div>
           </div>

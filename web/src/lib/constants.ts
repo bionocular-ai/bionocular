@@ -30,3 +30,9 @@ export const AUTH_ERROR_MESSAGES = {
   INVALID_EMAIL: 'Please enter a valid email address',
 } as const;
 
+export function dashboardRoute(slug: string, section?: string, query?: Record<string, string>): string {
+  const base = `/dashboard/${slug}`;
+  const path = section ? `${base}/${section}` : base;
+  const qs = query ? `?${new URLSearchParams(query).toString()}` : '';
+  return `${path}${qs}`;
+}

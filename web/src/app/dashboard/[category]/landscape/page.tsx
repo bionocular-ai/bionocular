@@ -15,6 +15,7 @@ import type { DashboardTrialCard } from '@/lib/api';
 import { Loader2, Filter, FileDown, FileSpreadsheet, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { DEFAULT_CANCER_TYPE_SLUG, PHASE_OPTIONS, STATUS_OPTIONS } from '@/lib/dashboard-constants';
 import { isOpenStudyStatus, selectTrialsWithOpenBias } from '@/lib/utils/trial-utils';
@@ -613,6 +614,7 @@ function DashboardContent() {
               </Link>
             </div>
             <div className="flex items-center gap-2">
+              <HomeNavLink />
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu

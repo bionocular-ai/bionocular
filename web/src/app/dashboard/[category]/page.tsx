@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserMenu } from '@/components/user-menu';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { Logo } from '@/components/Logo';
 import Link from 'next/link';
@@ -392,13 +393,14 @@ export default function CancerDashboardSnapshot() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-500 bg-white hover:bg-slate-50 hover:text-slate-700 transition-all duration-200 min-h-9 active:scale-[0.98] relative"
+                className="inline-flex items-center gap-2 rounded-full border border-(--brand-border) px-4 py-1.5 text-sm font-medium text-(--brand-text-muted) bg-transparent hover:bg-(--brand-accent-light) hover:text-(--brand-primary) hover:border-(--brand-primary) transition-all duration-200 min-h-[34px] active:scale-[0.98] relative"
                 aria-label="Alerts"
               >
                 <Bell className="h-4 w-4 shrink-0" aria-hidden />
                 <span>Alerts</span>
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 opacity-80" aria-hidden />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-(--brand-accent) opacity-90" aria-hidden />
               </button>
+              <HomeNavLink />
               <DashboardNavLink />
               {session?.user && (
                 <UserMenu

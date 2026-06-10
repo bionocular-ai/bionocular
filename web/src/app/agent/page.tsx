@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/user-menu';
-import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
+import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { ChatPanel } from '@/components/agent/ChatPanel';
 import { ROUTES } from '@/lib/constants';
 
@@ -29,7 +29,7 @@ export default async function AgentPage() {
               </span>
             </Link>
             <div className="flex items-center gap-3">
-              <DashboardNavLink />
+              <HomeNavLink />
               <UserMenu />
             </div>
           </div>
