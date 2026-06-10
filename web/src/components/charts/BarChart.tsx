@@ -39,7 +39,7 @@ interface BarShapeProps {
   fill?: string;
   fillOpacity?: number;
   payload?: HeadToHeadDataPoint;
-  background?: { height: number; y: number };
+  background?: { height: number; y: number; width: number; x: number };
 }
 
 // ============================================================================
@@ -72,60 +72,31 @@ interface RechartsLabelContentProps {
   value?: React.ReactNode;
 }
 
-/** Wrap treatment name into multiple lines for dashboard (compact) X-axis. Max chars per line; prefer word boundaries. */
-function wrapTreatmentName(text: string, maxCharsPerLine = 14): string[] {
-  if (!text || !text.trim()) return [text || ''];
-  const words = text.trim().split(/\s+/);
-  if (words.length <= 1) {
-    if (text.length <= maxCharsPerLine) return [text];
-    return [text.slice(0, maxCharsPerLine), text.slice(maxCharsPerLine)].filter(Boolean);
-  }
-  const lines: string[] = [];
-  let current = '';
-  for (const word of words) {
-    const next = current ? `${current} ${word}` : word;
-    if (next.length <= maxCharsPerLine) {
-      current = next;
-    } else {
-      if (current) lines.push(current);
-      current = word.length > maxCharsPerLine ? word.slice(0, maxCharsPerLine) : word;
-      if (word.length > maxCharsPerLine && word.slice(maxCharsPerLine)) {
-        lines.push(current);
-        current = word.slice(maxCharsPerLine);
-      }
-    }
-  }
-  if (current) lines.push(current);
-  return lines;
-}
 
-/** Custom X-axis tick for compact (dashboard) mode: multi-line treatment names. */
-interface CompactXAxisTickProps {
+/** X-axis tick for vertical bar chart: truncated treatment name, rotated -45°. */
+interface XAxisTickProps {
   x?: number;
   y?: number;
-  payload?: { value?: string; treatmentName?: string };
+  payload?: { value?: string };
   fill?: string;
   fontSize?: number;
-  fontWeight?: number;
+  maxChars?: number;
 }
-function CompactXAxisTick({ x = 0, y = 0, payload, fill = COLORS.axis, fontSize = 10, fontWeight = 500 }: CompactXAxisTickProps) {
-  const name = payload?.value ?? payload?.treatmentName ?? '';
-  const lines = wrapTreatmentName(name, 12);
-  const lineHeight = fontSize * 1.15;
+function CompactXAxisTick({ x = 0, y = 0, payload, fill = COLORS.axis, fontSize = 10, maxChars = 18 }: XAxisTickProps) {
+  const name = payload?.value ?? '';
+  const display = name.length > maxChars ? name.slice(0, maxChars - 1) + '…' : name;
   return (
     <g transform={`translate(${x},${y})`}>
       <text
-        textAnchor="middle"
+        transform="rotate(-40)"
+        textAnchor="end"
         fill={fill}
         fontSize={fontSize}
-        fontWeight={fontWeight}
-        dominantBaseline="hanging"
+        fontWeight={500}
+        dominantBaseline="auto"
+        dy={4}
       >
-        {lines.map((line, i) => (
-          <tspan key={i} x={0} dy={i === 0 ? 0 : lineHeight}>
-            {line}
-          </tspan>
-        ))}
+        {display}
       </text>
     </g>
   );
@@ -337,8 +308,6 @@ interface BarChartProps {
   compact?: boolean;
   /** When false, container has no rounded corners (e.g. dashboard grid) */
   rounded?: boolean;
-  /** When true (dashboard only), X-axis treatment names wrap to multiple lines. Ignored when compact is false. */
-  wrapXAxisLabels?: boolean;
   /** Optional override for bottom margin (e.g. analytics fullscreen). */
   bottomMargin?: number;
   leftMargin?: number;
@@ -357,7 +326,6 @@ export default function BarChart({
   referenceValue,
   compact = false,
   rounded = true,
-  wrapXAxisLabels = false,
   bottomMargin: bottomMarginProp,
   leftMargin: leftMarginProp,
   showTooltip = true,
@@ -448,12 +416,7 @@ export default function BarChart({
   }, [data]);
 
   const margin = compact
-    ? {
-        top: 20,
-        right: 6,
-        bottom: bottomMarginProp ?? (wrapXAxisLabels ? 24 : 140),
-        left: leftMarginProp ?? 6,
-      }
+    ? { top: 16, right: 20, bottom: 0, left: 0 }
     : {
         top: 20,
         right: showReferenceLine ? 14 : 30,
@@ -660,33 +623,27 @@ export default function BarChart({
 
   const colors = compact ? COLORS : DARK_COLORS;
 
-  // Custom bar shape that renders both the bar and dots
+  // Custom bar shape: bar is vertical, dots positioned along Y at their trial value
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const CustomBarShape = useCallback((props: any) => {
     const { x = 0, y = 0, width = 0, height = 0, fill, fillOpacity, payload, background } = props as BarShapeProps;
-    
+
     if (!payload || !background) return <Rectangle x={x} y={y} width={width} height={height} fill={fill} radius={0} />;
-    
+
     const trials = payload.trials || [];
     const trialCount = trials.length;
     const centerX = x + width / 2;
-    
-    // Calculate y scale based on background (full chart height) vs bar height
+
     const chartAreaHeight = background.height;
     const chartAreaTop = background.y;
     const [yMin, yMax] = yDomain;
-    
+
     const valueToY = (value: number) => {
       const range = yMax - yMin;
-      if (range === 0) {
-        // If all values are the same, center the dot
-        return chartAreaTop + chartAreaHeight / 2;
-      }
-      const normalizedValue = (value - yMin) / range;
-      return chartAreaTop + chartAreaHeight * (1 - normalizedValue);
+      if (range === 0) return chartAreaTop + chartAreaHeight / 2;
+      return chartAreaTop + chartAreaHeight * (1 - (value - yMin) / range);
     };
 
-    // Calculate dot positions
     const dots = trials.map((trial, index) => {
       let xOffset = 0;
       if (trialCount > 1) {
@@ -694,10 +651,7 @@ export default function BarChart({
         const spacing = maxSpread / Math.max(trialCount - 1, 1);
         xOffset = (index - (trialCount - 1) / 2) * spacing;
       }
-      
       const dotId = `${payload.treatmentName}-${trial.studyId}-${trial.value}`;
-      const isPinnedDot = isPinned && pinnedDotId === dotId;
-      
       return {
         ...trial,
         treatmentName: payload.treatmentName,
@@ -705,93 +659,41 @@ export default function BarChart({
         dotY: valueToY(trial.value),
         key: `dot-${index}`,
         dotId,
-        isPinnedDot,
+        isPinnedDot: isPinned && pinnedDotId === dotId,
       };
     });
 
     return (
       <g>
-        {/* The bar */}
-        <Rectangle
-          x={x}
-          y={y}
-          width={width}
-          height={height}
-          fill={fill}
-          fillOpacity={fillOpacity}
-          radius={0}
-        />
-        {/* The dots */}
+        <Rectangle x={x} y={y} width={width} height={height} fill={fill} fillOpacity={fillOpacity} radius={[3, 3, 0, 0]} />
         {dots.map((dot) => {
-          const isPinnedDot = dot.isPinnedDot;
-          const dotRadius = isPinnedDot ? 9 : 7;
-          const dotStrokeWidth = isPinnedDot ? 3 : 2;
-          
+          const dotRadius = dot.isPinnedDot ? 8 : 6;
           return (
             <g key={dot.key}>
-              {/* Outer glow for pinned dot */}
-              {isPinnedDot && (
+              {dot.isPinnedDot && (
                 <>
-                  <circle
-                    cx={dot.dotX}
-                    cy={dot.dotY}
-                    r={16}
-                    fill="#fbbf24"
-                    opacity={0.2}
-                    style={{ pointerEvents: 'none' }}
-                  />
-                  <circle
-                    cx={dot.dotX}
-                    cy={dot.dotY}
-                    r={12}
-                    fill="#fbbf24"
-                    opacity={0.3}
-                    style={{ pointerEvents: 'none' }}
-                  />
+                  <circle cx={dot.dotX} cy={dot.dotY} r={14} fill="#fbbf24" opacity={0.2} style={{ pointerEvents: 'none' }} />
+                  <circle cx={dot.dotX} cy={dot.dotY} r={10} fill="#fbbf24" opacity={0.3} style={{ pointerEvents: 'none' }} />
                 </>
               )}
-              {/* Main dot - visual only */}
               <circle
-                cx={dot.dotX}
-                cy={dot.dotY}
-                r={dotRadius}
-                fill={isPinnedDot ? '#fbbf24' : colors.dot.fill}
-                stroke={isPinnedDot ? '#f59e0b' : colors.dot.stroke}
-                strokeWidth={dotStrokeWidth}
-                style={{ 
-                  transition: 'all 0.2s ease',
-                  pointerEvents: 'none',
-                }}
+                cx={dot.dotX} cy={dot.dotY} r={dotRadius}
+                fill={dot.isPinnedDot ? '#fbbf24' : colors.dot.fill}
+                stroke={dot.isPinnedDot ? '#f59e0b' : colors.dot.stroke}
+                strokeWidth={dot.isPinnedDot ? 3 : 2}
+                style={{ transition: 'all 0.2s ease', pointerEvents: 'none' }}
               />
-              {/* Larger invisible clickable area */}
               <circle
                 data-dot-id={dot.dotId}
-                data-treatment={dot.treatmentName}
-                cx={dot.dotX}
-                cy={dot.dotY}
-                r={15}
-                fill="transparent"
-                stroke="transparent"
-                strokeWidth={20}
-                style={{ 
-                  cursor: 'pointer',
-                  pointerEvents: 'all',
-                }}
-                onMouseEnter={(e) => {
-                  handleDotMouseEnter(dot, e as unknown as React.MouseEvent);
-                }}
-                onMouseLeave={() => {
-                  handleDotMouseLeave(dot);
-                }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                }}
+                cx={dot.dotX} cy={dot.dotY} r={13}
+                fill="transparent" stroke="transparent" strokeWidth={18}
+                style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                onMouseEnter={(e) => handleDotMouseEnter(dot, e as unknown as React.MouseEvent)}
+                onMouseLeave={() => handleDotMouseLeave(dot)}
+                onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
                 onMouseUp={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  const nativeEvent = e as unknown as React.MouseEvent;
-                  handleDotClick(dot, nativeEvent);
+                  e.stopPropagation(); e.preventDefault();
+                  handleDotClick(dot, e as unknown as React.MouseEvent);
                 }}
               />
             </g>
@@ -849,38 +751,27 @@ export default function BarChart({
         >
           <ResponsiveContainer width={containerDims.width} height={containerDims.height}>
             <RechartsBarChart data={data} margin={margin}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke={colors.grid}
-              />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={colors.grid} />
               <XAxis
                 dataKey="treatmentName"
-                tick={
-                  wrapXAxisLabels ? (
-                    <CompactXAxisTick fill={colors.axis} fontSize={10} fontWeight={500} />
-                  ) : (
-                    { fontSize: 10, fill: colors.axis, fontWeight: 500 }
-                  )
-                }
-                tickLine={{ stroke: colors.grid }}
+                tick={<CompactXAxisTick fill={colors.axis} fontSize={10} maxChars={24} />}
+                tickLine={false}
                 axisLine={{ stroke: colors.grid }}
                 interval={0}
-                angle={wrapXAxisLabels ? undefined : -45}
-                textAnchor={wrapXAxisLabels ? undefined : 'end'}
-                height={wrapXAxisLabels ? 48 : 80}
+                height={130}
               />
               <YAxis
-                tick={{ fontSize: 12, fill: colors.axis }}
-                tickLine={{ stroke: colors.grid }}
-                axisLine={{ stroke: colors.grid }}
+                tick={{ fontSize: 11, fill: colors.axis }}
+                tickLine={false}
+                axisLine={false}
                 domain={yDomain}
-                width={50}
+                width={44}
                 label={{
-                  value: `${metricLabel} (${metricUnit})`,
+                  value: `${metricLabel}${metricUnit ? ` (${metricUnit})` : ''}`,
                   angle: -90,
                   position: 'insideLeft',
-                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 12, fontWeight: 600 },
+                  offset: 10,
+                  style: { textAnchor: 'middle', fill: colors.axis, fontSize: 11, fontWeight: 500 },
                 }}
               />
               {showReferenceLine && (
@@ -896,8 +787,8 @@ export default function BarChart({
                   label={{ content: medianLabelRight }}
                 />
               )}
-              <Bar 
-                dataKey="averageValue" 
+              <Bar
+                dataKey="averageValue"
                 shape={CustomBarShape}
                 background={{ fill: 'transparent' }}
                 onMouseEnter={(_, index, e) => {
@@ -906,10 +797,7 @@ export default function BarChart({
                 onMouseLeave={handleBarMouseLeave}
               >
                 {data.map((_entry: HeadToHeadDataPoint, index: number) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={colors.bar}
-                  />
+                  <Cell key={`cell-${index}`} fill={colors.bar} />
                 ))}
               </Bar>
             </RechartsBarChart>

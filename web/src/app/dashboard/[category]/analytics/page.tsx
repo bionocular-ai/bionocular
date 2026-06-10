@@ -22,6 +22,7 @@ import {
   BarChart3,
   CircleDot,
   Activity,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/PageHeader';
@@ -305,158 +306,6 @@ const ADVANCED_LINE_OF_THERAPY_OPTIONS = [
   { value: '2L+ (Refractory)', label: '2L+ (Refractory)' },
   { value: '3L+ (Third Line+)', label: '3L+ (Third Line+)' },
 ];
-// ============================================================================
-// Filter Select Component
-// ============================================================================
-
-interface FilterSelectProps {
-  label: string;
-  value: string;
-  options: { value: string; label: string; italic?: boolean }[];
-  onChange: (value: string) => void;
-  icon?: React.ReactNode;
-  searchable?: boolean;
-  searchPlaceholder?: string;
-}
-
-function FilterSelect({
-  label,
-  value,
-  options,
-  onChange,
-  icon,
-  searchable = false,
-  searchPlaceholder = 'Search...',
-}: FilterSelectProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const selectedOption = options.find(o => o.value === value);
-  const filteredOptions = useMemo(
-    () => options.filter(option => option.label.toLowerCase().includes(searchTerm.toLowerCase())),
-    [options, searchTerm],
-  );
-
-  return (
-    <div className="space-y-1.5">
-      <label className="text-[13px] font-medium text-[var(--brand-text)]">{label}</label>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex h-10 w-full items-center justify-between rounded-md border-2 border-[var(--brand-border)] bg-white px-3 text-sm text-gray-700 transition-all hover:border-[var(--brand-accent)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20">
-            <span className="flex items-center gap-2 truncate">
-              {icon && <span className="text-[var(--brand-primary)]">{icon}</span>}
-              {selectedOption?.label || 'Select...'}
-            </span>
-            <ChevronDown className="h-4 w-4 text-[var(--brand-primary)]/60 flex-shrink-0" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-72 overflow-y-auto">
-          {searchable && (
-            <div className="px-3 py-2">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder={searchPlaceholder}
-                className="w-full rounded-md border border-slate-200 px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:border-[var(--brand-primary)]"
-              />
-            </div>
-          )}
-          {filteredOptions.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-slate-500">No results</div>
-          ) : (
-            filteredOptions.map(option => (
-              <DropdownMenuItem
-                key={option.value}
-                className={`text-sm cursor-pointer ${value === option.value ? 'bg-[var(--brand-accent-light)] text-[var(--brand-primary)] font-medium' : ''}`}
-                onClick={() => {
-                  onChange(option.value);
-                  setSearchTerm('');
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span className={option.italic ? 'italic' : ''}>{option.label}</span>
-                  {value === option.value && <Check className="h-4 w-4 text-[var(--brand-primary)]" />}
-                </div>
-              </DropdownMenuItem>
-            ))
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
-// ============================================================================
-// Multi-Select Component for Therapies
-// ============================================================================
-
-interface TherapyMultiSelectProps {
-  label: string;
-  maxLabel: string;
-  options: string[];
-  selected: string[];
-  onChange: (selected: string[]) => void;
-  maxSelect: number;
-}
-
-function TherapyMultiSelect({ label, maxLabel, options, selected, onChange, maxSelect }: TherapyMultiSelectProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const toggleTherapy = (therapy: string) => {
-    if (selected.includes(therapy)) {
-      onChange(selected.filter(t => t !== therapy));
-    } else if (selected.length < maxSelect) {
-      onChange([...selected, therapy]);
-    }
-  };
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-baseline justify-between gap-1">
-        <label className="text-[13px] font-medium text-[var(--brand-text)]">{label}</label>
-        <span className="text-[10px] text-[var(--brand-primary)]/60 font-medium whitespace-nowrap">({maxLabel})</span>
-      </div>
-      <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
-        <DropdownMenuTrigger asChild>
-          <button className="flex h-10 w-full items-center justify-between rounded-md border-2 border-[var(--brand-border)] bg-white px-3 text-sm text-gray-700 transition-all hover:border-[var(--brand-accent)] focus:outline-none focus:border-[var(--brand-primary)] focus:ring-2 focus:ring-[var(--brand-primary)]/20">
-            <span className="truncate">
-              {selected.length === 0 ? 'All' : `${selected.length} selected`}
-            </span>
-            <ChevronDown className="h-4 w-4 text-[var(--brand-primary)]/60 flex-shrink-0" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-[var(--radix-dropdown-menu-trigger-width)] p-2 max-h-64 overflow-y-auto">
-          {selected.length > 0 && (
-            <button
-              onClick={() => onChange([])}
-              className="w-full text-left text-xs text-[var(--brand-primary)] hover:text-[var(--brand-primary-hover)] mb-2 flex items-center gap-1"
-            >
-              <X className="h-3 w-3" /> Clear selection
-            </button>
-          )}
-          {options.map(option => (
-            <label
-              key={option}
-              className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${selected.includes(option)
-                  ? 'bg-[var(--brand-accent-light)] text-[var(--brand-primary)]'
-                  : 'hover:bg-gray-50 text-gray-700'
-                } ${!selected.includes(option) && selected.length >= maxSelect ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(option)}
-                onChange={() => toggleTherapy(option)}
-                disabled={!selected.includes(option) && selected.length >= maxSelect}
-                className="rounded border-[var(--brand-border)] text-[var(--brand-primary)] focus:ring-[var(--brand-primary)]"
-              />
-              <span className="truncate">{option}</span>
-            </label>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
-}
-
 // ============================================================================
 // Main Page Component
 // ============================================================================
@@ -1085,21 +934,22 @@ export default function CategoryAnalyticsPage() {
   const survivalLink = (
     <Link
       href={dashboardRoute(categorySlug, 'head-to-head-survival')}
-      className="inline-flex items-center gap-2 rounded-full border border-(--brand-border) bg-(--brand-surface) px-4 py-2 text-sm font-medium text-(--brand-primary) transition-colors hover:bg-(--brand-accent-light) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1"
+      className="inline-flex items-center gap-2 rounded-full bg-(--brand-primary) px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1"
     >
       <Activity className="h-4 w-4 shrink-0" aria-hidden />
-      <span className="whitespace-nowrap">Survival curves</span>
+      <span className="whitespace-nowrap">Head to Head Survival</span>
+      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
     </Link>
   );
 
   return (
     <div className="min-h-screen bg-(--brand-bg)">
-      <div className="mx-auto flex h-[calc(100vh-3.5rem)] max-w-7xl flex-col px-6 py-8">
+      <div className="mx-auto flex max-w-7xl flex-col px-6 py-8">
         <PageHeader
           category={categoryName}
           title={hubTitle}
           description={hubDescription}
-          right={survivalLink}
+          right={mode === 'efficacy' ? survivalLink : undefined}
         />
 
       {/* Mode Banner with Parameter Selection - Compact, professional design */}
@@ -1523,11 +1373,11 @@ export default function CategoryAnalyticsPage() {
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="mt-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
-        {/* Horizontal Filter Bar */}
-        <div className="border-b border-(--brand-border) px-4 py-3 flex-shrink-0">
-          <div className="flex items-end gap-2 flex-wrap">
+      {/* Main Content — Filter Bar + Chart */}
+      <div className="mt-2 flex flex-col rounded-2xl border border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)] overflow-hidden">
+        {/* Compact Filter Bar */}
+        <div className="border-b border-(--brand-border) px-4 py-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <FilterChips
               label="FUNDING"
               size="sm"
@@ -1535,6 +1385,7 @@ export default function CategoryAnalyticsPage() {
               value={fundingType}
               onChange={(value) => setFundingType(value as 'all' | 'industry' | 'non-industry')}
             />
+            <div className="w-px h-4 bg-(--brand-border)" />
             <FilterChips
               label="LINE"
               size="sm"
@@ -1542,6 +1393,7 @@ export default function CategoryAnalyticsPage() {
               value={advancedLineOfTherapy}
               onChange={setAdvancedLineOfTherapy}
             />
+            <div className="w-px h-4 bg-(--brand-border)" />
             <FilterChips
               label="RESOURCE"
               size="sm"
@@ -1549,103 +1401,154 @@ export default function CategoryAnalyticsPage() {
               value={resourceType}
               onChange={(value) => setResourceType(value as 'all' | 'conference' | 'publication')}
             />
-            <div className="w-40">
-              <FilterSelect label="Modality" value={modality} options={MODALITY_OPTIONS} onChange={setModality} />
-            </div>
-            <div className="w-48">
-              <TherapyMultiSelect
-                label="Treatments"
-                maxLabel="Max 5"
-                options={allAvailableTreatments}
-                selected={selectedTreatments}
-                onChange={setRawSelectedTreatments}
-                maxSelect={5}
-              />
-            </div>
+            <div className="w-px h-4 bg-(--brand-border)" />
+            {/* Modality inline select */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="inline-flex items-center gap-1 h-7 rounded-md border border-(--brand-border) bg-(--brand-surface) pl-2.5 pr-2 text-xs text-(--brand-text) transition-all hover:border-(--brand-primary) focus:outline-none focus-visible:ring-1 focus-visible:ring-(--brand-primary)">
+                  <span className="font-medium text-(--brand-text-muted) uppercase tracking-[0.1em] text-[10px]" style={{ fontFamily: 'var(--font-mono)' }}>MODALITY</span>
+                  <span className="font-medium truncate max-w-[80px]">{MODALITY_OPTIONS.find(o => o.value === modality)?.label ?? 'All'}</span>
+                  <ChevronDown className="h-3 w-3 text-(--brand-text-muted) flex-shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52 max-h-72 overflow-y-auto">
+                {MODALITY_OPTIONS.map(option => (
+                  <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${modality === option.value ? 'bg-(--brand-accent-light) text-(--brand-primary) font-medium' : ''}`} onClick={() => setModality(option.value)}>
+                    <div className="flex items-center justify-between w-full"><span>{option.label}</span>{modality === option.value && <Check className="h-3.5 w-3.5 text-[var(--brand-primary)]" />}</div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            {/* Treatments inline select */}
+            <DropdownMenu open={undefined}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="inline-flex items-center gap-1 h-7 rounded-md border border-(--brand-border) bg-(--brand-surface) pl-2.5 pr-2 text-xs text-(--brand-text) transition-all hover:border-(--brand-primary) focus:outline-none focus-visible:ring-1 focus-visible:ring-(--brand-primary)"
+                  onClick={() => {}}
+                >
+                  <span className="font-medium text-(--brand-text-muted) uppercase tracking-[0.1em] text-[10px]" style={{ fontFamily: 'var(--font-mono)' }}>TREATMENTS</span>
+                  <span className="font-medium">{selectedTreatments.length === 0 ? 'All' : `${selectedTreatments.length} selected`}</span>
+                  <ChevronDown className="h-3 w-3 text-(--brand-text-muted) flex-shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 p-2 max-h-64 overflow-y-auto">
+                {selectedTreatments.length > 0 && (
+                  <button onClick={() => setRawSelectedTreatments([])} className="w-full text-left text-xs text-(--brand-primary) hover:text-(--brand-primary) mb-2 flex items-center gap-1">
+                    <X className="h-3 w-3" /> Clear
+                  </button>
+                )}
+                {allAvailableTreatments.map(option => (
+                  <label key={option} className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-sm transition-colors ${selectedTreatments.includes(option) ? 'bg-(--brand-accent-light) text-(--brand-primary)' : 'hover:bg-gray-50 text-gray-700'} ${!selectedTreatments.includes(option) && selectedTreatments.length >= 5 ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                    <input type="checkbox" checked={selectedTreatments.includes(option)} onChange={() => {
+                      if (selectedTreatments.includes(option)) setRawSelectedTreatments(selectedTreatments.filter(t => t !== option));
+                      else if (selectedTreatments.length < 5) setRawSelectedTreatments([...selectedTreatments, option]);
+                    }} disabled={!selectedTreatments.includes(option) && selectedTreatments.length >= 5} className="rounded border-(--brand-border) text-(--brand-primary) focus:ring-(--brand-primary)" />
+                    <span className="truncate">{option}</span>
+                  </label>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="w-px h-4 bg-(--brand-border)" />
+            {/* Advanced filters popover */}
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setAdvancedFiltersOpen(o => !o)}
                 className={cn(
-                  'flex h-9 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-all',
+                  'inline-flex items-center gap-1 h-7 rounded-md border px-2.5 text-xs font-medium transition-all',
                   advancedFiltersOpen
                     ? 'border-(--brand-primary) bg-(--brand-accent-light) text-(--brand-primary)'
                     : 'border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:border-(--brand-primary) hover:text-(--brand-primary)',
                 )}
               >
                 Advanced
-                <ChevronDown className={cn('h-4 w-4 transition-transform', advancedFiltersOpen && 'rotate-180')} />
+                <ChevronDown className={cn('h-3 w-3 transition-transform', advancedFiltersOpen && 'rotate-180')} />
               </button>
               {advancedFiltersOpen && (
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setAdvancedFiltersOpen(false)} />
-                  <div className="absolute right-0 top-full mt-2 z-40 w-[400px] rounded-xl border border-(--brand-border) bg-(--brand-surface) shadow-xl p-4">
-                    <div className="text-[11px] font-medium text-(--brand-text-muted) uppercase tracking-[0.12em] mb-3" style={{ fontFamily: 'var(--font-mono)' }}>
-                      Advanced filters
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <FilterSelect label="Stage" value={advancedStage} options={ADVANCED_STAGE_OPTIONS} onChange={setAdvancedStage} />
-                      <FilterSelect label="Biomarker" value={advancedBiomarker} options={ADVANCED_BIOMARKER_OPTIONS} onChange={setAdvancedBiomarker} />
+                  <div className="absolute left-0 top-full mt-1.5 z-40 w-max rounded-xl border border-(--brand-border) bg-(--brand-surface) shadow-xl p-4">
+                    <div className="text-[10px] font-semibold text-(--brand-text-muted) uppercase tracking-[0.14em] mb-3" style={{ fontFamily: 'var(--font-mono)' }}>Advanced filters</div>
+                    <div className="flex items-center gap-2">
+                      {/* Stage inline select */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="inline-flex items-center gap-1 h-7 rounded-md border border-(--brand-border) bg-(--brand-surface) pl-2.5 pr-2 text-xs text-(--brand-text) transition-all hover:border-(--brand-primary) focus:outline-none focus-visible:ring-1 focus-visible:ring-(--brand-primary)">
+                            <span className="font-medium text-(--brand-text-muted) uppercase tracking-[0.1em] text-[10px]" style={{ fontFamily: 'var(--font-mono)' }}>STAGE</span>
+                            <span className="font-medium truncate max-w-[80px]">{ADVANCED_STAGE_OPTIONS.find(o => o.value === advancedStage)?.label ?? 'All'}</span>
+                            <ChevronDown className="h-3 w-3 text-(--brand-text-muted) flex-shrink-0" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-52 max-h-72 overflow-y-auto">
+                          {ADVANCED_STAGE_OPTIONS.map(option => (
+                            <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${advancedStage === option.value ? 'bg-(--brand-accent-light) text-(--brand-primary) font-medium' : ''}`} onClick={() => setAdvancedStage(option.value)}>
+                              <div className="flex items-center justify-between w-full"><span>{option.label}</span>{advancedStage === option.value && <Check className="h-3.5 w-3.5 text-[var(--brand-primary)]" />}</div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      {/* Biomarker inline select */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="inline-flex items-center gap-1 h-7 rounded-md border border-(--brand-border) bg-(--brand-surface) pl-2.5 pr-2 text-xs text-(--brand-text) transition-all hover:border-(--brand-primary) focus:outline-none focus-visible:ring-1 focus-visible:ring-(--brand-primary)">
+                            <span className="font-medium text-(--brand-text-muted) uppercase tracking-[0.1em] text-[10px]" style={{ fontFamily: 'var(--font-mono)' }}>BIOMARKER</span>
+                            <span className="font-medium truncate max-w-[80px]">{ADVANCED_BIOMARKER_OPTIONS.find(o => o.value === advancedBiomarker)?.label ?? 'All'}</span>
+                            <ChevronDown className="h-3 w-3 text-(--brand-text-muted) flex-shrink-0" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-52 max-h-72 overflow-y-auto">
+                          {ADVANCED_BIOMARKER_OPTIONS.map(option => (
+                            <DropdownMenuItem key={option.value} className={`text-sm cursor-pointer ${advancedBiomarker === option.value ? 'bg-(--brand-accent-light) text-(--brand-primary) font-medium' : ''}`} onClick={() => setAdvancedBiomarker(option.value)}>
+                              <div className="flex items-center justify-between w-full"><span>{option.label}</span>{advancedBiomarker === option.value && <Check className="h-3.5 w-3.5 text-[var(--brand-primary)]" />}</div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </>
               )}
             </div>
-            <div className="flex-1 min-w-[8px]" />
-            <Button
-              variant="outline"
-              className="h-9 rounded-full border-(--brand-border) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary)"
+            <div className="flex-1" />
+            {/* Reset */}
+            <button
+              type="button"
+              className="inline-flex items-center h-7 rounded-md border border-(--brand-border) px-2.5 text-xs font-medium text-(--brand-text-muted) hover:border-(--brand-primary) hover:text-(--brand-primary) transition-colors"
               onClick={() => {
-                setModality('all');
-                setResourceType('all');
-                setFundingType('industry');
-                setAdvancedLineOfTherapy('all');
-                setRawSelectedTreatments([]);
-                setAdvancedStage('all');
-                setAdvancedBiomarker('all');
-                setEfficacyParamY('none');
-                setSafetyParamY('none');
-                if (mode === 'safety') {
-                  setEfficacyParam('none');
-                  setSafetyParam('GRADE_3_PLUS_AE');
-                } else if (mode === 'efficacy') {
-                  setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
-                  setSafetyParam('none');
-                } else {
-                  setEfficacyParam('OBJECTIVE_RESPONSE_RATE');
-                  setSafetyParam('GRADE_3_PLUS_AE');
-                }
+                setModality('all'); setResourceType('all'); setFundingType('industry');
+                setAdvancedLineOfTherapy('all'); setRawSelectedTreatments([]);
+                setAdvancedStage('all'); setAdvancedBiomarker('all');
+                setEfficacyParamY('none'); setSafetyParamY('none');
+                if (mode === 'safety') { setEfficacyParam('none'); setSafetyParam('GRADE_3_PLUS_AE'); }
+                else if (mode === 'efficacy') { setEfficacyParam('OBJECTIVE_RESPONSE_RATE'); setSafetyParam('none'); }
+                else { setEfficacyParam('OBJECTIVE_RESPONSE_RATE'); setSafetyParam('GRADE_3_PLUS_AE'); }
               }}
             >
               Reset
-            </Button>
-            <Button className="h-9 rounded-full bg-(--brand-primary) hover:bg-(--brand-primary-hover) text-white">
-              Apply
-            </Button>
+            </button>
           </div>
         </div>
 
-        {/* Split: Compare Table | Chart */}
-        <div className="flex flex-1 overflow-hidden gap-3 p-3 min-h-0">
-          <section className="flex-[0_0_60%] min-w-0 min-h-0 flex flex-col overflow-hidden">
-            <CompareTable
-              data={compareTableData}
-              mode={mode}
-              title={`Compare treatments — ${categoryName}`}
-              sort={compareSort}
-              onSortChange={setCompareSort}
-              hideEmpty={compareHideEmpty}
-              onHideEmptyChange={setCompareHideEmpty}
-              selections={compareSelections}
-              onToggleSelection={toggleCompareSelection}
-              activeMetricKeys={activeMetricKeys}
-            />
-          </section>
-
-        {/* Right Panel - Chart */}
-        <main className="flex-[0_0_40%] min-h-0 flex flex-col overflow-hidden bg-(--brand-surface) min-w-0 rounded-xl border border-(--brand-border)">
+        {/* Chart */}
+        <main className="flex flex-col bg-(--brand-surface)" style={{ minHeight: '640px' }}>
           {/* Compact Chart Header */}
-          <div className="px-4 py-3 bg-(--brand-bg) border-b border-(--brand-border) flex items-center justify-end gap-3 flex-shrink-0">
+          <div className="px-4 py-3 bg-(--brand-bg) border-b border-(--brand-border) flex items-center justify-between gap-3 flex-shrink-0">
+            {/* Export Buttons */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50" disabled={isLoading || chartData.length === 0}>
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+                Excel
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 text-slate-600 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50" disabled={isLoading || chartData.length === 0}>
+                <Presentation className="h-3.5 w-3.5" />
+                PPT
+              </Button>
+              <Button variant="outline" size="sm" className="h-8 px-3 gap-1.5 text-slate-600 hover:text-red-600 hover:border-red-300 hover:bg-red-50" disabled={isLoading || chartData.length === 0}>
+                <FileText className="h-3.5 w-3.5" />
+                PDF
+              </Button>
+            </div>
+            <div className="flex items-center gap-3">
             {/* Chart type label + selector - Show in all Head to Head modes */}
             {(mode === 'all' || mode === 'efficacy' || mode === 'safety') && (
               <div className="flex items-center gap-2">
@@ -1722,11 +1625,12 @@ export default function CategoryAnalyticsPage() {
             >
               <Maximize2 className="h-4 w-4" />
             </Button>
+            </div>
           </div>
 
-          {/* Chart Area - Fill remaining space; consistent padding for all chart types (space between header block and chart) */}
-          <div className="flex-1 flex flex-col overflow-hidden p-3">
-            <div className="flex-1 relative min-h-0">
+          {/* Chart Area */}
+          <div className="flex-1 flex flex-col" style={{ minHeight: '540px' }}>
+            <div className="flex-1 relative" style={{ minHeight: '500px' }}>
               <div className="absolute inset-0 w-full h-full">
                 {isLoading ? (
                   <div className="flex flex-col items-center justify-center h-full gap-3">
@@ -1849,24 +1753,24 @@ export default function CategoryAnalyticsPage() {
               </div>
             </div>
 
-            {/* Export Buttons Below Chart */}
-            <div className="flex items-center justify-center gap-3 pt-3 flex-shrink-0">
-              <Button variant="outline" size="sm" className="h-9 px-4 gap-2 text-slate-600 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50" disabled={isLoading || chartData.length === 0}>
-                <FileSpreadsheet className="h-4 w-4" />
-                Excel
-              </Button>
-              <Button variant="outline" size="sm" className="h-9 px-4 gap-2 text-slate-600 hover:text-orange-600 hover:border-orange-300 hover:bg-orange-50" disabled={isLoading || chartData.length === 0}>
-                <Presentation className="h-4 w-4" />
-                PPT
-              </Button>
-              <Button variant="outline" size="sm" className="h-9 px-4 gap-2 text-slate-600 hover:text-red-600 hover:border-red-300 hover:bg-red-50" disabled={isLoading || chartData.length === 0}>
-                <FileText className="h-4 w-4" />
-                PDF
-              </Button>
-            </div>
           </div>
         </main>
-        </div>
+      </div>
+
+      {/* Compare Table — separate card */}
+      <div className="mt-2 flex flex-col rounded-2xl border border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)] overflow-hidden" style={{ minHeight: '600px', maxHeight: '80vh' }}>
+        <CompareTable
+          data={compareTableData}
+          mode={mode}
+          title={`Compare treatments — ${categoryName}`}
+          sort={compareSort}
+          onSortChange={setCompareSort}
+          hideEmpty={compareHideEmpty}
+          onHideEmptyChange={setCompareHideEmpty}
+          selections={compareSelections}
+          onToggleSelection={toggleCompareSelection}
+          activeMetricKeys={activeMetricKeys}
+        />
       </div>
       </div>
 
