@@ -65,7 +65,7 @@ function parseMeta(path) {
     }
     const item = raw.match(/^-\s*name:\s*(.*)$/);
     if (item) {
-      arm = { name: item[1].trim() };
+      arm = { name: item[1].trim().replace(/^['"]|['"]$/g, '') };
       meta.arms.push(arm);
       continue;
     }
@@ -177,7 +177,14 @@ async function buildFolder(folder) {
     const { coords, n } = kmSteps(parseCsv(ipdPath));
     const oc = outcomes?.find((o) => norm(o.arm_name) === norm(arm.name)) || {};
 
-    const rate = pub.rates.map(([col, t]) => [num(oc[col]), t]).find(([v]) => v != null) || [null, null];
+    // Published rate always comes from the curve's own meta.yaml (published_24m_pfs /
+    // published_12m_os, …), preferring 24 > 12 > 6 mo — never from trial_outcomes.
+    let pubRate = null, rateT = null;
+    const suffix = endpoint.includes('PFS') || endpoint.includes('PROGRESSION') ? 'pfs' : 'os';
+    for (const t of [24, 12, 6]) {
+      const mv = num(arm[`published_${t}m_${suffix}`]);
+      if (mv != null) { pubRate = mv; rateT = t; break; }
+    }
     const v = validation[arm.name] || {};
 
     rows.push({
@@ -189,11 +196,11 @@ async function buildFolder(folder) {
       arm_name: arm.name,
       endpoint,
       twin_coords: coords,
-      published_median: num(oc[pub.median]) ?? num(arm.published_median),
+      published_median: num(arm.published_median),
       twin_median: v.twin_median ?? null,
-      rate_timepoint: rate[1],
-      published_rate: rate[0],
-      twin_rate: rate[1] != null ? survAt(coords, rate[1]) : null,
+      rate_timepoint: rateT,
+      published_rate: pubRate,
+      twin_rate: rateT != null ? survAt(coords, rateT) : null,
       median_follow_up: num(oc[pub.followup]),
       match_pct: v.match_pct ?? null,
       n_points: n,
@@ -229,11 +236,36 @@ async function main() {
   console.log(`Wrote SQL → ${OUT_SQL}`);
 
   if (APPLY) {
-    const { error } = await supabase.from('km_curves').upsert(all.map((r) => ({
+    // km_curves.publication_id is NOT NULL. Rows from folders without a trial_outcomes
+    // match have no publication_id — hold them until that table is backfilled (they load
+    // automatically on the next run once they gain a publication_id).
+    const held = all.filter((r) => r.publication_id == null);
+    const toUpsert = all.filter((r) => r.publication_id != null);
+    if (held.length) {
+      const heldFolders = [...new Set(held.map((r) => r.id.replace(/_[^_]+$/, '')))];
+      console.warn(`Holding ${held.length} rows without publication_id (backfill trial_outcomes): ${heldFolders.join(', ')}`);
+    }
+    // km_curves.nct_id has an FK to clinical_trials. Some trial_outcomes rows cite an
+    // nct_id that isn't in clinical_trials yet — null those (nullable FK) so the curve
+    // still loads; the id can be reattached once clinical_trials is backfilled.
+    const validNct = new Set();
+    for (let from = 0; ; from += 1000) {
+      const { data, error: e } = await supabase.from('clinical_trials').select('nct_id').range(from, from + 999);
+      if (e) throw e;
+      data.forEach((r) => validNct.add(r.nct_id));
+      if (data.length < 1000) break;
+    }
+    let orphanNct = 0;
+    for (const r of toUpsert) {
+      if (r.nct_id && !validNct.has(r.nct_id)) { r.nct_id = null; orphanNct++; }
+    }
+    if (orphanNct) console.warn(`Nulled ${orphanNct} nct_id(s) not present in clinical_trials.`);
+
+    const { error } = await supabase.from('km_curves').upsert(toUpsert.map((r) => ({
       ...r, twin_coords: r.twin_coords,
     })), { onConflict: 'id' });
     if (error) throw error;
-    console.log(`Applied: upserted ${all.length} rows into km_curves.`);
+    console.log(`Applied: upserted ${toUpsert.length} rows into km_curves (held ${held.length}).`);
   } else {
     console.log('Dry run. Re-run with --apply to upsert, or run the SQL in Supabase.');
   }
