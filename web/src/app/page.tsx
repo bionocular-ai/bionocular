@@ -14,7 +14,7 @@ import {
 const HERO_PHRASES: { strong: string; rest: string }[] = [
   {
     strong: 'Next-gen AI and Machine learning',
-    rest: ' providing analytics and insights (with Human verification) in the Oncology landscape.',
+    rest: ' for Oncology insights.',
   },
   {
     strong: 'Cutting the noise',
@@ -61,7 +61,7 @@ function HeroTextRotator() {
 
   return (
     <div
-      className="hero-rotator-wrapper relative min-h-[7rem] sm:min-h-[8.5rem] md:min-h-[10rem] lg:min-h-[12rem] w-full max-w-xl flex flex-col justify-center"
+      className="hero-rotator-wrapper relative min-h-20 sm:min-h-24 md:min-h-28 lg:min-h-34 w-full max-w-xl flex flex-col justify-center"
       aria-live="polite"
       aria-atomic="true"
     >
@@ -346,21 +346,7 @@ export default function Home() {
         <div className="hero-split-grid grid grid-cols-1 md:grid-cols-[2fr_3fr] min-h-[calc(92vh-62px)] relative z-0">
 
           {/* Left: text column */}
-          <div className="hero-text-column flex flex-col justify-center gap-8 py-12 md:py-16 text-left">
-
-            {/* Eyebrow badge */}
-            <div className="inline-flex items-center gap-2 self-start">
-              <span
-                className="text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full"
-                style={{
-                  background: 'rgba(122,193,162,0.18)',
-                  color: '#7AC1A2',
-                  border: '1px solid rgba(122,193,162,0.35)',
-                }}
-              >
-                Oncology Intelligence Platform
-              </span>
-            </div>
+          <div className="hero-text-column flex flex-col justify-center gap-4 md:gap-5 py-6 md:py-8 text-left">
 
             {/* H1 rotator */}
             <h1 id="heroHeadline" className="hero-split-title w-full max-w-xl m-0">
@@ -369,7 +355,7 @@ export default function Home() {
 
             {/* Sub-headline */}
             <p
-              className="text-base md:text-lg max-w-md leading-relaxed m-0"
+              className="text-sm md:text-base max-w-md leading-snug m-0"
               style={{ color: 'rgba(218,240,230,0.8)' }}
             >
               Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.
@@ -392,45 +378,39 @@ export default function Home() {
               <span className="hero-vision-sub">By Biopharma Strategists, for Biopharma Leaders.</span>
             </p>
 
-            {/* Feature bullet list */}
-            <ul className="hero-feature-list">
-              <li><span className="hero-feature-dot" />Cancer specific innovative dashboard</li>
-              <li><span className="hero-feature-dot" />Cancer specific efficacy &amp; safety of all treatments — stopped, ongoing or SoC</li>
-              <li><span className="hero-feature-dot" />Cancer specific live news &amp; live monitoring of all treatments</li>
-              <li><span className="hero-feature-dot" />Cancer specific clinical trial landscape with treatment, modality, target, line &amp; many more key filters</li>
-              <li><span className="hero-feature-dot" />Cancer specific AI agent</li>
-            </ul>
+            {/* Feature index (chart-styled, not a generic bullet list) */}
+            <div className="hero-index-list">
+              <span className="hero-index-label">Cancer specific — platform capabilities</span>
+              <div className="hero-index-row">
+                <span className="hero-index-num">01</span>
+                <span className="hero-index-desc">Innovative dashboard</span>
+              </div>
+              <div className="hero-index-row">
+                <span className="hero-index-num">02</span>
+                <span className="hero-index-desc">Efficacy &amp; safety of all treatments — stopped, ongoing or SoC</span>
+              </div>
+              <div className="hero-index-row">
+                <span className="hero-index-num">03</span>
+                <span className="hero-index-desc">Live news &amp; live monitoring of all treatments</span>
+              </div>
+              <div className="hero-index-row">
+                <span className="hero-index-num">04</span>
+                <span className="hero-index-desc">Clinical trial landscape with treatment, modality, target, line &amp; many more key filters</span>
+              </div>
+              <div className="hero-index-row hero-index-row-last">
+                <span className="hero-index-num">05</span>
+                <span className="hero-index-desc">AI agent</span>
+              </div>
+            </div>
 
             {/* CTA buttons */}
-            <div className="hero-split-ctas flex mt-6">
+            <div className="hero-split-ctas flex mt-2">
               <a
                 href="#platform"
-                className="btn flex items-center justify-center"
-                style={{
-                  background: 'var(--brand-accent)',
-                  color: '#0E3547',
-                  border: 'none',
-                  borderRadius: '9999px',
-                  padding: '16px 36px',
-                  fontWeight: 700,
-                  fontSize: '1.05rem',
-                  letterSpacing: '0.01em',
-                  transition: 'background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLElement).style.background = '#5EADA8';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(122,193,162,0.45)';
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLElement).style.background = 'var(--brand-accent)';
-                  (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                }}
+                className="hero-cta-underline inline-flex items-center"
               >
                 See How It Works
-                <ArrowRight className="w-5 h-5 ml-2" strokeWidth={2.5} />
+                <ArrowRight className="hero-cta-arrow w-5 h-5 ml-2" strokeWidth={2.5} />
               </a>
             </div>
 
