@@ -1,4 +1,4 @@
-import type { LucideIcon } from 'lucide-react';
+import type { ComponentType, SVGProps } from 'react';
 import {
   ClipboardList,
   Newspaper,
@@ -10,6 +10,9 @@ import {
   Landmark,
   Sparkles,
 } from 'lucide-react';
+import { SurvivalCurveIcon } from '@/components/icons/SurvivalCurveIcon';
+
+type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
 /** Cancer type options for dashboard dropdown (slug + display label). */
 export const DASHBOARD_CANCER_TYPES = [
@@ -40,17 +43,24 @@ export type DashboardNavStatus = 'live' | 'upcoming';
 export interface DashboardNavItem {
   key: string;
   label: string;
-  icon: LucideIcon;
+  icon: NavIcon;
   section?: string;
   query?: Record<string, string>;
   status: DashboardNavStatus;
+  /** Optional submenu items, rendered nested below this item. */
+  children?: DashboardNavItem[];
 }
 
 export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   { key: 'trial-updates',       label: 'Trial Updates',              icon: ClipboardList, section: 'trial-updates',       status: 'live' },
   { key: 'live-news',           label: 'Live News',                  icon: Newspaper,     section: 'live-ticker',         status: 'live' },
   { key: 'landscape',           label: 'Trial Landscape',            icon: Target,        section: 'landscape',           status: 'live' },
-  { key: 'efficacy',            label: 'Efficacy Intelligence Hub',  icon: TrendingUp,    section: 'analytics', query: { mode: 'efficacy' }, status: 'live' },
+  {
+    key: 'efficacy', label: 'Efficacy Intelligence Hub', icon: TrendingUp, section: 'analytics', query: { mode: 'efficacy' }, status: 'live',
+    children: [
+      { key: 'survival', label: 'Survival Intelligence Hub', icon: SurvivalCurveIcon, section: 'head-to-head-survival', status: 'live' },
+    ],
+  },
   { key: 'safety',              label: 'Safety Intelligence Hub',    icon: ShieldCheck,   section: 'analytics', query: { mode: 'safety' },   status: 'live' },
   { key: 'index',               label: 'Efficacy vs Safety Index Hub', icon: Scale,       section: 'analytics', query: { mode: 'all' },      status: 'live' },
   { key: 'treatment-algorithm', label: 'Treatment Algorithm',        icon: Workflow,                                                         status: 'upcoming' },

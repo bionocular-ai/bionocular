@@ -33,77 +33,113 @@ interface NavListProps {
   onNavigate?: () => void;
 }
 
+function NavItemLink({
+  item,
+  slug,
+  pathname,
+  currentMode,
+  onNavigate,
+  isChild = false,
+}: {
+  item: DashboardNavItem;
+  slug: string;
+  pathname: string;
+  currentMode: string;
+  onNavigate?: () => void;
+  isChild?: boolean;
+}) {
+  const Icon = item.icon;
+  const active = isItemActive(item, pathname, currentMode);
+  const href = item.section
+    ? dashboardRoute(slug, item.section, item.query)
+    : undefined;
+  const isUpcoming = item.status === 'upcoming';
+  // Disabled when an upcoming item has no destination, or any item lacks an href.
+  const isDisabled = (isUpcoming && !item.section) || !href;
+
+  const content = (
+    <>
+      <span className={cn('relative flex items-center justify-center', isChild ? 'h-6 w-6' : 'h-9 w-9')}>
+        <Icon className={cn('shrink-0', isChild ? 'h-3.5 w-3.5' : 'h-5 w-5')} aria-hidden />
+        {isUpcoming && item.section && !active && (
+          <span
+            aria-hidden
+            className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-(--brand-accent) ring-2 ring-(--brand-surface)"
+          />
+        )}
+      </span>
+      <span
+        className={cn(
+          'text-center leading-tight',
+          isChild ? 'text-[9px] font-medium uppercase tracking-[0.03em]' : 'text-[11px] font-medium tracking-tight',
+        )}
+        style={isChild ? { fontFamily: 'var(--font-mono)' } : undefined}
+      >
+        {item.label}
+      </span>
+    </>
+  );
+
+  const baseClasses = cn(
+    'group flex flex-col items-center text-center transition-all duration-200 ease-out',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 focus-visible:ring-offset-(--brand-surface)',
+    isChild ? 'gap-0.5 rounded-md px-1 py-1.5' : 'gap-1 rounded-xl px-1.5 py-2.5',
+  );
+
+  if (isDisabled) {
+    return (
+      <div
+        title="Coming soon"
+        aria-disabled="true"
+        className={cn(
+          baseClasses,
+          'cursor-not-allowed text-(--brand-text-muted) opacity-45',
+        )}
+      >
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      aria-current={active ? 'page' : undefined}
+      title={isUpcoming ? `${item.label} (preview)` : item.label}
+      className={cn(
+        baseClasses,
+        isChild
+          ? active
+            ? 'bg-(--brand-accent-light)/60 text-(--brand-primary) ring-1 ring-(--brand-accent)'
+            : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)/40 hover:text-(--brand-primary)'
+          : active
+            ? 'bg-(--brand-surface) text-(--brand-primary) shadow-[0_2px_10px_-2px_rgba(16,43,54,0.18)] ring-1 ring-(--brand-border)'
+            : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary)',
+        isUpcoming && !active && 'opacity-80',
+      )}
+    >
+      {content}
+    </Link>
+  );
+}
+
 function NavList({ slug, pathname, currentMode, onNavigate }: NavListProps) {
   return (
     <nav className="flex flex-1 flex-col items-stretch gap-1.5 overflow-y-auto px-2 py-3">
-      {DASHBOARD_NAV_ITEMS.map((item) => {
-        const Icon = item.icon;
-        const active = isItemActive(item, pathname, currentMode);
-        const href = item.section
-          ? dashboardRoute(slug, item.section, item.query)
-          : undefined;
-        const isUpcoming = item.status === 'upcoming';
-        // Disabled when an upcoming item has no destination, or any item lacks an href.
-        const isDisabled = (isUpcoming && !item.section) || !href;
-
-        const content = (
-          <>
-            <span className="relative flex h-9 w-9 items-center justify-center">
-              <Icon className="h-5 w-5 shrink-0" aria-hidden />
-              {isUpcoming && item.section && !active && (
-                <span
-                  aria-hidden
-                  className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-(--brand-accent) ring-2 ring-(--brand-surface)"
-                />
-              )}
-            </span>
-            <span className="text-center text-[11px] font-medium leading-tight tracking-tight">
-              {item.label}
-            </span>
-          </>
-        );
-
-        const baseClasses = cn(
-          'group flex flex-col items-center gap-1 rounded-xl px-1.5 py-2.5',
-          'text-center transition-all duration-200 ease-out',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 focus-visible:ring-offset-(--brand-surface)',
-        );
-
-        if (isDisabled) {
-          return (
-            <div
-              key={item.key}
-              title="Coming soon"
-              aria-disabled="true"
-              className={cn(
-                baseClasses,
-                'cursor-not-allowed text-(--brand-text-muted) opacity-45',
-              )}
-            >
-              {content}
+      {DASHBOARD_NAV_ITEMS.map((item) => (
+        <div key={item.key} className="flex flex-col">
+          <NavItemLink item={item} slug={slug} pathname={pathname} currentMode={currentMode} onNavigate={onNavigate} />
+          {item.children?.map((child) => (
+            <div key={child.key} className="flex flex-col items-center pl-2">
+              <span aria-hidden className="h-2 w-px bg-(--brand-border)" />
+              <div className="w-full">
+                <NavItemLink item={child} slug={slug} pathname={pathname} currentMode={currentMode} onNavigate={onNavigate} isChild />
+              </div>
             </div>
-          );
-        }
-
-        return (
-          <Link
-            key={item.key}
-            href={href}
-            onClick={onNavigate}
-            aria-current={active ? 'page' : undefined}
-            title={isUpcoming ? `${item.label} (preview)` : item.label}
-            className={cn(
-              baseClasses,
-              active
-                ? 'bg-(--brand-surface) text-(--brand-primary) shadow-[0_2px_10px_-2px_rgba(16,43,54,0.18)] ring-1 ring-(--brand-border)'
-                : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary)',
-              isUpcoming && !active && 'opacity-80',
-            )}
-          >
-            {content}
-          </Link>
-        );
-      })}
+          ))}
+        </div>
+      ))}
     </nav>
   );
 }

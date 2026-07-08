@@ -12,6 +12,8 @@ import {
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -24,10 +26,10 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { PageHeader } from '@/components/dashboard/PageHeader';
-import { FilterChips } from '@/components/dashboard/FilterChips';
 import { slugToCategory } from '@/lib/dashboard-constants';
 import { kmCurvesApi, type KmCurveRow, type KmPoint } from '@/lib/api';
 import KaplanMeierChart from '@/components/charts/KaplanMeierChart';
+import { SurvivalCurveIcon } from '@/components/icons/SurvivalCurveIcon';
 
 function fmt(n: number | null | undefined, suffix = ''): string {
   return n == null ? '—' : `${n}${suffix}`;
@@ -46,8 +48,36 @@ const ENDPOINT_LABELS: Record<string, string> = {
   DFS: 'Disease-free survival',
   RFS: 'Recurrence-free survival',
   EFS: 'Event-free survival',
+  DOR: 'Duration of response',
+  MSS: 'Melanoma-specific survival',
 };
-const endpointLabel = (e: string) => ENDPOINT_LABELS[e] ?? e;
+
+// Source publications label the same endpoint inconsistently (e.g. "PFS",
+// "PROGRESSION-FREE SURVIVAL", "PROGRESSION-FREE SURVIVAL PER BICR ASSESSMENT").
+// Collapse known variants to one canonical code so the filter doesn't fragment
+// a single endpoint into several duplicate-looking options.
+const ENDPOINT_CANONICAL_RULES: Array<{ code: string; test: RegExp }> = [
+  { code: 'OS', test: /overall survival|^os$/i },
+  { code: 'PFS', test: /progression.?free|overall pfs|^pfs$/i },
+  { code: 'RFS', test: /recurrence.?free|relapse.?free|^rfs$/i },
+  { code: 'DFS', test: /disease.?free|^dfs$/i },
+  { code: 'EFS', test: /event.?free|^efs$/i },
+  { code: 'DOR', test: /duration of response|^dor$/i },
+  { code: 'MSS', test: /melanoma.?specific survival|^mss$/i },
+];
+const ENDPOINT_ORDER = ['OS', 'PFS', 'RFS', 'DFS', 'EFS', 'DOR', 'MSS'];
+
+function canonicalEndpoint(raw: string): string {
+  const trimmed = raw.trim();
+  const rule = ENDPOINT_CANONICAL_RULES.find(({ test }) => test.test(trimmed));
+  return rule ? rule.code : trimmed.toUpperCase();
+}
+
+function toTitleCase(s: string): string {
+  return s.toLowerCase().replace(/(^|[\s-])[a-z]/g, (c) => c.toUpperCase());
+}
+
+const endpointLabel = (e: string) => ENDPOINT_LABELS[e] ?? toTitleCase(e);
 
 // Stable empty reference so query-loading state doesn't churn memo/effect deps.
 const EMPTY_CURVES: KmCurveRow[] = [];
@@ -119,11 +149,17 @@ export default function HeadToHeadEfficacyPage() {
   });
   const allCurves = data ?? EMPTY_CURVES;
 
-  // Distinct endpoints across all publications (PFS, OS, …).
-  const endpoints = React.useMemo(
-    () => [...new Set(allCurves.map((c) => c.endpoint))].sort(),
-    [allCurves]
-  );
+  // Distinct canonical endpoints across all publications (PFS, OS, …), in a fixed
+  // clinical order with any unrecognized ones trailing alphabetically.
+  const endpoints = React.useMemo(() => {
+    const set = new Set(allCurves.map((c) => canonicalEndpoint(c.endpoint)));
+    return [...set].sort((a, b) => {
+      const ai = ENDPOINT_ORDER.indexOf(a);
+      const bi = ENDPOINT_ORDER.indexOf(b);
+      if (ai !== -1 || bi !== -1) return (ai === -1 ? ENDPOINT_ORDER.length : ai) - (bi === -1 ? ENDPOINT_ORDER.length : bi);
+      return a.localeCompare(b);
+    });
+  }, [allCurves]);
 
   const [endpoint, setEndpoint] = React.useState<string>('');
   React.useEffect(() => {
@@ -132,7 +168,7 @@ export default function HeadToHeadEfficacyPage() {
 
   // All arms for the selected endpoint, across every publication/cohort.
   const armsForEndpoint = React.useMemo(
-    () => allCurves.filter((c) => c.endpoint === endpoint),
+    () => allCurves.filter((c) => canonicalEndpoint(c.endpoint) === endpoint),
     [allCurves, endpoint]
   );
 
@@ -213,27 +249,40 @@ export default function HeadToHeadEfficacyPage() {
     setSelectedIds(new Set(armsForEndpoint.slice(0, MAX_ARMS).map((c) => c.id)));
   const clearArms = () => setSelectedIds(new Set());
 
-  const endpointOptions = React.useMemo(
-    () => endpoints.map((e) => ({ value: e, label: e })),
-    [endpoints]
-  );
-
   return (
     <div className="min-h-screen bg-(--brand-bg)">
       <div className="mx-auto max-w-7xl px-6 py-8">
         <PageHeader
           category={slugToCategory(categorySlug)}
-          title="Head to Head Survival"
+          title="Survival Intelligence Hub"
           description="Reconstructed digitized-twin Kaplan–Meier survival curves by treatment arm, head-to-head across publications and cohorts."
           right={
-            <div className="flex items-center gap-2">
-              {endpointOptions.length > 0 && (
-                <FilterChips
-                  label="ENDPOINT"
-                  options={endpointOptions}
-                  value={endpoint}
-                  onChange={setEndpoint}
-                />
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {endpoints.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-2 rounded-full border-(--brand-border) bg-(--brand-surface) pl-3 pr-2.5 text-(--brand-text) shadow-sm hover:border-(--brand-primary) hover:bg-(--brand-accent-light)"
+                    >
+                      <SurvivalCurveIcon className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
+                      <span className="max-w-[180px] truncate font-medium">
+                        {endpoint ? endpointLabel(endpoint) : 'Endpoint'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64">
+                    <DropdownMenuRadioGroup value={endpoint} onValueChange={setEndpoint}>
+                      {endpoints.map((e) => (
+                        <DropdownMenuRadioItem key={e} value={e}>
+                          {endpointLabel(e)}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
 
               <DropdownMenu>
