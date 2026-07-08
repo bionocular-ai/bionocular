@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
 import {
   ChevronDown,
   Check,
@@ -21,14 +20,11 @@ import {
   AlertCircle,
   BarChart3,
   CircleDot,
-  Activity,
-  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { FilterChips } from '@/components/dashboard/FilterChips';
 import { slugToCategory } from '@/lib/dashboard-constants';
-import { dashboardRoute } from '@/lib/constants';
 import BarChart from '@/components/charts/BarChart';
 import DivergingBarChart from '@/components/charts/DivergingBarChart';
 import BubbleChart from '@/components/charts/BubbleChart';
@@ -930,18 +926,6 @@ export default function CategoryAnalyticsPage() {
     return 'No Metric Selected';
   }, [efficacyParam, safetyParam]);
 
-  // Restrained survival-curves link — survival lives within the Efficacy hub.
-  const survivalLink = (
-    <Link
-      href={dashboardRoute(categorySlug, 'head-to-head-survival')}
-      className="inline-flex items-center gap-2 rounded-full bg-(--brand-primary) px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1"
-    >
-      <Activity className="h-4 w-4 shrink-0" aria-hidden />
-      <span className="whitespace-nowrap">Head to Head Survival</span>
-      <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
-    </Link>
-  );
-
   return (
     <div className="min-h-screen bg-(--brand-bg)">
       <div className="mx-auto flex max-w-7xl flex-col px-6 py-8">
@@ -949,7 +933,6 @@ export default function CategoryAnalyticsPage() {
           category={categoryName}
           title={hubTitle}
           description={hubDescription}
-          right={mode === 'efficacy' ? survivalLink : undefined}
         />
 
       {/* Mode Banner with Parameter Selection - Compact, professional design */}
