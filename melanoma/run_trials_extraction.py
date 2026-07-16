@@ -195,6 +195,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help=f"Path to trials.db with api_discovery table (default: {_TRIALS_DB}).",
     )
     parser.add_argument(
+        "--snapshot",
+        type=Path,
+        default=None,
+        metavar="PATH",
+        help="Path to a Supabase snapshot JSON. When set, trial text and cancer "
+        "types come from the snapshot and --trials-db / --exports-dir are ignored. "
+        "Use a dedicated --output-dir to avoid clobbering other runs' results.json.",
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Enable DEBUG-level logging.",
@@ -208,18 +217,26 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 
-def _validate_env(api_key: str | None) -> str:
-    if not api_key:
+def _validate_env(project: str | None, location: str | None) -> tuple[str, str]:
+    missing = [
+        name
+        for name, value in (
+            ("GOOGLE_CLOUD_PROJECT", project),
+            ("GOOGLE_CLOUD_LOCATION", location),
+        )
+        if not value
+    ]
+    if missing:
         print(
-            "ERROR: GOOGLE_API_KEY is not set. "
+            f"ERROR: {', '.join(missing)} is not set. "
             "Add it to melanoma/.env or export it as an environment variable.",
             file=sys.stderr,
         )
         sys.exit(1)
     # sys.exit raises SystemExit (NoReturn), but not all static analysers model
-    # it as such.  The assert is a zero-cost hint that narrows str | None → str.
-    assert api_key
-    return api_key
+    # it as such.  The asserts are a zero-cost hint that narrows str | None → str.
+    assert project and location
+    return project, location
 
 
 def _validate_paths(
@@ -248,11 +265,20 @@ def main() -> None:
     _configure_logging(args.verbose)
     logger = logging.getLogger(__name__)
 
-    # Vertex AI via google-genai SDK — authenticated with GOOGLE_API_KEY.
-    api_key = _validate_env(os.getenv("GOOGLE_API_KEY"))
+    # Vertex AI via google-genai SDK — authenticated with ADC.
+    project, location = _validate_env(
+        os.getenv("GOOGLE_CLOUD_PROJECT"), os.getenv("GOOGLE_CLOUD_LOCATION")
+    )
 
-    # Validate required paths
-    _validate_paths(args.trials_db, args.exports_dir)
+    # Validate required inputs — snapshot mode reads a JSON file; file mode
+    # reads trials.db + the export directory.
+    if args.snapshot is not None:
+        if not args.snapshot.exists():
+            print(f"ERROR: snapshot not found: {args.snapshot}", file=sys.stderr)
+            sys.exit(1)
+        logger.info("Snapshot mode — ignoring --trials-db and --exports-dir.")
+    else:
+        _validate_paths(args.trials_db, args.exports_dir)
 
     # Build config
     nct_numbers = [n.upper() for n in args.nct_numbers] if args.nct_numbers else None
@@ -268,6 +294,7 @@ def main() -> None:
         dry_run=args.dry_run,
         cancer_type_filter=args.cancer_types or None,
         nct_allowlist=nct_numbers,
+        snapshot_path=args.snapshot,
     )
 
     logger.info("=" * 60)
@@ -291,9 +318,10 @@ def main() -> None:
     # visible to the service when it writes cost_report.json.
     cost_calculator = CostCalculator()
     llm = GeminiLLMService(
-        api_key=api_key,
         model=config.model,
         cost_calculator=cost_calculator,
+        project=project,
+        location=location,
     )
     service = TrialParameterExtractionService.from_config(
         config,

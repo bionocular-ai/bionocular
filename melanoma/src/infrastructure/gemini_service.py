@@ -144,37 +144,55 @@ def _parse_json_response(text: str) -> dict[str, Any]:
 class GeminiLLMService(LLMService):
     """LLM service backed by Vertex AI via the google-genai SDK.
 
-    Authenticates using GOOGLE_API_KEY (linked to the GCP project on
-    Google's backend) — no ADC or gcloud CLI required.
+    Supports two authentication modes:
+
+    * API key (Vertex Express Mode) — pass ``api_key``. No ADC or gcloud
+      CLI required.
+    * Application Default Credentials — pass ``project`` and ``location``
+      instead, and the SDK resolves credentials from the ambient ADC.
     """
 
     def __init__(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         model: str = _DEFAULT_MODEL,
         temperature: float = 0.0,
         max_tokens: int = 16384,
         cost_calculator: Optional[CostCalculator] = None,
+        project: Optional[str] = None,
+        location: Optional[str] = None,
     ) -> None:
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY is required")
+        if not api_key and not project:
+            raise ValueError(
+                "Either api_key (Express Mode) or project (ADC) is required"
+            )
 
         # Accept OpenRouter-style names like "google/gemini-3.1-pro-preview"
         model = model.removeprefix("google/")
 
         self._api_key = api_key
+        self._project = project
+        self._location = location
         self._model = model
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._cost_calculator = cost_calculator
         self._client = self._build_client()
 
-        logger.info("GeminiLLMService initialised | model=%s (Vertex AI)", model)
+        logger.info(
+            "GeminiLLMService initialised | model=%s (Vertex AI, auth=%s)",
+            model,
+            "api_key" if api_key else "adc",
+        )
 
     def _build_client(self) -> Any:
         from google import genai
 
-        return genai.Client(vertexai=True, api_key=self._api_key)
+        if self._api_key:
+            return genai.Client(vertexai=True, api_key=self._api_key)
+        return genai.Client(
+            vertexai=True, project=self._project, location=self._location
+        )
 
     def _record_usage(
         self,

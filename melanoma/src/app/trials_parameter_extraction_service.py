@@ -39,6 +39,7 @@ from ..domain.trials_extraction_prompts import (
     STAGE_VALUES,
     build_extraction_prompt,
 )
+from ..infrastructure.clinical_trials.snapshot_source import SnapshotTrialSource
 from ..infrastructure.cost_calculator import CostCalculator
 from ..infrastructure.openrouter_service import OpenRouterLLMService
 
@@ -78,6 +79,9 @@ class ExtractionConfig:
             processing to (None = all cancer types in api_discovery).
         nct_allowlist: Optional explicit list of NCT numbers to process,
             bypassing limit and cancer_type_filter.
+        snapshot_path: Optional path to a Supabase snapshot JSON. When set, trial
+            text and cancer types come from the snapshot instead of
+            trials_db_path / exports_dir (which are then ignored).
     """
 
     trials_db_path: Path
@@ -91,6 +95,7 @@ class ExtractionConfig:
     dry_run: bool = False
     cancer_type_filter: Optional[list[str]] = None
     nct_allowlist: Optional[list[str]] = None
+    snapshot_path: Optional[Path] = None
 
 
 # ---------------------------------------------------------------------------
@@ -462,6 +467,7 @@ class TrialParameterExtractionService:
         checkpoint: CheckpointManager,
         writer: ResultWriter,
         cost_calculator: CostCalculator,
+        snapshot_source: Optional[SnapshotTrialSource] = None,
     ) -> None:
         self._config = config
         self._llm = llm
@@ -471,6 +477,7 @@ class TrialParameterExtractionService:
         self._checkpoint = checkpoint
         self._writer = writer
         self._cost_calculator = cost_calculator
+        self._snapshot_source = snapshot_source
 
     # ------------------------------------------------------------------
     # Factory
@@ -519,6 +526,11 @@ class TrialParameterExtractionService:
         checkpoint = CheckpointManager(config.output_dir / "checkpoint.json")
         writer = ResultWriter(config.output_dir)
 
+        snapshot_source: Optional[SnapshotTrialSource] = None
+        if config.snapshot_path is not None:
+            snapshot = json.loads(config.snapshot_path.read_text(encoding="utf-8"))
+            snapshot_source = SnapshotTrialSource(snapshot)
+
         return cls(
             config=config,
             llm=llm,
@@ -528,6 +540,7 @@ class TrialParameterExtractionService:
             checkpoint=checkpoint,
             writer=writer,
             cost_calculator=_cost_calculator,
+            snapshot_source=snapshot_source,
         )
 
     # ------------------------------------------------------------------
@@ -580,23 +593,27 @@ class TrialParameterExtractionService:
                 continue
 
             # ------------------------------------------------------------------
-            # Load trial text
+            # Load trial text (snapshot source or .txt export file)
             # ------------------------------------------------------------------
-            txt_path = self._config.exports_dir / f"{nct_number}.txt"
-            if not txt_path.exists():
-                logger.warning("%s | export file not found, skipping", nct_number)
-                summary.skipped += 1
-                summary.total_trials += 1
-                continue
-
             try:
-                trial = self._loader.load(txt_path)
+                if self._snapshot_source is not None:
+                    trial = self._snapshot_source.load_trial(nct_number)
+                else:
+                    txt_path = self._config.exports_dir / f"{nct_number}.txt"
+                    if not txt_path.exists():
+                        logger.warning(
+                            "%s | export file not found, skipping", nct_number
+                        )
+                        summary.skipped += 1
+                        summary.total_trials += 1
+                        continue
+                    trial = self._loader.load(txt_path)
             except Exception as exc:
-                logger.error("%s | failed to load file: %s", nct_number, exc)
+                logger.error("%s | failed to load trial: %s", nct_number, exc)
                 result = TrialParameterResult(
                     nct_number=nct_number,
                     extraction_status=ExtractionStatus.FAILED,
-                    error_message=f"File load error: {exc}",
+                    error_message=f"Trial load error: {exc}",
                 )
                 results.append(result)
                 self._checkpoint.record(nct_number, ExtractionStatus.FAILED)
@@ -605,9 +622,12 @@ class TrialParameterExtractionService:
                 continue
 
             # ------------------------------------------------------------------
-            # Fetch cancer types from DB
+            # Fetch cancer types (snapshot source or DB)
             # ------------------------------------------------------------------
-            cancer_types = self._cancer_repo.get_cancer_types(nct_number)
+            if self._snapshot_source is not None:
+                cancer_types = self._snapshot_source.get_cancer_types(nct_number)
+            else:
+                cancer_types = self._cancer_repo.get_cancer_types(nct_number)
 
             # ------------------------------------------------------------------
             # Dry run: log what would be processed and skip LLM calls
@@ -705,22 +725,29 @@ class TrialParameterExtractionService:
 
         Applies the configured limit last.
         """
-        db_ncts = set(
-            self._cancer_repo.get_all_nct_numbers(self._config.cancer_type_filter)
-        )
-
-        export_ncts = {
-            p.stem.upper() for p in self._config.exports_dir.glob("NCT*.txt")
-        }
+        if self._snapshot_source is not None:
+            available = set(
+                self._snapshot_source.get_all_nct_numbers(
+                    self._config.cancer_type_filter
+                )
+            )
+        else:
+            db_ncts = set(
+                self._cancer_repo.get_all_nct_numbers(self._config.cancer_type_filter)
+            )
+            export_ncts = {
+                p.stem.upper() for p in self._config.exports_dir.glob("NCT*.txt")
+            }
+            available = db_ncts & export_ncts
 
         nct_allowlist = self._config.nct_allowlist
         if nct_allowlist:
             allowset = {n.upper() for n in nct_allowlist}
-            candidates = sorted(allowset & export_ncts)
+            candidates = sorted(allowset & available)
             logger.info("NCT allowlist applied: %d trial(s)", len(candidates))
             return candidates
 
-        candidates = sorted(db_ncts & export_ncts)
+        candidates = sorted(available)
 
         limit = self._config.limit
         if limit is not None:
@@ -732,12 +759,11 @@ class TrialParameterExtractionService:
                 start = self._config.offset
                 candidates = list(itertools.islice(candidates, start, start + limit))
 
+        source = "snapshot" if self._snapshot_source is not None else "DB ∩ exports"
         logger.info(
-            "Candidates: %d in DB, %d export files, %d intersection, "
-            "%d after limit/offset",
-            len(db_ncts),
-            len(export_ncts),
-            len(db_ncts & export_ncts),
+            "Candidates: %d available (%s), %d after limit/offset",
+            len(available),
+            source,
             len(candidates),
         )
         return candidates
