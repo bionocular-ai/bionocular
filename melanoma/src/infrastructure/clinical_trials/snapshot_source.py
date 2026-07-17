@@ -8,7 +8,6 @@ snapshot dict — no network access.
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 from ...domain.trial_parameter_models import TrialText
 
@@ -29,7 +28,7 @@ class SnapshotTrialSource:
         logger.info("SnapshotTrialSource loaded | %d trials", len(self._by_nct))
 
     def get_all_nct_numbers(
-        self, cancer_type_filter: Optional[list[str]] = None
+        self, cancer_type_filter: list[str] | None = None
     ) -> list[str]:
         """Return sorted NCT numbers, optionally restricted by cancer type."""
         if not cancer_type_filter:
