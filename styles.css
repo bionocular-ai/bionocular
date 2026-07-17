@@ -377,6 +377,24 @@ body {
   transition: transform 0.2s ease;
 }
 
+/* ─── Footer Links ───────────────────────────────────────────────────── */
+.footer-link {
+  color: rgba(255, 255, 255, 0.86);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-link:hover {
+  color: #fff;
+}
+
+/* Sized to match the 1.25rem webfont glyphs these inline SVGs replaced. */
+.social-icon {
+  height: 1.25rem;
+  width: auto;
+  vertical-align: -0.125em;
+}
+
 /* ─── Reduced Motion ─────────────────────────────────────────────────── */
 /* The headline rotator, hero video and smooth scroll are gated in script.js. */
 @media (prefers-reduced-motion: reduce) {
