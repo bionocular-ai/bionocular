@@ -13,16 +13,25 @@ const HERO_PHRASES = [
 let headlineIndex = 0;
 let activeNav = '';
 
+const prefersReducedMotion = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// CSS handles transitions; these are the motion sources a media query can't reach.
+const scrollBehavior = () => (prefersReducedMotion() ? 'auto' : 'smooth');
+
 // Initialize headline rotation
 function initHeadlineRotation() {
   const phraseEl = document.getElementById('heroRotatorPhrase');
   if (!phraseEl) return;
 
+  // HERO_PHRASES[0] is already in the markup, so rotation starts at the next phrase.
+  if (prefersReducedMotion()) return;
+
   function updatePhrase() {
     const phrase = HERO_PHRASES[headlineIndex];
     phraseEl.style.opacity = '0';
     phraseEl.style.transform = 'translateY(-14px)';
-    
+
     setTimeout(() => {
       phraseEl.innerHTML = `
         <span class="font-bold" style="font-weight: 700">${phrase.strong}</span>
@@ -30,7 +39,7 @@ function initHeadlineRotation() {
       `;
       // Start from below before animating in
       phraseEl.style.transform = 'translateY(14px)';
-      
+
       requestAnimationFrame(() => {
         // Must delay slightly for browser to register the translateY(14px)
         setTimeout(() => {
@@ -41,7 +50,6 @@ function initHeadlineRotation() {
     }, 400); // Wait for fade out
   }
 
-  updatePhrase();
   setInterval(() => {
     headlineIndex = (headlineIndex + 1) % HERO_PHRASES.length;
     updatePhrase();
@@ -66,7 +74,7 @@ function initSmoothScroll() {
     const header = document.querySelector('.site-header');
     const headerHeight = header ? header.offsetHeight : 0;
     const top = targetEl.getBoundingClientRect().top + window.pageYOffset - headerHeight - EXTRA_GAP_PX;
-    window.scrollTo({ top, behavior: 'smooth' });
+    window.scrollTo({ top, behavior: scrollBehavior() });
   }
 
   function updateIndicator(activeLink) {
@@ -113,7 +121,7 @@ function initSmoothScroll() {
     
     if (href === '#hero') {
       e.preventDefault();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: scrollBehavior() });
       setActiveNav('#hero');
       return;
     }
@@ -202,6 +210,15 @@ function initMobileMenu() {
   backdrop.addEventListener('click', closeMenu);
 }
 
+// Hero video: decorative, so hold it on a static frame when motion is unwelcome.
+function initHeroVideo() {
+  const video = document.querySelector('.hero-video-column video');
+  if (!video || !prefersReducedMotion()) return;
+  video.removeAttribute('autoplay');
+  video.removeAttribute('loop');
+  video.pause();
+}
+
 // Set copyright year
 function setCopyright() {
   const copyrightEl = document.getElementById('copyright');
@@ -214,6 +231,7 @@ function setCopyright() {
 // Initialize everything when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   initHeadlineRotation();
+  initHeroVideo();
   initMobileMenu();
   initSmoothScroll();
   setCopyright();

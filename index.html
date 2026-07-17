@@ -72,9 +72,11 @@
     <div class="hero-split-grid grid grid-cols-1 md:grid-cols-[2fr_3fr] min-h-[calc(92vh-62px)] relative z-0">
       <div class="hero-text-column flex flex-col justify-center gap-4 md:gap-5 py-6 md:py-8 text-left">
         <h1 id="heroHeadline" class="hero-split-title w-full max-w-xl m-0">
-          <div class="hero-rotator-wrapper relative min-h-[7rem] sm:min-h-[8.5rem] md:min-h-[10rem] lg:min-h-[12rem] w-full max-w-xl flex flex-col justify-center" aria-live="polite" aria-atomic="true">
+          <div class="hero-rotator-wrapper relative min-h-20 sm:min-h-24 md:min-h-28 lg:min-h-[8.5rem] w-full max-w-xl flex flex-col justify-center">
+            <!-- Must stay in sync with HERO_PHRASES[0] in script.js; rendered here so the h1 is non-empty before JS runs. -->
             <p id="heroRotatorPhrase" class="hero-rotator-phrase w-full text-[#E9ECEF] text-xl leading-[1.2] tracking-[-0.02em] sm:text-2xl md:text-3xl lg:text-4xl text-left pr-4" style="transition: opacity 0.6s ease, transform 0.6s ease;">
-              <!-- Dynamic content -->
+              <span class="font-bold" style="font-weight: 700">Next-gen AI and Machine learning</span>
+              <span class="font-light" style="font-weight: 300; opacity: 0.85"> for Oncology insights.</span>
             </p>
           </div>
         </h1>
