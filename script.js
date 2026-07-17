@@ -2,7 +2,7 @@
 const HERO_PHRASES = [
   {
     strong: 'Next-gen AI and Machine learning',
-    rest: ' providing analytics and insights (with Human verification) in the Oncology landscape.',
+    rest: ' for Oncology insights.',
   },
   {
     strong: 'Cutting the noise',
