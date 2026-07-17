@@ -411,22 +411,44 @@ class ResultWriter:
         results: list[TrialParameterResult],
         summary: ExtractionRunSummary,
     ) -> Path:
-        """Write results.json containing metadata + all trial results.
+        """Upsert `results` into results.json, keyed by NCT number.
+
+        A resumed run only processes the trials it did not already complete, so
+        `results` holds a subset of the file's trials. Merging with what is on
+        disk keeps earlier runs' trials intact; writing `results` directly would
+        truncate the file to just this run's work.
 
         Args:
-            results: Extracted results for all processed trials.
+            results: Extracted results for the trials processed this run.
             summary: High-level run statistics.
 
         Returns:
             Path to the written results file.
         """
-        output = {
-            "metadata": summary.to_dict(),
-            "trials": [r.to_dict() for r in results],
-        }
         path = self._output_dir / "results.json"
+
+        merged: dict[str, dict] = {}
+        if path.exists():
+            existing = json.loads(path.read_text())
+            for trial in existing.get("trials", []):
+                merged[trial["nct_number"]] = trial
+        for result in results:
+            trial = result.to_dict()
+            merged[trial["nct_number"]] = trial
+        trials = list(merged.values())
+
+        # Counts describe every trial in the file, not just this run's, so the
+        # metadata block stays consistent with the trials beside it.
+        metadata = summary.to_dict()
+        statuses = [t["extraction_status"] for t in trials]
+        metadata["total_trials"] = len(trials)
+        metadata["successful"] = statuses.count(ExtractionStatus.DONE.value)
+        metadata["partial"] = statuses.count(ExtractionStatus.PARTIAL.value)
+        metadata["failed"] = statuses.count(ExtractionStatus.FAILED.value)
+
+        output = {"metadata": metadata, "trials": trials}
         path.write_text(json.dumps(output, indent=2, ensure_ascii=False))
-        logger.info("Results written to %s (%d trials)", path, len(results))
+        logger.info("Results written to %s (%d trials)", path, len(trials))
         return path
 
     def write_cost_report(self, cost_calculator: CostCalculator) -> Path:
