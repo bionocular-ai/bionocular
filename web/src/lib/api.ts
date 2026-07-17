@@ -339,14 +339,32 @@ export const trialsApi = {
     const OPEN_RAW = ['RECRUITING', 'NOT_YET_RECRUITING', 'ACTIVE_NOT_RECRUITING'];
     const CLOSED_RAW = ['COMPLETED', 'TERMINATED', 'WITHDRAWN', 'SUSPENDED', 'ENROLLING_BY_INVITATION', 'UNKNOWN'];
 
+    // Sponsor is partitioned at the DB, not in JS: PostgREST caps any select at 1000
+    // rows, so filtering after the fetch silently hides everything past that cap.
+    // Selecting both (or neither) matches everything, so no filter is needed.
+    const wantsIndustry = filters.sponsor_type?.some(s => s.toLowerCase() === 'industry') ?? false;
+    const wantsNonIndustry = filters.sponsor_type?.some(s => s.toLowerCase() === 'non-industry') ?? false;
+    const sponsorMode: 'industry' | 'non-industry' | null =
+      wantsIndustry === wantsNonIndustry ? null : wantsIndustry ? 'industry' : 'non-industry';
+
+    // Non-Industry uses an OR clause so NULL lead_sponsor_class rows are kept
+    // (Postgres `<>` returns NULL for a NULL operand → would silently drop rows).
+    // any: the select string drives Supabase's return-type generics, which differ per embed.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const applySponsor = (q: any): any => {
+      if (sponsorMode === 'industry') return q.eq('clinical_trials.lead_sponsor_class', 'INDUSTRY');
+      if (sponsorMode === 'non-industry') return q.or('lead_sponsor_class.neq.INDUSTRY,lead_sponsor_class.is.null', { referencedTable: 'clinical_trials' });
+      return q;
+    };
+
     if (filters.open_fraction !== undefined && filters.limit !== undefined) {
       const wantOpen = Math.round(filters.limit * filters.open_fraction);
       const wantClosed = filters.limit - wantOpen;
       const biasSelect = '*, clinical_trials!inner(brief_title, phases, lead_sponsor_name, enrollment_count, overall_status, lead_sponsor_class)';
 
       const [{ data: openData, error: openErr }, { data: closedData, error: closedErr }] = await Promise.all([
-        supabase.from('trial_landscape').select(biasSelect).contains('cancer_type', [dbCancerType]).in('clinical_trials.overall_status', OPEN_RAW).limit(wantOpen),
-        supabase.from('trial_landscape').select(biasSelect).contains('cancer_type', [dbCancerType]).in('clinical_trials.overall_status', CLOSED_RAW).limit(wantClosed),
+        applySponsor(supabase.from('trial_landscape').select(biasSelect).contains('cancer_type', [dbCancerType]).in('clinical_trials.overall_status', OPEN_RAW)).limit(wantOpen),
+        applySponsor(supabase.from('trial_landscape').select(biasSelect).contains('cancer_type', [dbCancerType]).in('clinical_trials.overall_status', CLOSED_RAW)).limit(wantClosed),
       ]);
 
       if (openErr || closedErr) {
@@ -359,7 +377,7 @@ export const trialsApi = {
       const { data: outcomesData } = await supabase.from('trial_outcomes').select('nct_id').in('nct_id', nctIds);
       const nctIdsWithOutcomes = new Set((outcomesData || []).map((o: { nct_id: string }) => o.nct_id));
 
-      let biasTrials: DashboardTrialCard[] = merged.map((d: Record<string, unknown>) => {
+      const biasTrials: DashboardTrialCard[] = merged.map((d: Record<string, unknown>) => {
         const ctEntry = Array.isArray(d.clinical_trials) ? (d.clinical_trials as Record<string, unknown>[])[0] : d.clinical_trials as Record<string, unknown>;
         const rawPhases = Array.isArray(ctEntry?.phases) ? ctEntry.phases as string[] : [];
         return {
@@ -383,32 +401,44 @@ export const trialsApi = {
         };
       });
 
-      if (filters.sponsor_type && filters.sponsor_type.length > 0) {
-        const wantsIndustry = filters.sponsor_type.some(s => s.toLowerCase() === 'industry');
-        const wantsNonIndustry = filters.sponsor_type.some(s => s.toLowerCase() === 'non-industry');
-        biasTrials = biasTrials.filter(t => {
-          const isIndustry = (t.sponsor_type || '').toUpperCase() === 'INDUSTRY';
-          if (wantsIndustry && wantsNonIndustry) return true;
-          if (wantsIndustry) return isIndustry;
-          if (wantsNonIndustry) return !isIndustry;
-          return false;
-        });
-      }
-
       return { trials: biasTrials, total: biasTrials.length };
     }
 
-    // Parallel: exact count (HEAD) + data rows — both share identical filters.
-    let countQ = supabase.from('trial_landscape')
-      .select('nct_id', { count: 'exact', head: true })
+    // Filtering on an embedded column requires !inner. Every trial_landscape row has a
+    // matching clinical_trials row, so the inner join drops nothing.
+    const ctCols = 'brief_title, phases, lead_sponsor_name, enrollment_count, overall_status, lead_sponsor_class';
+    const join = sponsorMode ? '!inner' : '';
+    const dataSelect = `*, clinical_trials${join}(${ctCols})`;
+    const countSelect = sponsorMode ? 'nct_id, clinical_trials!inner(nct_id)' : 'nct_id';
+
+    // Parallel: exact count (HEAD) + data rows — both share identical filters, so the
+    // headline total always matches the list it labels.
+    // any: the select string drives Supabase's return-type generics, which differ per embed.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let countQ: any = supabase.from('trial_landscape')
+      .select(countSelect, { count: 'exact', head: true })
       .contains('cancer_type', [dbCancerType]);
-    let dataQ = supabase.from('trial_landscape')
-      .select('*, clinical_trials(brief_title, phases, lead_sponsor_name, enrollment_count, overall_status, lead_sponsor_class)')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dataQ: any = supabase.from('trial_landscape')
+      .select(dataSelect)
       .contains('cancer_type', [dbCancerType]);
 
     if (filters.modality) {
       countQ = countQ.eq('modality', filters.modality);
       dataQ = dataQ.eq('modality', filters.modality);
+    }
+
+    countQ = applySponsor(countQ);
+    dataQ = applySponsor(dataQ);
+
+    // Phase is filtered in JS below (normalized client-side), so it can't be paginated at
+    // the DB — a page would arrive already holed. Only paginate server-side without it;
+    // otherwise fall back to the fetch-then-slice path, still capped at 1000 rows.
+    const hasPhaseFilter = (filters.phase?.length ?? 0) > 0;
+    const paginateAtDb = !hasPhaseFilter && filters.limit !== undefined;
+    if (paginateAtDb) {
+      const skip = filters.skip ?? 0;
+      dataQ = dataQ.order('nct_id').range(skip, skip + filters.limit! - 1);
     }
 
     const [{ count: exactCount, error: countErr }, { data, error }] = await Promise.all([countQ, dataQ]);
@@ -454,28 +484,17 @@ export const trialsApi = {
        };
     });
 
-    // Client-side phase/sponsor filters (applied after fetch)
-    if (filters.phase && filters.phase.length > 0) {
+    // Client-side phase filter (applied after fetch). Sponsor is already filtered at the DB.
+    if (hasPhaseFilter) {
        trials = trials.filter(t => filters.phase!.some(p => t.phase.includes(p)));
     }
-    if (filters.sponsor_type && filters.sponsor_type.length > 0) {
-       const wantsIndustry = filters.sponsor_type.some(s => s.toLowerCase() === 'industry');
-       const wantsNonIndustry = filters.sponsor_type.some(s => s.toLowerCase() === 'non-industry');
-       trials = trials.filter(t => {
-         const isIndustry = (t.sponsor_type || '').toUpperCase() === 'INDUSTRY';
-         if (wantsIndustry && wantsNonIndustry) return true;
-         if (wantsIndustry) return isIndustry;
-         if (wantsNonIndustry) return !isIndustry;
-         return false;
-       });
-    }
 
-    // Use exactCount for total (accurate even when data rows are capped by PostgREST)
-    // After client-side filters, total reflects filtered count from fetched rows.
-    const hasClientFilter = (filters.phase?.length ?? 0) > 0 || (filters.sponsor_type?.length ?? 0) > 0;
-    const total = hasClientFilter ? trials.length : (exactCount ?? trials.length);
+    // exactCount shares every DB-level filter with the data query, so it is the true total
+    // whenever the DB did the paginating. The phase path filters in JS after a capped
+    // fetch, so only the rows actually seen can be counted.
+    const total = hasPhaseFilter ? trials.length : (exactCount ?? trials.length);
 
-    if (filters.skip !== undefined || filters.limit !== undefined) {
+    if (!paginateAtDb && (filters.skip !== undefined || filters.limit !== undefined)) {
        trials = trials.slice(filters.skip || 0, (filters.skip || 0) + (filters.limit || 100));
     }
 
