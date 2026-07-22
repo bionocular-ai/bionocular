@@ -11,6 +11,7 @@ from typing import Any, Optional, TypeVar
 from pydantic import BaseModel, ValidationError
 
 from ..domain.extraction_interfaces import LLMService
+from ..domain.structured_llm_interfaces import StructuredLLMService
 from .cost_calculator import CostCalculator
 
 T = TypeVar("T", bound=BaseModel)
@@ -141,7 +142,7 @@ def _parse_json_response(text: str) -> dict[str, Any]:
     return {}
 
 
-class GeminiLLMService(LLMService):
+class GeminiLLMService(LLMService, StructuredLLMService):
     """LLM service backed by Vertex AI via the google-genai SDK.
 
     Supports two authentication modes:
