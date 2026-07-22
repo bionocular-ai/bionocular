@@ -143,7 +143,19 @@ performance status), it is valid to use it.
 
 ### treatment_name
 The novel drug or drug combination that is the central subject of this trial.
-Use only the officialTitle and briefSummary sections.
+Use the interventions section as the primary signal for the drug name(s), cross-
+checked against the officialTitle and briefSummary. The interventions list is the
+authoritative set of agents administered in the trial; titles and summaries may
+omit, abbreviate, or use code names.
+
+Ignore intervention entries that are not the investigational treatment: placebo,
+best supportive care, sham, and diagnostic/imaging procedures. A comparator-arm
+drug is not the treatment_name either (apply the single-agent rule below).
+
+When an agent appears under several names (a development code, a brand name, and a
+generic/INN name), prefer the generic (INN) name (e.g. gefitinib over "Iressa" or
+"ZD1839"). Keep the code only when no generic name is available (unnamed
+investigational agents).
 
 Single agent: return the investigational drug name only — not the comparator.
   - Example: "Drug X vs. Nivolumab" → "Drug X"
@@ -165,6 +177,12 @@ Choose the modality value(s) that best describe the mechanism of treatment_name.
 - Use "Other" only if the mechanism is identifiable but fits none of the
   specific categories (e.g. radiation, photodynamic therapy).
 - Return [] if the mechanism is completely unidentifiable.
+- Use the intervention `type` from the interventions section as a prior, not a
+  final answer: GENETIC → CAR-T or TIL Therapy; PROCEDURE → Other (e.g. surgery);
+  RADIATION → Other; DRUG → usually Small Molecule or Chemotherapy; BIOLOGICAL →
+  an immunotherapy class (Monoclonal Antibody, Vaccine, Immunostimulant/Cytokine,
+  Bispecific, Oncolytic Virus). The type narrows the options; decide the exact
+  class from the drug name and mechanism, since type is not one-to-one.
 
 Reference examples (modality → example drug):
   Monoclonal Antibody        → Pembrolizumab (PD-1), Nivolumab, Ipilimumab

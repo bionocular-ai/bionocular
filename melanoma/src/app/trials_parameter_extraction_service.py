@@ -14,6 +14,7 @@ Architecture
   TrialParameterExtractionService — wires all of the above together
 """
 
+import hashlib
 import itertools
 import json
 import logging
@@ -592,6 +593,10 @@ class TrialParameterExtractionService:
             model=self._config.model,
             run_date=run_start,
         )
+        if self._config.snapshot_path is not None:
+            snapshot_bytes = self._config.snapshot_path.read_bytes()
+            summary.snapshot_path = str(self._config.snapshot_path)
+            summary.snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
 
         candidates = self._build_candidate_list()
         logger.info(

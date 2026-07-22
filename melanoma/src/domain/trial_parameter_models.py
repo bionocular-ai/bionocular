@@ -86,6 +86,10 @@ class ExtractionRunSummary:
     skipped: int = 0
     total_cost_usd: float = 0.0
     total_tokens: int = 0
+    # Provenance of the source snapshot (snapshot mode only). Lets the validation
+    # pipeline assert it grades against the exact source the extractor saw.
+    snapshot_path: Optional[str] = None
+    snapshot_sha256: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -98,4 +102,6 @@ class ExtractionRunSummary:
             "skipped": self.skipped,
             "total_cost_usd": round(self.total_cost_usd, 6),
             "total_tokens": self.total_tokens,
+            "snapshot_path": self.snapshot_path,
+            "snapshot_sha256": self.snapshot_sha256,
         }

@@ -36,12 +36,15 @@ _DEFAULT_OUT_DIR = _MELANOMA_ROOT / "data" / "output" / "trials_extraction_nonin
 _PAGE_SIZE = 1000
 
 # Columns saved: extractor inputs + deferred outcome filter + provenance.
+# `interventions` is the structured CT.gov arms/interventions list; it grounds
+# treatment_name / modality extraction (see snapshot_source.load_trial).
 _COLUMNS = [
     "nct_id",
     "cancer_type",
     "official_title",
     "brief_title",
     "brief_summary",
+    "interventions",
     "eligibility_criteria",
     "primary_outcomes",
     "secondary_outcomes",
@@ -119,9 +122,13 @@ def main() -> None:
     rows = _fetch_all(client)
 
     null_title = sum(1 for r in rows if not r.get("official_title"))
-    logger.info("Fetched %d trials (%d with null official_title)", len(rows), null_title)
+    logger.info(
+        "Fetched %d trials (%d with null official_title)", len(rows), null_title
+    )
 
-    out_path = args.out or (_DEFAULT_OUT_DIR / f"{date.today().isoformat()}-clinical-trials.json")
+    out_path = args.out or (
+        _DEFAULT_OUT_DIR / f"{date.today().isoformat()}-clinical-trials.json"
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     snapshot = {
