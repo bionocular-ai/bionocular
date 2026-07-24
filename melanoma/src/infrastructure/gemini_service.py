@@ -40,6 +40,35 @@ _CHARS_PER_TOKEN_ESTIMATE = 4
 # small and grow exponentially with jitter rather than sitting on a 60s floor.
 _BACKOFF_BASE_SECONDS = 1.0
 _BACKOFF_CAP_SECONDS = 30.0
+
+# Bounded per-request timeout (ms). Judge/extraction calls run ~3-8s; 90s is
+# generous over p99 yet caps a stalled socket that would otherwise hang a worker
+# forever (there is no default client timeout).
+_REQUEST_TIMEOUT_MS = 90_000
+
+_RETRYABLE_TOKENS = (
+    "429",
+    "RESOURCE_EXHAUSTED",
+    "RATE_LIMIT",
+    "DEADLINE_EXCEEDED",
+    "504",
+    "TIMEOUT",
+    "TIMED OUT",
+)
+
+
+def _is_retryable_error(exc: BaseException) -> bool:
+    """True for transient errors worth retrying: 429/quota and timeout/deadline.
+
+    Retrying a timed-out generate call is safe - the call is side-effect-free,
+    so at worst a completed-but-undelivered response is re-billed (rare, cheap).
+    """
+    if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+        return True
+    msg = str(exc).upper()
+    return any(token in msg for token in _RETRYABLE_TOKENS)
+
+
 _RETRY_AFTER_RE = re.compile(
     r"retry[-_ ]?(?:delay|after)['\"\s:]+(\d+(?:\.\d+)?)\s*s", re.IGNORECASE
 )
@@ -219,11 +248,18 @@ class GeminiLLMService(LLMService, StructuredLLMService):
 
     def _build_client(self) -> Any:
         from google import genai
+        from google.genai import types
 
+        http_options = types.HttpOptions(timeout=_REQUEST_TIMEOUT_MS)
         if self._api_key:
-            return genai.Client(vertexai=True, api_key=self._api_key)
+            return genai.Client(
+                vertexai=True, api_key=self._api_key, http_options=http_options
+            )
         return genai.Client(
-            vertexai=True, project=self._project, location=self._location
+            vertexai=True,
+            project=self._project,
+            location=self._location,
+            http_options=http_options,
         )
 
     def _record_usage(
@@ -252,11 +288,6 @@ class GeminiLLMService(LLMService, StructuredLLMService):
             success=success,
             error_message=error_message,
         )
-
-    def _is_rate_limit_error(self, exc: BaseException) -> bool:
-        """Return True for 429 / RESOURCE_EXHAUSTED transient quota errors."""
-        msg = str(exc).upper()
-        return "429" in msg or "RESOURCE_EXHAUSTED" in msg or "RATE_LIMIT" in msg
 
     async def generate_response(
         self,
@@ -307,12 +338,12 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                 return text
             except Exception as exc:
                 last_exc = exc
-                if self._is_rate_limit_error(exc) and attempt < max_retries - 1:
+                if _is_retryable_error(exc) and attempt < max_retries - 1:
                     # DSQ-aware backoff: honor a server retry hint, else a small
                     # exponential with jitter (see _backoff_seconds).
                     wait_sec = _backoff_seconds(attempt, _parse_retry_after(str(exc)))
                     logger.warning(
-                        "Rate limit (429) on attempt %d/%d — retrying in %.0fs",
+                        "Transient error (429/timeout) on attempt %d/%d — retrying in %.0fs",
                         attempt + 1,
                         max_retries,
                         wait_sec,
@@ -411,10 +442,10 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                     raise
             except Exception as exc:
                 last_exc = exc
-                if self._is_rate_limit_error(exc) and attempt < max_retries - 1:
+                if _is_retryable_error(exc) and attempt < max_retries - 1:
                     wait_sec = min(60 * (2**attempt) + random.uniform(0, 5), 300)
                     logger.warning(
-                        "Rate limit (429) on attempt %d/%d — retrying in %.0fs",
+                        "Transient error (429/timeout) on attempt %d/%d — retrying in %.0fs",
                         attempt + 1,
                         max_retries,
                         wait_sec,
