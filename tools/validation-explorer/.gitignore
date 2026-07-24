@@ -4,6 +4,13 @@ public/runs
 public/runs.json
 *.tsbuildinfo
 
+# tsc -b composite build stray artifacts (config files get compiled to JS
+# alongside their source since they're included in the TS project).
+vite.config.js
+vite.config.d.ts
+vitest.config.js
+vitest.config.d.ts
+
 # Repo-root .gitignore has a global `lib/` pattern (for Python venvs) that
 # would otherwise ignore this package's src/lib/ directory too.
 !src/lib/
