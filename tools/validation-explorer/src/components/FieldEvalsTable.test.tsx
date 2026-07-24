@@ -16,7 +16,7 @@ beforeAll(() => {
 })
 
 const rows: FieldEvalRow[] = [
-  { nct: 'NCT01', decision: 'hitl', fieldName: 'stage', status: 'FAIL', extracted: 'Stage II', corrected: 'Stage III', issue: null, justification: null, evidence: null },
+  { nct: 'NCT01', decision: 'hitl', fieldName: 'stage', status: 'FAIL', extracted: 'Stage II', corrected: 'Stage III', issue: 'value not in controlled vocabulary', justification: null, evidence: null },
 ]
 
 describe('FieldEvalsTable', () => {
@@ -25,6 +25,10 @@ describe('FieldEvalsTable', () => {
     expect(screen.getByText('NCT01')).toBeInTheDocument()
     expect(screen.getByText('stage')).toBeInTheDocument()
     expect(screen.getByText('FAIL')).toBeInTheDocument()
+  })
+  it('shows the issue description', () => {
+    render(<FieldEvalsTable rows={rows} />)
+    expect(screen.getByText('value not in controlled vocabulary')).toBeInTheDocument()
   })
   it('shows empty state when no rows', () => {
     render(<FieldEvalsTable rows={[]} />)

@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn'
 // Shared grid template so the header row and every body row line up. Widths
 // are fixed for the short/structured columns; the two value columns split
 // remaining space evenly and truncate independently.
-const COLS = 'grid grid-cols-[110px_150px_70px_1fr_1fr] gap-3'
+const COLS = 'grid grid-cols-[110px_140px_70px_1fr_1fr_1.4fr] gap-3'
 const ROW_HEIGHT = 40
 
 export function FieldEvalsTable({ rows }: { rows: FieldEvalRow[] }) {
@@ -36,6 +36,7 @@ export function FieldEvalsTable({ rows }: { rows: FieldEvalRow[] }) {
         <div>Status</div>
         <div>Extracted</div>
         <div>Corrected</div>
+        <div>Issue</div>
       </div>
       {/* The scroll container owns its own overflow so a ~10k-row table never
           pushes the page body wider or taller than the viewport - the
@@ -83,6 +84,9 @@ export function FieldEvalsTable({ rows }: { rows: FieldEvalRow[] }) {
                 </div>
                 <div className={cn('truncate')} title={r.corrected ?? undefined}>
                   {r.corrected || <span className={cn('text-slate-300')}>-</span>}
+                </div>
+                <div className={cn('truncate text-rose-700')} title={r.issue ?? undefined}>
+                  {r.issue || <span className={cn('text-slate-300')}>-</span>}
                 </div>
               </div>
             )
