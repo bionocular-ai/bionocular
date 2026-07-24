@@ -5,6 +5,10 @@ import { FilterProvider, useFilter } from '@/state/FilterContext'
 import { RunSwitcher } from '@/components/RunSwitcher'
 import { FilterBar } from '@/components/FilterBar'
 import { Tabs, type TabKey } from '@/components/Tabs'
+import { Dashboard } from '@/components/Dashboard'
+import { TrialsTable } from '@/components/TrialsTable'
+import { FieldEvalsTable } from '@/components/FieldEvalsTable'
+import { EmptyState } from '@/components/EmptyState'
 import { filterTrials, filterFieldEvals } from '@/lib/filters'
 import { cn } from '@/lib/cn'
 
@@ -24,11 +28,7 @@ function Explorer({ runId }: { runId: string }) {
     return <div className={cn('p-16 text-center text-sm text-slate-400')}>Loading run…</div>
   }
   if (isError || !run) {
-    return (
-      <div className={cn('p-16 text-center text-sm text-slate-400')}>
-        Could not load this run. Check that its validation.json exists under public/runs.
-      </div>
-    )
+    return <EmptyState kind="run-error" />
   }
 
   return (
@@ -36,21 +36,9 @@ function Explorer({ runId }: { runId: string }) {
       <FilterBar cancerTypes={cancerTypes} />
       <Tabs active={tab} onChange={setTab} />
       <div className={cn('p-6')}>
-        {tab === 'dashboard' && (
-          <div className={cn('text-sm text-slate-400')}>
-            Dashboard view (coming in a later task) - {trials.length} trials match
-          </div>
-        )}
-        {tab === 'trials' && (
-          <div className={cn('text-sm text-slate-400')}>
-            Trials view (coming in a later task) - {trials.length} trials match
-          </div>
-        )}
-        {tab === 'fields' && (
-          <div className={cn('text-sm text-slate-400')}>
-            Field evals view (coming in a later task) - {fieldEvals.length} field evaluations match
-          </div>
-        )}
+        {tab === 'dashboard' && <Dashboard trials={trials} fieldEvals={fieldEvals} metadata={run.metadata} />}
+        {tab === 'trials' && <TrialsTable rows={trials} />}
+        {tab === 'fields' && <FieldEvalsTable rows={fieldEvals} />}
       </div>
     </>
   )
@@ -80,11 +68,7 @@ export default function App() {
         </header>
 
         {isLoading && <div className={cn('p-16 text-center text-sm text-slate-400')}>Loading runs…</div>}
-        {(isError || (runs && runs.length === 0)) && (
-          <div className={cn('p-16 text-center text-sm text-slate-400')}>
-            No validation runs found. Run the export script to publish a run manifest to public/runs.json.
-          </div>
-        )}
+        {(isError || (runs && runs.length === 0)) && <EmptyState kind="no-manifest" />}
         {runId && <Explorer runId={runId} />}
       </div>
     </FilterProvider>
