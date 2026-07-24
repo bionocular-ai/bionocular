@@ -57,7 +57,7 @@ export function FilterBar({ cancerTypes }: { cancerTypes: string[] }) {
       <div className={cn('h-5 w-px bg-slate-200')} />
 
       <div className={cn('flex items-center gap-1.5 text-xs text-slate-500')}>
-        <span className="tabular-nums">score</span>
+        <span className={cn('tabular-nums')}>score</span>
         <input
           type="number"
           min={0}
@@ -133,7 +133,7 @@ export function FilterBar({ cancerTypes }: { cancerTypes: string[] }) {
           type="checkbox"
           checked={filter.hasFail}
           onChange={(e) => setFilter((f) => ({ ...f, hasFail: e.target.checked }))}
-          className="accent-teal-600"
+          className={cn('accent-teal-600')}
         />
         has FAIL
       </label>
@@ -142,7 +142,7 @@ export function FilterBar({ cancerTypes }: { cancerTypes: string[] }) {
           type="checkbox"
           checked={filter.hasMissed}
           onChange={(e) => setFilter((f) => ({ ...f, hasMissed: e.target.checked }))}
-          className="accent-teal-600"
+          className={cn('accent-teal-600')}
         />
         has missed
       </label>

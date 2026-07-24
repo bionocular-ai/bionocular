@@ -35,7 +35,7 @@ function Explorer({ runId }: { runId: string }) {
     <>
       <FilterBar cancerTypes={cancerTypes} />
       <Tabs active={tab} onChange={setTab} />
-      <div className="p-6">
+      <div className={cn('p-6')}>
         {tab === 'dashboard' && (
           <div className={cn('text-sm text-slate-400')}>
             Dashboard view (coming in a later task) - {trials.length} trials match
@@ -73,7 +73,7 @@ export default function App() {
           <h1 className={cn('text-base font-semibold tracking-tight text-slate-900')}>Validation Explorer</h1>
           <span className={cn('text-xs uppercase tracking-wide text-slate-400')}>LLM extraction QA</span>
           {runs && runs.length > 0 && (
-            <div className="ml-auto">
+            <div className={cn('ml-auto')}>
               <RunSwitcher runs={runs} selected={runId} onSelect={setSelected} />
             </div>
           )}
