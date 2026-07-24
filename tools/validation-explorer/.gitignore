@@ -1,0 +1,8 @@
+node_modules
+dist
+public/runs
+public/runs.json
+
+# Repo-root .gitignore has a global `lib/` pattern (for Python venvs) that
+# would otherwise ignore this package's src/lib/ directory too.
+!src/lib/
