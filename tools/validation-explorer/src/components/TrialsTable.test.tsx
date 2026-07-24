@@ -22,4 +22,20 @@ describe('TrialsTable', () => {
     render(<TrialsTable rows={[]} />)
     expect(screen.getByText('No trials match the current filters.')).toBeInTheDocument()
   })
+
+  it('exposes a keyboard-accessible disclosure button whose aria-expanded flips on activation', () => {
+    render(<TrialsTable rows={rows} />)
+    const toggle = screen.getByRole('button', { name: 'Toggle details for NCT01' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('Stage III')).toBeInTheDocument()
+
+    fireEvent.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('Stage III')).not.toBeInTheDocument()
+  })
 })

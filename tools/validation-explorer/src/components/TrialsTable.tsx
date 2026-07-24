@@ -107,7 +107,6 @@ export function TrialsTable({ rows }: { rows: TrialRow[] }) {
             <Fragment key={r.id}>
               <tr
                 onClick={() => setExpanded(isExpanded ? null : r.original.nct)}
-                aria-expanded={isExpanded}
                 className={cn(
                   'cursor-pointer border-b border-slate-100 transition-colors hover:bg-slate-50',
                   isExpanded && 'bg-teal-50/60',
@@ -116,7 +115,22 @@ export function TrialsTable({ rows }: { rows: TrialRow[] }) {
                 {r.getVisibleCells().map((c, i) => (
                   <td key={c.id} className={cn('px-3 py-2')}>
                     <div className={cn('flex items-center gap-1.5')}>
-                      {i === 0 && <ExpandChevron expanded={isExpanded} />}
+                      {i === 0 && (
+                        <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-label={`Toggle details for ${r.original.nct}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setExpanded(isExpanded ? null : r.original.nct)
+                          }}
+                          className={cn(
+                            'rounded p-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-600/50 focus-visible:ring-offset-1',
+                          )}
+                        >
+                          <ExpandChevron expanded={isExpanded} />
+                        </button>
+                      )}
                       {flexRender(c.column.columnDef.cell, c.getContext())}
                     </div>
                   </td>
