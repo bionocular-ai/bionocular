@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { emptyFilter, filterTrials, filterFieldEvals } from './filters'
+import { emptyFilter, filterTrials, filterFieldEvals, scopeToTrials } from './filters'
 import type { TrialRow, FieldEvalRow } from './types'
 
 const trials: TrialRow[] = [
@@ -64,5 +64,23 @@ describe('filterFieldEvals', () => {
   it('filters by parent decision', () => {
     const f = { ...emptyFilter(), decisions: new Set(['kept' as const]) }
     expect(filterFieldEvals(fields, f).map((r) => r.nct)).toEqual(['NCT02'])
+  })
+})
+
+describe('scopeToTrials', () => {
+  it('drops a field-eval whose parent trial is excluded by a trial-grain facet', () => {
+    // NCT02's field-eval has no facet of its own (fieldName/status/search) to
+    // exclude it, but its parent trial fails a trial-grain facet
+    // (cancerType) that filterFieldEvals has no notion of - scopeToTrials is
+    // what enforces that exclusion on the field-evals table.
+    const passingTrials = filterTrials(trials, { ...emptyFilter(), cancerType: 'Cutaneous Melanoma' })
+    expect(passingTrials.map((t) => t.nct)).toEqual(['NCT01', 'NCT03'])
+
+    const scoped = scopeToTrials(fields, passingTrials)
+    expect(scoped.map((r) => r.nct)).toEqual(['NCT01'])
+  })
+
+  it('keeps a field-eval whose parent trial passes', () => {
+    expect(scopeToTrials(fields, trials).map((r) => r.nct)).toEqual(['NCT01', 'NCT02'])
   })
 })

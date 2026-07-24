@@ -31,4 +31,19 @@ describe('fetchRun', () => {
     const run = await fetchRun('run-x')
     expect(run.trials[0].cancerType).toEqual([])
   })
+  it('tolerates a rejected results.json fetch (transport failure), cancerType empty', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('results.json')) throw new Error('network down')
+      return { ok: true, json: async () => validation }
+    }))
+    const run = await fetchRun('run-x')
+    expect(run.trials[0].cancerType).toEqual([])
+  })
+  it('still throws when the required validation.json fetch is rejected', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+      if (url.includes('validation.json')) throw new Error('network down')
+      return { ok: true, json: async () => results }
+    }))
+    await expect(fetchRun('run-x')).rejects.toThrow('network down')
+  })
 })

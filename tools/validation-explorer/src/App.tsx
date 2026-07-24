@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRuns } from '@/hooks/useRuns'
 import { useRun } from '@/hooks/useRun'
 import { FilterProvider, useFilter } from '@/state/FilterContext'
@@ -9,16 +9,33 @@ import { Dashboard } from '@/components/Dashboard'
 import { TrialsTable } from '@/components/TrialsTable'
 import { FieldEvalsTable } from '@/components/FieldEvalsTable'
 import { EmptyState } from '@/components/EmptyState'
-import { filterTrials, filterFieldEvals } from '@/lib/filters'
+import { filterTrials, filterFieldEvals, scopeToTrials } from '@/lib/filters'
 import { cn } from '@/lib/cn'
 
 function Explorer({ runId }: { runId: string }) {
   const { data: run, isLoading, isError } = useRun(runId)
-  const { filter } = useFilter()
+  const { filter, reset } = useFilter()
   const [tab, setTab] = useState<TabKey>('dashboard')
 
+  // Switching runs can leave stale facets (e.g. a cancerType absent from the
+  // new run) active, silently zeroing out every panel - reset on run change.
+  // Deliberately keyed on runId only: `reset` is redefined (new function
+  // identity) on every FilterProvider render since it isn't memoized, so
+  // including it here would re-run this effect - and re-reset the filter -
+  // on every keystroke in the filter bar, not just on a run switch.
+  useEffect(() => {
+    reset()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- see comment above
+  }, [runId])
+
   const trials = useMemo(() => (run ? filterTrials(run.trials, filter) : []), [run, filter])
-  const fieldEvals = useMemo(() => (run ? filterFieldEvals(run.fieldEvals, filter) : []), [run, filter])
+  // Field-evals are scoped to the trials that pass the trial-level filter so
+  // trial-grain facets (cancerType/score/hasFail/hasMissed) also narrow the
+  // field-evals table, not just fieldName/status/search.
+  const fieldEvals = useMemo(
+    () => (run ? scopeToTrials(filterFieldEvals(run.fieldEvals, filter), trials) : []),
+    [run, filter, trials],
+  )
   const cancerTypes = useMemo(
     () => (run ? [...new Set(run.trials.flatMap((t) => t.cancerType))].sort() : []),
     [run],
@@ -36,7 +53,7 @@ function Explorer({ runId }: { runId: string }) {
       <FilterBar cancerTypes={cancerTypes} />
       <Tabs active={tab} onChange={setTab} />
       <div className={cn('p-6')}>
-        {tab === 'dashboard' && <Dashboard trials={trials} fieldEvals={fieldEvals} metadata={run.metadata} />}
+        {tab === 'dashboard' && <Dashboard trials={trials} metadata={run.metadata} />}
         {tab === 'trials' && <TrialsTable rows={trials} />}
         {tab === 'fields' && <FieldEvalsTable rows={fieldEvals} />}
       </div>

@@ -40,6 +40,15 @@ export function filterTrials(rows: TrialRow[], f: FilterState): TrialRow[] {
   })
 }
 
+// Narrows a set of field-evals down to those whose parent trial survives the
+// trial-level filter. Lets trial-grain facets (cancerType/score/hasFail/
+// hasMissed) - which filterFieldEvals itself has no notion of - constrain the
+// field-evals table via the already-filtered trial population.
+export function scopeToTrials(fieldEvals: FieldEvalRow[], trials: TrialRow[]): FieldEvalRow[] {
+  const ncts = new Set(trials.map((t) => t.nct))
+  return fieldEvals.filter((f) => ncts.has(f.nct))
+}
+
 export function filterFieldEvals(rows: FieldEvalRow[], f: FilterState): FieldEvalRow[] {
   const q = f.search.trim().toLowerCase()
   return rows.filter((r) => {

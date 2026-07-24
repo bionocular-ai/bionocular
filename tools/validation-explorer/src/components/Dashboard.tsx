@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Too
 import { decisionBreakdown, failRateByField, missedValuesCount, scoreHistogram } from '@/lib/aggregate'
 import { cn } from '@/lib/cn'
 import { DECISION_DOT_CLASS } from '@/lib/decision-style'
-import type { FieldEvalRow, TrialRow } from '@/lib/types'
+import type { TrialRow } from '@/lib/types'
 import { StatTile } from './StatTile'
 
 // Chart chrome + data colors, per the dataviz reference palette (light chart surface).
@@ -52,13 +52,12 @@ function ChartCard({ title, empty, children }: { title: string; empty: boolean; 
 
 export function Dashboard({
   trials,
-  fieldEvals,
   metadata,
 }: {
   trials: TrialRow[]
-  fieldEvals: FieldEvalRow[]
   metadata: Record<string, unknown>
 }) {
+  const fieldEvals = trials.flatMap((t) => t.fields)
   const breakdown = decisionBreakdown(trials)
   const byField = failRateByField(fieldEvals).map((r) => ({ ...r, pct: Math.round(r.rate * 100) }))
   const hist = scoreHistogram(trials)

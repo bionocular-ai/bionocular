@@ -18,6 +18,12 @@ describe('TrialsTable', () => {
     expect(screen.getByText(/because/)).toBeInTheDocument()
   })
 
+  it('renders the is_valid column', () => {
+    render(<TrialsTable rows={rows} />)
+    expect(screen.getByText('is_valid')).toBeInTheDocument()
+    expect(screen.getByText('yes')).toBeInTheDocument()
+  })
+
   it('renders the empty state when there are no rows', () => {
     render(<TrialsTable rows={[]} />)
     expect(screen.getByText('No trials match the current filters.')).toBeInTheDocument()

@@ -38,6 +38,19 @@ const columns = [
     header: 'Score',
     cell: (c) => <span className={cn('tabular-nums')}>{c.getValue()?.toFixed(2) ?? '-'}</span>,
   }),
+  col.accessor('isValid', {
+    header: 'is_valid',
+    cell: (c) => (
+      <span
+        className={cn(
+          'inline-block rounded px-1.5 py-0.5 text-xs font-semibold tracking-wide',
+          c.getValue() ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700',
+        )}
+      >
+        {c.getValue() ? 'yes' : 'no'}
+      </span>
+    ),
+  }),
   col.accessor('failCount', { header: '# FAIL' }),
   col.accessor('missedCount', { header: '# missed' }),
   col.accessor((r) => r.cancerType.join(', '), { id: 'cancerType', header: 'Cancer type' }),

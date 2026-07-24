@@ -20,9 +20,16 @@ export async function fetchRun(id: string): Promise<NormalizedRun> {
   if (!vRes.ok) throw new Error(`Failed to load validation.json for ${id}`)
   const validation: RawValidation = await vRes.json()
 
+  // results.json is optional (cancer_type enrichment only) - a transport
+  // failure (rejected fetch) must degrade the same way a non-ok response
+  // does, not force the whole run into the error state.
   let results: RawResults | null = null
-  const rRes = await fetch(`/runs/${id}/results.json`)
-  if (rRes.ok) results = await rRes.json()
+  try {
+    const rRes = await fetch(`/runs/${id}/results.json`)
+    if (rRes.ok) results = await rRes.json()
+  } catch {
+    results = null
+  }
 
   return normalizeRun(validation, results)
 }
