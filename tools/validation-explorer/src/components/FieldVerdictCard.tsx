@@ -1,14 +1,6 @@
 import type { FieldEvalRow } from '@/lib/types'
+import { STATUS_BADGE_CLASS } from '@/lib/status-style'
 import { cn } from '@/lib/cn'
-
-// Status accent mirrors the app's existing semantics: FAIL takes the same
-// "critical" red used for the fail-rate chart series; PASS takes the same
-// emerald used for a "kept" decision. Keeps red/green meaning consistent
-// across the whole tool instead of inventing a third color pairing here.
-const STATUS_BADGE_CLASS: Record<FieldEvalRow['status'], string> = {
-  FAIL: 'bg-rose-100 text-rose-700',
-  PASS: 'bg-emerald-100 text-emerald-700',
-}
 
 export function FieldVerdictCard({ field }: { field: FieldEvalRow }) {
   const hasCorrection = field.corrected !== null && field.corrected !== field.extracted

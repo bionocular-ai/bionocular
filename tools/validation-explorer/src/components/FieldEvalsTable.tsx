@@ -1,17 +1,8 @@
 import { useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { FieldEvalRow } from '@/lib/types'
+import { STATUS_BADGE_CLASS } from '@/lib/status-style'
 import { cn } from '@/lib/cn'
-
-// Status accent mirrors FieldVerdictCard's semantics: FAIL takes the same
-// "critical" red used for the fail-rate chart series; PASS takes the same
-// emerald used for a "kept" decision. Kept local (not decision-style.ts)
-// because it's a status color, not a decision color - the two are separate
-// vocabularies in this app.
-const STATUS_BADGE_CLASS: Record<FieldEvalRow['status'], string> = {
-  FAIL: 'bg-rose-100 text-rose-700',
-  PASS: 'bg-emerald-100 text-emerald-700',
-}
 
 // Shared grid template so the header row and every body row line up. Widths
 // are fixed for the short/structured columns; the two value columns split
