@@ -1,18 +1,10 @@
 import { useFilter } from '@/state/FilterContext'
 import { cn } from '@/lib/cn'
+import { DECISION_ACTIVE_CLASS } from '@/lib/decision-style'
 import type { Decision, FieldStatus } from '@/lib/types'
 
 const DECISIONS: Decision[] = ['kept', 'hitl', 'dropped', 'fixed', 'error']
 const FIELDS = ['treatment_name', 'modality', 'biomarker', 'stage', 'line_of_therapy', 'previous_treatment_criteria']
-
-// Semantic color per decision outcome, used only for the active state of the toggle chips.
-const DECISION_ACTIVE_CLASS: Record<Decision, string> = {
-  kept: 'border-emerald-600 bg-emerald-600 text-white',
-  fixed: 'border-blue-600 bg-blue-600 text-white',
-  hitl: 'border-amber-500 bg-amber-500 text-white',
-  dropped: 'border-slate-500 bg-slate-500 text-white',
-  error: 'border-rose-600 bg-rose-600 text-white',
-}
 
 const selectClass = cn(
   'rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700 shadow-sm',
