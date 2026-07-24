@@ -23,12 +23,7 @@ export function scoreHistogram(trials: TrialRow[], bins = 10): { bucket: string;
   const counts = new Array(bins).fill(0)
   for (const t of trials) {
     if (t.score === null) continue
-    let idx = Math.floor(t.score * bins)
-    // If score lands exactly on a bin boundary (not at 1.0), place it in the lower bin
-    if (t.score !== 1.0 && (t.score * bins) % 1 === 0) {
-      idx -= 1
-    }
-    idx = Math.min(bins - 1, idx)
+    const idx = Math.max(0, Math.min(bins - 1, Math.ceil(t.score * bins) - 1))
     counts[idx] += 1
   }
   return counts.map((count, i) => ({

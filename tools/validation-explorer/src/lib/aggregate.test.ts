@@ -34,4 +34,14 @@ describe('aggregations', () => {
   it('missedValuesCount counts trials with missed values', () => {
     expect(missedValuesCount(trials)).toBe(1)
   })
+  it('scoreHistogram does not drop trials with score 0', () => {
+    const withZero: TrialRow[] = [
+      ...trials,
+      { nct: 'D', decision: 'dropped', score: 0, isValid: false, failCount: 1, missedCount: 0, detViolationCount: 0, cancerType: [], fields: [] },
+    ]
+    const h = scoreHistogram(withZero, 2)
+    const total = h.reduce((sum, b) => sum + b.count, 0)
+    expect(total).toBe(withZero.length)
+    expect(h[0].count).toBe(2) // 0.5 and 0 both land in bucket 0
+  })
 })
