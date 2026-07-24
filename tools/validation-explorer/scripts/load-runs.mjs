@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync, copyFileSync, readdirSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildManifestEntry } from './load-runs.core.mjs'
+import { buildManifestEntry, runKey } from './load-runs.core.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const APP_ROOT = resolve(__dirname, '..')
@@ -41,7 +41,7 @@ function main() {
   const manifest = []
   for (const run of findValidationRuns(OUTPUT_ROOT)) {
     const meta = JSON.parse(readFileSync(run.validationPath, 'utf8')).metadata ?? {}
-    const destDir = join(PUBLIC_RUNS, run.runId)
+    const destDir = join(PUBLIC_RUNS, runKey(run.cohortDir, run.runId))
     mkdirSync(destDir, { recursive: true })
     copyFileSync(run.validationPath, join(destDir, 'validation.json'))
     if (existsSync(run.resultsPath)) {

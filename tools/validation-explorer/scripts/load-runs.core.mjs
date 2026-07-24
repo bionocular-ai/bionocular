@@ -8,9 +8,16 @@ export function cohortLabel(cohortDir) {
   return COHORT_LABELS[cohortDir] ?? cohortDir
 }
 
+// Cohort-qualified run id. Two cohorts can each hold a subdir named
+// `validation`; keying only on the subdir name collides, so both the copied
+// output dir and the manifest id must fold in the cohort dir.
+export function runKey(cohortDir, runId) {
+  return `${cohortDir}__${runId}`
+}
+
 export function buildManifestEntry(validationMeta, runId, cohortDir) {
   return {
-    id: runId,
+    id: runKey(cohortDir, runId),
     label: `${cohortLabel(cohortDir)} - ${runId}`,
     cohort: cohortLabel(cohortDir),
     run_date: validationMeta.run_date ?? null,
