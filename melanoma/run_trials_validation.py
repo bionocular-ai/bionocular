@@ -226,7 +226,10 @@ def main() -> None:
     print("=" * 60)
     for decision in ("kept", "fixed", "dropped", "hitl", "error"):
         print(f"  {decision.capitalize():9}: {counts.get(decision, 0)}")
+    cost = cost_calculator.get_summary()
+    print(f"  Cost     : ${cost.total_cost:.4f} ({cost.total_tokens:,} tokens)")
     print(f"  Output   : {config.output_dir}")
+    print(f"  Cost report: {config.output_dir / 'cost_report.json'}")
     print("=" * 60)
 
 

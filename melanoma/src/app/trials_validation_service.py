@@ -316,6 +316,16 @@ class ValidationResultWriter:
             json.dumps({"corrections": corrections}, indent=2, ensure_ascii=False)
         )
 
+    def write_cost_report(self, cost_calculator: CostCalculator) -> Path:
+        """Write cost_report.json from the CostCalculator (parity with extraction).
+
+        Written incrementally under the run's write-lock so a mid-run kill keeps
+        the spend recorded up to that point.
+        """
+        path = self._output_dir / "cost_report.json"
+        cost_calculator.save_detailed_report(str(path))
+        return path
+
 
 # ---------------------------------------------------------------------------
 # Service
@@ -472,6 +482,7 @@ class TrialValidationService:
                     summary.total_cost_usd = cost.total_cost
                     summary.total_tokens = cost.total_tokens
                     self._writer.write_validation(results, summary)
+                    self._writer.write_cost_report(self._cost_calculator)
                     logger.info(
                         "Validated %d/%d | %s | %s",
                         len(results),
@@ -487,6 +498,7 @@ class TrialValidationService:
         summary.total_cost_usd = cost.total_cost
         summary.total_tokens = cost.total_tokens
         self._writer.write_validation(results, summary)
+        self._writer.write_cost_report(self._cost_calculator)
         logger.info("Validation complete | %d trials", len(results))
         return results
 

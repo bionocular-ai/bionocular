@@ -90,6 +90,21 @@ PREVIOUS_TREATMENT_VALUES = [
     "IO Naive",
 ]
 
+# The eight skin-cancer indications this pipeline covers. Single source of truth
+# for the extraction scoping rule and the validation judge's vocabulary. These
+# strings match the cancer_type tags emitted by CT.gov discovery / Supabase
+# verbatim, so the judge never flags a live tag as out-of-vocabulary.
+CANCER_TYPE_VALUES = [
+    "Cutaneous Melanoma",
+    "Cutaneous Melanoma with Brain/CNS Metastasis",
+    "Acral Melanoma",
+    "Uveal Melanoma",
+    "Mucosal Melanoma",
+    "Cutaneous Squamous Cell Carcinoma",
+    "Basal Cell Carcinoma",
+    "Merkel Cell Carcinoma",
+]
+
 # ---------------------------------------------------------------------------
 # System prompt
 # ---------------------------------------------------------------------------
@@ -113,6 +128,7 @@ _BIOMARKER_LIST = "\n".join(f"  - {v}" for v in BIOMARKER_VALUES)
 _STAGE_LIST = "\n".join(f"  - {v}" for v in STAGE_VALUES)
 _LOT_LIST = "\n".join(f"  - {v}" for v in LINE_OF_THERAPY_VALUES)
 _PREV_TX_LIST = "\n".join(f"  - {v}" for v in PREVIOUS_TREATMENT_VALUES)
+_CANCER_TYPE_INLINE = " | ".join(CANCER_TYPE_VALUES)
 
 # ---------------------------------------------------------------------------
 # Single extraction prompt
@@ -126,9 +142,7 @@ Extract all clinical trial parameters from the trial text below in a single pass
 
 ## Global rule
 This pipeline covers eight skin cancer indications:
-  Cutaneous melanoma | Cutaneous melanoma with Brain/CNS metastasis |
-  Acral Melanoma | Uveal Melanoma | Mucosal Melanoma |
-  Cutaneous Squamous Cell Carcinoma | Basal Cell Carcinoma | Merkel Cell Carcinoma
+  {cancer_type_inline}
 
 Some trials enrol multiple tumour types (basket trials, pan-tumour studies).
 When that is the case, extract every field exclusively from the eligibility
@@ -313,6 +327,7 @@ def build_extraction_prompt(full_text: str) -> str:
         Complete prompt string (system + user) ready to send to the LLM.
     """
     user = _EXTRACTION_USER.format(
+        cancer_type_inline=_CANCER_TYPE_INLINE,
         modality_list=_MODALITY_LIST,
         biomarker_list=_BIOMARKER_LIST,
         stage_list=_STAGE_LIST,

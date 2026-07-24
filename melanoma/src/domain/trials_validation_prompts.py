@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from .trials_extraction_prompts import (
     BIOMARKER_VALUES,
+    CANCER_TYPE_VALUES,
     LINE_OF_THERAPY_VALUES,
     MODALITY_VALUES,
     PREVIOUS_TREATMENT_VALUES,
@@ -37,6 +38,11 @@ _ENUM_VOCAB = (
     f"previous_treatment_criteria:\n{_render(PREVIOUS_TREATMENT_VALUES)}"
 )
 
+# The eight skin-cancer indications, rendered as trusted context (NOT a graded
+# vocabulary). cancer_type is a CT.gov condition-query tag, so the judge uses it
+# to identify the in-scope cohort - it never grades it.
+_CANCER_TYPE_CONTEXT = _render(CANCER_TYPE_VALUES)
+
 _USER_TEMPLATE = """\
 ## Task
 Audit the extracted parameters below against the trial source text. Produce a
@@ -48,6 +54,32 @@ per-field verdict and an overall judgement.
   placebo, or supportive/diagnostic entries.
 - biomarker, stage, line_of_therapy, previous_treatment_criteria: the eligibility
   criteria.
+
+## cancer_type is TRUSTED context - do NOT grade it
+cancer_type is not an extracted value; it is a trusted tag from the CT.gov
+condition query / discovery step. Do NOT produce a field verdict for it, do NOT
+PASS, FAIL, correct, or add it to missed_values. Treat the tags as given.
+
+Its only role here is the SCOPING ANCHOR: it tells you which skin-cancer
+cohort(s) the trial concerns, so you grade the other fields against the right
+slice of eligibility. The eight skin-cancer indications a trial may be tagged
+with:
+{cancer_type_context}
+
+To recognise the cohort in the eligibility text:
+- "Cutaneous Melanoma with Brain/CNS Metastasis" means melanoma patients with
+  brain OR central-nervous-system (CNS, e.g. leptomeningeal, spinal) metastases.
+- Rare Melanoma = Acral, Uveal, or Mucosal melanoma: "ocular / choroidal / iris"
+  is Uveal; "subungual / palmar / plantar" is Acral; "vaginal / anorectal /
+  sinonasal / conjunctival mucosa" is Mucosal.
+
+## Scoping rule (cancer_type bounds every other field)
+Some trials enrol multiple tumour types (basket / pan-tumour studies). Judge
+every field ONLY against the eligibility criteria that apply to the trial's
+skin-cancer indication(s). Discard requirements belonging to other tumour types
+(e.g. NSCLC, RCC, HNSCC, colorectal, bladder): do not FAIL a field for omitting
+such a value, and do not credit a value drawn from a non-skin cohort. Criteria
+shared across all cohorts (e.g. ECOG performance status) remain valid.
 
 ## Values are inferred, not copied
 Extracted values are mapped from source language, they do not appear verbatim.
@@ -90,6 +122,7 @@ Judge whether the source *justifies* the mapped value. Examples:
 def build_validation_prompt(source_text: str, candidate_json: str) -> str:
     """Assemble the full judge prompt for one trial."""
     user = _USER_TEMPLATE.format(
+        cancer_type_context=_CANCER_TYPE_CONTEXT,
         enum_vocab=_ENUM_VOCAB,
         source_text=source_text.strip(),
         candidate_json=candidate_json.strip(),
