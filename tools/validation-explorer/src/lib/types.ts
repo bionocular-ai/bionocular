@@ -14,7 +14,7 @@ export interface RawFieldEvaluation {
 export interface RawVerdict {
   is_valid: boolean
   validation_score: number
-  missed_values: string[]
+  missed_values: unknown[] // array of objects at runtime; only .length is consumed
   field_evaluations: RawFieldEvaluation[]
 }
 
@@ -23,7 +23,7 @@ export interface RawTrial {
   decision: Decision
   validation_score: number | null
   is_valid: boolean
-  deterministic_violations: string[]
+  deterministic_violations: unknown[] // array of objects at runtime; only .length is consumed
   applied_corrections: unknown[]
   verdict: RawVerdict | null
   error_message?: string | null
