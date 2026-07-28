@@ -129,8 +129,12 @@ def test_classifier_cancer_type_normalization():
     ), "Advanced Melanoma should normalize to approved category"
 
 
-def test_classifier():
-    """Run all classifier tests and print results."""
+def run_all_classifier_tests():
+    """Run all classifier tests and print results.
+
+    Not named `test_*`: pytest would collect it, re-run the three real tests a
+    second time, and warn about the bool return. It exists for `__main__` only.
+    """
     print("Testing TherapyClassifier with therapy_approval_status.json")
     print("=" * 80)
 
@@ -166,5 +170,5 @@ def test_classifier():
 
 
 if __name__ == "__main__":
-    success = test_classifier()
+    success = run_all_classifier_tests()
     sys.exit(0 if success else 1)

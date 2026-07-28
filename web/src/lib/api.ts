@@ -423,9 +423,13 @@ export const trialsApi = {
       .select(dataSelect)
       .contains('cancer_type', [dbCancerType]);
 
+    // `modality` is a '; '-joined text column, so a multi-value row
+    // ("Chemotherapy; Radiotherapy") never equals a single filter value.
+    // Substring match is what makes those rows selectable at all.
     if (filters.modality) {
-      countQ = countQ.eq('modality', filters.modality);
-      dataQ = dataQ.eq('modality', filters.modality);
+      const pattern = `%${filters.modality}%`;
+      countQ = countQ.ilike('modality', pattern);
+      dataQ = dataQ.ilike('modality', pattern);
     }
 
     countQ = applySponsor(countQ);
@@ -1248,7 +1252,7 @@ export const analyticsApi = {
       query = query.contains('cancer_type', [getDbCancerType(filters.cancer_type)]);
     }
     if (filters.modality) {
-      query = query.eq('modality', filters.modality);
+      query = query.ilike('modality', `%${filters.modality}%`);
     }
     if (filters.therapy_type && filters.therapy_type !== 'all') {
       query = query.eq('type_of_therapy', filters.therapy_type);

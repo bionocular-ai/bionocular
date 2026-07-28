@@ -5,7 +5,7 @@ pipeline, independent of the LLM or storage backend used.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Optional
 
@@ -54,7 +54,7 @@ class TrialParameterResult:
 
     extraction_status: ExtractionStatus = ExtractionStatus.DONE
     error_message: Optional[str] = None
-    extracted_at: datetime = field(default_factory=datetime.utcnow)
+    extracted_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict:
         """Serialise to a plain dict suitable for JSON output."""

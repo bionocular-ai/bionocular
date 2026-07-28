@@ -28,10 +28,17 @@ const MODALITY_HEADERS = [
   'CAR-T',
   'NK or Myeloid Cell Therapy',
   'TIL Therapy',
+  'Cell Therapy',
+  'Gene Therapy',
   'Small Molecule',
   'Antibody-Drug Conjugate',
   'Oncolytic Virus',
   'Chemotherapy',
+  'Radiotherapy',
+  'Radiopharmaceutical',
+  'Photodynamic Therapy',
+  'Surgery/Procedure',
+  'Device',
 ] as const;
 
 const MODALITY_OTHER = 'Other';
@@ -130,11 +137,24 @@ function normalizeModality(apiModality: string | null | undefined): (typeof MODA
     'nk cell': 'NK or Myeloid Cell Therapy',
     'til therapy': 'TIL Therapy',
     'til': 'TIL Therapy',
+    'cell therapy': 'Cell Therapy',
+    'adoptive cell therapy': 'Cell Therapy',
+    'gene therapy': 'Gene Therapy',
     'small molecule': 'Small Molecule',
     'antibody-drug conjugate': 'Antibody-Drug Conjugate',
     'adc': 'Antibody-Drug Conjugate',
     'oncolytic virus': 'Oncolytic Virus',
     'chemotherapy': 'Chemotherapy',
+    'radiotherapy': 'Radiotherapy',
+    'radiation': 'Radiotherapy',
+    'radiation therapy': 'Radiotherapy',
+    'radiopharmaceutical': 'Radiopharmaceutical',
+    'photodynamic therapy': 'Photodynamic Therapy',
+    'pdt': 'Photodynamic Therapy',
+    'surgery/procedure': 'Surgery/Procedure',
+    'surgery': 'Surgery/Procedure',
+    'procedure': 'Surgery/Procedure',
+    'device': 'Device',
   };
   if (aliases[lower]) return aliases[lower];
   const exact = MODALITY_HEADERS.find((h) => h.toLowerCase() === lower);

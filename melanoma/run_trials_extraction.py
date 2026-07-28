@@ -166,6 +166,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "Overrides --limit and --cancer-type.",
     )
     parser.add_argument(
+        "--nct-file",
+        type=Path,
+        metavar="PATH",
+        help="File with one NCT number per line (blank lines and #comments "
+        "ignored), merged with any --nct flags. Use this for backfill runs: "
+        "hundreds of repeated --nct flags is kilobytes of argv and does not "
+        "survive every shell intact.",
+    )
+    parser.add_argument(
         "--cancer-type",
         metavar="CANCER_TYPE",
         action="append",
@@ -204,6 +213,22 @@ def _build_parser() -> argparse.ArgumentParser:
         "Use a dedicated --output-dir to avoid clobbering other runs' results.json.",
     )
     parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=5,
+        metavar="N",
+        help="Max in-flight extraction calls (default: 5).",
+    )
+    parser.add_argument(
+        "--modality-only",
+        action="store_true",
+        help="Extract modality alone with a narrow prompt, for backfill runs "
+        "where every other parameter is already extracted. Results carry an "
+        "empty biomarker/stage/line_of_therapy/previous_treatment_criteria, so "
+        "this REQUIRES a dedicated --output-dir: results.json merges by NCT "
+        "number and would otherwise blank out a full run's fields.",
+    )
+    parser.add_argument(
         "-v", "--verbose",
         action="store_true",
         help="Enable DEBUG-level logging.",
@@ -237,6 +262,34 @@ def _validate_env(project: str | None, location: str | None) -> tuple[str, str]:
     # it as such.  The asserts are a zero-cost hint that narrows str | None → str.
     assert project and location
     return project, location
+
+
+def _collect_nct_numbers(
+    flags: list[str] | None, path: Path | None
+) -> list[str] | None:
+    """Merge --nct flags with the contents of --nct-file, preserving order.
+
+    Args:
+        flags: Values collected from repeated --nct flags.
+        path: File with one NCT number per line; blank lines and lines starting
+            with '#' are ignored.
+
+    Returns:
+        Deduplicated, upper-cased NCT numbers, or None when neither was given.
+    """
+    collected = list(flags or [])
+    if path is not None:
+        if not path.exists():
+            print(f"ERROR: --nct-file not found: {path}", file=sys.stderr)
+            sys.exit(1)
+        collected += [
+            line.strip()
+            for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+    if not collected:
+        return None
+    return list(dict.fromkeys(n.upper() for n in collected))
 
 
 def _validate_paths(
@@ -281,7 +334,7 @@ def main() -> None:
         _validate_paths(args.trials_db, args.exports_dir)
 
     # Build config
-    nct_numbers = [n.upper() for n in args.nct_numbers] if args.nct_numbers else None
+    nct_numbers = _collect_nct_numbers(args.nct_numbers, args.nct_file)
     config = ExtractionConfig(
         trials_db_path=args.trials_db,
         exports_dir=args.exports_dir,
@@ -295,6 +348,8 @@ def main() -> None:
         cancer_type_filter=args.cancer_types or None,
         nct_allowlist=nct_numbers,
         snapshot_path=args.snapshot,
+        modality_only=args.modality_only,
+        concurrency=args.concurrency,
     )
 
     logger.info("=" * 60)
@@ -305,6 +360,7 @@ def main() -> None:
     logger.info("Last       : %s", config.last)
     logger.info("Resume     : %s", config.resume)
     logger.info("Dry run    : %s", config.dry_run)
+    logger.info("Modality only: %s", config.modality_only)
     logger.info(
         "Cancer types: %s",
         ", ".join(config.cancer_type_filter) if config.cancer_type_filter else "all",

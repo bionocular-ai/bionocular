@@ -18,6 +18,9 @@ data/processed/ESMO_Abstracts/
 # Output files directory (all generated output files)
 data/output/
 
+# Full-table dumps taken before a destructive write (backfill_modality.py)
+data/backups/
+
 # Trial API export and merged files
 data/trials_db/trial_api_exports/
 data/trials_db/trial_api_merged/
