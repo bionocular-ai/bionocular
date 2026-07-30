@@ -134,7 +134,7 @@ class SnapshotTrialSource:
         purpose_block = (
             f"primaryPurpose: {primary_purpose}\n\n" if primary_purpose else ""
         )
-        full_text = (
+        mechanism_text = (
             f"NCT Number: {nct_number}\n\n"
             f"{purpose_block}"
             f"officialTitle:\n{official_title}\n\n"
@@ -142,11 +142,13 @@ class SnapshotTrialSource:
             f"{detailed_block}"
             f"{interventions_block}"
             f"{arm_groups_block}"
-            f"eligibilityCriteria:\n{eligibility}\n"
         )
+        full_text = f"{mechanism_text}eligibilityCriteria:\n{eligibility}\n"
         return TrialText(
             nct_number=nct_number,
             official_title=official_title,
             brief_summary=brief_summary,
             full_text=full_text,
+            # Everything above eligibilityCriteria: what is given, not who enrols.
+            modality_text=mechanism_text.rstrip() + "\n",
         )

@@ -236,6 +236,43 @@ def test_load_trial_empty_other_names_leaves_name_bare() -> None:
     assert "also known as" not in full_text
 
 
+def test_modality_text_keeps_the_mechanism_sections() -> None:
+    """The modality-only run needs what is given, so every mechanism-bearing
+    section must survive the narrowing."""
+    src = SnapshotTrialSource(_snapshot([_TRIAL_CODE_NAMED]))
+    modality_text = src.load_trial("NCT00000020").modality_text
+    for kept in (
+        "NCT Number: NCT00000020",
+        "primaryPurpose: TREATMENT",
+        "officialTitle:",
+        "briefSummary:",
+        "detailedDescription:",
+        "interventions:",
+        "armGroups:",
+        "also known as",
+    ):
+        assert kept in modality_text
+
+
+def test_modality_text_drops_eligibility_criteria() -> None:
+    """Eligibility is who may enrol, not what is given.
+
+    It is the bulk of the prompt and its prior-therapy drug names actively
+    mislead a modality decision, so the narrow run must not see it.
+    """
+    trial = dict(_TRIAL_CODE_NAMED)
+    trial["eligibility_criteria"] = "Inclusion: prior ipilimumab and dabrafenib."
+    src = SnapshotTrialSource(_snapshot([trial]))
+    loaded = src.load_trial("NCT00000020")
+
+    assert "eligibilityCriteria:" not in loaded.modality_text
+    assert "ipilimumab" not in loaded.modality_text
+    # The single-pass run still needs it - stage and line of therapy live there.
+    assert "eligibilityCriteria:" in loaded.full_text
+    assert "ipilimumab" in loaded.full_text
+    assert len(loaded.modality_text) < len(loaded.full_text)
+
+
 def test_load_trial_arm_group_without_label_still_renders_description() -> None:
     trial = dict(_TRIAL_A)
     trial["nct_id"] = "NCT00000022"

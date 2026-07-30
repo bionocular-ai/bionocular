@@ -20,6 +20,10 @@ from src.domain.trials_extraction_prompts import (
     build_extraction_prompt,
     build_modality_prompt,
 )
+from src.infrastructure.clinical_trials.repository import (
+    _MODALITY_HEADERS,
+    _MODALITY_OTHER,
+)
 
 _NEW_VALUES = [
     "Radiotherapy",
@@ -29,6 +33,15 @@ _NEW_VALUES = [
     "Photodynamic Therapy",
     "Radiopharmaceutical",
     "Gene Therapy",
+]
+
+# The second round of additions. Kept separate from _NEW_VALUES so each list
+# still names the backfill it was added for.
+_V2_VALUES = [
+    "Imaging/Diagnostic Agent",
+    "Protein/Peptide Therapeutic",
+    "Dietary/Microbiome",
+    "Behavioral/Digital Health",
 ]
 
 _TRIAL = TrialText(
@@ -71,6 +84,22 @@ def test_new_modality_values_present() -> None:
     """The seven additions the backfill depends on are in the vocabulary."""
     for value in _NEW_VALUES:
         assert value in MODALITY_VALUES
+
+
+def test_v2_modality_values_present() -> None:
+    """The four additions the second backfill depends on are in the vocabulary."""
+    for value in _V2_VALUES:
+        assert value in MODALITY_VALUES
+
+
+def test_repository_headers_match_the_vocabulary() -> None:
+    """`repository.py` re-declares the vocabulary by hand for column ordering.
+
+    The two lists have drifted before, which folds a real class into Other on the
+    dashboard while extraction keeps producing it.
+    """
+    assert list(_MODALITY_HEADERS) == [v for v in MODALITY_VALUES if v != "Other"]
+    assert _MODALITY_OTHER == "Other"
 
 
 def test_modality_values_survive_the_column_encoding() -> None:
@@ -119,11 +148,36 @@ def test_modality_prompt_omits_the_other_fields() -> None:
 
 def test_prompts_route_radiation_and_procedure_away_from_other() -> None:
     """The old prompt sent RADIATION and PROCEDURE to Other by instruction."""
-    prompt = build_modality_prompt(_TRIAL.full_text)
-    assert "RADIATION  → Radiotherapy" in prompt
-    assert "PROCEDURE  → Surgery/Procedure" in prompt
+    prompt = " ".join(build_modality_prompt(_TRIAL.full_text).split())
+    assert "RADIATION → Radiotherapy" in prompt
+    assert "PROCEDURE → Surgery/Procedure" in prompt
     assert "RADIATION → Other" not in prompt
     assert "PROCEDURE → Other" not in prompt
+
+
+def test_prompt_keeps_non_treatment_studies_in_scope() -> None:
+    """Diagnostic and supportive-care trials do administer something.
+
+    The earlier rule returned [] whenever primaryPurpose was not TREATMENT, which
+    is what sent every PET tracer and diet arm to Other or NULL. The four v2
+    values only reach the output if that rule stays relaxed.
+    """
+    prompt = " ".join(build_modality_prompt(_TRIAL.full_text).split())
+    assert "DIAGNOSTIC, SCREENING, PREVENTION or SUPPORTIVE_CARE still gets a" in prompt
+    assert "Return [] only when nothing is administered" in prompt
+
+
+def test_prompt_grounds_each_v2_value_with_an_example() -> None:
+    """A value listed but never exemplified is one the model will not pick."""
+    prompt = " ".join(build_modality_prompt(_TRIAL.full_text).split())
+    for value, example in (
+        ("Imaging/Diagnostic Agent", "PET tracers"),
+        ("Protein/Peptide Therapeutic", "denileukin"),
+        ("Dietary/Microbiome", "faecal microbiota transplant"),
+        ("Behavioral/Digital Health", "patient-facing apps"),
+    ):
+        assert value in prompt
+        assert example in prompt
 
 
 def test_modality_prompt_includes_trial_text() -> None:
@@ -171,6 +225,38 @@ async def test_modality_only_uses_the_narrow_prompt() -> None:
 
 
 @pytest.mark.asyncio
+async def test_modality_only_sends_the_narrowed_trial_text() -> None:
+    """Only the mechanism sections are paid for when the source can split them."""
+    trial = TrialText(
+        nct_number="NCT00000002",
+        official_title="Study of Agent X",
+        brief_summary="Agent X is given intravenously.",
+        full_text="mechanism sections\neligibilityCriteria:\nprior ipilimumab\n",
+        modality_text="mechanism sections\n",
+    )
+    llm = _FakeLLM({"modality": ["Small Molecule"]})
+    extractor = TrialParameterExtractor(llm, modality_only=True)  # type: ignore[arg-type]
+
+    await extractor.extract(trial, ["Cutaneous Melanoma"])
+
+    assert "mechanism sections" in llm.prompt
+    assert "eligibilityCriteria" not in llm.prompt
+    assert "ipilimumab" not in llm.prompt
+
+
+@pytest.mark.asyncio
+async def test_modality_only_falls_back_to_full_text() -> None:
+    """The .txt loader cannot split sections and leaves modality_text empty."""
+    llm = _FakeLLM({"modality": ["Radiotherapy"]})
+    extractor = TrialParameterExtractor(llm, modality_only=True)  # type: ignore[arg-type]
+
+    assert _TRIAL.modality_text == ""
+    await extractor.extract(_TRIAL, ["Cutaneous Melanoma"])
+
+    assert "External beam radiotherapy" in llm.prompt
+
+
+@pytest.mark.asyncio
 async def test_modality_only_drops_values_outside_the_vocabulary() -> None:
     llm = _FakeLLM({"modality": ["Radiotherapy", "Proton Beam"]})
     extractor = TrialParameterExtractor(llm, modality_only=True)  # type: ignore[arg-type]
@@ -178,6 +264,37 @@ async def test_modality_only_drops_values_outside_the_vocabulary() -> None:
     result = await extractor.extract(_TRIAL, ["Cutaneous Melanoma"])
 
     assert result.modality == ["Radiotherapy"]
+
+
+@pytest.mark.parametrize("value", _V2_VALUES)
+@pytest.mark.asyncio
+async def test_v2_values_survive_the_vocabulary_filter(value: str) -> None:
+    """Each new value must round-trip; the filter drops anything unknown."""
+    llm = _FakeLLM({"treatment_name": "Agent", "modality": [value]})
+    extractor = TrialParameterExtractor(llm, modality_only=True)  # type: ignore[arg-type]
+
+    result = await extractor.extract(_TRIAL, ["Cutaneous Melanoma"])
+
+    assert result.modality == [value]
+    assert result.extraction_status == ExtractionStatus.DONE
+
+
+@pytest.mark.asyncio
+async def test_modality_only_keeps_repeats_for_combinations() -> None:
+    """One value per agent: a two-antibody regimen answers twice, and that arity
+    is the answer. Consumers collapse repeats for display, so the extractor must
+    not throw the information away."""
+    llm = _FakeLLM(
+        {
+            "treatment_name": "Nivolumab + Ipilimumab",
+            "modality": ["Monoclonal Antibody", "Monoclonal Antibody"],
+        }
+    )
+    extractor = TrialParameterExtractor(llm, modality_only=True)  # type: ignore[arg-type]
+
+    result = await extractor.extract(_TRIAL, ["Cutaneous Melanoma"])
+
+    assert result.modality == ["Monoclonal Antibody", "Monoclonal Antibody"]
 
 
 @pytest.mark.asyncio

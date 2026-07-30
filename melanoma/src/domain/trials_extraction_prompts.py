@@ -43,9 +43,13 @@ MODALITY_VALUES = [
     "Chemotherapy",
     "Radiotherapy",
     "Radiopharmaceutical",
+    "Imaging/Diagnostic Agent",
     "Photodynamic Therapy",
     "Surgery/Procedure",
     "Device",
+    "Protein/Peptide Therapeutic",
+    "Dietary/Microbiome",
+    "Behavioral/Digital Health",
     "Other",
 ]
 
@@ -154,20 +158,30 @@ Choose the modality value(s) that best describe the mechanism of treatment_name.
 - "Other" is a last resort: the mechanism is identifiable but fits none of the
   categories below. Never return "Other" alongside a specific value — if any
   agent has a specific class, drop "Other".
-- Return [] if the mechanism is completely unidentifiable, and also when
-  primaryPurpose is not TREATMENT and no therapeutic agent is administered
-  (diagnostic, screening, supportive-care and observational studies).
+- Return [] only when nothing is administered to the patient, or the mechanism is
+  completely unidentifiable. Registry, observational, sample-collection and
+  questionnaire-only studies return []. A study whose primaryPurpose is
+  DIAGNOSTIC, SCREENING, PREVENTION or SUPPORTIVE_CARE still gets a modality
+  whenever it administers something - a tracer, a contrast agent, a diet, a
+  behavioural programme - because the categories below cover those.
 - Use the intervention `type` from the interventions section as a prior, not a
   final answer:
-    RADIATION  → Radiotherapy — Radiopharmaceutical if the agent is a
-                 radiolabelled compound given to the patient
-    PROCEDURE  → Surgery/Procedure
-    DEVICE     → Device
-    GENETIC    → Gene Therapy — CAR-T or TIL Therapy when the product is an
-                 engineered or expanded cell infusion
-    DRUG       → usually Small Molecule or Chemotherapy
-    BIOLOGICAL → an immunotherapy class (Monoclonal Antibody, Vaccine,
-                 Immunostimulant/Cytokine, Bispecific, Oncolytic Virus)
+    RADIATION          → Radiotherapy, or Radiopharmaceutical / Imaging
+                         Diagnostic Agent for a radiolabelled compound given to
+                         the patient
+    PROCEDURE          → Surgery/Procedure
+    DEVICE             → Device, or Behavioral/Digital Health when the "device"
+                         is a patient-facing app or programme
+    DIAGNOSTIC_TEST    → Imaging/Diagnostic Agent for an administered agent,
+                         Device for imaging or analysis hardware
+    GENETIC            → Gene Therapy, or CAR-T / TIL Therapy when the product
+                         is an engineered or expanded cell infusion
+    DRUG               → usually Small Molecule or Chemotherapy
+    BIOLOGICAL         → an immunotherapy class (Monoclonal Antibody, Vaccine,
+                         Immunostimulant/Cytokine, Bispecific, Oncolytic Virus)
+                         or Protein/Peptide Therapeutic
+    BEHAVIORAL         → Behavioral/Digital Health
+    DIETARY_SUPPLEMENT → Dietary/Microbiome
   The type narrows the options; decide the exact class from the drug name and
   mechanism, since type is not one-to-one. The `also known as` names carry the
   decoded mechanism for code-named agents — read them.
@@ -192,14 +206,40 @@ Reference examples (modality → example intervention):
   Chemotherapy               → Dacarbazine, Temozolomide, carboplatin
   Radiotherapy               → external beam radiotherapy, SBRT, brachytherapy,
                                proton therapy
-  Radiopharmaceutical        → Lymphoseek (technetium Tc-99m tilmanocept),
-                               Lu-177 and Ac-225 labelled agents
+  Radiopharmaceutical        → Lu-177 and Ac-225 labelled agents given for their
+                               radiation dose to tumour
+  Imaging/Diagnostic Agent   → 18F / 68Ga / 89Zr PET tracers, Lymphoseek
+                               (technetium Tc-99m tilmanocept), indocyanine
+                               green, fluorescein, gadolinium contrast,
+                               superparamagnetic iron oxide, tumour-paint
+                               fluorophores (BLZ-100)
   Photodynamic Therapy       → Metvix (methyl aminolevulinate), 5-ALA plus
                                light activation
   Surgery/Procedure          → wide local excision, sentinel lymph node biopsy,
-                               isolated limb perfusion, cryosurgery
+                               isolated limb perfusion, cryosurgery, and the
+                               implantation of a tissue-engineered graft or skin
+                               substitute (PHITAH, engineered cartilage,
+                               autograft, fibrin sealant)
   Device                     → electroporation devices, laser and ablation
-                               systems, tumour-treating fields
+                               systems, tumour-treating fields, and diagnostic
+                               imaging hardware or image-analysis software
+                               (MelaFind, reflectance confocal microscopy,
+                               LC-OCT, melanoma image-analysis algorithms)
+  Protein/Peptide Therapeutic → fusion proteins and immunotoxins (denileukin
+                               diftitox, ziv-aflibercept, AMP-224, ICON-1),
+                               therapeutic enzymes (ADI-PEG 20, PEG-BCT-100,
+                               bromelain debriding agents), peptides and
+                               peptide-drug conjugates (ST101, TH1902),
+                               polyclonal immunoglobulin (IVIG)
+  Dietary/Microbiome         → ketogenic, Mediterranean and high-fibre diets,
+                               fasting protocols, dietary supplements, vitamins,
+                               and also faecal microbiota transplant, live
+                               biotherapeutics (MRx0518) and engineered
+                               bacterial vectors (ACTM-838)
+  Behavioral/Digital Health  → patient education, psychotherapy (EMDR, CBT),
+                               exercise and smoking-cessation programmes,
+                               patient-facing apps, telemonitoring and
+                               teleoncology interventions
   Other                      → mechanism identified but outside every category
                                above
 
@@ -210,10 +250,21 @@ Tie-breaks:
   - A dendritic-cell product presenting antigen is a Vaccine; any other infused
     cell product is CAR-T / TIL Therapy / NK or Myeloid Cell Therapy when it
     fits one of those, otherwise Cell Therapy.
-  - A radiolabelled agent administered to the patient is a Radiopharmaceutical;
-    beam or implanted-source treatment is Radiotherapy.
+  - A radiolabelled agent administered to the patient is a Radiopharmaceutical
+    when it is given for its radiation dose to tumour, and an Imaging/Diagnostic
+    Agent when it is given to visualise or localise disease. Beam or
+    implanted-source treatment is Radiotherapy. Non-radioactive contrast agents
+    and fluorescent dyes are Imaging/Diagnostic Agents too.
   - Surgery/Procedure is the operative act; Device is the instrument or hardware
     when the hardware itself is the intervention under study.
+  - The antibody and cytokine classes win whenever they apply: Protein/Peptide
+    Therapeutic is only for protein and peptide agents that are not a Monoclonal
+    Antibody, Bispecific, Antibody-Drug Conjugate or Immunostimulant/Cytokine.
+  - A cultured skin or cartilage construct implanted surgically is
+    Surgery/Procedure; Cell Therapy is for infused cell products.
+  - A patient-facing app, programme or coaching intervention is
+    Behavioral/Digital Health even when its intervention `type` is DEVICE;
+    Device is measurement or treatment hardware.
 
 Combination example: "V940 + Pembrolizumab" → ["Vaccine", "Monoclonal Antibody"]
 Allowed modality values:

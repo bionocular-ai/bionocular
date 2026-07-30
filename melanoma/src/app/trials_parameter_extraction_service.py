@@ -420,11 +420,15 @@ class TrialParameterExtractor:
         the modality decision and is kept on the result for human review of the
         backfill diff; no consumer of a modality-only run writes it back.
 
+        Only the mechanism-bearing sections are sent (`modality_text`): purpose,
+        titles, summary, detailed description, interventions and arm groups.
+        Sources that cannot split the text leave it empty and get `full_text`.
+
         An empty modality is PARTIAL, not DONE: for the backfill that means
         "the model could not tell", which must not overwrite a stored value.
         """
         try:
-            prompt = build_modality_prompt(trial.full_text)
+            prompt = build_modality_prompt(trial.modality_text or trial.full_text)
             raw = await self._llm.extract_json(
                 prompt,
                 operation="extraction",
@@ -463,6 +467,13 @@ class TrialParameterExtractor:
         A value the vocabulary does not know is discarded silently everywhere
         else in this file, which makes a prompt/vocabulary mismatch look like a
         clean run. Log it loudly instead.
+
+        Repeats are kept on purpose: the prompt asks for one value per agent, so
+        a two-antibody combination answers ["Monoclonal Antibody",
+        "Monoclonal Antibody"] and that is the arity of the regimen. Every
+        consumer collapses it for display - `_parse_modalities` here and
+        `parseModalityValues` on the landscape page both dedupe - so nothing
+        downstream double-counts.
         """
         kept = [v for v in values if v in _MODALITY_SET]
         rejected = [v for v in values if v not in _MODALITY_SET]
