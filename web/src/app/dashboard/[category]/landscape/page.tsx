@@ -12,40 +12,15 @@ import { TrialCard } from '@/components/dashboard/TrialCard';
 import { trialsApi } from '@/lib/api';
 import type { DashboardTrialCard } from '@/lib/api';
 import { Loader2, Filter, FileDown, FileSpreadsheet, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check } from 'lucide-react';
-import { DEFAULT_CANCER_TYPE_SLUG, PHASE_OPTIONS, STATUS_OPTIONS, slugToCategory } from '@/lib/dashboard-constants';
+import { DEFAULT_CANCER_TYPE_SLUG, MODALITY_OTHER, MODALITY_VALUES, PHASE_OPTIONS, STATUS_OPTIONS, slugToCategory } from '@/lib/dashboard-constants';
 import { isOpenStudyStatus, selectTrialsWithOpenBias } from '@/lib/utils/trial-utils';
 import { cn } from '@/lib/utils';
 import type { GroupByOption } from '@/types/bullseye';
 import { type ViewMode } from '@/components/dashboard/ViewToggle';
 import { BullseyeView } from '@/components/dashboard/BullseyeView';
 
-/** Modality column headers in display order (reference). */
-const MODALITY_HEADERS = [
-  'Monoclonal Antibody',
-  'Vaccine',
-  'Immunostimulant/Cytokine',
-  'Bispecific',
-  'CAR-T',
-  'NK or Myeloid Cell Therapy',
-  'TIL Therapy',
-  'Cell Therapy',
-  'Gene Therapy',
-  'Small Molecule',
-  'Antibody-Drug Conjugate',
-  'Oncolytic Virus',
-  'Chemotherapy',
-  'Radiotherapy',
-  'Radiopharmaceutical',
-  'Imaging/Diagnostic Agent',
-  'Photodynamic Therapy',
-  'Surgery/Procedure',
-  'Device',
-  'Protein/Peptide Therapeutic',
-  'Dietary/Microbiome',
-  'Behavioral/Digital Health',
-] as const;
-
-const MODALITY_OTHER = 'Other';
+/** Modality column headers in display order. `Other` is rendered last, separately. */
+const MODALITY_HEADERS = MODALITY_VALUES.filter((v) => v !== MODALITY_OTHER);
 
 const UNSPECIFIED_LABEL = 'Unspecified';
 /** Canonical group-by category values (match trials_extraction_prompts.py). Column order follows these lists. */
