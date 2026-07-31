@@ -567,3 +567,31 @@ class PublicationPostprocessingPatterns:
     ORIGINAL_ARTICLE_WITH_JOURNAL: Final[
         str
     ] = r"^#{0,4}\s*\*?\*?original\s+article\s+.*\*?\*?$"
+
+
+# =============================================================================
+# RESULTS VALIDATION (abstract / publication LLM-as-a-Judge pipeline)
+# =============================================================================
+
+
+class ResultsValidation:
+    """Constants for the abstract / publication validation pipeline."""
+
+    # Sentinels the extractor writes when a source carries no value for a field.
+    # "NR" ("not reached") is a real clinical value, not an absence marker.
+    EMPTY_VALUE_TOKENS: Final[frozenset[str]] = frozenset(
+        {"", "not found", "n/a", "na", "none", "null", "not reported", "-"}
+    )
+
+    # Cost-calculator labels for the judge's LLM calls.
+    OPERATION: Final[str] = "results_validation"
+    ATTRIBUTE_TYPE: Final[str] = "results_validation"
+
+    # Output filenames written to the validation output directory.
+    VALIDATION_FILE: Final[str] = "validation.json"
+    CLEANED_FILE: Final[str] = "results.cleaned.json"
+    HITL_FILE: Final[str] = "validation_hitl.json"
+    MISSED_VALUES_FILE: Final[str] = "missed_values.json"
+    DROPPED_ARMS_FILE: Final[str] = "dropped-arms.json"
+    COST_REPORT_FILE: Final[str] = "cost_report.json"
+    CHECKPOINT_FILE: Final[str] = "validation_checkpoint.json"
