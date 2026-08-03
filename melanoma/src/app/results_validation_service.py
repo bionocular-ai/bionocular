@@ -90,6 +90,8 @@ _MIDDLE_DOT_DECIMAL = re.compile(r"(?<=\d)[·•∙⋅](?=\d)")
 # (the same normalisation `value_validator.validate_ci` performs).
 _RANGE_TO = re.compile(r"(?<=\d)\s+to\s+(?=\d)", re.IGNORECASE)
 _HAS_DIGIT = re.compile(r"\d")
+#: "24" / "24.0" / "24.00" - a whole number, however the extractor spelled it.
+_INTEGRAL_FLOAT = re.compile(r"(\d+)(?:\.0+)?")
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +116,10 @@ def value_supported_by_quote(value: str, quote: str) -> bool:
     A value carrying no digits at all ("NR", "Significant") is a token the source
     states in words ("not reached"), which containment cannot express - such a
     value is left to the quote-grounding check alone.
+
+    A whole number stored as a float ("24.0") matches a source that prints it as an
+    integer ("24%") and vice versa: abstracts store every percentage as a float, so
+    without this most abstract percentages would be downgraded.
     """
     if not value.strip() or not quote.strip():
         return False
@@ -121,8 +127,16 @@ def value_supported_by_quote(value: str, quote: str) -> bool:
     if not _HAS_DIGIT.search(needle):
         return True
     haystack = _normalise_numerals(quote)
-    pattern = rf"(?<![\d.]){re.escape(needle)}(?![\d])"
-    return re.search(pattern, haystack) is not None
+    integral = _INTEGRAL_FLOAT.fullmatch(needle)
+    if integral:
+        # A whole number matches either spelling, but must not be satisfied by a
+        # different decimal: "24.0" may match "24" or "24.00", never "24.5".
+        core = rf"{re.escape(integral.group(1))}(?:\.0+)?"
+        tail = r"(?![\d])(?!\.\d)"
+    else:
+        core = re.escape(needle)
+        tail = r"(?![\d])"
+    return re.search(rf"(?<![\d.]){core}{tail}", haystack) is not None
 
 
 def effective_status(

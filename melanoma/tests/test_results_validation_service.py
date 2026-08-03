@@ -126,6 +126,29 @@ def test_a_middle_dot_outside_a_number_is_not_treated_as_a_decimal_point() -> No
     assert not value_supported_by_quote("1.2", "· 1 patient · 2 patients")
 
 
+def test_an_integer_percentage_stored_as_a_float_matches_its_quote() -> None:
+    """Abstracts store whole-number percentages as '24.0' while the source prints
+    '24%'. Without this, most abstract percentages are downgraded to UNCERTAIN."""
+    assert value_supported_by_quote("24.0", "the grade 3-4 irAE rate was 24%")
+    assert value_supported_by_quote("57.0", "57% grade 3-4")
+    assert value_supported_by_quote("100.0", "toxicity occurred in 100%")
+    # The source may itself print the trailing zero.
+    assert value_supported_by_quote("24.0", "the rate was 24.0%")
+
+
+def test_a_float_value_still_must_not_match_a_longer_number() -> None:
+    """Relaxing the trailing zero must not let '24.0' be satisfied by '240'."""
+    assert not value_supported_by_quote("24.0", "240 patients were enrolled")
+    assert not value_supported_by_quote("24.0", "the rate was 24.5%")
+    assert not value_supported_by_quote("2.0", "the rate was 2.05%")
+
+
+def test_a_genuine_decimal_is_unaffected_by_the_trailing_zero_rule() -> None:
+    """'24.5' must keep matching '24.50' and must not match a bare '24'."""
+    assert value_supported_by_quote("24.5", "the rate was 24.5%")
+    assert not value_supported_by_quote("24.5", "the rate was 24%")
+
+
 def test_a_lancet_style_value_still_must_match_the_right_number() -> None:
     assert not value_supported_by_quote("11.0", "median survival was 25·1 months")
 
