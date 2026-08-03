@@ -15,6 +15,7 @@ import pytest
 from src.app.results_validation_service import (
     ResultsValidationConfig,
     ResultsValidationService,
+    ResultsValidationWriter,
     RouteOutcome,
     effective_status,
     route_arm,
@@ -550,3 +551,80 @@ def test_the_recall_report_groups_missed_values_by_field(tmp_path: Path) -> None
     missed = json.loads((tmp_path / "validation" / "missed_values.json").read_text())
 
     assert missed == {"total": 0, "by_field": {}}
+
+
+# ---------------------------------------------------------------------------
+# cost report accumulation across resumes
+# ---------------------------------------------------------------------------
+
+
+def _cost_totals(tmp_path: Path) -> dict:
+    report = json.loads((tmp_path / "validation" / "cost_report.json").read_text())
+    return report["summary"]
+
+
+def test_a_resumed_run_adds_its_spend_to_the_previous_report(tmp_path: Path) -> None:
+    """cost_report.json is rewritten every run. Without carrying the previous
+    spend forward, a resume pass makes a $14 cohort look like it cost $0.61."""
+    calc_one = CostCalculator()
+    calc_one.record_api_call(
+        prompt_tokens=1000, completion_tokens=100, model="stub", operation="a"
+    )
+    writer = ResultsValidationWriter(tmp_path / "validation")
+    writer.write_cost_report(calc_one)
+    first = _cost_totals(tmp_path)
+    assert first["total_requests"] == 1
+
+    calc_two = CostCalculator()
+    calc_two.record_api_call(
+        prompt_tokens=2000, completion_tokens=200, model="stub", operation="b"
+    )
+    resumed = ResultsValidationWriter(tmp_path / "validation", carry_forward_cost=True)
+    resumed.write_cost_report(calc_two)
+
+    total = _cost_totals(tmp_path)
+    assert total["total_requests"] == 2
+    assert total["total_prompt_tokens"] == 3000
+    assert total["total_completion_tokens"] == 300
+    assert total["total_cost"] == pytest.approx(
+        first["total_cost"] + calc_two.get_summary().total_cost
+    )
+
+
+def test_repeated_writes_within_one_run_do_not_double_count(tmp_path: Path) -> None:
+    """write_cost_report runs after every document; the carried baseline must be
+    snapshotted once, not re-merged on each incremental write."""
+    seed = CostCalculator()
+    seed.record_api_call(
+        prompt_tokens=1000, completion_tokens=100, model="stub", operation="a"
+    )
+    ResultsValidationWriter(tmp_path / "validation").write_cost_report(seed)
+
+    calc = CostCalculator()
+    writer = ResultsValidationWriter(tmp_path / "validation", carry_forward_cost=True)
+    for _ in range(3):
+        calc.record_api_call(
+            prompt_tokens=10, completion_tokens=1, model="stub", operation="b"
+        )
+        writer.write_cost_report(calc)
+
+    total = _cost_totals(tmp_path)
+    assert total["total_requests"] == 4
+    assert total["total_prompt_tokens"] == 1030
+
+
+def test_a_fresh_run_does_not_inherit_a_previous_cost_report(tmp_path: Path) -> None:
+    """--no-resume discards the previous results, so its spend must not be carried."""
+    seed = CostCalculator()
+    seed.record_api_call(
+        prompt_tokens=1000, completion_tokens=100, model="stub", operation="a"
+    )
+    ResultsValidationWriter(tmp_path / "validation").write_cost_report(seed)
+
+    calc = CostCalculator()
+    calc.record_api_call(
+        prompt_tokens=5, completion_tokens=1, model="stub", operation="b"
+    )
+    ResultsValidationWriter(tmp_path / "validation").write_cost_report(calc)
+
+    assert _cost_totals(tmp_path)["total_requests"] == 1

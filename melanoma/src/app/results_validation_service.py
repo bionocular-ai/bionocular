@@ -169,6 +169,48 @@ def effective_status(
     return ValidationFieldStatus.PASS
 
 
+def _merge_cost_report(prior_calls: list[dict], report: dict) -> dict:
+    """Fold `prior_calls` into `report`, recomputing totals from the union.
+
+    Every summary and breakdown figure is derivable from the call list, so the
+    merged report is recomputed rather than added up field by field.
+    """
+    calls = [*prior_calls, *report.get("api_calls", [])]
+    successes = sum(1 for c in calls if c.get("success"))
+    prompt = sum(c.get("prompt_tokens", 0) for c in calls)
+    completion = sum(c.get("completion_tokens", 0) for c in calls)
+    by_operation: dict[str, float] = {}
+    by_attribute: dict[str, float] = {}
+    by_model: dict[str, float] = {}
+    for call in calls:
+        cost = call.get("cost", 0.0)
+        for bucket, key in (
+            (by_operation, call.get("operation")),
+            (by_attribute, call.get("attribute_type")),
+            (by_model, call.get("model")),
+        ):
+            if key is not None:
+                bucket[key] = bucket.get(key, 0.0) + cost
+    return {
+        "summary": {
+            "total_requests": len(calls),
+            "total_prompt_tokens": prompt,
+            "total_completion_tokens": completion,
+            "total_tokens": prompt + completion,
+            "total_cost": sum(c.get("cost", 0.0) for c in calls),
+            "successful_requests": successes,
+            "failed_requests": len(calls) - successes,
+            "success_rate": successes / max(len(calls), 1) * 100,
+        },
+        "breakdown": {
+            "by_operation": by_operation,
+            "by_attribute": by_attribute,
+            "by_model": by_model,
+        },
+        "api_calls": calls,
+    }
+
+
 @dataclass
 class RouteOutcome:
     decision: ValidationDecision
@@ -297,9 +339,14 @@ class ValidationCheckpointManager:
 class ResultsValidationWriter:
     """Writes validation.json (merge-upsert) plus the derived routing files."""
 
-    def __init__(self, output_dir: Path) -> None:
+    def __init__(self, output_dir: Path, carry_forward_cost: bool = False) -> None:
         self._output_dir = output_dir
         output_dir.mkdir(parents=True, exist_ok=True)
+        # Snapshotted once: write_cost_report runs after every document, so
+        # re-reading the file each time would compound the carried spend.
+        self._prior_cost_calls: list[dict] = (
+            self._read_cost_calls() if carry_forward_cost else []
+        )
 
     def write_validation(
         self,
@@ -364,10 +411,26 @@ class ResultsValidationWriter:
         )
 
     def write_cost_report(self, cost_calculator: CostCalculator) -> Path:
-        """Write cost_report.json incrementally, so a mid-run kill keeps the spend."""
+        """Write cost_report.json incrementally, so a mid-run kill keeps the spend.
+
+        On a resumed run the previous report's calls are folded in, so the file
+        reports what the cohort cost rather than what the last pass cost. A fresh
+        run (``--no-resume``) re-validates everything, so it starts from zero.
+        """
         path = self._output_dir / ResultsValidation.COST_REPORT_FILE
         cost_calculator.save_detailed_report(str(path))
+        if self._prior_cost_calls:
+            report = json.loads(path.read_text())
+            report = _merge_cost_report(self._prior_cost_calls, report)
+            path.write_text(json.dumps(report, indent=2))
         return path
+
+    def _read_cost_calls(self) -> list[dict]:
+        path = self._output_dir / ResultsValidation.COST_REPORT_FILE
+        if not path.exists():
+            return []
+        calls = json.loads(path.read_text()).get("api_calls", [])
+        return calls if isinstance(calls, list) else []
 
     def _write(self, filename: str, payload: dict) -> None:
         (self._output_dir / filename).write_text(
@@ -415,7 +478,9 @@ class ResultsValidationService:
             checkpoint=ValidationCheckpointManager(
                 config.output_dir / ResultsValidation.CHECKPOINT_FILE
             ),
-            writer=ResultsValidationWriter(config.output_dir),
+            writer=ResultsValidationWriter(
+                config.output_dir, carry_forward_cost=config.resume
+            ),
             cost_calculator=cost_calculator,
         )
 
