@@ -41,9 +41,10 @@ _CHARS_PER_TOKEN_ESTIMATE = 4
 _BACKOFF_BASE_SECONDS = 1.0
 _BACKOFF_CAP_SECONDS = 30.0
 
-# Bounded per-request timeout (ms). Judge/extraction calls run ~3-8s; 90s is
-# generous over p99 yet caps a stalled socket that would otherwise hang a worker
-# forever (there is no default client timeout).
+# Bounded per-request timeout (ms); there is no default client timeout, so a
+# stalled socket would otherwise hang a worker forever. On the streamed path
+# (generate_structured) this bounds the gap between chunks, not total generation
+# time - so a long response is free to take as long as it needs.
 _REQUEST_TIMEOUT_MS = 90_000
 
 _RETRYABLE_TOKENS = (
@@ -405,31 +406,39 @@ class GeminiLLMService(LLMService, StructuredLLMService):
             response_schema=_inline_pydantic_schema(response_schema),
         )
 
-        def _sync_call() -> Any:
-            return self._client.models.generate_content(
+        def _sync_call() -> tuple[str, Any]:
+            # Streamed, not buffered: a non-streaming call sends nothing until the
+            # whole generation finishes, so the client read timeout ends up bounding
+            # total generation time and long judge responses trip it. Streaming makes
+            # the same timeout bound the gap between chunks instead.
+            text_parts: list[str] = []
+            usage: Any = None
+            for chunk in self._client.models.generate_content_stream(
                 model=effective_model,
                 contents=prompt,
                 config=config,
-            )
+            ):
+                part = chunk.text
+                if part:
+                    text_parts.append(part)
+                # Usage arrives on the final chunk.
+                if getattr(chunk, "usage_metadata", None) is not None:
+                    usage = chunk.usage_metadata
+            return "".join(text_parts), usage
 
         last_exc: Optional[Exception] = None
         for attempt in range(max_retries):
             try:
-                response = await asyncio.to_thread(_sync_call)
+                text, usage_metadata = await asyncio.to_thread(_sync_call)
                 self._record_usage(
-                    response.usage_metadata,
+                    usage_metadata,
                     model=effective_model,
                     operation=operation,
                     attribute_type=attribute_type,
                     success=True,
                 )
-                # SDK exposes `parsed` when response_schema is a Pydantic class.
-                parsed = getattr(response, "parsed", None)
-                if isinstance(parsed, response_schema):
-                    return parsed
-                # Fallback: parse from JSON text (covers SDK versions that don't
-                # populate `parsed` reliably).
-                text = response.text or ""
+                # `response.parsed` is not populated for streamed responses, so the
+                # accumulated text always goes through the JSON path below.
                 try:
                     return response_schema.model_validate_json(text)
                 except ValidationError:
@@ -443,7 +452,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
             except Exception as exc:
                 last_exc = exc
                 if _is_retryable_error(exc) and attempt < max_retries - 1:
-                    wait_sec = min(60 * (2**attempt) + random.uniform(0, 5), 300)
+                    wait_sec = _backoff_seconds(attempt, _parse_retry_after(str(exc)))
                     logger.warning(
                         "Transient error (429/timeout) on attempt %d/%d — retrying in %.0fs",
                         attempt + 1,
