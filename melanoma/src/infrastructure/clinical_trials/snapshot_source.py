@@ -13,6 +13,37 @@ from ...domain.trial_parameter_models import TrialText
 
 logger = logging.getLogger(__name__)
 
+# Intervention entries that are never the trial's treatment. Comparators are NOT
+# filtered here (the extractor needs to see them to tell investigational from
+# comparator); only clearly non-treatment entries are dropped.
+_SKIP_INTERVENTION_TYPES = {"DIAGNOSTIC_TEST"}
+_SKIP_NAME_MARKERS = ("placebo", "best supportive care", "sham")
+
+
+def _render_interventions(interventions: list[dict]) -> str:
+    """Render the CT.gov interventions list as `type - name - description` lines.
+
+    Returns an empty string when nothing survives filtering, so callers can omit
+    the section entirely for trials without usable interventions.
+    """
+    lines: list[str] = []
+    for item in interventions:
+        name = (item.get("name") or "").strip()
+        if not name:
+            continue
+        itype = (item.get("type") or "").strip()
+        if itype.upper() in _SKIP_INTERVENTION_TYPES:
+            continue
+        if any(marker in name.lower() for marker in _SKIP_NAME_MARKERS):
+            continue
+        description = (item.get("description") or "").strip()
+        parts = [p for p in (itype, name) if p]
+        line = " - ".join(parts)
+        if description:
+            line = f"{line} - {description}"
+        lines.append(f"- {line}")
+    return "\n".join(lines)
+
 
 class SnapshotTrialSource:
     """Serves candidate NCTs, cancer types, and trial text from a snapshot.
@@ -57,11 +88,16 @@ class SnapshotTrialSource:
         official_title = row.get("official_title") or row.get("brief_title") or ""
         brief_summary = row.get("brief_summary") or ""
         eligibility = row.get("eligibility_criteria") or ""
+        interventions_text = _render_interventions(row.get("interventions") or [])
 
+        interventions_block = (
+            f"interventions:\n{interventions_text}\n\n" if interventions_text else ""
+        )
         full_text = (
             f"NCT Number: {nct_number}\n\n"
             f"officialTitle:\n{official_title}\n\n"
             f"briefSummary:\n{brief_summary}\n\n"
+            f"{interventions_block}"
             f"eligibilityCriteria:\n{eligibility}\n"
         )
         return TrialText(

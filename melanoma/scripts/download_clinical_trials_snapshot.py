@@ -14,10 +14,18 @@ via `--snapshot` instead of hitting Supabase per run, and outcome-measure
 filtering happens locally against this file afterwards. It is co-located with the
 run's results.json / checkpoint.json so everything for this cohort lives together.
 
+The INDUSTRY cohort (`--sponsor-class INDUSTRY`) inverts the sponsor filter to
+`lead_sponsor_class == 'INDUSTRY'` and defaults its output to
+`data/output/trials_extraction_industry/`. Pass `--exclude-interventions` when
+auditing an extraction that predates interventions grounding so the judge grades
+against the same source text the extractor saw.
+
 Usage:
     cd melanoma
     poetry run python3 scripts/download_clinical_trials_snapshot.py
     poetry run python3 scripts/download_clinical_trials_snapshot.py --out /tmp/snap.json
+    poetry run python3 scripts/download_clinical_trials_snapshot.py \
+        --sponsor-class INDUSTRY --exclude-interventions
 """
 
 import argparse
@@ -33,15 +41,21 @@ from supabase import create_client
 
 _MELANOMA_ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_OUT_DIR = _MELANOMA_ROOT / "data" / "output" / "trials_extraction_nonindustry"
+_DEFAULT_OUT_DIR_INDUSTRY = (
+    _MELANOMA_ROOT / "data" / "output" / "trials_extraction_industry"
+)
 _PAGE_SIZE = 1000
 
 # Columns saved: extractor inputs + deferred outcome filter + provenance.
+# `interventions` is the structured CT.gov arms/interventions list; it grounds
+# treatment_name / modality extraction (see snapshot_source.load_trial).
 _COLUMNS = [
     "nct_id",
     "cancer_type",
     "official_title",
     "brief_title",
     "brief_summary",
+    "interventions",
     "eligibility_criteria",
     "primary_outcomes",
     "secondary_outcomes",
@@ -72,22 +86,48 @@ def _build_parser() -> argparse.ArgumentParser:
         metavar="PATH",
         help="Output file (default: data/snapshots/<date>-clinical-trials.json).",
     )
+    parser.add_argument(
+        "--sponsor-class",
+        choices=["NON_INDUSTRY", "INDUSTRY"],
+        default="NON_INDUSTRY",
+        help="Which cohort to fetch: NON_INDUSTRY (lead_sponsor_class != INDUSTRY, "
+        "the default) or INDUSTRY (lead_sponsor_class == INDUSTRY).",
+    )
+    parser.add_argument(
+        "--exclude-interventions",
+        action="store_true",
+        help="Drop the interventions column from the snapshot. Use when auditing an "
+        "extraction run that predates interventions grounding, so the judge grades "
+        "against the same source text the extractor actually saw.",
+    )
+    parser.add_argument(
+        "--all-study-types",
+        action="store_true",
+        help="Skip the study_type filter and fetch every study type (including "
+        "OBSERVATIONAL). Use when auditing an extraction whose cohort was not "
+        "restricted to interventional/expanded-access trials.",
+    )
     return parser
 
 
-def _fetch_all(client: object) -> list[dict]:
+def _fetch_all(
+    client: object, columns: list[str], industry: bool, all_study_types: bool
+) -> list[dict]:
     """Paginate the filtered clinical_trials query into a single list."""
     rows: list[dict] = []
     start = 0
     while True:
-        resp = (
-            client.table("clinical_trials")  # type: ignore[attr-defined]
-            .select(",".join(_COLUMNS))
-            .neq("lead_sponsor_class", _EXCLUDED_SPONSOR_CLASS)
-            .in_("study_type", _INCLUDED_STUDY_TYPES)
-            .range(start, start + _PAGE_SIZE - 1)
-            .execute()
+        query = client.table("clinical_trials").select(  # type: ignore[attr-defined]
+            ",".join(columns)
         )
+        query = (
+            query.eq("lead_sponsor_class", _EXCLUDED_SPONSOR_CLASS)
+            if industry
+            else query.neq("lead_sponsor_class", _EXCLUDED_SPONSOR_CLASS)
+        )
+        if not all_study_types:
+            query = query.in_("study_type", _INCLUDED_STUDY_TYPES)
+        resp = query.range(start, start + _PAGE_SIZE - 1).execute()
         page = resp.data
         if not page:
             break
@@ -111,28 +151,45 @@ def main() -> None:
         )
         sys.exit(1)
 
+    industry = args.sponsor_class == "INDUSTRY"
+    drop_interventions = args.exclude_interventions
+    columns = [c for c in _COLUMNS if not (drop_interventions and c == "interventions")]
+
     client = create_client(url, key)
     logger.info(
-        "Fetching non-industry %s trials from clinical_trials...",
-        "/".join(_INCLUDED_STUDY_TYPES),
+        "Fetching %s %s trials from clinical_trials...",
+        args.sponsor_class.lower().replace("_", "-"),
+        "all-study-type" if args.all_study_types else "/".join(_INCLUDED_STUDY_TYPES),
     )
-    rows = _fetch_all(client)
+    rows = _fetch_all(client, columns, industry, args.all_study_types)
 
     null_title = sum(1 for r in rows if not r.get("official_title"))
-    logger.info("Fetched %d trials (%d with null official_title)", len(rows), null_title)
+    logger.info(
+        "Fetched %d trials (%d with null official_title)", len(rows), null_title
+    )
 
-    out_path = args.out or (_DEFAULT_OUT_DIR / f"{date.today().isoformat()}-clinical-trials.json")
+    default_dir = _DEFAULT_OUT_DIR_INDUSTRY if industry else _DEFAULT_OUT_DIR
+    out_path = args.out or (
+        default_dir / f"{date.today().isoformat()}-clinical-trials.json"
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    sponsor_filter = (
+        {"lead_sponsor_class_eq": _EXCLUDED_SPONSOR_CLASS}
+        if industry
+        else {"lead_sponsor_class_ne": _EXCLUDED_SPONSOR_CLASS}
+    )
     snapshot = {
         "metadata": {
             "source_table": "clinical_trials",
             "fetched_at": date.today().isoformat(),
             "filters": {
-                "lead_sponsor_class_ne": _EXCLUDED_SPONSOR_CLASS,
-                "study_type_in": _INCLUDED_STUDY_TYPES,
+                **sponsor_filter,
+                "study_type_in": (
+                    "ALL" if args.all_study_types else _INCLUDED_STUDY_TYPES
+                ),
             },
-            "columns": _COLUMNS,
+            "columns": columns,
             "row_count": len(rows),
         },
         "trials": rows,

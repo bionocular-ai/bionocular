@@ -91,3 +91,64 @@ def test_load_trial_missing_nct_raises() -> None:
     src = SnapshotTrialSource(_snapshot([_TRIAL_A]))
     with pytest.raises(KeyError):
         src.load_trial("NCT99999999")
+
+
+_TRIAL_WITH_INTERVENTIONS = {
+    "nct_id": "NCT00000010",
+    "cancer_type": ["Cutaneous Melanoma"],
+    "official_title": "Study of Nivolumab",
+    "brief_title": "Nivo Trial",
+    "brief_summary": "Testing nivolumab.",
+    "eligibility_criteria": "Inclusion: stage IV.",
+    "interventions": [
+        {
+            "type": "BIOLOGICAL",
+            "name": "Nivolumab",
+            "description": "Anti-PD-1 antibody given IV.",
+        },
+        # Comparator drug — kept, so the extractor can tell it from the treatment.
+        {"type": "DRUG", "name": "Dacarbazine", "description": ""},
+        # Non-treatment entries — must be filtered out.
+        {"type": "DRUG", "name": "Placebo", "description": "Matching placebo."},
+        {"type": "DIAGNOSTIC_TEST", "name": "CT scan", "description": "Imaging."},
+        {"type": "PROCEDURE", "name": "Sham surgery", "description": ""},
+        {"type": "OTHER", "name": "Best Supportive Care", "description": ""},
+        # No name — skipped.
+        {"type": "DRUG", "name": "", "description": "orphan"},
+    ],
+}
+
+
+def test_load_trial_renders_interventions_section() -> None:
+    src = SnapshotTrialSource(_snapshot([_TRIAL_WITH_INTERVENTIONS]))
+    trial = src.load_trial("NCT00000010")
+    assert (
+        "interventions:\n"
+        "- BIOLOGICAL - Nivolumab - Anti-PD-1 antibody given IV.\n"
+        "- DRUG - Dacarbazine\n\n"
+    ) in trial.full_text
+    # Section sits between briefSummary and eligibilityCriteria.
+    assert trial.full_text.index("interventions:") < trial.full_text.index(
+        "eligibilityCriteria:"
+    )
+
+
+def test_load_trial_interventions_filters_non_treatments() -> None:
+    src = SnapshotTrialSource(_snapshot([_TRIAL_WITH_INTERVENTIONS]))
+    full_text = src.load_trial("NCT00000010").full_text
+    for dropped in ("Placebo", "CT scan", "Sham surgery", "Best Supportive Care"):
+        assert dropped not in full_text
+    assert "orphan" not in full_text
+
+
+def test_load_trial_no_interventions_omits_section() -> None:
+    src = SnapshotTrialSource(_snapshot([_TRIAL_A]))
+    assert "interventions:" not in src.load_trial("NCT00000001").full_text
+
+
+def test_load_trial_all_interventions_filtered_omits_section() -> None:
+    trial = dict(_TRIAL_A)
+    trial["nct_id"] = "NCT00000011"
+    trial["interventions"] = [{"type": "DRUG", "name": "Placebo", "description": ""}]
+    src = SnapshotTrialSource(_snapshot([trial]))
+    assert "interventions:" not in src.load_trial("NCT00000011").full_text

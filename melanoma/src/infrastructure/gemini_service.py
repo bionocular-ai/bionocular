@@ -11,6 +11,7 @@ from typing import Any, Optional, TypeVar
 from pydantic import BaseModel, ValidationError
 
 from ..domain.extraction_interfaces import LLMService
+from ..domain.structured_llm_interfaces import StructuredLLMService
 from .cost_calculator import CostCalculator
 
 T = TypeVar("T", bound=BaseModel)
@@ -33,6 +34,66 @@ GEMINI_CACHE_MIN_TOKENS = 32_768
 # so we only short-circuit when we are clearly below the floor; borderline docs
 # still attempt the SDK call and fall back gracefully on rejection.
 _CHARS_PER_TOKEN_ESTIMATE = 4
+
+# 429 backoff. Vertex Gemini runs on Dynamic Shared Quota: a 429 means demand
+# momentarily exceeded the shared pool and usually clears in 1-5s, so we start
+# small and grow exponentially with jitter rather than sitting on a 60s floor.
+_BACKOFF_BASE_SECONDS = 1.0
+_BACKOFF_CAP_SECONDS = 30.0
+
+# Bounded per-request timeout (ms). Judge/extraction calls run ~3-8s; 90s is
+# generous over p99 yet caps a stalled socket that would otherwise hang a worker
+# forever (there is no default client timeout).
+_REQUEST_TIMEOUT_MS = 90_000
+
+_RETRYABLE_TOKENS = (
+    "429",
+    "RESOURCE_EXHAUSTED",
+    "RATE_LIMIT",
+    "DEADLINE_EXCEEDED",
+    "504",
+    "TIMEOUT",
+    "TIMED OUT",
+)
+
+
+def _is_retryable_error(exc: BaseException) -> bool:
+    """True for transient errors worth retrying: 429/quota and timeout/deadline.
+
+    Retrying a timed-out generate call is safe - the call is side-effect-free,
+    so at worst a completed-but-undelivered response is re-billed (rare, cheap).
+    """
+    if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+        return True
+    msg = str(exc).upper()
+    return any(token in msg for token in _RETRYABLE_TOKENS)
+
+
+_RETRY_AFTER_RE = re.compile(
+    r"retry[-_ ]?(?:delay|after)['\"\s:]+(\d+(?:\.\d+)?)\s*s", re.IGNORECASE
+)
+
+
+def _parse_retry_after(error: str) -> float | None:
+    """Extract a server-suggested retry delay (seconds) from an error string.
+
+    Vertex RESOURCE_EXHAUSTED errors may carry a ``retryDelay: '7s'`` hint.
+    Returns None when no hint is present.
+    """
+    match = _RETRY_AFTER_RE.search(error)
+    return float(match.group(1)) if match else None
+
+
+def _backoff_seconds(attempt: int, retry_after: float | None = None) -> float:
+    """Seconds to wait before retry ``attempt`` (0-indexed).
+
+    Honors a server-provided ``retry_after`` when present (still capped),
+    otherwise exponential base*2**attempt plus jitter, capped.
+    """
+    if retry_after is not None and retry_after > 0:
+        return min(retry_after, _BACKOFF_CAP_SECONDS)
+    exp = min(_BACKOFF_BASE_SECONDS * (2**attempt), _BACKOFF_CAP_SECONDS)
+    return exp + random.uniform(0, _BACKOFF_BASE_SECONDS)
 
 
 def _inline_pydantic_schema(schema_cls: type[BaseModel]) -> dict[str, Any]:
@@ -141,7 +202,7 @@ def _parse_json_response(text: str) -> dict[str, Any]:
     return {}
 
 
-class GeminiLLMService(LLMService):
+class GeminiLLMService(LLMService, StructuredLLMService):
     """LLM service backed by Vertex AI via the google-genai SDK.
 
     Supports two authentication modes:
@@ -187,11 +248,18 @@ class GeminiLLMService(LLMService):
 
     def _build_client(self) -> Any:
         from google import genai
+        from google.genai import types
 
+        http_options = types.HttpOptions(timeout=_REQUEST_TIMEOUT_MS)
         if self._api_key:
-            return genai.Client(vertexai=True, api_key=self._api_key)
+            return genai.Client(
+                vertexai=True, api_key=self._api_key, http_options=http_options
+            )
         return genai.Client(
-            vertexai=True, project=self._project, location=self._location
+            vertexai=True,
+            project=self._project,
+            location=self._location,
+            http_options=http_options,
         )
 
     def _record_usage(
@@ -220,11 +288,6 @@ class GeminiLLMService(LLMService):
             success=success,
             error_message=error_message,
         )
-
-    def _is_rate_limit_error(self, exc: BaseException) -> bool:
-        """Return True for 429 / RESOURCE_EXHAUSTED transient quota errors."""
-        msg = str(exc).upper()
-        return "429" in msg or "RESOURCE_EXHAUSTED" in msg or "RATE_LIMIT" in msg
 
     async def generate_response(
         self,
@@ -275,13 +338,12 @@ class GeminiLLMService(LLMService):
                 return text
             except Exception as exc:
                 last_exc = exc
-                if self._is_rate_limit_error(exc) and attempt < max_retries - 1:
-                    # Exponential backoff starting at 60 s with ±5 s jitter,
-                    # capped at 300 s — matches Google's recommended handling
-                    # for RESOURCE_EXHAUSTED / 429 responses.
-                    wait_sec = min(60 * (2**attempt) + random.uniform(0, 5), 300)
+                if _is_retryable_error(exc) and attempt < max_retries - 1:
+                    # DSQ-aware backoff: honor a server retry hint, else a small
+                    # exponential with jitter (see _backoff_seconds).
+                    wait_sec = _backoff_seconds(attempt, _parse_retry_after(str(exc)))
                     logger.warning(
-                        "Rate limit (429) on attempt %d/%d — retrying in %.0fs",
+                        "Transient error (429/timeout) on attempt %d/%d — retrying in %.0fs",
                         attempt + 1,
                         max_retries,
                         wait_sec,
@@ -380,10 +442,10 @@ class GeminiLLMService(LLMService):
                     raise
             except Exception as exc:
                 last_exc = exc
-                if self._is_rate_limit_error(exc) and attempt < max_retries - 1:
+                if _is_retryable_error(exc) and attempt < max_retries - 1:
                     wait_sec = min(60 * (2**attempt) + random.uniform(0, 5), 300)
                     logger.warning(
-                        "Rate limit (429) on attempt %d/%d — retrying in %.0fs",
+                        "Transient error (429/timeout) on attempt %d/%d — retrying in %.0fs",
                         attempt + 1,
                         max_retries,
                         wait_sec,
