@@ -14,6 +14,7 @@ Architecture
   TrialParameterExtractionService — wires all of the above together
 """
 
+import asyncio
 import hashlib
 import itertools
 import json
@@ -21,7 +22,7 @@ import logging
 import re
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Optional
 
@@ -39,6 +40,7 @@ from ..domain.trials_extraction_prompts import (
     PREVIOUS_TREATMENT_VALUES,
     STAGE_VALUES,
     build_extraction_prompt,
+    build_modality_prompt,
 )
 from ..infrastructure.clinical_trials.snapshot_source import SnapshotTrialSource
 from ..infrastructure.cost_calculator import CostCalculator
@@ -83,6 +85,13 @@ class ExtractionConfig:
         snapshot_path: Optional path to a Supabase snapshot JSON. When set, trial
             text and cancer types come from the snapshot instead of
             trials_db_path / exports_dir (which are then ignored).
+        modality_only: If True, run the modality-only prompt. Every other
+            parameter is left empty in the result, so such a run must never
+            share an output_dir with a full run - results.json is merged by NCT
+            and the emptier row would win.
+        concurrency: Number of trials extracted in parallel. Matches the
+            validation pipeline's default; the per-trial disk writes are guarded
+            by a lock.
     """
 
     trials_db_path: Path
@@ -97,6 +106,8 @@ class ExtractionConfig:
     cancer_type_filter: Optional[list[str]] = None
     nct_allowlist: Optional[list[str]] = None
     snapshot_path: Optional[Path] = None
+    modality_only: bool = False
+    concurrency: int = 5
 
 
 # ---------------------------------------------------------------------------
@@ -279,7 +290,7 @@ class CheckpointManager:
         """Record the extraction outcome for a trial and flush to disk."""
         self._data[nct_number] = {
             "status": status.value,
-            "recorded_at": datetime.utcnow().isoformat(),
+            "recorded_at": datetime.now(UTC).isoformat(),
         }
         self._flush()
 
@@ -306,8 +317,9 @@ class CheckpointManager:
 class TrialParameterExtractor:
     """Runs a single LLM call to extract all parameters for a trial."""
 
-    def __init__(self, llm: LLMService) -> None:
+    def __init__(self, llm: LLMService, modality_only: bool = False) -> None:
         self._llm = llm
+        self._modality_only = modality_only
 
     async def extract(
         self, trial: TrialText, cancer_types: list[str]
@@ -317,6 +329,9 @@ class TrialParameterExtractor:
         One LLM call returns all six fields. If the call fails entirely the
         status is set to FAILED. If the call succeeds but some fields are
         empty the status is PARTIAL.
+
+        In modality_only mode the narrow prompt is used instead and only
+        `modality` is populated; see `_extract_modality_only`.
 
         Args:
             trial: Parsed trial text sections.
@@ -329,6 +344,8 @@ class TrialParameterExtractor:
             nct_number=trial.nct_number,
             cancer_type=cancer_types,
         )
+        if self._modality_only:
+            return await self._extract_modality_only(trial, result)
 
         try:
             prompt = build_extraction_prompt(trial.full_text)
@@ -393,6 +410,80 @@ class TrialParameterExtractor:
             result.error_message = str(exc)
 
         return result
+
+    async def _extract_modality_only(
+        self, trial: TrialText, result: TrialParameterResult
+    ) -> TrialParameterResult:
+        """Populate `modality` alone, leaving every other field untouched.
+
+        `treatment_name` is requested by the prompt as the reasoning anchor for
+        the modality decision and is kept on the result for human review of the
+        backfill diff; no consumer of a modality-only run writes it back.
+
+        Only the mechanism-bearing sections are sent (`modality_text`): purpose,
+        titles, summary, detailed description, interventions and arm groups.
+        Sources that cannot split the text leave it empty and get `full_text`.
+
+        An empty modality is PARTIAL, not DONE: for the backfill that means
+        "the model could not tell", which must not overwrite a stored value.
+        """
+        try:
+            prompt = build_modality_prompt(trial.modality_text or trial.full_text)
+            raw = await self._llm.extract_json(
+                prompt,
+                operation="extraction",
+                attribute_type="modality",
+            )
+
+            result.treatment_name = raw.get("treatment_name") or None
+            result.modality = self._filter_modality(
+                _coerce_list(raw.get("modality")), trial.nct_number
+            )
+
+            logger.debug(
+                "%s | treatment=%s modality=%s",
+                trial.nct_number,
+                result.treatment_name,
+                result.modality,
+            )
+
+            if result.modality:
+                result.extraction_status = ExtractionStatus.DONE
+            else:
+                result.extraction_status = ExtractionStatus.PARTIAL
+                result.error_message = "LLM returned no modality."
+
+        except Exception as exc:
+            logger.warning("%s | modality extraction failed: %s", trial.nct_number, exc)
+            result.extraction_status = ExtractionStatus.FAILED
+            result.error_message = str(exc)
+
+        return result
+
+    @staticmethod
+    def _filter_modality(values: list[str], nct_number: str) -> list[str]:
+        """Drop values outside MODALITY_VALUES, logging what was dropped.
+
+        A value the vocabulary does not know is discarded silently everywhere
+        else in this file, which makes a prompt/vocabulary mismatch look like a
+        clean run. Log it loudly instead.
+
+        Repeats are kept on purpose: the prompt asks for one value per agent, so
+        a two-antibody combination answers ["Monoclonal Antibody",
+        "Monoclonal Antibody"] and that is the arity of the regimen. Every
+        consumer collapses it for display - `_parse_modalities` here and
+        `parseModalityValues` on the landscape page both dedupe - so nothing
+        downstream double-counts.
+        """
+        kept = [v for v in values if v in _MODALITY_SET]
+        rejected = [v for v in values if v not in _MODALITY_SET]
+        if rejected:
+            logger.warning(
+                "%s | modality values outside the vocabulary, dropped: %s",
+                nct_number,
+                rejected,
+            )
+        return kept
 
 
 # ---------------------------------------------------------------------------
@@ -545,7 +636,7 @@ class TrialParameterExtractionService:
             )
         loader = TrialLoader()
         cancer_repo = CancerTypeRepository(config.trials_db_path)
-        extractor = TrialParameterExtractor(llm)
+        extractor = TrialParameterExtractor(llm, modality_only=config.modality_only)
         checkpoint = CheckpointManager(config.output_dir / "checkpoint.json")
         writer = ResultWriter(config.output_dir)
 
@@ -575,20 +666,17 @@ class TrialParameterExtractionService:
 
         Workflow:
           1. Collect the candidate NCT numbers (from DB ∩ export files).
-          2. Apply limit.
-          3. For each trial:
-             a. Skip if already checkpointed (when resume=True).
-             b. Load the .txt file.
-             c. Fetch cancer type tags from DB.
-             d. Run single-pass extraction (skipped if dry_run=True).
-             e. Record checkpoint entry.
-             f. Flush results.json incrementally.
+          2. Apply limit, then drop the trials already in the checkpoint.
+          3. Extract up to `concurrency` trials in parallel; each worker loads
+             the trial, fetches its cancer types, runs the LLM call, then takes
+             the write lock to record its checkpoint entry and flush
+             results.json.
           4. Write final results.json and cost_report.json.
 
         Returns:
             List of TrialParameterResult for every trial attempted.
         """
-        run_start = datetime.utcnow()
+        run_start = datetime.now(UTC)
         summary = ExtractionRunSummary(
             model=self._config.model,
             run_date=run_start,
@@ -599,115 +687,72 @@ class TrialParameterExtractionService:
             summary.snapshot_sha256 = hashlib.sha256(snapshot_bytes).hexdigest()
 
         candidates = self._build_candidate_list()
+        pending = [
+            nct
+            for nct in candidates
+            if not (self._config.resume and self._checkpoint.is_done(nct))
+        ]
+        summary.skipped += len(candidates) - len(pending)
+        summary.total_trials += len(candidates) - len(pending)
         logger.info(
-            "Pipeline starting | candidates=%d limit=%s model=%s dry_run=%s",
+            "Pipeline starting | candidates=%d pending=%d concurrency=%d "
+            "limit=%s model=%s dry_run=%s",
             len(candidates),
+            len(pending),
+            self._config.concurrency,
             self._config.limit,
             self._config.model,
             self._config.dry_run,
         )
 
         results: list[TrialParameterResult] = []
+        write_lock = asyncio.Lock()
+        semaphore = asyncio.Semaphore(max(1, self._config.concurrency))
 
-        for nct_number in candidates:
-            # ------------------------------------------------------------------
-            # Resume: skip already completed trials
-            # ------------------------------------------------------------------
-            if self._config.resume and self._checkpoint.is_done(nct_number):
-                logger.debug("%s | skipped (already done)", nct_number)
-                summary.skipped += 1
+        async def _worker(nct_number: str) -> None:
+            async with semaphore:
+                try:
+                    result = await self._extract_one(nct_number)
+                except Exception as exc:  # noqa: BLE001 - recorded, not swallowed
+                    logger.error(
+                        "%s | unexpected extraction error: %s", nct_number, exc
+                    )
+                    result = TrialParameterResult(
+                        nct_number=nct_number,
+                        extraction_status=ExtractionStatus.FAILED,
+                        error_message=str(exc),
+                    )
+
+            async with write_lock:
                 summary.total_trials += 1
-                continue
+                if result is None:
+                    summary.skipped += 1
+                    return
 
-            # ------------------------------------------------------------------
-            # Load trial text (snapshot source or .txt export file)
-            # ------------------------------------------------------------------
-            try:
-                if self._snapshot_source is not None:
-                    trial = self._snapshot_source.load_trial(nct_number)
-                else:
-                    txt_path = self._config.exports_dir / f"{nct_number}.txt"
-                    if not txt_path.exists():
-                        logger.warning(
-                            "%s | export file not found, skipping", nct_number
-                        )
-                        summary.skipped += 1
-                        summary.total_trials += 1
-                        continue
-                    trial = self._loader.load(txt_path)
-            except Exception as exc:
-                logger.error("%s | failed to load trial: %s", nct_number, exc)
-                result = TrialParameterResult(
-                    nct_number=nct_number,
-                    extraction_status=ExtractionStatus.FAILED,
-                    error_message=f"Trial load error: {exc}",
-                )
                 results.append(result)
-                self._checkpoint.record(nct_number, ExtractionStatus.FAILED)
-                summary.failed += 1
-                summary.total_trials += 1
-                continue
+                self._checkpoint.record(nct_number, result.extraction_status)
+                if result.extraction_status == ExtractionStatus.DONE:
+                    summary.successful += 1
+                elif result.extraction_status == ExtractionStatus.PARTIAL:
+                    summary.partial += 1
+                else:
+                    summary.failed += 1
 
-            # ------------------------------------------------------------------
-            # Fetch cancer types (snapshot source or DB)
-            # ------------------------------------------------------------------
-            if self._snapshot_source is not None:
-                cancer_types = self._snapshot_source.get_cancer_types(nct_number)
-            else:
-                cancer_types = self._cancer_repo.get_cancer_types(nct_number)
-
-            # ------------------------------------------------------------------
-            # Dry run: log what would be processed and skip LLM calls
-            # ------------------------------------------------------------------
-            if self._config.dry_run:
                 logger.info(
-                    "DRY RUN | %s | cancer_types=%s | title=%s",
+                    "Processed %d/%d | %s | status=%s",
+                    summary.total_trials,
+                    len(candidates),
                     nct_number,
-                    cancer_types,
-                    trial.official_title[:80],
-                )
-                summary.skipped += 1
-                summary.total_trials += 1
-                continue
-
-            # ------------------------------------------------------------------
-            # Single-pass extraction
-            # ------------------------------------------------------------------
-            try:
-                result = await self._extractor.extract(trial, cancer_types)
-            except Exception as exc:
-                logger.error("%s | unexpected extraction error: %s", nct_number, exc)
-                result = TrialParameterResult(
-                    nct_number=nct_number,
-                    cancer_type=cancer_types,
-                    extraction_status=ExtractionStatus.FAILED,
-                    error_message=str(exc),
+                    result.extraction_status.value,
                 )
 
-            results.append(result)
-            self._checkpoint.record(nct_number, result.extraction_status)
+                # Flush after every trial so progress survives an interruption
+                cost_so_far = self._cost_calculator.get_summary()
+                summary.total_cost_usd = cost_so_far.total_cost
+                summary.total_tokens = cost_so_far.total_tokens
+                self._writer.write_results(results, summary)
 
-            summary.total_trials += 1
-            if result.extraction_status == ExtractionStatus.DONE:
-                summary.successful += 1
-            elif result.extraction_status == ExtractionStatus.PARTIAL:
-                summary.partial += 1
-            else:
-                summary.failed += 1
-
-            logger.info(
-                "Processed %d/%d | %s | status=%s",
-                summary.total_trials,
-                len(candidates),
-                nct_number,
-                result.extraction_status.value,
-            )
-
-            # Flush after every trial so progress is never lost on interruption
-            cost_so_far = self._cost_calculator.get_summary()
-            summary.total_cost_usd = cost_so_far.total_cost
-            summary.total_tokens = cost_so_far.total_tokens
-            self._writer.write_results(results, summary)
+        await asyncio.gather(*(_worker(nct) for nct in pending))
 
         # ------------------------------------------------------------------
         # Finalise and write output
@@ -742,6 +787,49 @@ class TrialParameterExtractionService:
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
+
+    async def _extract_one(self, nct_number: str) -> Optional[TrialParameterResult]:
+        """Load one trial and run extraction on it.
+
+        Args:
+            nct_number: Trial to process.
+
+        Returns:
+            The extraction result, or None when the trial is skipped - no export
+            file on disk, or a dry run that makes no LLM call.
+        """
+        try:
+            if self._snapshot_source is not None:
+                trial = self._snapshot_source.load_trial(nct_number)
+            else:
+                txt_path = self._config.exports_dir / f"{nct_number}.txt"
+                if not txt_path.exists():
+                    logger.warning("%s | export file not found, skipping", nct_number)
+                    return None
+                trial = self._loader.load(txt_path)
+        except Exception as exc:
+            logger.error("%s | failed to load trial: %s", nct_number, exc)
+            return TrialParameterResult(
+                nct_number=nct_number,
+                extraction_status=ExtractionStatus.FAILED,
+                error_message=f"Trial load error: {exc}",
+            )
+
+        if self._snapshot_source is not None:
+            cancer_types = self._snapshot_source.get_cancer_types(nct_number)
+        else:
+            cancer_types = self._cancer_repo.get_cancer_types(nct_number)
+
+        if self._config.dry_run:
+            logger.info(
+                "DRY RUN | %s | cancer_types=%s | title=%s",
+                nct_number,
+                cancer_types,
+                trial.official_title[:80],
+            )
+            return None
+
+        return await self._extractor.extract(trial, cancer_types)
 
     def _build_candidate_list(self) -> list[str]:
         """Build the ordered list of NCT numbers to attempt.

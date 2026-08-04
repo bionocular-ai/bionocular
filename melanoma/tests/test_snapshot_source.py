@@ -152,3 +152,135 @@ def test_load_trial_all_interventions_filtered_omits_section() -> None:
     trial["interventions"] = [{"type": "DRUG", "name": "Placebo", "description": ""}]
     src = SnapshotTrialSource(_snapshot([trial]))
     assert "interventions:" not in src.load_trial("NCT00000011").full_text
+
+
+# --- otherNames / arm_groups / detailed_description / primary_purpose --------
+# These four are what make an opaque code name classifiable. Modelled on the
+# real NCT01386580 row, where the name alone ("2B3-101") identifies nothing.
+
+_TRIAL_CODE_NAMED = {
+    "nct_id": "NCT00000020",
+    "cancer_type": ["Cutaneous Melanoma"],
+    "official_title": "A Study of 2B3-101",
+    "brief_title": "2B3-101 Trial",
+    "brief_summary": "Dose escalation.",
+    "eligibility_criteria": "Inclusion: adults.",
+    "primary_purpose": "TREATMENT",
+    "detailed_description": "Patients receive escalating doses.",
+    "interventions": [
+        {
+            "type": "DRUG",
+            "name": "2B3-101",
+            "otherNames": [
+                "Glutathione pegylated liposomal doxorubicin hydrochloride",
+                "Herceptin",
+            ],
+            "description": "IV every 21 days",
+        }
+    ],
+    "arm_groups": [
+        {
+            "type": "EXPERIMENTAL",
+            "label": "Single Agent Dose Escalation",
+            "description": "Single IV dose on day 1 of each cycle.",
+        }
+    ],
+}
+
+
+def test_load_trial_renders_other_names() -> None:
+    """The decoded name must reach the prompt — it is the modality signal."""
+    src = SnapshotTrialSource(_snapshot([_TRIAL_CODE_NAMED]))
+    full_text = src.load_trial("NCT00000020").full_text
+    assert (
+        "- DRUG - 2B3-101 (also known as: "
+        "Glutathione pegylated liposomal doxorubicin hydrochloride, Herceptin) "
+        "- IV every 21 days"
+    ) in full_text
+
+
+def test_load_trial_renders_arm_groups_section() -> None:
+    src = SnapshotTrialSource(_snapshot([_TRIAL_CODE_NAMED]))
+    full_text = src.load_trial("NCT00000020").full_text
+    assert (
+        "armGroups:\n"
+        "- EXPERIMENTAL - Single Agent Dose Escalation - "
+        "Single IV dose on day 1 of each cycle.\n\n"
+    ) in full_text
+
+
+def test_load_trial_renders_detailed_description_and_purpose() -> None:
+    src = SnapshotTrialSource(_snapshot([_TRIAL_CODE_NAMED]))
+    full_text = src.load_trial("NCT00000020").full_text
+    assert "primaryPurpose: TREATMENT\n\n" in full_text
+    assert "detailedDescription:\nPatients receive escalating doses.\n\n" in full_text
+
+
+def test_load_trial_omits_new_sections_when_absent() -> None:
+    """_TRIAL_A has none of the four — the March layout must be unchanged."""
+    src = SnapshotTrialSource(_snapshot([_TRIAL_A]))
+    full_text = src.load_trial("NCT00000001").full_text
+    for absent in ("armGroups:", "detailedDescription:", "primaryPurpose:"):
+        assert absent not in full_text
+
+
+def test_load_trial_empty_other_names_leaves_name_bare() -> None:
+    trial = dict(_TRIAL_A)
+    trial["nct_id"] = "NCT00000021"
+    trial["interventions"] = [
+        {"type": "DRUG", "name": "Dacarbazine", "otherNames": [], "description": ""}
+    ]
+    src = SnapshotTrialSource(_snapshot([trial]))
+    full_text = src.load_trial("NCT00000021").full_text
+    assert "- DRUG - Dacarbazine\n" in full_text
+    assert "also known as" not in full_text
+
+
+def test_modality_text_keeps_the_mechanism_sections() -> None:
+    """The modality-only run needs what is given, so every mechanism-bearing
+    section must survive the narrowing."""
+    src = SnapshotTrialSource(_snapshot([_TRIAL_CODE_NAMED]))
+    modality_text = src.load_trial("NCT00000020").modality_text
+    for kept in (
+        "NCT Number: NCT00000020",
+        "primaryPurpose: TREATMENT",
+        "officialTitle:",
+        "briefSummary:",
+        "detailedDescription:",
+        "interventions:",
+        "armGroups:",
+        "also known as",
+    ):
+        assert kept in modality_text
+
+
+def test_modality_text_drops_eligibility_criteria() -> None:
+    """Eligibility is who may enrol, not what is given.
+
+    It is the bulk of the prompt and its prior-therapy drug names actively
+    mislead a modality decision, so the narrow run must not see it.
+    """
+    trial = dict(_TRIAL_CODE_NAMED)
+    trial["eligibility_criteria"] = "Inclusion: prior ipilimumab and dabrafenib."
+    src = SnapshotTrialSource(_snapshot([trial]))
+    loaded = src.load_trial("NCT00000020")
+
+    assert "eligibilityCriteria:" not in loaded.modality_text
+    assert "ipilimumab" not in loaded.modality_text
+    # The single-pass run still needs it - stage and line of therapy live there.
+    assert "eligibilityCriteria:" in loaded.full_text
+    assert "ipilimumab" in loaded.full_text
+    assert len(loaded.modality_text) < len(loaded.full_text)
+
+
+def test_load_trial_arm_group_without_label_still_renders_description() -> None:
+    trial = dict(_TRIAL_A)
+    trial["nct_id"] = "NCT00000022"
+    trial["arm_groups"] = [
+        {"type": "", "label": "", "description": "Radiotherapy 30 Gy in 10 fractions."}
+    ]
+    src = SnapshotTrialSource(_snapshot([trial]))
+    assert (
+        "armGroups:\n- Radiotherapy 30 Gy in 10 fractions.\n\n"
+        in src.load_trial("NCT00000022").full_text
+    )

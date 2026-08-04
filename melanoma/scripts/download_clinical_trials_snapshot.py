@@ -49,18 +49,24 @@ _PAGE_SIZE = 1000
 # Columns saved: extractor inputs + deferred outcome filter + provenance.
 # `interventions` is the structured CT.gov arms/interventions list; it grounds
 # treatment_name / modality extraction (see snapshot_source.load_trial).
+# `arm_groups` and `detailed_description` carry mechanism prose the title and
+# summary omit; `primary_purpose` separates treatment trials from diagnostic,
+# screening and supportive-care ones, which have no modality to assign.
 _COLUMNS = [
     "nct_id",
     "cancer_type",
     "official_title",
     "brief_title",
     "brief_summary",
+    "detailed_description",
     "interventions",
+    "arm_groups",
     "eligibility_criteria",
     "primary_outcomes",
     "secondary_outcomes",
     "lead_sponsor_class",
     "study_type",
+    "primary_purpose",
 ]
 
 _EXCLUDED_SPONSOR_CLASS = "INDUSTRY"

@@ -23,6 +23,10 @@ _SKIP_NAME_MARKERS = ("placebo", "best supportive care", "sham")
 def _render_interventions(interventions: list[dict]) -> str:
     """Render the CT.gov interventions list as `type - name - description` lines.
 
+    `otherNames` is rendered inline after the name. It is often the only place a
+    code-named agent is decoded (`2B3-101` -> "Glutathione pegylated liposomal
+    doxorubicin"), which is what makes the modality identifiable.
+
     Returns an empty string when nothing survives filtering, so callers can omit
     the section entirely for trials without usable interventions.
     """
@@ -36,12 +40,35 @@ def _render_interventions(interventions: list[dict]) -> str:
             continue
         if any(marker in name.lower() for marker in _SKIP_NAME_MARKERS):
             continue
+        other_names = [
+            str(n).strip() for n in (item.get("otherNames") or []) if str(n).strip()
+        ]
+        if other_names:
+            name = f"{name} (also known as: {', '.join(other_names)})"
         description = (item.get("description") or "").strip()
         parts = [p for p in (itype, name) if p]
         line = " - ".join(parts)
         if description:
             line = f"{line} - {description}"
         lines.append(f"- {line}")
+    return "\n".join(lines)
+
+
+def _render_arm_groups(arm_groups: list[dict]) -> str:
+    """Render the CT.gov arm groups as `type - label - description` lines.
+
+    Arm descriptions frequently spell out a mechanism that the title and summary
+    only gesture at, especially for dose-escalation trials.
+    """
+    lines: list[str] = []
+    for item in arm_groups:
+        label = (item.get("label") or "").strip()
+        description = (item.get("description") or "").strip()
+        if not label and not description:
+            continue
+        atype = (item.get("type") or "").strip()
+        parts = [p for p in (atype, label, description) if p]
+        lines.append(f"- {' - '.join(parts)}")
     return "\n".join(lines)
 
 
@@ -88,21 +115,40 @@ class SnapshotTrialSource:
         official_title = row.get("official_title") or row.get("brief_title") or ""
         brief_summary = row.get("brief_summary") or ""
         eligibility = row.get("eligibility_criteria") or ""
+        detailed_description = (row.get("detailed_description") or "").strip()
         interventions_text = _render_interventions(row.get("interventions") or [])
+        arm_groups_text = _render_arm_groups(row.get("arm_groups") or [])
 
         interventions_block = (
             f"interventions:\n{interventions_text}\n\n" if interventions_text else ""
         )
-        full_text = (
+        arm_groups_block = (
+            f"armGroups:\n{arm_groups_text}\n\n" if arm_groups_text else ""
+        )
+        detailed_block = (
+            f"detailedDescription:\n{detailed_description}\n\n"
+            if detailed_description
+            else ""
+        )
+        primary_purpose = (row.get("primary_purpose") or "").strip()
+        purpose_block = (
+            f"primaryPurpose: {primary_purpose}\n\n" if primary_purpose else ""
+        )
+        mechanism_text = (
             f"NCT Number: {nct_number}\n\n"
+            f"{purpose_block}"
             f"officialTitle:\n{official_title}\n\n"
             f"briefSummary:\n{brief_summary}\n\n"
+            f"{detailed_block}"
             f"{interventions_block}"
-            f"eligibilityCriteria:\n{eligibility}\n"
+            f"{arm_groups_block}"
         )
+        full_text = f"{mechanism_text}eligibilityCriteria:\n{eligibility}\n"
         return TrialText(
             nct_number=nct_number,
             official_title=official_title,
             brief_summary=brief_summary,
             full_text=full_text,
+            # Everything above eligibilityCriteria: what is given, not who enrols.
+            modality_text=mechanism_text.rstrip() + "\n",
         )

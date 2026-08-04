@@ -12,29 +12,15 @@ import { TrialCard } from '@/components/dashboard/TrialCard';
 import { trialsApi } from '@/lib/api';
 import type { DashboardTrialCard } from '@/lib/api';
 import { Loader2, Filter, FileDown, FileSpreadsheet, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Check } from 'lucide-react';
-import { DEFAULT_CANCER_TYPE_SLUG, PHASE_OPTIONS, STATUS_OPTIONS, slugToCategory } from '@/lib/dashboard-constants';
+import { DEFAULT_CANCER_TYPE_SLUG, MODALITY_OTHER, MODALITY_VALUES, PHASE_OPTIONS, STATUS_OPTIONS, slugToCategory } from '@/lib/dashboard-constants';
 import { isOpenStudyStatus, selectTrialsWithOpenBias } from '@/lib/utils/trial-utils';
 import { cn } from '@/lib/utils';
 import type { GroupByOption } from '@/types/bullseye';
 import { type ViewMode } from '@/components/dashboard/ViewToggle';
 import { BullseyeView } from '@/components/dashboard/BullseyeView';
 
-/** Modality column headers in display order (reference). */
-const MODALITY_HEADERS = [
-  'Monoclonal Antibody',
-  'Vaccine',
-  'Immunostimulant/Cytokine',
-  'Bispecific',
-  'CAR-T',
-  'NK or Myeloid Cell Therapy',
-  'TIL Therapy',
-  'Small Molecule',
-  'Antibody-Drug Conjugate',
-  'Oncolytic Virus',
-  'Chemotherapy',
-] as const;
-
-const MODALITY_OTHER = 'Other';
+/** Modality column headers in display order. `Other` is rendered last, separately. */
+const MODALITY_HEADERS = MODALITY_VALUES.filter((v) => v !== MODALITY_OTHER);
 
 const UNSPECIFIED_LABEL = 'Unspecified';
 /** Canonical group-by category values (match trials_extraction_prompts.py). Column order follows these lists. */
@@ -130,11 +116,44 @@ function normalizeModality(apiModality: string | null | undefined): (typeof MODA
     'nk cell': 'NK or Myeloid Cell Therapy',
     'til therapy': 'TIL Therapy',
     'til': 'TIL Therapy',
+    'cell therapy': 'Cell Therapy',
+    'adoptive cell therapy': 'Cell Therapy',
+    'gene therapy': 'Gene Therapy',
     'small molecule': 'Small Molecule',
     'antibody-drug conjugate': 'Antibody-Drug Conjugate',
     'adc': 'Antibody-Drug Conjugate',
     'oncolytic virus': 'Oncolytic Virus',
     'chemotherapy': 'Chemotherapy',
+    'radiotherapy': 'Radiotherapy',
+    'radiation': 'Radiotherapy',
+    'radiation therapy': 'Radiotherapy',
+    'radiopharmaceutical': 'Radiopharmaceutical',
+    'imaging/diagnostic agent': 'Imaging/Diagnostic Agent',
+    'imaging agent': 'Imaging/Diagnostic Agent',
+    'diagnostic agent': 'Imaging/Diagnostic Agent',
+    'pet tracer': 'Imaging/Diagnostic Agent',
+    'photodynamic therapy': 'Photodynamic Therapy',
+    'pdt': 'Photodynamic Therapy',
+    'surgery/procedure': 'Surgery/Procedure',
+    'surgery': 'Surgery/Procedure',
+    'procedure': 'Surgery/Procedure',
+    'graft': 'Surgery/Procedure',
+    'tissue engineered': 'Surgery/Procedure',
+    'device': 'Device',
+    'protein/peptide therapeutic': 'Protein/Peptide Therapeutic',
+    'protein': 'Protein/Peptide Therapeutic',
+    'peptide': 'Protein/Peptide Therapeutic',
+    'fusion protein': 'Protein/Peptide Therapeutic',
+    'enzyme': 'Protein/Peptide Therapeutic',
+    'dietary/microbiome': 'Dietary/Microbiome',
+    'dietary': 'Dietary/Microbiome',
+    'diet': 'Dietary/Microbiome',
+    'microbiome': 'Dietary/Microbiome',
+    'fmt': 'Dietary/Microbiome',
+    'behavioral/digital health': 'Behavioral/Digital Health',
+    'behavioral': 'Behavioral/Digital Health',
+    'behavioural': 'Behavioral/Digital Health',
+    'digital health': 'Behavioral/Digital Health',
   };
   if (aliases[lower]) return aliases[lower];
   const exact = MODALITY_HEADERS.find((h) => h.toLowerCase() === lower);

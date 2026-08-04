@@ -5,7 +5,7 @@ pipeline, independent of the LLM or storage backend used.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Optional
 
@@ -27,12 +27,20 @@ class TrialText:
     passes the complete text to the LLM so it has full context for all
     fields, including officialTitle and briefSummary for treatment/modality
     and eligibility sections for stage, line of therapy, and biomarkers.
+
+    `modality_text` is the same trial narrowed to the sections that carry a
+    mechanism, for the modality-only run. Eligibility criteria are the bulk of
+    `full_text` and describe who may enrol, not what is given - feeding them to a
+    modality decision only adds cost and the prior-therapy drug names they list
+    are a source of wrong answers. Empty when the source cannot split the text,
+    in which case callers fall back to `full_text`.
     """
 
     nct_number: str
     official_title: str
     brief_summary: str
     full_text: str
+    modality_text: str = ""
 
 
 @dataclass
@@ -54,7 +62,7 @@ class TrialParameterResult:
 
     extraction_status: ExtractionStatus = ExtractionStatus.DONE
     error_message: Optional[str] = None
-    extracted_at: datetime = field(default_factory=datetime.utcnow)
+    extracted_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict:
         """Serialise to a plain dict suitable for JSON output."""

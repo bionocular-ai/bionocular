@@ -212,3 +212,6 @@ logs/
 htmlcov/
 coverage.xml
 .coverage
+
+# Lavish review artifacts (local review loop only)
+.lavish/

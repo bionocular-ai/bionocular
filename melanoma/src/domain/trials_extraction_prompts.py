@@ -25,6 +25,8 @@ and backend categorization should use these vocabularies.
 # dashboard group-by: Stage, Modality, Biomarker, Line of therapy, Previous treatment)
 # ---------------------------------------------------------------------------
 
+# No value may contain `;` or `,`: the column is `'; '`-joined text and the
+# frontend splits it on /[;,]/. A `/` round-trips safely.
 MODALITY_VALUES = [
     "Monoclonal Antibody",
     "Vaccine",
@@ -33,10 +35,21 @@ MODALITY_VALUES = [
     "CAR-T",
     "NK or Myeloid Cell Therapy",
     "TIL Therapy",
+    "Cell Therapy",
+    "Gene Therapy",
     "Small Molecule",
     "Antibody-Drug Conjugate",
     "Oncolytic Virus",
     "Chemotherapy",
+    "Radiotherapy",
+    "Radiopharmaceutical",
+    "Imaging/Diagnostic Agent",
+    "Photodynamic Therapy",
+    "Surgery/Procedure",
+    "Device",
+    "Protein/Peptide Therapeutic",
+    "Dietary/Microbiome",
+    "Behavioral/Digital Health",
     "Other",
 ]
 
@@ -131,6 +144,133 @@ _PREV_TX_LIST = "\n".join(f"  - {v}" for v in PREVIOUS_TREATMENT_VALUES)
 _CANCER_TYPE_INLINE = " | ".join(CANCER_TYPE_VALUES)
 
 # ---------------------------------------------------------------------------
+# Modality field instructions
+# ---------------------------------------------------------------------------
+
+# Shared verbatim by the full extraction prompt and the modality-only prompt.
+# One definition, so the two runs cannot drift apart and produce
+# non-comparable modality values.
+_MODALITY_FIELD = f"""\
+### modality
+Choose the modality value(s) that best describe the mechanism of treatment_name.
+- For a single agent return one value; for a combination return one per agent.
+- Prefer the most specific match over "Other".
+- "Other" is a last resort: the mechanism is identifiable but fits none of the
+  categories below. Never return "Other" alongside a specific value — if any
+  agent has a specific class, drop "Other".
+- Return [] only when nothing is administered to the patient, or the mechanism is
+  completely unidentifiable. Registry, observational, sample-collection and
+  questionnaire-only studies return []. A study whose primaryPurpose is
+  DIAGNOSTIC, SCREENING, PREVENTION or SUPPORTIVE_CARE still gets a modality
+  whenever it administers something - a tracer, a contrast agent, a diet, a
+  behavioural programme - because the categories below cover those.
+- Use the intervention `type` from the interventions section as a prior, not a
+  final answer:
+    RADIATION          → Radiotherapy, or Radiopharmaceutical / Imaging
+                         Diagnostic Agent for a radiolabelled compound given to
+                         the patient
+    PROCEDURE          → Surgery/Procedure
+    DEVICE             → Device, or Behavioral/Digital Health when the "device"
+                         is a patient-facing app or programme
+    DIAGNOSTIC_TEST    → Imaging/Diagnostic Agent for an administered agent,
+                         Device for imaging or analysis hardware
+    GENETIC            → Gene Therapy, or CAR-T / TIL Therapy when the product
+                         is an engineered or expanded cell infusion
+    DRUG               → usually Small Molecule or Chemotherapy
+    BIOLOGICAL         → an immunotherapy class (Monoclonal Antibody, Vaccine,
+                         Immunostimulant/Cytokine, Bispecific, Oncolytic Virus)
+                         or Protein/Peptide Therapeutic
+    BEHAVIORAL         → Behavioral/Digital Health
+    DIETARY_SUPPLEMENT → Dietary/Microbiome
+  The type narrows the options; decide the exact class from the drug name and
+  mechanism, since type is not one-to-one. The `also known as` names carry the
+  decoded mechanism for code-named agents — read them.
+
+Reference examples (modality → example intervention):
+  Monoclonal Antibody        → Pembrolizumab (PD-1), Nivolumab, Ipilimumab
+  Vaccine                    → V940 (mRNA-4157), mRNA vaccines, plasmid DNA,
+                               viral-vector immunotherapies
+  Immunostimulant/Cytokine   → Aldesleukin (IL-2), interferons, interleukins
+  Bispecific                 → Tebentafusp, bispecific antibodies
+  CAR-T                      → IL13Ra2 CAR-T, CD19 CAR-T
+  NK or Myeloid Cell Therapy → iNKT cell therapy, NK cell therapy
+  TIL Therapy                → Lifileucel, autologous TIL infusion
+  Cell Therapy               → adoptive cell transfer outside CAR-T / TIL / NK,
+                               stem cell transplant, lymphocyte infusion
+  Gene Therapy               → viral-vector gene transfer, antisense
+                               oligonucleotide, siRNA, gene editing
+  Small Molecule             → SX-682 (CXCR1/2 inhibitor), vemurafenib,
+                               dabrafenib, trametinib
+  Antibody-Drug Conjugate    → Ozuriftamab vedotin, HER3 ADC
+  Oncolytic Virus            → Talimogene laherparepvec (Imlygic), T-VEC
+  Chemotherapy               → Dacarbazine, Temozolomide, carboplatin
+  Radiotherapy               → external beam radiotherapy, SBRT, brachytherapy,
+                               proton therapy
+  Radiopharmaceutical        → Lu-177 and Ac-225 labelled agents given for their
+                               radiation dose to tumour
+  Imaging/Diagnostic Agent   → 18F / 68Ga / 89Zr PET tracers, Lymphoseek
+                               (technetium Tc-99m tilmanocept), indocyanine
+                               green, fluorescein, gadolinium contrast,
+                               superparamagnetic iron oxide, tumour-paint
+                               fluorophores (BLZ-100)
+  Photodynamic Therapy       → Metvix (methyl aminolevulinate), 5-ALA plus
+                               light activation
+  Surgery/Procedure          → wide local excision, sentinel lymph node biopsy,
+                               isolated limb perfusion, cryosurgery, and the
+                               implantation of a tissue-engineered graft or skin
+                               substitute (PHITAH, engineered cartilage,
+                               autograft, fibrin sealant)
+  Device                     → electroporation devices, laser and ablation
+                               systems, tumour-treating fields, and diagnostic
+                               imaging hardware or image-analysis software
+                               (MelaFind, reflectance confocal microscopy,
+                               LC-OCT, melanoma image-analysis algorithms)
+  Protein/Peptide Therapeutic → fusion proteins and immunotoxins (denileukin
+                               diftitox, ziv-aflibercept, AMP-224, ICON-1),
+                               therapeutic enzymes (ADI-PEG 20, PEG-BCT-100,
+                               bromelain debriding agents), peptides and
+                               peptide-drug conjugates (ST101, TH1902),
+                               polyclonal immunoglobulin (IVIG)
+  Dietary/Microbiome         → ketogenic, Mediterranean and high-fibre diets,
+                               fasting protocols, dietary supplements, vitamins,
+                               and also faecal microbiota transplant, live
+                               biotherapeutics (MRx0518) and engineered
+                               bacterial vectors (ACTM-838)
+  Behavioral/Digital Health  → patient education, psychotherapy (EMDR, CBT),
+                               exercise and smoking-cessation programmes,
+                               patient-facing apps, telemonitoring and
+                               teleoncology interventions
+  Other                      → mechanism identified but outside every category
+                               above
+
+Tie-breaks:
+  - A vector or plasmid delivering a tumour antigen to raise an immune response
+    is a Vaccine; one delivering a gene for its own function (replacement,
+    silencing, editing) is Gene Therapy.
+  - A dendritic-cell product presenting antigen is a Vaccine; any other infused
+    cell product is CAR-T / TIL Therapy / NK or Myeloid Cell Therapy when it
+    fits one of those, otherwise Cell Therapy.
+  - A radiolabelled agent administered to the patient is a Radiopharmaceutical
+    when it is given for its radiation dose to tumour, and an Imaging/Diagnostic
+    Agent when it is given to visualise or localise disease. Beam or
+    implanted-source treatment is Radiotherapy. Non-radioactive contrast agents
+    and fluorescent dyes are Imaging/Diagnostic Agents too.
+  - Surgery/Procedure is the operative act; Device is the instrument or hardware
+    when the hardware itself is the intervention under study.
+  - The antibody and cytokine classes win whenever they apply: Protein/Peptide
+    Therapeutic is only for protein and peptide agents that are not a Monoclonal
+    Antibody, Bispecific, Antibody-Drug Conjugate or Immunostimulant/Cytokine.
+  - A cultured skin or cartilage construct implanted surgically is
+    Surgery/Procedure; Cell Therapy is for infused cell products.
+  - A patient-facing app, programme or coaching intervention is
+    Behavioral/Digital Health even when its intervention `type` is DEVICE;
+    Device is measurement or treatment hardware.
+
+Combination example: "V940 + Pembrolizumab" → ["Vaccine", "Monoclonal Antibody"]
+Allowed modality values:
+{_MODALITY_LIST}"""
+
+# ---------------------------------------------------------------------------
 # Single extraction prompt
 # ---------------------------------------------------------------------------
 
@@ -184,40 +324,7 @@ investigational regimen, return them joined with " + ".
 
 Return null only if the treatment cannot be identified from the title or summary.
 
-### modality
-Choose the modality value(s) that best describe the mechanism of treatment_name.
-- For a single agent return one value; for a combination return one per agent.
-- Prefer the most specific match over "Other".
-- Use "Other" only if the mechanism is identifiable but fits none of the
-  specific categories (e.g. radiation, photodynamic therapy).
-- Return [] if the mechanism is completely unidentifiable.
-- Use the intervention `type` from the interventions section as a prior, not a
-  final answer: GENETIC → CAR-T or TIL Therapy; PROCEDURE → Other (e.g. surgery);
-  RADIATION → Other; DRUG → usually Small Molecule or Chemotherapy; BIOLOGICAL →
-  an immunotherapy class (Monoclonal Antibody, Vaccine, Immunostimulant/Cytokine,
-  Bispecific, Oncolytic Virus). The type narrows the options; decide the exact
-  class from the drug name and mechanism, since type is not one-to-one.
-
-Reference examples (modality → example drug):
-  Monoclonal Antibody        → Pembrolizumab (PD-1), Nivolumab, Ipilimumab
-  Vaccine                    → V940 (mRNA-4157), mRNA vaccines, plasmid DNA,
-                               viral-vector immunotherapies
-  Immunostimulant/Cytokine   → Aldesleukin (IL-2), interferons, interleukins
-  Bispecific                 → Tebentafusp, bispecific antibodies
-  CAR-T                      → IL13Ra2 CAR-T, CD19 CAR-T
-  NK or Myeloid Cell Therapy → iNKT cell therapy, NK cell therapy
-  TIL Therapy                → Lifileucel, autologous TIL infusion
-  Small Molecule             → SX-682 (CXCR1/2 inhibitor), vemurafenib,
-                               dabrafenib, trametinib
-  Antibody-Drug Conjugate    → Ozuriftamab vedotin, HER3 ADC
-  Oncolytic Virus            → Talimogene laherparepvec (Imlygic), T-VEC
-  Chemotherapy               → Dacarbazine, Temozolomide, carboplatin
-  Other                      → radiation, photodynamic therapy, adoptive cell
-                               therapy not covered by CAR-T / TIL / NK
-
-Combination example: "V940 + Pembrolizumab" → ["Vaccine", "Monoclonal Antibody"]
-Allowed modality values:
-{modality_list}
+{modality_field}
 
 ### biomarker
 Tag a biomarker only when the trial requires patients to have a specific
@@ -312,6 +419,59 @@ Return valid JSON only, with exactly these keys:
 """
 
 # ---------------------------------------------------------------------------
+# Modality-only prompt
+# ---------------------------------------------------------------------------
+
+_MODALITY_USER = """\
+## Task
+Identify the treatment(s) this trial administers and classify their modality.
+Nothing else is being extracted.
+
+---
+
+## Global rule
+This pipeline covers eight skin cancer indications:
+  {cancer_type_inline}
+
+Some trials enrol multiple tumour types (basket trials, pan-tumour studies).
+Classify the treatment the trial administers to the skin cancer cohort above.
+
+---
+
+## Field instructions
+
+### treatment_name
+The novel drug, regimen, or procedure that is the central subject of this trial.
+Use the interventions section as the primary signal, cross-checked against the
+officialTitle, briefSummary, detailedDescription and armGroups. The
+interventions list is the authoritative set of what is administered; titles and
+summaries may omit, abbreviate, or use code names.
+
+Ignore intervention entries that are not the investigational treatment: placebo,
+best supportive care, and sham. A comparator-arm drug is not the treatment_name.
+Combinations are joined with " + ". Return null if no treatment can be
+identified.
+
+This field only exists to anchor the modality decision; it is not stored.
+
+{modality_field}
+
+---
+
+## Trial text
+{full_text}
+
+---
+
+## Output
+Return valid JSON only, with exactly these keys:
+{{
+  "treatment_name": "string or null",
+  "modality": []
+}}\
+"""
+
+# ---------------------------------------------------------------------------
 # Public builder function
 # ---------------------------------------------------------------------------
 
@@ -328,11 +488,34 @@ def build_extraction_prompt(full_text: str) -> str:
     """
     user = _EXTRACTION_USER.format(
         cancer_type_inline=_CANCER_TYPE_INLINE,
-        modality_list=_MODALITY_LIST,
+        modality_field=_MODALITY_FIELD,
         biomarker_list=_BIOMARKER_LIST,
         stage_list=_STAGE_LIST,
         lot_list=_LOT_LIST,
         prev_tx_list=_PREV_TX_LIST,
+        full_text=full_text.strip(),
+    )
+    return f"{_SYSTEM_PROMPT}\n\n{user}"
+
+
+def build_modality_prompt(full_text: str) -> str:
+    """Return the modality-only prompt for a trial.
+
+    Used by backfill runs, where every other parameter is already extracted and
+    only `modality` is being repaired. `treatment_name` is still requested: the
+    modality rules are written in terms of "the mechanism of treatment_name",
+    and naming the agents first is what makes the classification answerable. It
+    is review context only and is never written back.
+
+    Args:
+        full_text: Complete trial text (all sections).
+
+    Returns:
+        Complete prompt string (system + user) ready to send to the LLM.
+    """
+    user = _MODALITY_USER.format(
+        cancer_type_inline=_CANCER_TYPE_INLINE,
+        modality_field=_MODALITY_FIELD,
         full_text=full_text.strip(),
     )
     return f"{_SYSTEM_PROMPT}\n\n{user}"

@@ -24,7 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { FilterChips } from '@/components/dashboard/FilterChips';
-import { slugToCategory } from '@/lib/dashboard-constants';
+import { MODALITY_VALUES, slugToCategory } from '@/lib/dashboard-constants';
 import BarChart from '@/components/charts/BarChart';
 import DivergingBarChart from '@/components/charts/DivergingBarChart';
 import BubbleChart from '@/components/charts/BubbleChart';
@@ -49,20 +49,10 @@ import { cn } from '@/lib/utils';
 
 // Note: Funding type filtering is now handled by the backend API
 
+/** Derived from the shared vocabulary so the filter can never fall behind it. */
 const MODALITY_OPTIONS = [
   { value: 'all', label: 'All' },
-  { value: 'Monoclonal Antibody', label: 'Monoclonal Antibody' },
-  { value: 'Vaccine', label: 'Vaccine' },
-  { value: 'Immunostimulant/Cytokine', label: 'Immunostimulant/Cytokine' },
-  { value: 'Bispecific', label: 'Bispecific' },
-  { value: 'CAR-T', label: 'CAR-T' },
-  { value: 'NK or Myeloid Cell Therapy', label: 'NK or Myeloid Cell Therapy' },
-  { value: 'TIL Therapy', label: 'TIL Therapy' },
-  { value: 'Small Molecule', label: 'Small Molecule' },
-  { value: 'Antibody-Drug Conjugate', label: 'Antibody-Drug Conjugate' },
-  { value: 'Oncolytic Virus', label: 'Oncolytic Virus' },
-  { value: 'Chemotherapy', label: 'Chemotherapy' },
-  { value: 'Other', label: 'Other' },
+  ...MODALITY_VALUES.map((value) => ({ value, label: value })),
 ];
 
 const RESOURCE_TYPE_OPTIONS = [
