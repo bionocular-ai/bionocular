@@ -28,6 +28,7 @@ import {
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { slugToCategory } from '@/lib/dashboard-constants';
 import { kmCurvesApi, type KmCurveRow, type KmPoint } from '@/lib/api';
+import { formatArmName } from '@/lib/utils/arm-name';
 import KaplanMeierChart from '@/components/charts/KaplanMeierChart';
 import { SurvivalCurveIcon } from '@/components/icons/SurvivalCurveIcon';
 
@@ -219,7 +220,7 @@ export default function HeadToHeadEfficacyPage() {
     const [cmp, ref] = medA >= medB ? [a, b] : [b, a];
     const hr = computeApproxHR(cmp, ref);
     if (hr == null) return null;
-    return { hr, cmpName: cmp.arm_name, refName: ref.arm_name };
+    return { hr, cmpName: formatArmName(cmp.arm_name), refName: formatArmName(ref.arm_name) };
   }, [visibleCurves]);
 
   // Rate timepoint can differ per arm. When selected arms agree, name it in the
@@ -347,7 +348,7 @@ export default function HeadToHeadEfficacyPage() {
                             onCheckedChange={() => toggleId(c.id)}
                             onSelect={(e) => e.preventDefault()}
                           >
-                            {c.arm_name}
+                            {formatArmName(c.arm_name)}
                           </DropdownMenuCheckboxItem>
                         ))}
                       </React.Fragment>
@@ -400,7 +401,9 @@ export default function HeadToHeadEfficacyPage() {
               <TableBody>
                 {visibleCurves.map((c) => (
                   <TableRow key={c.id} className="border-(--brand-border)">
-                    <TableCell className="font-medium text-(--brand-text)">{c.arm_name}</TableCell>
+                    <TableCell className="font-medium text-(--brand-text)">
+                      {formatArmName(c.arm_name)}
+                    </TableCell>
                     <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.published_median, 'm')}</TableCell>
                     <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.twin_median, 'm')}</TableCell>
                     <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.published_rate, c.rate_timepoint)}</TableCell>

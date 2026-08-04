@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { KmCurveRow } from '@/lib/api';
+import { formatArmName } from '@/lib/utils/arm-name';
 
 // Series palette — mirrors the dashboard TREATMENT_COLORS ordering.
 const CURVE_COLORS = [
@@ -98,7 +99,7 @@ export default function KaplanMeierChart({ curves, endpoint, height = 460, hr }:
         {curves.map((c, i) => (
           <div key={c.id} className="flex items-center gap-2 py-0.5">
             <span className="inline-block h-0.5 w-4 rounded" style={{ background: armColor(i) }} />
-            <span className="text-slate-700">{c.arm_name}</span>
+            <span className="text-slate-700">{formatArmName(c.arm_name)}</span>
           </div>
         ))}
         {hr && (
@@ -148,7 +149,7 @@ export default function KaplanMeierChart({ curves, endpoint, height = 460, hr }:
             key={c.id}
             type="stepAfter"
             dataKey={c.id}
-            name={c.arm_name}
+            name={formatArmName(c.arm_name)}
             stroke={armColor(i)}
             strokeWidth={2.5}
             dot={false}
