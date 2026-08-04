@@ -33,8 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
-# vercel
-.vercel
+# next dev regenerates these on every run
+/AGENTS.md
+/CLAUDE.md
 
 # typescript
 *.tsbuildinfo
