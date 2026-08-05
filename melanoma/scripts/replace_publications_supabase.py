@@ -44,23 +44,28 @@ DEFAULT_JSON = str(
 EMPTY_VALUES = {None, "", "Not found", "N/A", "Not available", "Not reached"}
 
 
-def parse_numeric(val: str) -> float | None:
+def parse_numeric(val: str) -> tuple[float | None, bool]:
     """Parse a numeric string, falling back to the value inside parentheses.
 
     Handles dirty extraction outputs like '1 (<1%)' or '<1' by extracting
     the parenthesized portion first, then stripping <, >, % characters.
+
+    Returns (value, is_censored). A censored value like '<1' stores its bound as
+    the number so it still plots; the caller records the column in is_lt so the
+    '<' is not lost.
     """
     try:
-        return float(val)
+        return float(val), False
     except (ValueError, TypeError):
         pass
     m = re.search(r'\(([^)]+)\)', val)
     candidate = m.group(1) if m else val
+    censored = "<" in candidate
     stripped = re.sub(r'[<>%]', '', candidate).strip()
     try:
-        return float(stripped)
+        return float(stripped), censored
     except (ValueError, TypeError):
-        return None
+        return None, False
 
 
 def build_rows(publications: list) -> list[dict]:
@@ -117,12 +122,13 @@ def build_rows(publications: list) -> list[dict]:
                 "source_url", "nct_id", "arm_id", "arm_name", "cancer_type", "sponsors",
                 "line_of_treatment", "generic_name", "brand_name", "dosage",
                 "type_of_dosing", "mechanism_of_action", "target_protein",
-                "type_of_therapy", "sub_therapy", "is_nr", "all_attributes",
+                "type_of_therapy", "sub_therapy", "is_nr", "is_lt", "all_attributes",
                 "created_at", "ci_hr_pfs", "ci_hr_os", "ci_hr_efs",
                 "ci_hr_rfs", "ci_hr_mfs", "ci_hr_ttp",
             }
 
             is_nr_list: list[str] = []
+            is_lt_list: list[str] = []
             for attr_key, col_name in ATTRIBUTE_MAPPING.items():
                 is_num = col_name not in known_strings
                 clean_target = attr_key.lower().replace("_", "")
@@ -136,7 +142,9 @@ def build_rows(publications: list) -> list[dict]:
                     val = None
 
                 if is_num and val is not None:
-                    val = parse_numeric(val)
+                    val, censored = parse_numeric(val)
+                    if censored:
+                        is_lt_list.append(col_name)
                     if val is not None and col_name == "num_patients":
                         val = int(val)
 
@@ -178,6 +186,7 @@ def build_rows(publications: list) -> list[dict]:
                 record["cancer_type"] = []
 
             record["is_nr"] = is_nr_list if is_nr_list else None
+            record["is_lt"] = is_lt_list if is_lt_list else None
             rows.append(record)
 
     return rows
