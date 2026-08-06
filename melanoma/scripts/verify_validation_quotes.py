@@ -67,7 +67,10 @@ def normalize(text: str) -> str:
     text = HTML_TAG.sub("", text)
     # Table cell separators are absent from the judge's rendering of a table row.
     text = text.replace("|", " ")
-    return re.sub(r"\s+", " ", text).strip().lower()
+    text = re.sub(r"\s+", " ", text).strip().lower()
+    # Sources and quotes disagree on spacing around comparison operators
+    # ("grade >=3" vs "grade >= 3"); neither spelling is more correct.
+    return re.sub(r"\s*(>=|<=)\s*", r"\1", text)
 
 
 def quote_found(quote: str, source: str) -> bool:
