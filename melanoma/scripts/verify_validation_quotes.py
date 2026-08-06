@@ -15,6 +15,7 @@ Usage:
 import argparse
 import collections
 import csv
+import functools
 import html
 import json
 import pathlib
@@ -53,6 +54,10 @@ MIN_FRAGMENT_CHARS = 12
 # Abstract sources hold a whole conference in one file. Without splitting them, a
 # quote lifted from a neighbouring abstract would count as found.
 ABSTRACT_SECTION = re.compile(r"^### Abstract ID:\s*(\S+)\s*$", re.M)
+# A table names the abstract it reports on in its first cell.
+TABLE_BLOCK = re.compile(
+    r"^#### Table:\n\|\s*Table:\s*([A-Za-z0-9]+).*?(?=^#### |\Z)", re.M | re.S
+)
 
 
 def normalize(text: str) -> str:
@@ -82,21 +87,49 @@ def quote_found(quote: str, source: str) -> bool:
     return all(fragment in source for fragment in fragments)
 
 
-def source_text(source_path: pathlib.Path, doc_id: str) -> str | None:
-    """The text a quote must appear in: one abstract, or the whole publication."""
+def _restore_table(section: str, block: str) -> str:
+    """Append a table to the abstract it belongs to, ahead of the `---` separator."""
+    body, separator = section.rstrip(), ""
+    if body.endswith("---"):
+        body, separator = body[:-3].rstrip(), "\n\n---\n"
+    return f"{body}\n\n{block.rstrip()}\n{separator}"
+
+
+@functools.cache
+def _sections(source_path: pathlib.Path) -> dict[str, str]:
+    """Abstract id -> its section text, header line included."""
     text = source_path.read_text()
     boundaries = list(ABSTRACT_SECTION.finditer(text))
-    if not boundaries:
-        return text
-    abstract_id = doc_id.rsplit("_", 1)[-1]
+    sections = {}
     for index, match in enumerate(boundaries):
-        if match.group(1) != abstract_id:
-            continue
         end = (
             boundaries[index + 1].start() if index + 1 < len(boundaries) else len(text)
         )
-        return text[match.end() : end]
-    return None
+        sections[match.group(1)] = text[match.start() : end]
+
+    # ESMO_2020 prints four tables after the *next* abstract's header, so the headers
+    # alone hand each table to the wrong abstract - and rob its true owner of its own.
+    # Go by the id the table names, but only when that abstract exists: the same
+    # mismatch arises from OCR reading the trailing letter O as a zero ("1076O" ->
+    # "Table: 10760"), and those tables are already where they belong.
+    moves = [
+        (holder, match.group(1), match.group(0))
+        for holder, section in sections.items()
+        for match in TABLE_BLOCK.finditer(section)
+        if match.group(1) != holder and match.group(1) in sections
+    ]
+    for holder, owner, block in moves:
+        sections[holder] = sections[holder].replace(block, "", 1)
+        sections[owner] = _restore_table(sections[owner], block)
+    return sections
+
+
+def source_text(source_path: pathlib.Path, doc_id: str) -> str | None:
+    """The text a quote must appear in: one abstract, or the whole publication."""
+    sections = _sections(source_path)
+    if not sections:
+        return source_path.read_text()
+    return sections.get(doc_id.rsplit("_", 1)[-1])
 
 
 def main() -> None:

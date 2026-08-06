@@ -27,6 +27,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from verify_validation_quotes import normalize, quote_found  # noqa: E402
 
 _root = pathlib.Path(__file__).parent.parent
+sys.path.insert(0, str(_root / "src"))
+from domain.extraction_models import AttributeType  # noqa: E402
 
 DEFAULT_DIR = _root / "data/validation/abstracts_adjudication"
 COLUMNS_CSV = _root / "data/backups/trial_outcomes_rows.csv"
@@ -70,7 +72,11 @@ def load_valid_targets() -> set[str]:
 
     columns = set(next(csv.reader(open(COLUMNS_CSV))))
     by_normalized = {normalize_column(k) for k in mapping}
-    return columns | by_normalized | set(mapping.values())
+    # The CSV holds only the columns some row has filled, so it cannot confirm a
+    # rarely-used name. AttributeType is the authoritative list, and it is the
+    # vocabulary the batches speak.
+    enum_values = {attribute.value for attribute in AttributeType}
+    return columns | by_normalized | set(mapping.values()) | enum_values
 
 
 def main() -> int:
@@ -121,7 +127,12 @@ def main() -> int:
             quote = verdict.get("source_evidence") or ""
             if not quote:
                 problems.append(f"{name}: no source_evidence on {key(verdict)}")
-            elif verdict["doc_id"] in sources:
+            elif verdict["doc_id"] in sources and not (
+                # Ruling 4: a "No Name" trial keeps its value because the abstract
+                # names no trial, and an absence has no quote to cite.
+                verdict["db_column"] == "trial_name"
+                and label == "JUDGE_WRONG_KEEP"
+            ):
                 if not quote_found(quote, sources[verdict["doc_id"]]):
                     problems.append(
                         f"{name}: evidence not in abstract for {key(verdict)}: {quote[:70]!r}"
