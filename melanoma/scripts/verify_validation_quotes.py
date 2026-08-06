@@ -43,6 +43,8 @@ PUNCT_FOLD = {
     "”": '"',
     "·": ".",
     " ": " ",
+    "≥": ">=",
+    "≤": "<=",
 }
 EMPHASIS = re.compile(r"[*`]")
 # Sources keep inline markup ("HR<sub>adj</sub>"); the judge quotes it rendered.
