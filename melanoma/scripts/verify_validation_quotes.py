@@ -29,7 +29,9 @@ DEFAULT_VALIDATION = (
 )
 
 # The judge elides long table rows; each fragment is matched independently.
-ELLIPSIS = re.compile(r"\.\.\.|…")
+# Adjudicating agents bracket their elisions ("[...]"), so consume the brackets too -
+# otherwise they survive as fragment text that appears nowhere in the source.
+ELLIPSIS = re.compile(r"\[\s*(?:\.\.\.|…)\s*\]|\.\.\.|…")
 # Quotes reproduce dashes, quote marks and thin spaces inconsistently with the source.
 PUNCT_FOLD = {
     "‐": "-",
@@ -64,6 +66,13 @@ def normalize(text: str) -> str:
     # Sources carry HTML entities ("p &lt; 0.0001"); the judge quotes the rendered "<".
     text = html.unescape(text)
     text = unicodedata.normalize("NFKC", text)
+    # Sources write "ICI-naïve"; quotes routinely transliterate it to "ICI-naive".
+    # Decompose and drop the combining marks so the two spellings compare equal.
+    text = "".join(
+        character
+        for character in unicodedata.normalize("NFKD", text)
+        if not unicodedata.combining(character)
+    )
     for old, new in PUNCT_FOLD.items():
         text = text.replace(old, new)
     # The sources are markdown; the judge quotes the rendered text, so emphasis
