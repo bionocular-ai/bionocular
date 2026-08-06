@@ -15,6 +15,7 @@ Usage:
 import argparse
 import collections
 import csv
+import html
 import json
 import pathlib
 import re
@@ -44,16 +45,26 @@ PUNCT_FOLD = {
     " ": " ",
 }
 EMPHASIS = re.compile(r"[*`]")
+# Sources keep inline markup ("HR<sub>adj</sub>"); the judge quotes it rendered.
+HTML_TAG = re.compile(r"</?[a-z]+>", re.I)
 MIN_FRAGMENT_CHARS = 12
+# Abstract sources hold a whole conference in one file. Without splitting them, a
+# quote lifted from a neighbouring abstract would count as found.
+ABSTRACT_SECTION = re.compile(r"^### Abstract ID:\s*(\S+)\s*$", re.M)
 
 
 def normalize(text: str) -> str:
+    # Sources carry HTML entities ("p &lt; 0.0001"); the judge quotes the rendered "<".
+    text = html.unescape(text)
     text = unicodedata.normalize("NFKC", text)
     for old, new in PUNCT_FOLD.items():
         text = text.replace(old, new)
     # The sources are markdown; the judge quotes the rendered text, so emphasis
     # markers around a word ("*vs*") would otherwise read as a missing quote.
     text = EMPHASIS.sub("", text)
+    text = HTML_TAG.sub("", text)
+    # Table cell separators are absent from the judge's rendering of a table row.
+    text = text.replace("|", " ")
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
@@ -64,6 +75,23 @@ def quote_found(quote: str, source: str) -> bool:
     if not fragments:
         return True
     return all(fragment in source for fragment in fragments)
+
+
+def source_text(source_path: pathlib.Path, doc_id: str) -> str | None:
+    """The text a quote must appear in: one abstract, or the whole publication."""
+    text = source_path.read_text()
+    boundaries = list(ABSTRACT_SECTION.finditer(text))
+    if not boundaries:
+        return text
+    abstract_id = doc_id.rsplit("_", 1)[-1]
+    for index, match in enumerate(boundaries):
+        if match.group(1) != abstract_id:
+            continue
+        end = (
+            boundaries[index + 1].start() if index + 1 < len(boundaries) else len(text)
+        )
+        return text[match.end() : end]
+    return None
 
 
 def main() -> None:
@@ -93,7 +121,11 @@ def main() -> None:
         if not source_path or not pathlib.Path(source_path).exists():
             missing_sources.append(doc_id)
             continue
-        sources[doc_id] = normalize(pathlib.Path(source_path).read_text())
+        text = source_text(pathlib.Path(source_path), doc_id)
+        if text is None:
+            missing_sources.append(doc_id)
+            continue
+        sources[doc_id] = normalize(text)
 
         for arm in document["arms"]:
             for evaluation in arm["field_evaluations"]:
