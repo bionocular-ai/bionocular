@@ -35,6 +35,12 @@ SHARED_EXTRACTION_RULES = (
     "return the percentage, not the patient count. "
     # Unit stripping
     "Strip unit suffixes from numeric values: '14.7 months' → '14.7'; '2.8 mo' → '2.8'. "
+    # Time-unit conversion — duration fields are always months
+    "Duration fields are reported in MONTHS. If the document states a duration in weeks, days, "
+    "or years, convert it: weeks ÷ 4.35, days ÷ 30.44, years × 12 "
+    "('6.1 weeks' → '1.40'; '18 months' → '18'; '2 years' → '24'). "
+    "Round the converted value to two decimals. Never return a week or day count as if it "
+    "were months. "
     # CI exception
     "Do not apply percentage-extraction rules to CI ranges like '0.68 (0.55–0.85)'. "
     # Empty-string sentinel
@@ -297,6 +303,23 @@ _VALUE_FORMAT_NOTE = (
     "  Not stated : '' (empty string)"
 )
 
+_COMPARATOR_ATTRIBUTION_RULE = (
+    "COMPARATOR ATTRIBUTION: a hazard ratio, its CI, and the p-value describe a COMPARISON "
+    "between arms — they are not properties of any single arm. File all three on the "
+    "EXPERIMENTAL arm only (the arm being tested); leave them empty on the control/comparator "
+    "arm. Never copy the same HR, CI, or p-value onto every arm. When the document compares "
+    "three or more arms against one control, file each comparison's statistics on the "
+    "experimental arm it describes."
+)
+
+_FOLLOWUP_SCOPE_RULE = (
+    "FOLLOW-UP SCOPE: the follow-up fields in this family (median_followup_*, length_*) mean the "
+    "follow-up FOR THAT ARM. Documents usually print one study-level median follow-up covering "
+    "the whole population ('median follow-up was 19 months'). That is not an arm value — leave "
+    "the field empty rather than copying it onto every arm. Fill it only where the document "
+    "gives a per-arm follow-up figure."
+)
+
 _CI_HR_RULE = (
     "CI HR FORMAT: 95% CI for the hazard ratio is a 'low-high' range with TWO decimals "
     "separated by a hyphen (e.g., '0.42-0.64'). The CI is the parenthesized range that "
@@ -316,8 +339,12 @@ _TABLE_FORMAT_BLOCK = (
     "  'X%'       → return 'X'    e.g. '2.5%'            → '2.5'\n"
     "  '0'        → return '0'    (zero events; valid percentage)\n"
     "Never return the patient count N; never include the % symbol.\n"
-    "Separate Grade 3, Grade 4, and Grade 5 columns: apply the above patterns to each cell, "
-    "then SUM all extracted percentages → return the total as the grade_3_plus_* value.\n"
+    "Separate Grade 3, Grade 4, and Grade 5 columns: combine them into one grade_3_plus_* value.\n"
+    "  Preferred — when the cells give patient COUNTS and the arm's total N is known: add the "
+    "counts, then divide by N. e.g. Grade 3 '4 (1%)' + Grade 4 '1 (<1%)' with N=269 → "
+    "(4+1)/269 = '1.9'. Adding the printed percentages instead gives '1', which is wrong: each "
+    "printed percentage is already rounded, and '<1%' carries no usable value.\n"
+    "  Fallback — only when no counts are printed: add the percentages.\n"
     "GRADE NOTATION: 'Grade 3/4', 'Grade 3-4', 'Grade 3-5', 'Grade III/IV', 'Grade ≥3', "
     "'G3+', 'Grade 3 or higher', 'Grade 3 or above' all mean Grade 3+ toxicity."
 )
@@ -439,6 +466,8 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "  Timepoint aliases: '1-year' = 12m, '2-year' = 24m, '3-year' = 36m, '4-year' = 48m.\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
         f"{_CI_HR_RULE}\n"
+        f"{_COMPARATOR_ATTRIBUTION_RULE}\n"
+        f"{_FOLLOWUP_SCOPE_RULE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EDGE CASES:\n"
         "- p-values: strip operators and prefixes — 'p<0.001' → '0.001'; '<0.0001' → '0.0001'; "
@@ -469,6 +498,8 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "  Timepoint aliases: '1-year' = 12m, '2-year' = 24m, '3-year' = 36m, '4-year' = 48m.\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
         f"{_CI_HR_RULE}\n"
+        f"{_COMPARATOR_ATTRIBUTION_RULE}\n"
+        f"{_FOLLOWUP_SCOPE_RULE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EDGE CASES:\n"
         "- p-values: strip operators — 'p<0.001' → '0.001'; '<0.0001' → '0.0001'; "
@@ -508,6 +539,8 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "  Note: p_value_mfs does not exist in the data model — do not add it.\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
         f"{_CI_HR_RULE}\n"
+        f"{_COMPARATOR_ATTRIBUTION_RULE}\n"
+        f"{_FOLLOWUP_SCOPE_RULE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EDGE CASES:\n"
         "- p-values: strip operators — 'p<0.001' → '0.001'; 'NS' → 'Non-Significant'.\n"
@@ -542,6 +575,8 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         "- ttf — months (or 'NR').\n\n"
         f"{_VALUE_FORMAT_NOTE}\n"
         f"{_CI_HR_RULE}\n"
+        f"{_COMPARATOR_ATTRIBUTION_RULE}\n"
+        f"{_FOLLOWUP_SCOPE_RULE}\n"
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "FORMAT: Strip range/unit text — '2.8 months (range, 2.3–12.5)' → '2.8'. "
         "'Not estimable' → 'NR'. 'Not reached' → 'NR'.\n\n"

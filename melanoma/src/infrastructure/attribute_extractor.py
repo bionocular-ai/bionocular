@@ -29,6 +29,10 @@ from ..domain.extraction_models import (
 
 logger = logging.getLogger(__name__)
 
+# Duration fields are stored in months. A calendar month averages 365.25/12 days.
+DAYS_PER_MONTH = 30.44
+WEEKS_PER_MONTH = 4.35
+
 
 def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
     """Clean numeric values by removing units, percentages, and other text.
@@ -130,7 +134,7 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
         # Look for time units and convert to months
         value_str_lower = value_str.lower()
 
-        # Weeks to months (divide by 4)
+        # Weeks to months (a month averages 365.25/12/7 = 4.35 weeks, not 4)
         if "week" in value_str_lower:
             time_units_pattern = r"\b(weeks?|wks?|w)\b"
             value_str = re.sub(
@@ -140,13 +144,13 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
             if numeric_match:
                 try:
                     numeric_value = (
-                        float(numeric_match.group(0)) / 4.0
+                        float(numeric_match.group(0)) / WEEKS_PER_MONTH
                     )  # Convert weeks to months
                     return numeric_value
                 except (ValueError, OverflowError):
                     pass
 
-        # Days to months (divide by ~30.44, but let's use 30 for simplicity)
+        # Days to months (a month averages 365.25/12 = 30.44 days, not 30)
         elif "day" in value_str_lower:
             time_units_pattern = r"\b(days?|d)\b"
             value_str = re.sub(
@@ -156,7 +160,7 @@ def clean_numeric_value(value: Any, attribute_type: AttributeType) -> Any:
             if numeric_match:
                 try:
                     numeric_value = (
-                        float(numeric_match.group(0)) / 30.0
+                        float(numeric_match.group(0)) / DAYS_PER_MONTH
                     )  # Convert days to months
                     return numeric_value
                 except (ValueError, OverflowError):
