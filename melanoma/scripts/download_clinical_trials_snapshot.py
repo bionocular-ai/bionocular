@@ -40,6 +40,10 @@ from dotenv import load_dotenv
 from supabase import create_client
 
 _MELANOMA_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_MELANOMA_ROOT))
+
+from src.domain.constants import TrialLandscape  # noqa: E402
+
 _DEFAULT_OUT_DIR = _MELANOMA_ROOT / "data" / "output" / "trials_extraction_nonindustry"
 _DEFAULT_OUT_DIR_INDUSTRY = (
     _MELANOMA_ROOT / "data" / "output" / "trials_extraction_industry"
@@ -70,7 +74,9 @@ _COLUMNS = [
 ]
 
 _EXCLUDED_SPONSOR_CLASS = "INDUSTRY"
-_INCLUDED_STUDY_TYPES = ["INTERVENTIONAL", "EXPANDED_ACCESS"]
+# Shared with the trial_landscape uploaders' guard so the download filter and the
+# upload guard cannot drift apart.
+_INCLUDED_STUDY_TYPES = list(TrialLandscape.INCLUDED_STUDY_TYPES)
 
 logging.basicConfig(
     level=logging.INFO,

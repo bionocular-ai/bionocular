@@ -26,7 +26,11 @@ load_dotenv()
 _here = pathlib.Path(__file__).parent
 _root = _here.parent
 
+sys.path.insert(0, str(_root))
+
 from supabase import Client, create_client  # noqa: E402
+
+from src.domain.trial_landscape_guard import partition_by_study_type  # noqa: E402
 
 url = os.environ.get("SUPABASE_URL")
 key = os.environ.get("SUPABASE_KEY")
@@ -74,6 +78,35 @@ def map_record(trial: dict) -> dict:
     return record
 
 
+def fetch_study_types(nct_ids: list[str]) -> dict[str, str]:
+    """Read study_type for these trials from clinical_trials."""
+    types: dict[str, str] = {}
+    for i in range(0, len(nct_ids), 200):
+        response = (
+            supabase.table("clinical_trials")
+            .select("nct_id,study_type")
+            .in_("nct_id", nct_ids[i : i + 200])
+            .execute()
+        )
+        for row in response.data:
+            types[row["nct_id"]] = row["study_type"]
+    return types
+
+
+def guard_study_types(records: list[dict]) -> list[dict]:
+    """Drop trials this table does not accept, and say which and why."""
+    types = fetch_study_types([r["nct_id"] for r in records])
+    kept, rejected = partition_by_study_type(records, types)
+    if rejected:
+        counts: dict[str, int] = {}
+        for _, reason in rejected:
+            counts[reason] = counts.get(reason, 0) + 1
+        print(f"Study-type guard dropped {len(rejected)} record(s):")
+        for reason, count in sorted(counts.items(), key=lambda kv: -kv[1]):
+            print(f"  {reason}: {count}")
+    return list(kept)  # type: ignore[arg-type]
+
+
 def validate(records: list[dict]) -> None:
     """Fail loudly before any write if the payload violates the table's invariants."""
     for r in records:
@@ -102,10 +135,14 @@ def main() -> None:
         trials = json.load(f)["trials"]
 
     records = [map_record(t) for t in trials]
-    validate(records)
 
     if len(records) != EXPECTED_ROWS and not args.limit:
         raise ValueError(f"Expected {EXPECTED_ROWS} rows, got {len(records)}")
+
+    # Guard first, validate second: a row this table will never accept should not be
+    # able to fail validation and block the rows that are fine.
+    records = guard_study_types(records)
+    validate(records)
 
     if args.limit:
         records = records[: args.limit]
