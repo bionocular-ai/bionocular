@@ -21,6 +21,9 @@ data/output/
 # Full-table dumps taken before a destructive write (backfill_modality.py)
 data/backups/
 
+# Validation adjudication verdicts, patched CSVs and change reports
+data/validation/
+
 # Trial API export and merged files
 data/trials_db/trial_api_exports/
 data/trials_db/trial_api_merged/

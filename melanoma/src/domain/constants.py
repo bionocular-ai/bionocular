@@ -595,3 +595,21 @@ class ResultsValidation:
     DROPPED_ARMS_FILE: Final[str] = "dropped-arms.json"
     COST_REPORT_FILE: Final[str] = "cost_report.json"
     CHECKPOINT_FILE: Final[str] = "validation_checkpoint.json"
+
+
+# =============================================================================
+# TRIAL LANDSCAPE
+# =============================================================================
+
+
+class TrialLandscape:
+    """Constants for the trial_landscape table and the pipelines that fill it."""
+
+    # trial_landscape describes what treatment was given, at which line, to whom.
+    # An OBSERVATIONAL study assigns no treatment, so it has no landscape to record.
+    # The snapshot download filters on this, and the uploaders guard on it, so the
+    # two must agree - keep this the single definition.
+    INCLUDED_STUDY_TYPES: Final[tuple[str, ...]] = (
+        "INTERVENTIONAL",
+        "EXPANDED_ACCESS",
+    )
