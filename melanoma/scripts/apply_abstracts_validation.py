@@ -52,6 +52,12 @@ OUT_DIR = ADJUDICATION_DIR
 
 SOURCE_TYPE = "abstract"
 
+# The publications pass excluded cancer_type because no rule said what a mixed cohort
+# should store, so its verdicts could not be trusted. Ruling 7 settles it - the column is
+# multi-valued and records every defined skin-cancer type the cohort contains - so these
+# verdicts are applied here. line_of_treatment stays excluded.
+EXCLUDED_COLUMNS = EXCLUDED_COLUMNS - {"cancer_type"}
+
 # Identity fields the extraction vocabulary names differently from the table.
 IDENTITY_COLUMNS = {"nct_number": "nct_id"}
 
@@ -101,6 +107,23 @@ def load_auto_ci_fixes() -> dict[tuple[str, str, str], str]:
         (fix["doc_id"], fix["arm_id"], fix["db_column"]): fix["corrected_value"]
         for fix in json.load(open(AUTO_CI_FIXES))
     }
+
+
+CANCER_TYPE_COLUMN = "cancer_type"
+
+
+def as_cancer_type_list(value: str | None) -> str:
+    """Serialize a cancer_type correction into the JSON array the table stores.
+
+    The column is multi-valued and already holds values like
+    ["Acral Melanoma","Mucosal Melanoma"], but the validation pipeline flattens the
+    array to a comma-separated string before showing it to the judge, so verdicts come
+    back in that flattened form. Write the array back, not the flattened string.
+    """
+    if not value:
+        return "[]"
+    types = [part.strip() for part in value.split(",") if part.strip()]
+    return json.dumps(types, separators=(",", ":"))
 
 
 def float_residue(value: str) -> str | None:
@@ -239,7 +262,10 @@ def apply_verdicts(
             else:
                 patcher.set_cell(row, column, None, "null", verdict)
         elif kind == "JUDGE_RIGHT_FIX":
-            patcher.set_cell(row, column, verdict["corrected_value"], "fix", verdict)
+            corrected = verdict["corrected_value"]
+            if column == CANCER_TYPE_COLUMN:
+                corrected = as_cancer_type_list(corrected)
+            patcher.set_cell(row, column, corrected, "fix", verdict)
         elif kind == "JUDGE_RIGHT_MOVE":
             target = resolve_column(
                 verdict["target_column"] or "", columns, by_normalized

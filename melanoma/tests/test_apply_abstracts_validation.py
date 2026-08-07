@@ -13,6 +13,7 @@ sys.path.insert(0, str(_scripts))
 
 from apply_abstracts_validation import (  # noqa: E402
     apply_verdicts,
+    as_cancer_type_list,
     float_residue,
     resolve_column,
     write_trial_names,
@@ -33,6 +34,7 @@ COLUMNS = {
     "grade_3_plus_teae_ir_ae",
     "grade_3_plus_ae_pct",
     "ci_hr_os",
+    "cancer_type",
 }
 # The two-name bridge the real ATTRIBUTE_MAPPING provides.
 BY_NORMALIZED = {
@@ -210,6 +212,32 @@ def test_trial_name_verdicts_never_touch_a_table_cell() -> None:
     assert patcher.changes == []
     assert row["trae_pct"] == "50.0"
     assert any("no trial-name column" in s["reason"] for s in patcher.skips)
+
+
+def test_cancer_type_is_written_back_as_a_json_array() -> None:
+    """The table stores a list; the judge sees it flattened, so verdicts come back flat."""
+    assert (
+        as_cancer_type_list("Acral Melanoma, Mucosal Melanoma")
+        == '["Acral Melanoma","Mucosal Melanoma"]'
+    )
+    assert as_cancer_type_list("Uveal Melanoma") == '["Uveal Melanoma"]'
+    assert as_cancer_type_list(None) == "[]"
+
+
+def test_cancer_type_fix_lands_as_a_list_not_a_flat_string() -> None:
+    patcher, row = make_patcher(cancer_type='["Uveal Melanoma"]')
+    run(
+        patcher,
+        [
+            verdict(
+                db_column="cancer_type",
+                value_in_db='["Uveal Melanoma"]',
+                verdict="JUDGE_RIGHT_FIX",
+                corrected_value="Cutaneous Melanoma, Uveal Melanoma",
+            )
+        ],
+    )
+    assert row["cancer_type"] == '["Cutaneous Melanoma","Uveal Melanoma"]'
 
 
 def test_float_residue_cleans_noise_but_spares_real_precision() -> None:

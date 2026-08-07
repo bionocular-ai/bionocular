@@ -127,6 +127,14 @@ def test_followup_families_reject_landmarks_and_endpoint_medians() -> None:
         ), f"{fam} prompt confuses median with follow-up"
 
 
+def test_cancer_type_is_documented_as_multi_valued() -> None:
+    """Basket trials span several skin cancers; the column is multi-valued by design."""
+    p = FAMILY_PROMPTS[AttributeFamily.IDENTIFICATION]
+    assert "MULTI-VALUED" in p, "prompt must not tell the model to pick a single type"
+    assert "comma-separated" in p
+    assert "out of scope" in p, "types outside the eight defined ones are left out"
+
+
 def test_efs_rfs_mfs_states_it_has_no_rate_fields() -> None:
     """Only OS and PFS have *_rate_* columns, so an RFS landmark rate has no home."""
     p = FAMILY_PROMPTS[AttributeFamily.EFS_RFS_MFS]
