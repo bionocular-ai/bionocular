@@ -175,6 +175,48 @@ def build_patches(
     return patches
 
 
+def drop_unreferencable_nct_ids(
+    client: Client, patches: dict[str, dict]
+) -> list[tuple[str, str]]:
+    """Remove nct_id corrections that point at a trial clinical_trials does not hold.
+
+    trial_outcomes.nct_id carries a foreign key onto clinical_trials, which is scoped to
+    skin-cancer trials. A basket trial registered for "advanced solid tumors" that then
+    publishes a melanoma subgroup abstract has a real registry id with no row to
+    reference. Postgres rejects the whole UPDATE, so one unwritable column takes that
+    row's unrelated corrections down with it. Drop the column and keep the rest; the
+    correction is reported rather than silently applied.
+    """
+    wanted = {
+        row_id: payload["nct_id"]
+        for row_id, payload in patches.items()
+        if payload.get("nct_id")
+    }
+    if not wanted:
+        return []
+    known: set[str] = set()
+    for start in range(0, 20000, 1000):
+        response = (
+            client.table("clinical_trials")
+            .select("nct_id")
+            .range(start, start + 999)
+            .execute()
+        )
+        known |= {row["nct_id"] for row in response.data}
+        if len(response.data) < 1000:
+            break
+    dropped = [
+        (row_id, str(nct_id))
+        for row_id, nct_id in wanted.items()
+        if nct_id not in known
+    ]
+    for row_id, _ in dropped:
+        del patches[row_id]["nct_id"]
+        if not patches[row_id]:
+            del patches[row_id]
+    return dropped
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -188,6 +230,11 @@ def main() -> None:
     )
     parser.add_argument("--patched", default=None)
     parser.add_argument("--baseline", default=str(BASELINE_CSV))
+    parser.add_argument(
+        "--only-id",
+        default=None,
+        help="Restrict to one row id, to retry a row an earlier run could not write",
+    )
     args = parser.parse_args()
 
     source_type = args.source_type
@@ -207,6 +254,14 @@ def main() -> None:
         sys.exit(1)
     print(f"Baseline and patched agree on {len(baseline)} {source_type} rows")
 
+    if args.only_id:
+        if args.only_id not in baseline:
+            print(f"{args.only_id} is not a {source_type} row in the CSVs.")
+            sys.exit(1)
+        baseline = {args.only_id: baseline[args.only_id]}
+        patched = {args.only_id: patched[args.only_id]}
+        print(f"Restricted to {args.only_id}")
+
     live = fetch_live(client, source_type)
     print(f"Live {source_type} rows: {len(live)}")
 
@@ -221,6 +276,9 @@ def main() -> None:
     print("Drift check clean: live table matches the baseline export")
 
     patches = build_patches(baseline, patched)
+    unreferencable = drop_unreferencable_nct_ids(client, patches)
+    for row_id, nct_id in unreferencable:
+        print(f"  ! {row_id}: {nct_id} has no clinical_trials row; nct_id left as-is")
     cells = sum(len(payload) for payload in patches.values())
     print(f"{len(patches)} rows to update, {cells} columns total")
 
@@ -251,12 +309,15 @@ def main() -> None:
     print(f"Wrote {len(patches) - len(failures)}/{len(patches)} rows")
 
     after = fetch_live(client, source_type)
+    # A dropped nct_id is a known, reported divergence, not a failed write.
+    left_alone = {row_id for row_id, _ in unreferencable}
     remaining = [
         (row_id, column)
         for row_id, row in patched.items()
         for column in row
         if column in after[row_id]
         and column not in DRIFT_EXEMPT
+        and not (column == "nct_id" and row_id in left_alone)
         and canonical(column, after[row_id][column]) != canonical(column, row[column])
     ]
     if remaining:
