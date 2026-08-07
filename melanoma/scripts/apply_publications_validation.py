@@ -160,10 +160,16 @@ def load_missed_values(mapping: dict[str, str]) -> list[dict]:
 
 
 class Patcher:
-    def __init__(self, rows: list[dict], fieldnames: list[str]) -> None:
-        # Publication rows only. Abstract and webscrape rows must come through byte-identical.
+    def __init__(
+        self,
+        rows: list[dict],
+        fieldnames: list[str],
+        source_type: str = "publication",
+    ) -> None:
+        # Rows of this source_type only. Every other row must come through byte-identical.
+        self.source_type = source_type
         self.by_id = {
-            row["id"]: row for row in rows if row["source_type"] == "publication"
+            row["id"]: row for row in rows if row["source_type"] == source_type
         }
         self.fieldnames = fieldnames
         self.changes: list[dict] = []
@@ -177,7 +183,7 @@ class Patcher:
                 self.markers[row["id"]]["nr"] = set(json.loads(row["is_nr"]))
 
     def row_for(self, doc_id: str, arm_id: str) -> dict | None:
-        return self.by_id.get(f"publication_{doc_id}_{arm_id}")
+        return self.by_id.get(f"{self.source_type}_{doc_id}_{arm_id}")
 
     def skip(self, doc_id: str, arm_id: str, column: str, reason: str) -> None:
         self.skips.append(
