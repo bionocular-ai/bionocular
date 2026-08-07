@@ -112,6 +112,28 @@ def test_trae_general_has_single_arm_relabel_clause() -> None:
     )
 
 
+def test_followup_families_reject_landmarks_and_endpoint_medians() -> None:
+    """A '5-year RFS' landmark and a median RFS both got stored as follow-up length."""
+    for fam in [
+        AttributeFamily.PFS_FAMILY,
+        AttributeFamily.OS_FAMILY,
+        AttributeFamily.EFS_RFS_MFS,
+        AttributeFamily.TIME_TO_METRICS,
+    ]:
+        p = FAMILY_PROMPTS[fam]
+        assert "LANDMARK LABEL" in p, f"{fam} prompt lets a landmark become follow-up"
+        assert (
+            "ENDPOINT'S OWN MEDIAN" in p
+        ), f"{fam} prompt confuses median with follow-up"
+
+
+def test_efs_rfs_mfs_states_it_has_no_rate_fields() -> None:
+    """Only OS and PFS have *_rate_* columns, so an RFS landmark rate has no home."""
+    p = FAMILY_PROMPTS[AttributeFamily.EFS_RFS_MFS]
+    assert "NO rate fields" in p
+    assert "rfs_rate_" in p
+
+
 def test_efs_rfs_mfs_has_non_substitution_rule() -> None:
     p = FAMILY_PROMPTS[AttributeFamily.EFS_RFS_MFS]
     assert "never copy" in p.lower() or "do not substitute" in p.lower()

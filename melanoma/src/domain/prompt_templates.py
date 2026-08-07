@@ -317,7 +317,11 @@ _FOLLOWUP_SCOPE_RULE = (
     "follow-up FOR THAT ARM. Documents usually print one study-level median follow-up covering "
     "the whole population ('median follow-up was 19 months'). That is not an arm value — leave "
     "the field empty rather than copying it onto every arm. Fill it only where the document "
-    "gives a per-arm follow-up figure."
+    "gives a per-arm follow-up figure.\n"
+    "Two things are never follow-up. A LANDMARK LABEL names when a RATE was measured: in "
+    "'5-year RFS was 60%' the value is 60 — never store the 5 years as follow-up. And the "
+    "ENDPOINT'S OWN MEDIAN is not follow-up: 'median RFS was 18 months' fills rfs, not "
+    "length_rfs. A follow-up field needs the document to say 'follow-up'."
 )
 
 _CI_HR_RULE = (
@@ -544,7 +548,9 @@ FAMILY_PROMPTS: dict[AttributeFamily, str] = {
         f"{_NO_INFERENCE_CLAUSE}\n\n"
         "EDGE CASES:\n"
         "- p-values: strip operators — 'p<0.001' → '0.001'; 'NS' → 'Non-Significant'.\n"
-        "- Medians: strip unit — '14.7 months' → '14.7'; 'not reached' → 'NR'.\n\n"
+        "- Medians: strip unit — '14.7 months' → '14.7'; 'not reached' → 'NR'.\n"
+        "- This family has NO rate fields (no rfs_rate_*, mfs_rate_*, efs_rate_*). A landmark "
+        "rate — '5-year RFS was 60%' — has no destination here: drop it entirely.\n\n"
         "NON-SUBSTITUTION RULE:\n"
         "EFS, RFS, and MFS are NOT interchangeable with PFS or OS. If the document only reports "
         "PFS and OS — with no row, section, or table label using EFS / RFS / MFS or one of their "
