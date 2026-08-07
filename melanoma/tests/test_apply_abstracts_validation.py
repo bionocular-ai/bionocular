@@ -4,6 +4,7 @@ Covers the four behaviours that differ from the publications pass: vocabulary
 translation, MOVE collision dedupe, a NULL that must not undo a MOVE, and a KEEP
 on an auto-repaired ci_hr cell (which is a write, not a no-op).
 """
+import csv
 import pathlib
 import sys
 
@@ -14,6 +15,7 @@ from apply_abstracts_validation import (  # noqa: E402
     apply_verdicts,
     float_residue,
     resolve_column,
+    write_trial_names,
 )
 from apply_publications_validation import Patcher  # noqa: E402
 
@@ -168,6 +170,46 @@ def test_plain_keep_changes_nothing() -> None:
     run(patcher, [verdict(verdict="JUDGE_WRONG_KEEP")])
     assert row["trae_pct"] == "50.0"
     assert patcher.changes == []
+
+
+def test_trial_names_are_exported_rather_than_lost(tmp_path: pathlib.Path) -> None:
+    """trial_outcomes has no trial-name column, so these findings go to their own file."""
+    path = tmp_path / "trial_names.csv"
+    written = write_trial_names(
+        [
+            verdict(
+                db_column="trial_name",
+                value_in_db="No Name",
+                verdict="JUDGE_RIGHT_FIX",
+                corrected_value="IGNYTE",
+                source_evidence="the IGNYTE trial",
+            ),
+            verdict(db_column="trae", verdict="JUDGE_RIGHT_NULL"),
+        ],
+        path,
+    )
+    assert written == 1, "only trial_name verdicts belong in this file"
+    rows = list(csv.DictReader(open(path)))
+    assert rows[0]["row_id"] == "abstract_DOC_arm_1", "keyed for a later schema change"
+    assert rows[0]["corrected_value"] == "IGNYTE"
+    assert rows[0]["source_evidence"] == "the IGNYTE trial"
+
+
+def test_trial_name_verdicts_never_touch_a_table_cell() -> None:
+    patcher, row = make_patcher(trae_pct="50.0")
+    run(
+        patcher,
+        [
+            verdict(
+                db_column="trial_name",
+                verdict="JUDGE_RIGHT_FIX",
+                corrected_value="IGNYTE",
+            )
+        ],
+    )
+    assert patcher.changes == []
+    assert row["trae_pct"] == "50.0"
+    assert any("no trial-name column" in s["reason"] for s in patcher.skips)
 
 
 def test_float_residue_cleans_noise_but_spares_real_precision() -> None:

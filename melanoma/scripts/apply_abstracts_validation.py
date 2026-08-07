@@ -58,9 +58,14 @@ IDENTITY_COLUMNS = {"nct_number": "nct_id"}
 # Fields a verdict can name that this table has no cell for. The verdicts are still
 # recorded in skipped.csv - they are real findings with nowhere to land.
 UNMAPPED_COLUMNS = {
-    "trial_name": "trial_outcomes has no trial-name column",
+    "trial_name": "trial_outcomes has no trial-name column (exported to trial_names.csv)",
     "abstract_number": "abstract_id already carries the full document id",
 }
+
+# trial_name is the one homeless field carrying findings that would otherwise be lost:
+# 54 of its verdicts are real trial names the extractor missed. They go to their own
+# file, keyed by row id, so a later schema change can apply them without re-running.
+TRIAL_NAME_FIELD = "trial_name"
 
 
 def resolve_column(name: str, columns: set[str], by_normalized: dict[str, str]) -> str:
@@ -114,6 +119,47 @@ def float_residue(value: str) -> str | None:
         return None
     cleaned = float(f"{number:.12g}")
     return repr(cleaned) if cleaned != number else None
+
+
+def write_trial_names(verdicts: list[dict], path: pathlib.Path) -> int:
+    """Export the trial_name verdicts, which have no column to be applied to.
+
+    Keyed by row id so this stays applyable if trial_outcomes ever gains the column.
+    """
+    fieldnames = [
+        "row_id",
+        "doc_id",
+        "arm_id",
+        "verdict",
+        "value_in_db",
+        "corrected_value",
+        "confidence",
+        "source_evidence",
+        "reason",
+        "batch",
+    ]
+    rows = [
+        {
+            "row_id": f"{SOURCE_TYPE}_{v['doc_id']}_{v['arm_id']}",
+            "doc_id": v["doc_id"],
+            "arm_id": v["arm_id"],
+            "verdict": v["verdict"],
+            "value_in_db": v["value_in_db"],
+            "corrected_value": v.get("corrected_value") or "",
+            "confidence": v.get("confidence", ""),
+            "source_evidence": (v.get("source_evidence") or "")[:300],
+            "reason": v.get("reason", ""),
+            "batch": v.get("_batch", ""),
+        }
+        for v in verdicts
+        if v["db_column"] == TRIAL_NAME_FIELD
+    ]
+    rows.sort(key=lambda r: (r["doc_id"], r["arm_id"]))
+    with open(path, "w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+    return len(rows)
 
 
 def apply_verdicts(
@@ -397,6 +443,9 @@ def main() -> None:
     print(f"Wrote {out_csv} ({len(rows)} rows, {len(fieldnames)} columns)")
 
     write_reports(patcher, counts, out_csv)
+    trial_names_path = OUT_DIR / "trial_names.csv"
+    exported = write_trial_names(verdicts, trial_names_path)
+    print(f"Wrote {trial_names_path} ({exported} verdicts with no column to apply to)")
     print(f"{len(patcher.changes)} cells changed, {len(patcher.skips)} skipped")
     print("No Supabase write performed.")
 
