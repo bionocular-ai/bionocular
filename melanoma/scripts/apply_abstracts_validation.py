@@ -126,6 +126,16 @@ def as_cancer_type_list(value: str | None) -> str:
     return json.dumps(types, separators=(",", ":"))
 
 
+# The extraction vocabulary lets a p-value be a significance label rather than a number
+# (AttributeType.P_VALUE_* in src/domain/extraction_models.py, and the extractor maps
+# 'NS' / 'not significant' onto these). trial_outcomes stores the p-value columns as
+# numeric, so no label can be written to one - the baseline export contains none. A
+# correction to a label therefore has no storable destination, which by the spec's own
+# rule makes the cell a null; the number sitting there was read off an inequality
+# ("p>0.05") and asserts a precision the source never gave.
+SIGNIFICANCE_LABELS = {"Non-Significant", "Significant", "Highly Significant"}
+
+
 def float_residue(value: str) -> str | None:
     """The clean form of a value carrying binary-float noise ('64.80000000000001').
 
@@ -265,6 +275,16 @@ def apply_verdicts(
             corrected = verdict["corrected_value"]
             if column == CANCER_TYPE_COLUMN:
                 corrected = as_cancer_type_list(corrected)
+            elif corrected in SIGNIFICANCE_LABELS:
+                patcher.set_cell(
+                    row,
+                    column,
+                    None,
+                    "null",
+                    verdict,
+                    note=f"{corrected!r} has no numeric form; column is numeric",
+                )
+                continue
             patcher.set_cell(row, column, corrected, "fix", verdict)
         elif kind == "JUDGE_RIGHT_MOVE":
             target = resolve_column(

@@ -35,6 +35,7 @@ COLUMNS = {
     "grade_3_plus_ae_pct",
     "ci_hr_os",
     "cancer_type",
+    "p_value_pfs",
 }
 # The two-name bridge the real ATTRIBUTE_MAPPING provides.
 BY_NORMALIZED = {
@@ -238,6 +239,24 @@ def test_cancer_type_fix_lands_as_a_list_not_a_flat_string() -> None:
         ],
     )
     assert row["cancer_type"] == '["Cutaneous Melanoma","Uveal Melanoma"]'
+
+
+def test_significance_label_correction_nulls_rather_than_writing_text() -> None:
+    """'p>0.05' is not 0.05, but the numeric column cannot hold the label either."""
+    patcher, row = make_patcher(p_value_pfs="0.05")
+    run(
+        patcher,
+        [
+            verdict(
+                db_column="p_value_pfs",
+                value_in_db="0.05",
+                verdict="JUDGE_RIGHT_FIX",
+                corrected_value="Non-Significant",
+            )
+        ],
+    )
+    assert row["p_value_pfs"] == ""
+    assert [c["action"] for c in patcher.changes] == ["null"]
 
 
 def test_float_residue_cleans_noise_but_spares_real_precision() -> None:
