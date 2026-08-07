@@ -1,17 +1,17 @@
 """
-Write the adjudicated publications validation patch to Supabase.
+Write an adjudicated validation patch to Supabase.
 
-Update-only: one UPDATE per publication row carrying just the columns that changed.
-Nothing is deleted, nothing is inserted, and abstract/webscrape rows are never touched.
+Update-only: one UPDATE per row carrying just the columns that changed. Nothing is
+deleted, nothing is inserted, and rows of any other source_type are never touched.
 The patch is derived by diffing the baseline export against the patched CSV produced by
-apply_publications_validation.py, so this script cannot invent a change of its own.
+apply_<cohort>_validation.py, so this script cannot invent a change of its own.
 
 Refuses to run if the live table has drifted from the baseline export since it was taken.
 
 Usage:
     cd melanoma
-    poetry run python3 scripts/write_publications_validation_supabase.py             # dry run
-    poetry run python3 scripts/write_publications_validation_supabase.py --execute
+    poetry run python3 scripts/write_validation_supabase.py --source-type abstract
+    poetry run python3 scripts/write_validation_supabase.py --source-type abstract --execute
 """
 
 import argparse
@@ -32,12 +32,13 @@ load_dotenv(_root / ".env")
 from supabase import Client, create_client  # noqa: E402
 
 BASELINE_CSV = _root / "data/backups/trial_outcomes_rows.csv"
-PATCHED_CSV = (
-    _root / "data/validation/publications_adjudication/trial_outcomes_rows.patched.csv"
-)
 BACKUP_DIR = _root / "data/backups"
 
-SOURCE_TYPE = "publication"
+
+def patched_csv_for(source_type: str) -> pathlib.Path:
+    directory = _root / f"data/validation/{source_type}s_adjudication"
+    return directory / "trial_outcomes_rows.patched.csv"
+
 
 ARRAY_COLUMNS = {"cancer_type", "is_nr", "is_lt"}
 INT_COLUMNS = {"num_patients"}
@@ -73,7 +74,10 @@ TEXT_COLUMNS = {
     "ci_hr_ttp",
 }
 # Columns the export renders differently from the API; excluded from the drift check.
-DRIFT_EXEMPT = {"created_at"}
+# all_attributes is the extractor's own audit blob: the API returns it as a Python object
+# and the export as JSON text, so the two never compare equal. The patchers exclude the
+# column, so it is never written and its rendering cannot mask a real drift.
+DRIFT_EXEMPT = {"created_at", "all_attributes"}
 
 
 def to_db(column: str, raw: str) -> object:
@@ -107,17 +111,17 @@ def canonical(column: str, value: object) -> str:
         return str(value)
 
 
-def read_publication_rows(path: pathlib.Path) -> dict[str, dict]:
+def read_rows(path: pathlib.Path, source_type: str) -> dict[str, dict]:
     csv.field_size_limit(10_000_000)
     with open(path, newline="") as handle:
         return {
             row["id"]: row
             for row in csv.DictReader(handle)
-            if row["source_type"] == SOURCE_TYPE
+            if row["source_type"] == source_type
         }
 
 
-def fetch_live(client: Client) -> dict[str, dict]:
+def fetch_live(client: Client, source_type: str) -> dict[str, dict]:
     rows: list[dict] = []
     page = 500
     start = 0
@@ -125,7 +129,7 @@ def fetch_live(client: Client) -> dict[str, dict]:
         response = (
             client.table("trial_outcomes")
             .select("*")
-            .eq("source_type", SOURCE_TYPE)
+            .eq("source_type", source_type)
             .range(start, start + page - 1)
             .execute()
         )
@@ -176,9 +180,18 @@ def main() -> None:
     parser.add_argument(
         "--execute", action="store_true", help="Perform the writes (default: dry run)"
     )
-    parser.add_argument("--patched", default=str(PATCHED_CSV))
+    parser.add_argument(
+        "--source-type",
+        default="publication",
+        choices=["publication", "abstract"],
+        help="Which cohort's patch to write (default: publication)",
+    )
+    parser.add_argument("--patched", default=None)
     parser.add_argument("--baseline", default=str(BASELINE_CSV))
     args = parser.parse_args()
+
+    source_type = args.source_type
+    patched_path = pathlib.Path(args.patched or patched_csv_for(source_type))
 
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_KEY")
@@ -187,15 +200,15 @@ def main() -> None:
         sys.exit(1)
     client: Client = create_client(url, key)
 
-    baseline = read_publication_rows(pathlib.Path(args.baseline))
-    patched = read_publication_rows(pathlib.Path(args.patched))
+    baseline = read_rows(pathlib.Path(args.baseline), source_type)
+    patched = read_rows(patched_path, source_type)
     if set(baseline) != set(patched):
         print("Baseline and patched CSVs cover different rows; refusing to continue.")
         sys.exit(1)
-    print(f"Baseline and patched agree on {len(baseline)} publication rows")
+    print(f"Baseline and patched agree on {len(baseline)} {source_type} rows")
 
-    live = fetch_live(client)
-    print(f"Live publication rows: {len(live)}")
+    live = fetch_live(client, source_type)
+    print(f"Live {source_type} rows: {len(live)}")
 
     drift = find_drift(live, baseline)
     if drift:
@@ -222,7 +235,7 @@ def main() -> None:
         return
 
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    backup_path = BACKUP_DIR / f"trial_outcomes_publications_{stamp}.json"
+    backup_path = BACKUP_DIR / f"trial_outcomes_{source_type}s_{stamp}.json"
     backup_path.write_text(json.dumps(list(live.values()), indent=1, default=str))
     print(f"Backed up {len(live)} live rows to {backup_path}")
 
@@ -237,7 +250,7 @@ def main() -> None:
             print(f"  {index}/{len(patches)} rows written")
     print(f"Wrote {len(patches) - len(failures)}/{len(patches)} rows")
 
-    after = fetch_live(client)
+    after = fetch_live(client, source_type)
     remaining = [
         (row_id, column)
         for row_id, row in patched.items()
@@ -253,7 +266,10 @@ def main() -> None:
         for row in remaining[:20]:
             print(f"  {row[0]} {row[1]}")
         sys.exit(1)
-    print("Verified: live table matches the patched CSV on all 131 publication rows")
+    print(
+        f"Verified: live table matches the patched CSV on all "
+        f"{len(patched)} {source_type} rows"
+    )
     if failures:
         print(f"{len(failures)} row updates reported errors; see above")
         sys.exit(1)
