@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prepare": "cd .. && git config core.hooksPath web/.husky"
+    "prepare": "cd .. && git config core.hooksPath web/.husky",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:evals": "vitest run --include 'src/**/*.eval.test.ts'"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
@@ -29,7 +32,6 @@
     "framer-motion": "^12.33.0",
     "lucide-react": "^0.554.0",
     "next": "^16.2.12",
-    "p-retry": "^8.0.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-markdown": "^10.1.0",
@@ -49,6 +51,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

@@ -14,11 +14,8 @@ export interface ToolCardProps {
 }
 
 const PRETTY_NAMES: Record<string, string> = {
-  search_pubmed:           'PubMed search',
-  search_clinical_trials:  'ClinicalTrials.gov search',
-  search_chembl:           'ChEMBL search',
-  query_open_targets:      'Open Targets query',
   query_proprietary_data:  'Proprietary data query',
+  lookup_trial:            'Trial lookup',
   store_finding:           'Save finding',
 };
 

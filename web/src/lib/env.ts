@@ -63,8 +63,6 @@ function requireServerEnv(key: string): string {
 export function getServerEnv() {
   return {
     supabaseSecretKey: requireServerEnv('SUPABASE_SECRET_KEY'),
-    anthropicApiKey: requireServerEnv('ANTHROPIC_API_KEY'),
-    pubmedApiKey: process.env.PUBMED_API_KEY,
   };
 }
 
