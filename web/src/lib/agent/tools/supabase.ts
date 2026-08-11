@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { getDbCancerType } from '@/lib/api';
 import { PHASE_MAP } from '@/lib/clinical-trials-enums';
 import { DATA_TOOL_NAMES } from './names';
+import { runTool } from './logging';
 import {
   AGENT_TABLES,
   AGENT_TABLE_NAMES,
@@ -29,11 +30,13 @@ export interface AgentToolContext {
   cancerSlug: string;
   /** Present only once a chat has been persisted. */
   sessionId?: string;
+  /** Per-request ID tying every tool log line to one chat session row. */
+  traceId: string;
 }
 
 const PHASE_VALUES = Object.keys(PHASE_MAP) as [string, ...string[]];
 
-export function buildSupabaseTools({ userId, cancerSlug, sessionId }: AgentToolContext) {
+export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: AgentToolContext) {
   const dbCancerType = getDbCancerType(cancerSlug);
 
   return {
@@ -60,7 +63,9 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId }: AgentToolC
           .describe('Substring match on the treatment or arm name for this table.'),
         limit: z.number().int().min(1).max(MAX_ROWS).default(10),
       }),
-      execute: async ({ table, nctId, sponsor, phase, drug, limit }) => {
+      execute: async (args) =>
+        runTool('query_proprietary_data', traceId, args, async () => {
+        const { table, nctId, sponsor, phase, drug, limit } = args;
         const spec = AGENT_TABLES[table];
         const supabase = createServiceClient();
 
@@ -129,7 +134,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId }: AgentToolC
         }
 
         return { ok: true as const, table, coverage, rows };
-      },
+        }),
     }),
 
     store_finding: tool({
@@ -145,7 +150,9 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId }: AgentToolC
         sourceTool: z.enum(DATA_TOOL_NAMES),
         citations: z.array(z.string()).default([]),
       }),
-      execute: async ({ findingType, title, summary, sourceTool, citations }) => {
+      execute: async (args) =>
+        runTool('store_finding', traceId, args, async () => {
+        const { findingType, title, summary, sourceTool, citations } = args;
         const supabase = createServiceClient();
         const { data, error } = await supabase
           .from('agent_findings')
@@ -166,7 +173,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId }: AgentToolC
           return { ok: false as const, reason: 'insert_failed' as const, message: error.message };
         }
         return { ok: true as const, id: data.id };
-      },
+        }),
     }),
   };
 }

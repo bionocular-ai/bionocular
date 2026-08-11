@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prepare": "cd .. && git config core.hooksPath web/.husky"
+    "prepare": "cd .. && git config core.hooksPath web/.husky",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:evals": "vitest run --include 'src/**/*.eval.test.ts'"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
@@ -48,6 +51,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

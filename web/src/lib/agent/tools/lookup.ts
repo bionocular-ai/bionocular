@@ -10,6 +10,7 @@ import {
   applyTrialKey,
   type AgentTable,
 } from './schema';
+import { runTool } from './logging';
 import type { AgentToolContext } from './supabase';
 
 /** Enough to show every arm or curve for one trial without dumping the table. */
@@ -29,7 +30,7 @@ interface TableHit {
  * distinguishable: the trial is here, the trial is in the database but tagged to
  * a different cancer type, and the trial is not in the database at all.
  */
-export function buildLookupTool({ cancerSlug }: AgentToolContext) {
+export function buildLookupTool({ cancerSlug, traceId }: AgentToolContext) {
   const dbCancerType = getDbCancerType(cancerSlug);
 
   return {
@@ -45,7 +46,9 @@ export function buildLookupTool({ cancerSlug }: AgentToolContext) {
           .regex(NCT_ID_PATTERN, 'must be an NCT number, e.g. NCT00006368')
           .describe('An 8-digit NCT number. Other registry IDs are not supported.'),
       }),
-      execute: async ({ nctId }) => {
+      execute: async (args) =>
+        runTool('lookup_trial', traceId, args, async () => {
+        const { nctId } = args;
         const supabase = createServiceClient();
 
         const results = await Promise.all(
@@ -110,7 +113,7 @@ export function buildLookupTool({ cancerSlug }: AgentToolContext) {
           },
           tables,
         };
-      },
+        }),
     }),
   };
 }

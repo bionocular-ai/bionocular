@@ -31,10 +31,14 @@ export interface ChatPanelProps {
 }
 
 export function ChatPanel({ cancerType }: ChatPanelProps) {
+  // One ID for the life of this chat, so the server upserts a single row
+  // instead of inserting one per turn.
+  const [sessionId] = useState(() => crypto.randomUUID());
+
   const { messages, sendMessage, status, error } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/agent/chat',
-      body: { cancerType },
+      body: { cancerType, sessionId },
     }),
   });
 
