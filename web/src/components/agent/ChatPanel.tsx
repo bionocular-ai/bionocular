@@ -182,10 +182,13 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
 }
 
 function EmptyState({ onPick }: { onPick: (q: string) => void }) {
+  // Every example has to be answerable from the database, for whichever cancer
+  // type the dashboard is on - naming another one would ask the agent for
+  // something it is scoped out of.
   const examples = [
-    'What are the active phase 3 trials in uveal melanoma?',
-    'Compare encorafenib vs dabrafenib mechanism and approval status.',
-    'Which targets have the strongest genetic association with cutaneous melanoma?',
+    'What phase 3 trials do we have for BRAF-mutant disease?',
+    'Tell me about NCT00006368.',
+    'Which treatments have reported overall survival data?',
   ];
   return (
     <div className="flex flex-col items-center gap-6 py-16 text-center">
@@ -195,7 +198,8 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Bionocular Research Agent</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Oncology questions across trials, literature, compounds, targets, and our proprietary data.
+          Ask about the trials, reported outcomes, survival curves, and news Bionocular tracks for
+          this cancer type. No live registry or literature lookups.
         </p>
       </div>
       <div className="grid w-full max-w-xl gap-2">
