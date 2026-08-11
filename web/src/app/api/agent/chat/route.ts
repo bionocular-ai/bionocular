@@ -11,7 +11,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { checkAgentRateLimit } from '@/lib/agent/rate-limit';
 import { agentTools } from '@/lib/agent/tools';
 import { ONCOLOGY_SYSTEM_PROMPT } from '@/lib/agent/prompts';
-import { DEFAULT_CANCER_TYPE_SLUG } from '@/lib/dashboard-constants';
+import { DASHBOARD_CANCER_TYPES } from '@/lib/dashboard-constants';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -19,7 +19,13 @@ export const maxDuration = 60;
 interface ChatRequestBody {
   messages: UIMessage[];
   sessionId?: string;
+  /** Dashboard category slug the chat was opened under. */
+  cancerType?: string;
 }
+
+const VALID_CANCER_SLUGS: ReadonlySet<string> = new Set(
+  DASHBOARD_CANCER_TYPES.map((t) => t.value),
+);
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -33,7 +39,14 @@ export async function POST(req: Request) {
     return new Response('Rate limit exceeded — 20 requests per minute', { status: 429 });
   }
 
-  const { messages, sessionId }: ChatRequestBody = await req.json();
+  const { messages, sessionId, cancerType }: ChatRequestBody = await req.json();
+
+  // Client-supplied, so it is checked against the known slugs before it reaches
+  // the query builder rather than passed through.
+  if (!cancerType || !VALID_CANCER_SLUGS.has(cancerType)) {
+    return new Response('Unknown cancer type', { status: 400 });
+  }
+
   const modelMessages: ModelMessage[] = await convertToModelMessages(messages);
 
   // Cache the system prompt + tool definitions. Anthropic caches break on changes,
@@ -50,7 +63,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: anthropic('claude-sonnet-4-6'),
     messages: [systemMessage, ...modelMessages],
-    tools: agentTools({ userId: user.id, cancerSlug: DEFAULT_CANCER_TYPE_SLUG, sessionId }),
+    tools: agentTools({ userId: user.id, cancerSlug: cancerType, sessionId }),
     stopWhen: stepCountIs(4), // raise to 8 after Render Pro upgrade
     onFinish: async ({ usage }) => {
       try {

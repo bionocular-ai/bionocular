@@ -25,9 +25,17 @@ function isToolPart(part: { type: string }): part is MessageToolPart {
   return part.type.startsWith('tool-');
 }
 
-export function ChatPanel() {
+export interface ChatPanelProps {
+  /** Dashboard category slug. Every tool query is restricted to it server-side. */
+  cancerType: string;
+}
+
+export function ChatPanel({ cancerType }: ChatPanelProps) {
   const { messages, sendMessage, status, error } = useChat({
-    transport: new DefaultChatTransport({ api: '/api/agent/chat' }),
+    transport: new DefaultChatTransport({
+      api: '/api/agent/chat',
+      body: { cancerType },
+    }),
   });
 
   const [input, setInput] = useState('');
