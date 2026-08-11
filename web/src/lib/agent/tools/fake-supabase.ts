@@ -29,10 +29,18 @@ export interface TableFixture {
   error?: { code: string; message: string };
 }
 
+export interface RecordedUpsert {
+  table: string;
+  values: Record<string, unknown>;
+  onConflict?: string;
+}
+
 export interface FakeSupabase {
   from: (table: string) => FakeQuery;
   /** Every query built during the test, in order. */
   queries: RecordedQuery[];
+  /** Every row written during the test, in order. */
+  upserts: RecordedUpsert[];
 }
 
 interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown; count: number | null }> {
@@ -41,6 +49,12 @@ interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown
   eq: (column: string, value: unknown) => FakeQuery;
   contains: (column: string, value: unknown) => FakeQuery;
   ilike: (column: string, value: string) => FakeQuery;
+  /** Resolves the first fixture row rather than the array, as PostgREST does. */
+  maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
+  upsert: (
+    values: Record<string, unknown>,
+    options?: { onConflict?: string },
+  ) => PromiseLike<{ error: unknown }>;
 }
 
 /**
@@ -49,6 +63,7 @@ interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown
  */
 export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}): FakeSupabase {
   const queries: RecordedQuery[] = [];
+  const upserts: RecordedUpsert[] = [];
 
   function from(table: string): FakeQuery {
     const record: RecordedQuery = {
@@ -83,6 +98,18 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
         record.filters.push({ operator: 'ilike', column, value });
         return query;
       },
+      maybeSingle() {
+        const fixture = fixtures[table] ?? {};
+        return Promise.resolve(
+          fixture.error
+            ? { data: null, error: fixture.error }
+            : { data: fixture.rows?.[0] ?? null, error: null },
+        );
+      },
+      upsert(values, options) {
+        upserts.push({ table, values, onConflict: options?.onConflict });
+        return Promise.resolve({ error: fixtures[table]?.error ?? null });
+      },
       then(onfulfilled) {
         const fixture = fixtures[table] ?? {};
         const rows = fixture.rows ?? [];
@@ -96,5 +123,5 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
     return query;
   }
 
-  return { from, queries };
+  return { from, queries, upserts };
 }

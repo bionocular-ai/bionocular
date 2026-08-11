@@ -7,8 +7,8 @@ import {
   type UIMessage,
 } from 'ai';
 import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
 import { checkAgentRateLimit } from '@/lib/agent/rate-limit';
+import { persistSession } from '@/lib/agent/persist-session';
 import { agentTools } from '@/lib/agent/tools';
 import { ONCOLOGY_SYSTEM_PROMPT } from '@/lib/agent/prompts';
 import { DASHBOARD_CANCER_TYPES } from '@/lib/dashboard-constants';
@@ -116,6 +116,10 @@ export async function POST(req: Request) {
   });
 
   return result.toUIMessageStreamResponse({
+    // Turns on the SDK's persistence mode. Without it `onFinish` hands back only
+    // the response message, so what got stored was a single assistant turn with
+    // no question in front of it - and no user message meant no session title.
+    originalMessages: messages,
     // Without this the SDK sends a bare "An error occurred." and the real cause
     // never reaches the server logs either.
     onError: (error) => {
@@ -141,46 +145,3 @@ export async function POST(req: Request) {
   });
 }
 
-interface PersistArgs {
-  userId: string;
-  sessionId: string;
-  traceId: string;
-  messages: UIMessage[];
-  usage: unknown;
-}
-
-/**
- * Upsert the conversation on the client-supplied session ID.
- *
- * The ID is owned by the browser for the life of the chat, so a conversation
- * lands in one row that grows. Previously the client never sent one, so the
- * update branch was unreachable and every turn inserted a fresh row - and what
- * it stored was the request's message list, which stops before the answer the
- * user actually saw. The list saved here comes from the finished UI stream, so
- * it includes the assistant turn and its tool calls.
- */
-async function persistSession({ userId, sessionId, traceId, messages, usage }: PersistArgs) {
-  const supabase = createServiceClient();
-  const firstUserMessage = messages.find((m) => m.role === 'user');
-  const titleSource = firstUserMessage?.parts.find((p) => p.type === 'text');
-  const title = titleSource && 'text' in titleSource
-    ? String(titleSource.text).slice(0, 80)
-    : 'Untitled chat';
-
-  const { error } = await supabase
-    .from('chat_sessions')
-    .upsert(
-      {
-        id: sessionId,
-        user_id: userId,
-        title,
-        messages,
-        token_usage: usage,
-        last_trace_id: traceId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' },
-    );
-
-  if (error) throw new Error(`chat_sessions upsert failed: ${error.message}`);
-}
