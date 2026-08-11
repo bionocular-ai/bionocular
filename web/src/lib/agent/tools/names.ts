@@ -4,6 +4,6 @@
  * old free-text field still suggested `search_clinical_trials`, deleted months
  * before this file was written.
  */
-export const DATA_TOOL_NAMES = ['query_proprietary_data'] as const;
+export const DATA_TOOL_NAMES = ['query_proprietary_data', 'lookup_trial'] as const;
 
 export type DataToolName = typeof DATA_TOOL_NAMES[number];

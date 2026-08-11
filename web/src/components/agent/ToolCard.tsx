@@ -15,6 +15,7 @@ export interface ToolCardProps {
 
 const PRETTY_NAMES: Record<string, string> = {
   query_proprietary_data:  'Proprietary data query',
+  lookup_trial:            'Trial lookup',
   store_finding:           'Save finding',
 };
 
