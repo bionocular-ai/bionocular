@@ -16,6 +16,31 @@ import { DASHBOARD_CANCER_TYPES } from '@/lib/dashboard-constants';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+/**
+ * Thinking configuration lives here and nowhere else.
+ *
+ * Sonnet 5 runs adaptive thinking by default; Sonnet 4.6 ran thinking-off when
+ * the field was omitted, so leaving it out would silently change behaviour.
+ * Disabled deliberately for now: turning it on is a change to `{ type:
+ * 'adaptive' }` here, plus a bump to MAX_OUTPUT_TOKENS below and a check that
+ * answers are not being truncated.
+ */
+const AGENT_MODEL_OPTIONS = {
+  anthropic: { thinking: { type: 'disabled' } },
+} as const;
+
+/**
+ * A cap on thinking *and* response text together, not on the answer alone -
+ * so this has to grow if thinking is ever enabled above.
+ */
+const MAX_OUTPUT_TOKENS = 4096;
+
+/**
+ * Tool calls plus a final answer. The last step is forced to answer in text
+ * (see `prepareStep`), so one of these is always spent on the reply.
+ */
+const MAX_STEPS = 8;
+
 interface ChatRequestBody {
   messages: UIMessage[];
   sessionId?: string;
@@ -49,9 +74,10 @@ export async function POST(req: Request) {
 
   const modelMessages: ModelMessage[] = await convertToModelMessages(messages);
 
-  // Cache the system prompt + tool definitions. Anthropic caches break on changes,
-  // so the system prompt lives in the messages array with cacheControl rather than
-  // as a top-level `system` string.
+  // The single cache breakpoint: it covers the tool definitions and the system
+  // prompt, which render ahead of it. The prompt lives in the messages array
+  // rather than in the top-level `system` string only because the AI SDK's
+  // `system` accepts no providerOptions, and cacheControl is a providerOption.
   const systemMessage: ModelMessage = {
     role: 'system',
     content: ONCOLOGY_SYSTEM_PROMPT,
@@ -61,10 +87,16 @@ export async function POST(req: Request) {
   };
 
   const result = streamText({
-    model: anthropic('claude-sonnet-4-6'),
+    model: anthropic('claude-sonnet-5'),
     messages: [systemMessage, ...modelMessages],
     tools: agentTools({ userId: user.id, cancerSlug: cancerType, sessionId }),
-    stopWhen: stepCountIs(4), // raise to 8 after Render Pro upgrade
+    providerOptions: AGENT_MODEL_OPTIONS,
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
+    stopWhen: stepCountIs(MAX_STEPS),
+    // Take the tools away for the last step so the turn cannot end on a tool
+    // call the model never got to explain - tool cards and silence.
+    prepareStep: ({ stepNumber }) =>
+      stepNumber === MAX_STEPS - 1 ? { toolChoice: 'none' } : {},
     onFinish: async ({ usage }) => {
       try {
         await persistSession({
