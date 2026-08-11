@@ -11,6 +11,7 @@ import { createServiceClient } from '@/lib/supabase/service';
 import { checkAgentRateLimit } from '@/lib/agent/rate-limit';
 import { agentTools } from '@/lib/agent/tools';
 import { ONCOLOGY_SYSTEM_PROMPT } from '@/lib/agent/prompts';
+import { DEFAULT_CANCER_TYPE_SLUG } from '@/lib/dashboard-constants';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -49,7 +50,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: anthropic('claude-sonnet-4-6'),
     messages: [systemMessage, ...modelMessages],
-    tools: agentTools(user.id),
+    tools: agentTools({ userId: user.id, cancerSlug: DEFAULT_CANCER_TYPE_SLUG, sessionId }),
     stopWhen: stepCountIs(4), // raise to 8 after Render Pro upgrade
     onFinish: async ({ usage }) => {
       try {
@@ -66,7 +67,14 @@ export async function POST(req: Request) {
     },
   });
 
-  return result.toUIMessageStreamResponse();
+  return result.toUIMessageStreamResponse({
+    // Without this the SDK sends a bare "An error occurred." and the real cause
+    // never reaches the server logs either.
+    onError: (error) => {
+      console.error('agent stream failed', error);
+      return 'The assistant hit an error answering that. Please try again.';
+    },
+  });
 }
 
 interface PersistArgs {

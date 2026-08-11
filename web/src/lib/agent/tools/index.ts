@@ -1,9 +1,10 @@
-import { buildSupabaseTools } from './supabase';
+import { buildSupabaseTools, type AgentToolContext } from './supabase';
 
-export function agentTools(userId: string) {
+export function agentTools(context: AgentToolContext) {
   return {
-    ...buildSupabaseTools(userId),
+    ...buildSupabaseTools(context),
   };
 }
 
 export type AgentTools = ReturnType<typeof agentTools>;
+export type { AgentToolContext };

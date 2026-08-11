@@ -1,42 +1,134 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/service';
+import { getDbCancerType } from '@/lib/api';
+import { PHASE_MAP } from '@/lib/clinical-trials-enums';
+import { DATA_TOOL_NAMES } from './names';
+import {
+  AGENT_TABLES,
+  AGENT_TABLE_NAMES,
+  NCT_ID_PATTERN,
+  applyCancerScope,
+  applyNamedFilter,
+  applyTrialKey,
+  describeTables,
+  projectionColumns,
+  supportedFilters,
+  type AgentTable,
+  type FilterName,
+} from './schema';
 
-const ALLOWED_TABLES = ['clinical_trials', 'trial_outcomes', 'trial_landscape'] as const;
-type AllowedTable = typeof ALLOWED_TABLES[number];
+/** PostgREST code for "column does not exist". */
+const UNDEFINED_COLUMN = '42703';
 
-export function buildSupabaseTools(userId: string) {
+const MAX_ROWS = 25;
+
+export interface AgentToolContext {
+  userId: string;
+  /** Dashboard slug, e.g. `cutaneous-melanoma`. Validated by the caller. */
+  cancerSlug: string;
+  /** Present only once a chat has been persisted. */
+  sessionId?: string;
+}
+
+const PHASE_VALUES = Object.keys(PHASE_MAP) as [string, ...string[]];
+
+export function buildSupabaseTools({ userId, cancerSlug, sessionId }: AgentToolContext) {
+  const dbCancerType = getDbCancerType(cancerSlug);
+
   return {
     query_proprietary_data: tool({
       description:
-        "Query Bionocular's proprietary trial database. ALWAYS try this first before public " +
-        'sources. Tables: ' +
-        '`clinical_trials` (live trial registry mirror with our enrichments), ' +
-        '`trial_outcomes` (extracted efficacy/safety endpoints from abstracts and publications), ' +
-        '`trial_landscape` (denormalized view joining trials, outcomes, cancer-type tags). ' +
-        'Filter by NCT ID, cancer_type, sponsor, phase, or any column. Returns up to 25 rows.',
+        "Query Bionocular's own oncology database. This is the only source of data available - " +
+        'there is no live registry or literature lookup. Every query is automatically restricted ' +
+        `to the dashboard's cancer type, so do not ask for one.\n\nTables:\n${describeTables()}\n\n` +
+        'Filters are named parameters, not column expressions. Returns at most ' +
+        `${MAX_ROWS} rows plus a coverage report of how many rows matched in total.`,
       inputSchema: z.object({
-        table: z.enum(ALLOWED_TABLES),
-        filters: z
-          .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+        table: z.enum(AGENT_TABLE_NAMES),
+        nctId: z
+          .string()
+          .regex(NCT_ID_PATTERN, 'must be an NCT number, e.g. NCT00006368')
           .optional()
-          .describe('Equality filters keyed by column. e.g. { cancer_type: "Cutaneous Melanoma" }'),
-        limit: z.number().int().min(1).max(25).default(10),
+          .describe('Restrict to one trial.'),
+        sponsor: z.string().min(2).optional().describe('Substring match on the sponsor name.'),
+        phase: z.enum(PHASE_VALUES).optional().describe('clinical_trials only.'),
+        drug: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Substring match on the treatment or arm name for this table.'),
+        limit: z.number().int().min(1).max(MAX_ROWS).default(10),
       }),
-      providerOptions: {
-        anthropic: { cacheControl: { type: 'ephemeral' } },
-      },
-      execute: async ({ table, filters, limit }) => {
+      execute: async ({ table, nctId, sponsor, phase, drug, limit }) => {
+        const spec = AGENT_TABLES[table];
         const supabase = createServiceClient();
-        let q = supabase.from(table as AllowedTable).select('*').limit(limit);
-        if (filters) {
-          for (const [k, v] of Object.entries(filters)) {
-            q = q.eq(k, v);
+
+        let query = supabase
+          .from(table)
+          .select(spec.projection, { count: 'exact' })
+          .limit(limit);
+
+        query = applyCancerScope(query, table, dbCancerType);
+        if (nctId) query = applyTrialKey(query, table, nctId);
+
+        const named: Array<[FilterName, string | undefined]> = [
+          ['sponsor', sponsor],
+          ['phase', phase],
+          ['drug', drug],
+        ];
+        const applied: Record<string, string> = {};
+        for (const [name, value] of named) {
+          if (value === undefined) continue;
+          const next = applyNamedFilter(query, table, name, value);
+          if (!next) {
+            return {
+              ok: false as const,
+              reason: 'unsupported_filter' as const,
+              table,
+              filter: name,
+              supportedFilters: supportedFilters(table),
+              hint: `\`${table}\` has no ${name} column. Try a table that does, or drop the filter.`,
+            };
           }
+          query = next;
+          applied[name] = value;
         }
-        const { data, error } = await q;
-        if (error) throw new Error(`Supabase query failed: ${error.message}`);
-        return { table, count: data?.length ?? 0, rows: data ?? [] };
+
+        const { data, error, count } = await query;
+
+        if (error) {
+          console.error('query_proprietary_data failed', { table, code: error.code, message: error.message });
+          return {
+            ok: false as const,
+            reason: error.code === UNDEFINED_COLUMN ? ('unknown_column' as const) : ('query_failed' as const),
+            table,
+            message: error.message,
+            availableColumns: projectionColumns(table),
+          };
+        }
+
+        const rows = data ?? [];
+        const coverage = {
+          returned: rows.length,
+          matched: count ?? rows.length,
+          cancerType: dbCancerType,
+          ...(nctId ? { trialKeyColumn: spec.trialKey?.column } : {}),
+          ...(spec.caveat ? { caveat: spec.caveat } : {}),
+        };
+
+        if (rows.length === 0) {
+          return {
+            ok: false as const,
+            reason: 'no_rows' as const,
+            table,
+            appliedFilters: { ...applied, ...(nctId ? { nctId } : {}) },
+            coverage,
+            hint: 'Report this absence to the user. Do not substitute knowledge from outside these results.',
+          };
+        }
+
+        return { ok: true as const, table, coverage, rows };
       },
     }),
 
@@ -44,23 +136,22 @@ export function buildSupabaseTools(userId: string) {
       description:
         'Persist a research finding for the user. Call only when the user explicitly asks to ' +
         'save, bookmark, or remember something. Provide a concise title, a 1-3 sentence summary, ' +
-        'and the citations array (NCT IDs, PMIDs, ChEMBL IDs, etc).',
+        'the tool the finding came from, and the identifiers it rests on (NCT numbers, ' +
+        'abstract or publication IDs) exactly as they appeared in that tool result.',
       inputSchema: z.object({
         findingType: z.enum(['trial', 'literature', 'compound', 'target', 'landscape', 'other']),
         title: z.string().min(3).max(200),
         summary: z.string().min(10).max(2000),
-        sourceTool: z.string().describe('Which tool produced this (e.g. "search_clinical_trials")'),
+        sourceTool: z.enum(DATA_TOOL_NAMES),
         citations: z.array(z.string()).default([]),
       }),
-      providerOptions: {
-        anthropic: { cacheControl: { type: 'ephemeral' } },
-      },
       execute: async ({ findingType, title, summary, sourceTool, citations }) => {
         const supabase = createServiceClient();
         const { data, error } = await supabase
           .from('agent_findings')
           .insert({
             user_id: userId,
+            session_id: sessionId ?? null,
             finding_type: findingType,
             title,
             summary,
@@ -69,9 +160,16 @@ export function buildSupabaseTools(userId: string) {
           })
           .select('id')
           .single();
-        if (error) throw new Error(`store_finding failed: ${error.message}`);
-        return { ok: true, id: data.id };
+
+        if (error) {
+          console.error('store_finding failed', { code: error.code, message: error.message });
+          return { ok: false as const, reason: 'insert_failed' as const, message: error.message };
+        }
+        return { ok: true as const, id: data.id };
       },
     }),
   };
 }
+
+export type SupabaseAgentTools = ReturnType<typeof buildSupabaseTools>;
+export type { AgentTable };
