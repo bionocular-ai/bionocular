@@ -97,6 +97,10 @@ NON_MELANOMA_RULES: Final[dict[str, _TokenGroups]] = {
     MERKEL_CELL_CARCINOMA: (
         ("merkel", "cell", "carcinoma"),
         ("merkel", "cell", "cancer"),
+        # Older names for the same disease. Both need "skin" in the same string:
+        # neuroendocrine carcinoma arises throughout the body.
+        ("neuroendocrine", "carcinoma", "skin"),
+        ("trabecular", "carcinoma", "skin"),
     ),
 }
 
@@ -186,9 +190,15 @@ def _derive_cutaneous_scc(
     """Decide whether an SCC mention is cutaneous. Returns (bucket, evidence).
 
     Squamous cell carcinoma is a histology, not a site, and 191 condition strings in
-    the corpus name it with no qualifier at all. Explicit wins; a named non-skin site
-    beats trial-level skin context; an unqualified mention is cutaneous only in a
-    dermatology-scoped, non-basket trial.
+    the corpus name it with no qualifier at all. A string that calls itself cutaneous
+    wins outright, even when it also names a site: 'Cutaneous Squamous Cell Carcinoma
+    of the Head and Neck' is a skin primary, and head and neck is where that skin is.
+    Otherwise a named non-skin site beats trial-level skin context, and an unqualified
+    mention is cutaneous only in a dermatology-scoped, non-basket trial.
+
+    The qualifier is only ever read from the string that carries the SCC, so a trial
+    listing 'Cutaneous Melanoma' beside 'Head and Neck Squamous Cell Carcinoma' still
+    earns no cSCC bucket.
 
     Assertions are read from the positive part, but the organ is looked for in the
     whole string: in 'Squamous Cell Carcinoma, Non-Small Cell Lung' the site sits
@@ -202,8 +212,8 @@ def _derive_cutaneous_scc(
     if not squamous:
         return None
 
-    for original, full, text in squamous:
-        if SKIN_QUALIFIER.search(text) and not NON_SKIN_SITE.search(full):
+    for original, _full, text in squamous:
+        if SKIN_QUALIFIER.search(text):
             return CUTANEOUS_SCC, original
 
     unqualified = [(o, t) for o, full, t in squamous if not NON_SKIN_SITE.search(full)]

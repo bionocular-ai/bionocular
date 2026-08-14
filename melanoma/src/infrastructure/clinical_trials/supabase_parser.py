@@ -130,8 +130,11 @@ def extract_processed_trial(
     conditions = cond_mod.get("conditions", [])
     keywords = cond_mod.get("keywords", [])
 
-    # Shadow columns. `cancer_type` still carries the query-derived value so nothing
-    # user-facing moves; the derived label is validated and promoted separately.
+    # The label comes from the trial's own conditions. `cancer_types_map` records
+    # which search term found the trial, which is a fact about discovery, not about
+    # the disease - the promoted values would drift back to it within a day if the
+    # daily sync kept writing it here.
+    del cancer_types_map
     derived = derive_cancer_types(conditions, keywords)
 
     return {
@@ -182,7 +185,7 @@ def extract_processed_trial(
         "brief_summary": desc_mod.get("briefSummary"),
         "detailed_description": desc_mod.get("detailedDescription"),
         "eligibility_criteria": elig_mod.get("eligibilityCriteria"),
-        "cancer_type": cancer_types_map.get(nct_id, []),
+        "cancer_type": derived.buckets,
         "cancer_type_derived": derived.buckets,
         "cancer_type_evidence": derived.evidence,
         "is_basket": derived.is_basket,
