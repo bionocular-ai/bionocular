@@ -22,9 +22,9 @@ SKIN_CANCER_TYPES = [
 CANCER_TYPE_MAPPING = {
     "Cutaneous Melanoma": ["Cutaneous melanoma"],
     "Cutaneous Squamous Cell Carcinoma": ["Cutaneous Squamous Cell Carcinoma"],
-    "Uveal Melanoma": ["Uveal Melanoma", "Rare melanoma"],
-    "Acral Melanoma": ["Acral Melanoma", "Rare melanoma"],
-    "Mucosal Melanoma": ["Mucosal Melanoma", "Rare melanoma"],
+    "Uveal Melanoma": ["Uveal Melanoma"],
+    "Acral Melanoma": ["Acral Melanoma"],
+    "Mucosal Melanoma": ["Mucosal Melanoma"],
     "Basal Cell Carcinoma": ["Basal Cell Carcinoma"],
     "Merkel Cell Carcinoma": ["Merkel Cell Carcinoma"],
     # Brain and CNS are queried separately in the service and merged under this tag
