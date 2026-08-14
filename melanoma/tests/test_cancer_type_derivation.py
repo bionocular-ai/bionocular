@@ -245,6 +245,42 @@ def test_explicitly_cutaneous_squamous_is_cutaneous_scc():
     assert result.buckets == [CSCC]
 
 
+def test_a_string_calling_itself_cutaneous_beats_a_site_token_in_that_string():
+    """NCT02955290. Head and neck is where this skin primary sits, not a rival organ.
+
+    Adjudication over the ambiguous slice put 26 rows on this one pattern - the
+    largest single cause of a trial losing every bucket.
+    """
+    result = derive_cancer_types(
+        ["Stage IV Cutaneous Squamous Cell Carcinoma of the Head and Neck AJCC v8"]
+    )
+    assert result.buckets == [CSCC]
+
+
+def test_cutaneous_and_mucosal_squamous_can_coexist_in_one_trial():
+    """NCT02955290 in full: the cutaneous string earns the bucket, lung does not."""
+    result = derive_cancer_types(
+        [
+            "Advanced Head and Neck Squamous Cell Carcinoma",
+            "Advanced Squamous Non-Small Cell Lung Carcinoma",
+            "Stage IV Cutaneous Squamous Cell Carcinoma of the Head and Neck AJCC v8",
+        ]
+    )
+    assert result.buckets == [CSCC]
+
+
+def test_skin_qualified_carcinoma_in_situ_earns_the_bucket():
+    """In-situ carcinoma is carcinoma, unlike actinic keratosis."""
+    result = derive_cancer_types(["Squamous Cell Carcinoma in Situ of the Skin"])
+    assert result.buckets == [CSCC]
+
+
+def test_unqualified_squamous_is_still_declined():
+    """Bare squamous names a histology with no site, so it earns nothing."""
+    assert derive_cancer_types(["Squamous Cell Carcinoma in Situ"]).buckets == []
+    assert derive_cancer_types(["Carcinoma, Squamous Cell"]).buckets == []
+
+
 def test_a_skin_cancer_basket_earns_each_named_skin_bucket():
     """Excerpt from NCT02978625, which lists 39 conditions."""
     result = derive_cancer_types(
@@ -281,6 +317,24 @@ def test_basal_cell_nevus_syndrome_is_not_a_carcinoma():
 def test_merkel_cell_carcinoma():
     result = derive_cancer_types(["Refractory Merkel Cell Carcinoma"])
     assert result.buckets == [MERKEL]
+
+
+def test_neuroendocrine_carcinoma_of_the_skin_is_merkel():
+    """NCT00003549. The older name for Merkel cell carcinoma, 5 rows in the corpus."""
+    result = derive_cancer_types(["Neuroendocrine Carcinoma of the Skin"])
+    assert result.buckets == [MERKEL]
+
+
+def test_trabecular_carcinoma_of_the_skin_is_merkel():
+    result = derive_cancer_types(["Trabecular Carcinoma of the Skin"])
+    assert result.buckets == [MERKEL]
+
+
+def test_neuroendocrine_carcinoma_elsewhere_is_not_merkel():
+    """The synonym needs the skin; neuroendocrine tumours arise all over the body."""
+    assert (
+        derive_cancer_types(["Neuroendocrine Carcinoma of the Pancreas"]).buckets == []
+    )
 
 
 # ---------------------------------------------------------------------------
