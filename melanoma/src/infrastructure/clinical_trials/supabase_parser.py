@@ -8,6 +8,8 @@ sync pipeline and the legacy uploader share a single source of truth.
 import logging
 from typing import Any, Optional
 
+from .cancer_type_derivation import derive_cancer_types
+
 logger = logging.getLogger(__name__)
 
 
@@ -125,6 +127,13 @@ def extract_processed_trial(
     min_age_raw = elig_mod.get("minimumAge")
     max_age_raw = elig_mod.get("maximumAge")
 
+    conditions = cond_mod.get("conditions", [])
+    keywords = cond_mod.get("keywords", [])
+
+    # Shadow columns. `cancer_type` still carries the query-derived value so nothing
+    # user-facing moves; the derived label is validated and promoted separately.
+    derived = derive_cancer_types(conditions, keywords)
+
     return {
         "nct_id": nct_id,
         "brief_title": id_mod.get("briefTitle"),
@@ -174,8 +183,12 @@ def extract_processed_trial(
         "detailed_description": desc_mod.get("detailedDescription"),
         "eligibility_criteria": elig_mod.get("eligibilityCriteria"),
         "cancer_type": cancer_types_map.get(nct_id, []),
-        "conditions": cond_mod.get("conditions", []),
-        "keywords": cond_mod.get("keywords", []),
+        "cancer_type_derived": derived.buckets,
+        "cancer_type_evidence": derived.evidence,
+        "is_basket": derived.is_basket,
+        "melanoma_unspecified": derived.melanoma_unspecified,
+        "conditions": conditions,
+        "keywords": keywords,
         "locations": loc_mod.get("locations", []),
         "interventions": arms_mod.get("interventions", []),
         "arm_groups": arms_mod.get("armGroups", []),
