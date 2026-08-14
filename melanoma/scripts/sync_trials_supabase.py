@@ -5,9 +5,11 @@ Fetches new + updated trials for the eight skin-cancer types defined in
 `cancer_type_mapping.SKIN_CANCER_TYPES` and upserts them into the Supabase
 `clinical_trials_cache` (raw JSON) and `clinical_trials` (parsed) tables.
 
-Incremental strategy: a `query.term=AREA[LastUpdatePostDate]RANGE[cutoff,MAX]`
-filter on the v2 API returns trials updated since `cutoff` (default: today - 2
-days). Idempotent — re-running the same window is a no-op via PK upsert.
+Discovery is scoped to each trial's own condition list
+(`query.term=AREA[Condition]<term>`); the incremental window is ANDed onto the
+same expression as `AREA[LastUpdatePostDate]RANGE[cutoff,MAX]` (default cutoff:
+today - 2 days). Idempotent - re-running the same window is a no-op via PK
+upsert.
 
 Usage:
     poetry run python3 scripts/sync_trials_supabase.py [--days N] [--full]

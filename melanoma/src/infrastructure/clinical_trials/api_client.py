@@ -196,11 +196,21 @@ class ClinicalTrialsGovAPIClient(ClinicalTrialsAPIClient):
 
         try:
             while True:
-                # Build query parameters
-                # ClinicalTrials.gov API v2 uses query.cond for condition
-                # filter.overallStatus accepts comma-separated values
+                # Build query parameters.
+                # AREA[Condition] restricts the match to the trial's own
+                # conditions. Plain query.cond is an Essie expression that also
+                # spans BriefTitle, OfficialTitle, ConditionMeshTerm and
+                # ConditionAncestorTerm, so it pulls in trials that never name
+                # the condition (measured: 3708 hits vs 3411, a strict subset).
+                term_clauses = [f"AREA[Condition]{condition}"]
+                if last_update_after is not None:
+                    term_clauses.append(
+                        f"AREA[LastUpdatePostDate]"
+                        f"RANGE[{last_update_after.isoformat()},MAX]"
+                    )
+
                 request_params: dict[str, any] = {
-                    "query.cond": condition,
+                    "query.term": " AND ".join(term_clauses),
                     "pageSize": 100,  # Maximum page size
                 }
 
@@ -208,12 +218,6 @@ class ClinicalTrialsGovAPIClient(ClinicalTrialsAPIClient):
                 if status_list:
                     request_params["filter.overallStatus"] = ",".join(status_list)
                 # If status_list is None or empty, don't add filter - get all trials
-
-                if last_update_after is not None:
-                    request_params["query.term"] = (
-                        f"AREA[LastUpdatePostDate]"
-                        f"RANGE[{last_update_after.isoformat()},MAX]"
-                    )
 
                 if page_token:
                     request_params["pageToken"] = page_token
