@@ -53,8 +53,8 @@ const TABLE_DEFINITIONS = {
     trialKey: { column: 'nct_id', kind: 'scalar' },
     projection:
       'nct_id, brief_title, overall_status, phases, enrollment_count, ' +
-      'lead_sponsor_name, lead_sponsor_class, cancer_type, conditions, keywords, ' +
-      'study_type, last_update_posted_date, is_basket',
+      'lead_sponsor_name, lead_sponsor_class, cancer_type, cancer_type_evidence, ' +
+      'conditions, keywords, study_type, last_update_posted_date, is_basket',
     filters: {
       sponsor: { column: 'lead_sponsor_name', kind: 'scalar' },
       phase: { column: 'phases', kind: 'array' },
