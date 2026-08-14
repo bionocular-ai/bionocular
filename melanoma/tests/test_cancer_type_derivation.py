@@ -10,6 +10,7 @@ cutaneous as well.
 from src.infrastructure.clinical_trials.cancer_type_derivation import (
     derive_cancer_types,
 )
+from src.infrastructure.clinical_trials.supabase_parser import extract_processed_trial
 
 CUTANEOUS = "Cutaneous Melanoma"
 UVEAL = "Uveal Melanoma"
@@ -245,6 +246,42 @@ def test_explicitly_cutaneous_squamous_is_cutaneous_scc():
     assert result.buckets == [CSCC]
 
 
+def test_a_string_calling_itself_cutaneous_beats_a_site_token_in_that_string():
+    """NCT02955290. Head and neck is where this skin primary sits, not a rival organ.
+
+    Adjudication over the ambiguous slice put 26 rows on this one pattern - the
+    largest single cause of a trial losing every bucket.
+    """
+    result = derive_cancer_types(
+        ["Stage IV Cutaneous Squamous Cell Carcinoma of the Head and Neck AJCC v8"]
+    )
+    assert result.buckets == [CSCC]
+
+
+def test_cutaneous_and_mucosal_squamous_can_coexist_in_one_trial():
+    """NCT02955290 in full: the cutaneous string earns the bucket, lung does not."""
+    result = derive_cancer_types(
+        [
+            "Advanced Head and Neck Squamous Cell Carcinoma",
+            "Advanced Squamous Non-Small Cell Lung Carcinoma",
+            "Stage IV Cutaneous Squamous Cell Carcinoma of the Head and Neck AJCC v8",
+        ]
+    )
+    assert result.buckets == [CSCC]
+
+
+def test_skin_qualified_carcinoma_in_situ_earns_the_bucket():
+    """In-situ carcinoma is carcinoma, unlike actinic keratosis."""
+    result = derive_cancer_types(["Squamous Cell Carcinoma in Situ of the Skin"])
+    assert result.buckets == [CSCC]
+
+
+def test_unqualified_squamous_is_still_declined():
+    """Bare squamous names a histology with no site, so it earns nothing."""
+    assert derive_cancer_types(["Squamous Cell Carcinoma in Situ"]).buckets == []
+    assert derive_cancer_types(["Carcinoma, Squamous Cell"]).buckets == []
+
+
 def test_a_skin_cancer_basket_earns_each_named_skin_bucket():
     """Excerpt from NCT02978625, which lists 39 conditions."""
     result = derive_cancer_types(
@@ -281,6 +318,24 @@ def test_basal_cell_nevus_syndrome_is_not_a_carcinoma():
 def test_merkel_cell_carcinoma():
     result = derive_cancer_types(["Refractory Merkel Cell Carcinoma"])
     assert result.buckets == [MERKEL]
+
+
+def test_neuroendocrine_carcinoma_of_the_skin_is_merkel():
+    """NCT00003549. The older name for Merkel cell carcinoma, 5 rows in the corpus."""
+    result = derive_cancer_types(["Neuroendocrine Carcinoma of the Skin"])
+    assert result.buckets == [MERKEL]
+
+
+def test_trabecular_carcinoma_of_the_skin_is_merkel():
+    result = derive_cancer_types(["Trabecular Carcinoma of the Skin"])
+    assert result.buckets == [MERKEL]
+
+
+def test_neuroendocrine_carcinoma_elsewhere_is_not_merkel():
+    """The synonym needs the skin; neuroendocrine tumours arise all over the body."""
+    assert (
+        derive_cancer_types(["Neuroendocrine Carcinoma of the Pancreas"]).buckets == []
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -357,3 +412,32 @@ def test_empty_conditions_earn_nothing():
     assert result.buckets == []
     assert result.is_basket is False
     assert result.melanoma_unspecified is False
+
+
+# ---------------------------------------------------------------------------
+# The parser writes the derived label, not the search term that found the trial.
+# ---------------------------------------------------------------------------
+
+
+def _raw(conditions: list[str]) -> dict:
+    return {"protocolSection": {"conditionsModule": {"conditions": conditions}}}
+
+
+def test_the_parser_writes_the_derived_label_into_cancer_type():
+    row = extract_processed_trial(
+        _raw(["Metastatic Uveal Melanoma"]),
+        "NCT06581406",
+        {"NCT06581406": ["Cutaneous Melanoma", "Uveal Melanoma"]},
+    )
+    assert row["cancer_type"] == [UVEAL]
+    assert row["cancer_type_derived"] == [UVEAL]
+
+
+def test_the_search_term_map_no_longer_reaches_cancer_type():
+    """The daily sync would otherwise revert promoted rows to query-derived labels."""
+    row = extract_processed_trial(
+        _raw(["Head and Neck Cancer"]),
+        "NCT00448552",
+        {"NCT00448552": ["Basal Cell Carcinoma"]},
+    )
+    assert row["cancer_type"] == []
