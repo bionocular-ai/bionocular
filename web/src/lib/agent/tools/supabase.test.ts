@@ -85,6 +85,16 @@ describe('query_proprietary_data', () => {
     expect(projection.split(',').length).toBeLessThan(40);
   });
 
+  it('returns the condition strings each cancer_type bucket was derived from', async () => {
+    // cancer_type is derived from the trial's own conditions, so the evidence is
+    // the sponsor's wording. Without it the model can only assert our tag.
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', limit: 10 }, RUN_OPTIONS);
+
+    expect(fake.queries[0].projection).toContain('cancer_type_evidence');
+  });
+
   it('reports rows with a coverage count of everything that matched', async () => {
     const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW], count: 3701 } });
 
