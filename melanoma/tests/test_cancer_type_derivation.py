@@ -10,6 +10,7 @@ cutaneous as well.
 from src.infrastructure.clinical_trials.cancer_type_derivation import (
     derive_cancer_types,
 )
+from src.infrastructure.clinical_trials.supabase_parser import extract_processed_trial
 
 CUTANEOUS = "Cutaneous Melanoma"
 UVEAL = "Uveal Melanoma"
@@ -411,3 +412,32 @@ def test_empty_conditions_earn_nothing():
     assert result.buckets == []
     assert result.is_basket is False
     assert result.melanoma_unspecified is False
+
+
+# ---------------------------------------------------------------------------
+# The parser writes the derived label, not the search term that found the trial.
+# ---------------------------------------------------------------------------
+
+
+def _raw(conditions: list[str]) -> dict:
+    return {"protocolSection": {"conditionsModule": {"conditions": conditions}}}
+
+
+def test_the_parser_writes_the_derived_label_into_cancer_type():
+    row = extract_processed_trial(
+        _raw(["Metastatic Uveal Melanoma"]),
+        "NCT06581406",
+        {"NCT06581406": ["Cutaneous Melanoma", "Uveal Melanoma"]},
+    )
+    assert row["cancer_type"] == [UVEAL]
+    assert row["cancer_type_derived"] == [UVEAL]
+
+
+def test_the_search_term_map_no_longer_reaches_cancer_type():
+    """The daily sync would otherwise revert promoted rows to query-derived labels."""
+    row = extract_processed_trial(
+        _raw(["Head and Neck Cancer"]),
+        "NCT00448552",
+        {"NCT00448552": ["Basal Cell Carcinoma"]},
+    )
+    assert row["cancer_type"] == []
