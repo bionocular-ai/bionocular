@@ -1,4 +1,4 @@
-import { anthropic } from '@ai-sdk/anthropic';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import {
   convertToModelMessages,
   stepCountIs,
@@ -21,13 +21,27 @@ export const maxDuration = 60;
  *
  * Sonnet 5 runs adaptive thinking by default; Sonnet 4.6 ran thinking-off when
  * the field was omitted, so leaving it out would silently change behaviour.
- * Disabled deliberately for now: turning it on is a change to `{ type:
- * 'adaptive' }` here, plus a bump to MAX_OUTPUT_TOKENS below and a check that
- * answers are not being truncated.
+ * Disabled deliberately for now: turning it on means sending `adaptive` here,
+ * plus a bump to MAX_OUTPUT_TOKENS below and a check that answers are not being
+ * truncated.
+ *
+ * It has to go on the wire by hand. `@ai-sdk/anthropic` builds the `thinking`
+ * field only for `enabled` and `adaptive` and drops `disabled` on the floor, so
+ * `providerOptions` cannot express "off" - the request went out with no
+ * `thinking` field at all, which on Sonnet 5 means adaptive. That was invisible
+ * until a tool result got big enough for the reasoning to eat the whole output
+ * budget: 4096 output tokens, two empty reasoning blocks, no answer.
  */
-const AGENT_MODEL_OPTIONS = {
-  anthropic: { thinking: { type: 'disabled' } },
-} as const;
+const THINKING_CONFIG = { type: 'disabled' } as const;
+
+const anthropic = createAnthropic({
+  fetch: async (input, init) => {
+    if (typeof init?.body !== 'string') return fetch(input, init);
+    const body = JSON.parse(init.body) as Record<string, unknown>;
+    body.thinking = THINKING_CONFIG;
+    return fetch(input, { ...init, body: JSON.stringify(body) });
+  },
+});
 
 /**
  * A cap on thinking *and* response text together, not on the answer alone -
@@ -100,7 +114,6 @@ export async function POST(req: Request) {
     model: anthropic('claude-sonnet-5'),
     messages: [systemMessage, ...modelMessages],
     tools: agentTools({ userId: user.id, cancerSlug: cancerType, sessionId, traceId }),
-    providerOptions: AGENT_MODEL_OPTIONS,
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     stopWhen: stepCountIs(MAX_STEPS),
     // Take the tools away for the last step so the turn cannot end on a tool
