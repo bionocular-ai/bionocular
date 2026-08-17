@@ -12,8 +12,8 @@ export function DashboardTopNav() {
   const { data: session } = useSession();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-(--brand-border) bg-(--brand-surface) shadow-sm">
-      <div className="flex h-14 items-center justify-between gap-4 px-6">
+    <header className="sticky top-0 z-40 h-14 border-b border-(--brand-border) bg-(--brand-surface) shadow-sm">
+      <div className="flex h-full items-center justify-between gap-4 px-6">
         <Link href="/" className="brand flex-shrink-0">
           <Logo height={32} />
           <span className="brand-text text-lg">

@@ -9,6 +9,8 @@ import { MessageBubble } from './MessageBubble';
 import { ToolCard } from './ToolCard';
 
 const COLD_START_DELAY_MS = 5000;
+/** How close to the bottom still counts as "following the stream". */
+const BOTTOM_THRESHOLD_PX = 80;
 
 interface MessageTextPart { type: 'text'; text: string }
 interface MessageToolPart {
@@ -44,6 +46,9 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
 
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  // Follow the stream only while the reader is already at the bottom. Without
+  // this, every token re-pins the view and scrolling up mid-answer is impossible.
+  const pinnedToBottom = useRef(true);
 
   // Cold-start hint: track elapsed-since-request-start in state so render is pure.
   // setElapsed only fires inside callbacks (setInterval, cleanup), never in the
@@ -71,8 +76,17 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
     isBusyForHint && !hasAssistantText && elapsed > COLD_START_DELAY_MS;
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    if (!pinnedToBottom.current) return;
+    // Instant, not smooth: a smooth scroll restarted on every token never
+    // settles, and while it animates the container swallows wheel input.
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (!el) return;
+    pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD_PX;
+  };
 
   const isBusy = status === 'submitted' || status === 'streaming';
 
@@ -80,13 +94,18 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
     e.preventDefault();
     const trimmed = input.trim();
     if (!trimmed || isBusy) return;
+    pinnedToBottom.current = true;
     sendMessage({ text: trimmed });
     setInput('');
   };
 
   return (
     <div className="flex h-full flex-col bg-[var(--brand-bg)]">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 py-6 sm:px-8"
+      >
         <div className="mx-auto flex max-w-3xl flex-col gap-4">
           {messages.length === 0 ? (
             <EmptyState onPick={(q) => setInput(q)} />
