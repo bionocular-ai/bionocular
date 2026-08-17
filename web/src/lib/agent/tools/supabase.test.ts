@@ -109,6 +109,104 @@ describe('query_proprietary_data', () => {
     });
   });
 
+  it('marks a result incomplete when the limit cut it short', async () => {
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW], count: 184 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', phase: 'PHASE3', limit: 1 },
+      RUN_OPTIONS,
+    );
+
+    const { coverage } = result as { coverage: { complete: boolean; truncatedBy: string; hint: string } };
+    expect(coverage.complete).toBe(false);
+    expect(coverage.truncatedBy).toBe('limit');
+    expect(coverage.hint).toMatch(/higher limit/i);
+  });
+
+  it('marks a result complete when every matching row came back', async () => {
+    const rows = Array.from({ length: 53 }, (_, i) => ({ ...TRIAL_ROW, nct_id: `NCT0000000${i}` }));
+    const tools = toolsWith({ clinical_trials: { rows, count: 53 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', phase: 'PHASE3', limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    const { coverage } = result as { coverage: { complete: boolean; truncatedBy?: string } };
+    expect(coverage).toMatchObject({ returned: 53, matched: 53, complete: true });
+    expect(coverage.truncatedBy).toBeUndefined();
+  });
+
+  it('drops rows that do not fit the size budget and says so', async () => {
+    // Each row is ~2KB of free text, so 500 of them overrun the result budget.
+    const rows = Array.from({ length: 500 }, (_, i) => ({
+      nct_id: `NCT1000${String(i).padStart(4, '0')}`,
+      brief_title: 'x'.repeat(2000),
+    }));
+    const tools = toolsWith({ clinical_trials: { rows, count: 500 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    const { coverage, rows: kept } = result as {
+      coverage: { returned: number; complete: boolean; truncatedBy: string };
+      rows: unknown[];
+    };
+    expect(coverage.complete).toBe(false);
+    expect(coverage.truncatedBy).toBe('size');
+    expect(kept.length).toBeLessThan(500);
+    expect(coverage.returned).toBe(kept.length);
+  });
+
+  it('matches several recruitment statuses in one query rather than one at a time', async () => {
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW], count: 53 } });
+
+    await tools.query_proprietary_data.execute!(
+      {
+        table: 'clinical_trials',
+        phase: 'PHASE3',
+        status: ['RECRUITING', 'ACTIVE_NOT_RECRUITING', 'NOT_YET_RECRUITING'],
+        limit: 500,
+      },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'in',
+      column: 'overall_status',
+      value: ['RECRUITING', 'ACTIVE_NOT_RECRUITING', 'NOT_YET_RECRUITING'],
+    });
+  });
+
+  it('matches a single status with eq, so ACTIVE_NOT_RECRUITING cannot catch NOT_YET_RECRUITING', async () => {
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW], count: 27 } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', status: ['ACTIVE_NOT_RECRUITING'], limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'eq',
+      column: 'overall_status',
+      value: 'ACTIVE_NOT_RECRUITING',
+    });
+    expect(fake.queries[0].filters.some((f) => f.operator === 'ilike')).toBe(false);
+  });
+
+  it('refuses a status filter on tables that have no recruitment status', async () => {
+    const tools = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT00006368' }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_landscape', status: ['RECRUITING'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: 'unsupported_filter', filter: 'status' });
+  });
+
   it('carries the linkage caveat on trial_outcomes results', async () => {
     const tools = toolsWith({ trial_outcomes: { rows: [{ id: 'o1' }] } });
 

@@ -9,7 +9,7 @@
  */
 
 export interface RecordedFilter {
-  operator: 'eq' | 'contains' | 'ilike';
+  operator: 'eq' | 'in' | 'contains' | 'ilike';
   column: string;
   value: unknown;
 }
@@ -47,6 +47,7 @@ interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown
   select: (projection: string, options?: { count?: string; head?: boolean }) => FakeQuery;
   limit: (n: number) => FakeQuery;
   eq: (column: string, value: unknown) => FakeQuery;
+  in: (column: string, values: readonly unknown[]) => FakeQuery;
   contains: (column: string, value: unknown) => FakeQuery;
   ilike: (column: string, value: string) => FakeQuery;
   /** Resolves the first fixture row rather than the array, as PostgREST does. */
@@ -88,6 +89,10 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
       },
       eq(column, value) {
         record.filters.push({ operator: 'eq', column, value });
+        return query;
+      },
+      in(column, values) {
+        record.filters.push({ operator: 'in', column, value: values });
         return query;
       },
       contains(column, value) {

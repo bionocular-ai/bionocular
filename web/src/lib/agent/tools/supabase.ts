@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getDbCancerType } from '@/lib/api';
-import { PHASE_MAP } from '@/lib/clinical-trials-enums';
+import { PHASE_MAP, STATUS_MAP } from '@/lib/clinical-trials-enums';
 import { DATA_TOOL_NAMES } from './names';
 import { runTool } from './logging';
 import {
@@ -22,7 +22,35 @@ import {
 /** PostgREST code for "column does not exist". */
 const UNDEFINED_COLUMN = '42703';
 
-const MAX_ROWS = 25;
+/**
+ * A filtered sweep has to come back whole, or the model reports a sample as if
+ * it were the population: 184 Phase 3 cutaneous melanoma trials read through a
+ * 25-row window looked like 9 active ones when there are 53.
+ *
+ * Row count alone is the wrong guard, because a row costs anywhere from 370
+ * bytes (`news_feed`) to 650 (`clinical_trials`, which carries free text). The
+ * size budget is what actually bounds the tool result; the row cap only stops
+ * an unfiltered table scan from starting.
+ */
+const MAX_ROWS = 500;
+const DEFAULT_ROWS = 25;
+/** ~35k tokens of JSON. Every filtered sweep measured fits well under this. */
+const MAX_RESULT_CHARS = 130_000;
+
+/**
+ * Drop rows from the tail until the payload fits the budget. Returns the kept
+ * rows and whether anything was dropped, so the caller can say so out loud.
+ */
+function fitToBudget<T>(rows: T[]): { kept: T[]; droppedForSize: boolean } {
+  if (JSON.stringify(rows).length <= MAX_RESULT_CHARS) {
+    return { kept: rows, droppedForSize: false };
+  }
+  let kept = rows;
+  while (kept.length > 1 && JSON.stringify(kept).length > MAX_RESULT_CHARS) {
+    kept = kept.slice(0, Math.floor(kept.length * 0.8));
+  }
+  return { kept, droppedForSize: true };
+}
 
 export interface AgentToolContext {
   userId: string;
@@ -35,6 +63,7 @@ export interface AgentToolContext {
 }
 
 const PHASE_VALUES = Object.keys(PHASE_MAP) as [string, ...string[]];
+const STATUS_VALUES = Object.keys(STATUS_MAP) as [string, ...string[]];
 
 export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: AgentToolContext) {
   const dbCancerType = getDbCancerType(cancerSlug);
@@ -45,8 +74,13 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         "Query Bionocular's own oncology database. This is the only source of data available - " +
         'there is no live registry or literature lookup. Every query is automatically restricted ' +
         `to the dashboard's cancer type, so do not ask for one.\n\nTables:\n${describeTables()}\n\n` +
-        'Filters are named parameters, not column expressions. Returns at most ' +
-        `${MAX_ROWS} rows plus a coverage report of how many rows matched in total.`,
+        'Filters are named parameters, not column expressions.\n\n' +
+        `Returns at most ${MAX_ROWS} rows, and every result carries a coverage report: ` +
+        '`matched` is how many rows exist in total, `returned` is how many you got, and ' +
+        '`complete` says whether you are looking at all of them. When `complete` is false, ' +
+        'either re-run with a higher `limit` or narrow the filters - and never describe a ' +
+        'partial result as if it were the full set. To sweep a whole filtered set in one ' +
+        `call, ask for limit ${MAX_ROWS}.`,
       inputSchema: z.object({
         table: z.enum(AGENT_TABLE_NAMES),
         nctId: z
@@ -56,16 +90,31 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           .describe('Restrict to one trial.'),
         sponsor: z.string().min(2).optional().describe('Substring match on the sponsor name.'),
         phase: z.enum(PHASE_VALUES).optional().describe('clinical_trials only.'),
+        status: z
+          .array(z.enum(STATUS_VALUES))
+          .min(1)
+          .optional()
+          .describe(
+            'clinical_trials only. Recruitment status; several values match any of them. ' +
+              'Trials still under way are RECRUITING, ACTIVE_NOT_RECRUITING, ' +
+              'NOT_YET_RECRUITING and ENROLLING_BY_INVITATION.',
+          ),
         drug: z
           .string()
           .min(2)
           .optional()
           .describe('Substring match on the treatment or arm name for this table.'),
-        limit: z.number().int().min(1).max(MAX_ROWS).default(10),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(MAX_ROWS)
+          .default(DEFAULT_ROWS)
+          .describe(`Raise toward ${MAX_ROWS} when the user asks for a complete set.`),
       }),
       execute: async (args) =>
         runTool('query_proprietary_data', traceId, args, async () => {
-        const { table, nctId, sponsor, phase, drug, limit } = args;
+        const { table, nctId, sponsor, phase, status, drug, limit } = args;
         const spec = AGENT_TABLES[table];
         const supabase = createServiceClient();
 
@@ -77,12 +126,13 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         query = applyCancerScope(query, table, dbCancerType);
         if (nctId) query = applyTrialKey(query, table, nctId);
 
-        const named: Array<[FilterName, string | undefined]> = [
+        const named: Array<[FilterName, string | readonly string[] | undefined]> = [
           ['sponsor', sponsor],
           ['phase', phase],
+          ['status', status],
           ['drug', drug],
         ];
-        const applied: Record<string, string> = {};
+        const applied: Record<string, string | readonly string[]> = {};
         for (const [name, value] of named) {
           if (value === undefined) continue;
           const next = applyNamedFilter(query, table, name, value);
@@ -113,11 +163,23 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           };
         }
 
-        const rows = data ?? [];
+        const fetched = data ?? [];
+        const matched = count ?? fetched.length;
+        const { kept: rows, droppedForSize } = fitToBudget(fetched);
+        const complete = rows.length === matched;
         const coverage = {
           returned: rows.length,
-          matched: count ?? rows.length,
+          matched,
+          complete,
           cancerType: dbCancerType,
+          ...(complete
+            ? {}
+            : {
+                truncatedBy: droppedForSize ? ('size' as const) : ('limit' as const),
+                hint: droppedForSize
+                  ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.`
+                  : `You asked for ${limit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
+              }),
           ...(nctId ? { trialKeyColumn: spec.trialKey?.column } : {}),
           ...(spec.caveat ? { caveat: spec.caveat } : {}),
         };

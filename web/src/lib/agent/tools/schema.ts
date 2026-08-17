@@ -17,7 +17,7 @@
 /** Anchored on purpose - PostgREST takes whatever string it is handed. */
 export const NCT_ID_PATTERN = /^NCT\d{8}$/;
 
-export type ColumnKind = 'array' | 'scalar';
+export type ColumnKind = 'array' | 'scalar' | 'exact';
 
 export interface AgentColumn {
   readonly column: string;
@@ -40,6 +40,7 @@ export interface AgentTableSpec {
   readonly filters: {
     readonly sponsor?: AgentColumn;
     readonly phase?: AgentColumn;
+    readonly status?: AgentColumn;
     readonly drug?: AgentColumn;
   };
   /** Surfaced with every result for this table so the model can qualify it. */
@@ -58,6 +59,9 @@ const TABLE_DEFINITIONS = {
     filters: {
       sponsor: { column: 'lead_sponsor_name', kind: 'scalar' },
       phase: { column: 'phases', kind: 'array' },
+      // Exact enum value, so `exact` rather than the default substring match:
+      // `ACTIVE_NOT_RECRUITING` must not also match on `NOT_YET_RECRUITING`.
+      status: { column: 'overall_status', kind: 'exact' },
     },
   },
 
@@ -136,6 +140,7 @@ export const AGENT_TABLE_NAMES = Object.keys(AGENT_TABLES) as [AgentTable, ...Ag
  */
 export interface FilterableQuery<Q> {
   eq(column: string, value: unknown): Q;
+  in(column: string, values: readonly unknown[]): Q;
   contains(column: string, value: unknown): Q;
   ilike(column: string, pattern: string): Q;
 }
@@ -165,25 +170,35 @@ export function applyTrialKey<Q extends FilterableQuery<Q>>(
   return key.kind === 'array' ? query.contains(key.column, [nctId]) : query.eq(key.column, nctId);
 }
 
-export type FilterName = 'sponsor' | 'phase' | 'drug';
+export type FilterName = 'sponsor' | 'phase' | 'status' | 'drug';
 
 /**
  * Apply one named filter, or return null if this table does not support it -
- * `phase` exists only on `clinical_trials`, `drug` means a different column on
- * every table that has one. The caller turns null into a structured refusal
- * rather than a silently unfiltered query.
+ * `phase` and `status` exist only on `clinical_trials`, `drug` means a
+ * different column on every table that has one. The caller turns null into a
+ * structured refusal rather than a silently unfiltered query.
+ *
+ * `exact` filters take a list, because "active trials" is three separate
+ * `overall_status` enum values and asking for them one query at a time makes
+ * the row cap bite three times over. The other kinds stay single-valued:
+ * `.in()` on a `text[]` column compares whole arrays, not membership.
  */
 export function applyNamedFilter<Q extends FilterableQuery<Q>>(
   query: Q,
   table: AgentTable,
   name: FilterName,
-  value: string,
+  value: string | readonly string[],
 ): Q | null {
   const spec = AGENT_TABLES[table].filters[name];
   if (!spec) return null;
+  if (spec.kind === 'exact') {
+    const values = typeof value === 'string' ? [value] : value;
+    return values.length === 1 ? query.eq(spec.column, values[0]) : query.in(spec.column, values);
+  }
+  const single = typeof value === 'string' ? value : value[0];
   return spec.kind === 'array'
-    ? query.contains(spec.column, [value])
-    : query.ilike(spec.column, `%${value}%`);
+    ? query.contains(spec.column, [single])
+    : query.ilike(spec.column, `%${single}%`);
 }
 
 /** Columns a caller may ask for by name, for error messages and descriptions. */
