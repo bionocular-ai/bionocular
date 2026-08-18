@@ -65,7 +65,7 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   { key: 'index',               label: 'Efficacy vs Safety Index Hub', icon: Scale,       section: 'analytics', query: { mode: 'all' },      status: 'live' },
   { key: 'treatment-algorithm', label: 'Treatment Algorithm',        icon: Workflow,                                                         status: 'upcoming' },
   { key: 'regulatory',          label: 'Regulatory Timeline',        icon: Landmark,      section: 'regulatory-timeline',                    status: 'upcoming' },
-  { key: 'ai-agent',            label: 'AI Agent',                   icon: Sparkles,      section: 'agent',                                  status: 'upcoming' },
+  { key: 'ai-agent',            label: 'Bionocular Agent',           icon: Sparkles,      section: 'agent',                                  status: 'upcoming' },
 ];
 
 export const DEFAULT_CANCER_TYPE_SLUG = 'cutaneous-melanoma';

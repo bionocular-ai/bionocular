@@ -14,8 +14,15 @@
  * currently returns them: with the literature tools gone, an answer citing one
  * is fabricating it, which is exactly what this should catch.
  */
+/**
+ * Shared with the markdown renderer, which linkifies NCT numbers in answers.
+ * Exported as a source string so each caller builds its own regex - a global
+ * one carries `lastIndex` state that does not survive being passed around.
+ */
+export const NCT_ID_SOURCE = String.raw`\bNCT\d{8}\b`;
+
 const IDENTIFIER_PATTERNS: readonly RegExp[] = [
-  /\bNCT\d{8}\b/g,
+  new RegExp(NCT_ID_SOURCE, 'g'),
   /\bPMID:?\s*(\d{6,9})\b/gi,
   /\b10\.\d{4,9}\/[^\s)"']+/g,
 ];
