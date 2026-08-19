@@ -98,6 +98,23 @@ export async function POST(req: Request) {
   // prompt, which render ahead of it. The prompt lives in the messages array
   // rather than in the top-level `system` string only because the AI SDK's
   // `system` accepts no providerOptions, and cacheControl is a providerOption.
+  //
+  // Dormant on Haiku 4.5, deliberately. The minimum cacheable prefix is a
+  // property of the model - 4096 tokens here, against 1024 on Sonnet 5 and 512
+  // on Opus 5 - and below it the marker is ignored with no error and no
+  // cache_creation_input_tokens. This prefix measures ~3.4k, so nothing caches:
+  // `chat_sessions.token_usage.cachedInputTokens` reads 3161 on every Sonnet 5
+  // row and 0 on the first Haiku one. Left in place because it costs nothing
+  // and revives on its own if the prompt grows or the model changes; do not pad
+  // the prompt to reach the threshold. Note the minimum is not monotonic across
+  // generations, so check it per model rather than assuming newer is lower.
+  //
+  // This is also not where caching would pay. Nothing here covers the message
+  // history, so tool results are re-sent at full price on every step of a turn.
+  // A breakpoint on the last message would fix that (`prepareStep` can return a
+  // modified `messages` array), but writes cost 1.25x against reads at 0.1x, so
+  // it wins on 3+ step turns and loses on 2-step ones. Decide it from real
+  // `totalUsage` data, not from here.
   const systemMessage: ModelMessage = {
     role: 'system',
     content: ONCOLOGY_SYSTEM_PROMPT,
@@ -120,8 +137,12 @@ export async function POST(req: Request) {
     // call the model never got to explain - tool cards and silence.
     prepareStep: ({ stepNumber }) =>
       stepNumber === MAX_STEPS - 1 ? { toolChoice: 'none' } : {},
-    onFinish: ({ usage, warnings }) => {
-      finalUsage = usage;
+    onFinish: ({ totalUsage, warnings }) => {
+      // `usage` on this event is the final step alone. A turn that ran three
+      // steps re-sends every earlier tool result on each one, so recording the
+      // last step under-reported a measured 105k-token turn as 58k - and the
+      // cost of a wasteful tool call was invisible in `chat_sessions`.
+      finalUsage = totalUsage;
       // Provider warnings — unsupported settings, silently dropped options —
       // are otherwise invisible.
       if (warnings?.length) console.warn('agent model warnings', { traceId, warnings });
