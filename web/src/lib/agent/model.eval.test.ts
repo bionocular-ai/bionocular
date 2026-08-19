@@ -24,7 +24,7 @@ const CONTEXT = {
 
 async function ask(question: string) {
   return generateText({
-    model: anthropic('claude-sonnet-5'),
+    model: anthropic('claude-haiku-4-5-20251001'),
     system: ONCOLOGY_SYSTEM_PROMPT,
     tools: agentTools(CONTEXT),
     providerOptions: { anthropic: { thinking: { type: 'disabled' } } },
