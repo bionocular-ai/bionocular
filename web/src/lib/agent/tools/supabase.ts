@@ -11,7 +11,7 @@ import {
   NCT_ID_PATTERN,
   applyCancerScope,
   applyNamedFilter,
-  applyTrialKey,
+  applyTrialKeys,
   describeTables,
   projectionColumns,
   supportedFilters,
@@ -34,14 +34,41 @@ const UNDEFINED_COLUMN = '42703';
  */
 const MAX_ROWS = 500;
 const DEFAULT_ROWS = 25;
-/** ~35k tokens of JSON. Every filtered sweep measured fits well under this. */
-const MAX_RESULT_CHARS = 130_000;
+/** Comfortably above the largest filtered trial set any one table returns. */
+const MAX_TRIAL_KEYS = 100;
+/** ~48k tokens of JSON, measured. Every filtered sweep measured fits well under this. */
+export const MAX_RESULT_CHARS = 130_000;
+
+/**
+ * Reduce each intervention to the drug and what kind of thing it is.
+ *
+ * `clinical_trials.interventions` carries the sponsor's prose alongside the
+ * name. Measured over the 53 Phase 3 active cutaneous melanoma trials, the
+ * column is 15,718 tokens, of which 12,594 are `description`, `otherNames` and
+ * `armGroupLabels`. Name and type are what answer "which treatments"; the prose
+ * is read once and then re-sent on every later step of the turn. Rows from
+ * tables that do not project the column pass through untouched.
+ */
+function compactInterventions(rows: unknown[]): unknown[] {
+  return rows.map((row) => {
+    if (typeof row !== 'object' || row === null) return row;
+    const { interventions } = row as { interventions?: unknown };
+    if (!Array.isArray(interventions)) return row;
+    return {
+      ...row,
+      interventions: interventions.map((entry) => {
+        const { name, type } = entry as { name?: unknown; type?: unknown };
+        return { name, type };
+      }),
+    };
+  });
+}
 
 /**
  * Drop rows from the tail until the payload fits the budget. Returns the kept
  * rows and whether anything was dropped, so the caller can say so out loud.
  */
-function fitToBudget<T>(rows: T[]): { kept: T[]; droppedForSize: boolean } {
+export function fitToBudget<T>(rows: T[]): { kept: T[]; droppedForSize: boolean } {
   if (JSON.stringify(rows).length <= MAX_RESULT_CHARS) {
     return { kept: rows, droppedForSize: false };
   }
@@ -80,14 +107,22 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         '`complete` says whether you are looking at all of them. When `complete` is false, ' +
         'either re-run with a higher `limit` or narrow the filters - and never describe a ' +
         'partial result as if it were the full set. To sweep a whole filtered set in one ' +
-        `call, ask for limit ${MAX_ROWS}.`,
+        `call, ask for limit ${MAX_ROWS} - a limit above ${DEFAULT_ROWS} needs at least one ` +
+        'filter, because unfiltered it reads the table end to end. To combine tables, query ' +
+        'the one that can filter for what was asked, then pass the NCT numbers it returned ' +
+        'as `nctIds` to the table holding the rest.',
       inputSchema: z.object({
         table: z.enum(AGENT_TABLE_NAMES),
-        nctId: z
-          .string()
-          .regex(NCT_ID_PATTERN, 'must be an NCT number, e.g. NCT00006368')
+        nctIds: z
+          .array(z.string().regex(NCT_ID_PATTERN, 'must be an NCT number, e.g. NCT00006368'))
+          .min(1)
+          .max(MAX_TRIAL_KEYS)
           .optional()
-          .describe('Restrict to one trial.'),
+          .describe(
+            'Restrict to these trials. Pass the whole set at once - this is how you enrich a ' +
+              'result from another table (e.g. the NCT numbers of every Phase 3 trial) without ' +
+              'reading a table end to end.',
+          ),
         sponsor: z.string().min(2).optional().describe('Substring match on the sponsor name.'),
         phase: z.enum(PHASE_VALUES).optional().describe('clinical_trials only.'),
         status: z
@@ -114,8 +149,28 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
       }),
       execute: async (args) =>
         runTool('query_proprietary_data', traceId, args, async () => {
-        const { table, nctId, sponsor, phase, status, drug, limit } = args;
+        const { table, nctIds, sponsor, phase, status, drug, limit } = args;
         const spec = AGENT_TABLES[table];
+
+        // Cancer scope is applied to every query, so on its own it narrows
+        // nothing the caller chose. Without a second predicate a raised limit is
+        // a table read: 500 unfiltered `trial_landscape` rows measured 48k
+        // tokens and carried 3 that mattered. The default window still allows an
+        // unfiltered browse, which is how "what exists here" gets answered.
+        const narrowed = [nctIds, sponsor, phase, status, drug].some((f) => f !== undefined);
+        if (!narrowed && limit > DEFAULT_ROWS) {
+          return {
+            ok: false as const,
+            reason: 'unfiltered_sweep' as const,
+            table,
+            supportedFilters: supportedFilters(table),
+            hint:
+              `A limit above ${DEFAULT_ROWS} needs a filter - unfiltered, \`${table}\` is read ` +
+              'end to end and most of what comes back is noise. Narrow it, or find the trials ' +
+              'you want in another table first and pass their NCT numbers as `nctIds`.',
+          };
+        }
+
         const supabase = createServiceClient();
 
         let query = supabase
@@ -124,7 +179,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           .limit(limit);
 
         query = applyCancerScope(query, table, dbCancerType);
-        if (nctId) query = applyTrialKey(query, table, nctId);
+        if (nctIds) query = applyTrialKeys(query, table, nctIds);
 
         const named: Array<[FilterName, string | readonly string[] | undefined]> = [
           ['sponsor', sponsor],
@@ -163,7 +218,9 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           };
         }
 
-        const fetched = data ?? [];
+        // Trimmed before the size budget runs, so the budget measures what the
+        // model will actually be sent.
+        const fetched = compactInterventions(data ?? []);
         const matched = count ?? fetched.length;
         const { kept: rows, droppedForSize } = fitToBudget(fetched);
         const complete = rows.length === matched;
@@ -180,7 +237,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
                   ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.`
                   : `You asked for ${limit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
               }),
-          ...(nctId ? { trialKeyColumn: spec.trialKey?.column } : {}),
+          ...(nctIds ? { trialKeyColumn: spec.trialKey?.column } : {}),
           ...(spec.caveat ? { caveat: spec.caveat } : {}),
         };
 
@@ -189,7 +246,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
             ok: false as const,
             reason: 'no_rows' as const,
             table,
-            appliedFilters: { ...applied, ...(nctId ? { nctId } : {}) },
+            appliedFilters: { ...applied, ...(nctIds ? { nctIds } : {}) },
             coverage,
             hint: 'Report this absence to the user. Do not substitute knowledge from outside these results.',
           };

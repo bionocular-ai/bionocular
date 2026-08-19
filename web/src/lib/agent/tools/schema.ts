@@ -55,7 +55,12 @@ const TABLE_DEFINITIONS = {
     projection:
       'nct_id, brief_title, overall_status, phases, enrollment_count, ' +
       'lead_sponsor_name, lead_sponsor_class, cancer_type, cancer_type_evidence, ' +
-      'conditions, keywords, study_type, last_update_posted_date, is_basket',
+      'conditions, keywords, study_type, last_update_posted_date, is_basket, ' +
+      // The registry's own intervention list - drug names and types, straight
+      // from the sponsor. Without it "which treatments" had no answer in the
+      // one table that can filter by phase and status, so the model reached for
+      // `trial_landscape`, which can do neither, and read 500 rows to find 3.
+      'interventions',
     filters: {
       sponsor: { column: 'lead_sponsor_name', kind: 'scalar' },
       phase: { column: 'phases', kind: 'array' },
@@ -142,6 +147,7 @@ export interface FilterableQuery<Q> {
   eq(column: string, value: unknown): Q;
   in(column: string, values: readonly unknown[]): Q;
   contains(column: string, value: unknown): Q;
+  overlaps(column: string, values: readonly unknown[]): Q;
   ilike(column: string, pattern: string): Q;
 }
 
@@ -159,15 +165,27 @@ export function applyCancerScope<Q extends FilterableQuery<Q>>(
   return kind === 'array' ? query.contains(column, [dbCancerType]) : query.eq(column, dbCancerType);
 }
 
-/** Match a single trial by whichever key the table actually uses. */
-export function applyTrialKey<Q extends FilterableQuery<Q>>(
+/**
+ * Match one or more trials by whichever key the table actually uses.
+ *
+ * Taking a list is what makes a trial-set enrichment pass expressible: find the
+ * 53 Phase 3 trials in `clinical_trials`, then ask `trial_landscape` for those
+ * 53 rows. One NCT at a time, that pass costs one model round trip per trial
+ * and runs out of steps; unexpressible, it costs a whole-table read.
+ *
+ * `.in()` on a `text[]` column compares whole arrays rather than testing
+ * membership, so the array-keyed table (`news_feed.nct_ids`) needs `overlaps` -
+ * the many-valued form of the `contains` used for cancer scope.
+ */
+export function applyTrialKeys<Q extends FilterableQuery<Q>>(
   query: Q,
   table: AgentTable,
-  nctId: string,
+  nctIds: readonly string[],
 ): Q {
   const key = AGENT_TABLES[table].trialKey;
   if (!key) return query;
-  return key.kind === 'array' ? query.contains(key.column, [nctId]) : query.eq(key.column, nctId);
+  if (key.kind === 'array') return query.overlaps(key.column, nctIds);
+  return nctIds.length === 1 ? query.eq(key.column, nctIds[0]) : query.in(key.column, nctIds);
 }
 
 export type FilterName = 'sponsor' | 'phase' | 'status' | 'drug';

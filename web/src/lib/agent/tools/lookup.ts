@@ -7,7 +7,7 @@ import {
   AGENT_TABLE_NAMES,
   NCT_ID_PATTERN,
   applyCancerScope,
-  applyTrialKey,
+  applyTrialKeys,
   type AgentTable,
 } from './schema';
 import { runTool } from './logging';
@@ -59,7 +59,7 @@ export function buildLookupTool({ cancerSlug, traceId }: AgentToolContext) {
               .select(spec.projection, { count: 'exact' })
               .limit(LOOKUP_ROW_LIMIT);
             query = applyCancerScope(query, table, dbCancerType);
-            query = applyTrialKey(query, table, nctId);
+            query = applyTrialKeys(query, table, [nctId]);
 
             const { data, error, count } = await query;
             if (error) {
