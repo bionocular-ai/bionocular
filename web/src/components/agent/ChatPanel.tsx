@@ -3,29 +3,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
-import { Send, Loader2, Sparkles } from 'lucide-react';
+import { Send, Square, RotateCcw, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { MessageBubble } from './MessageBubble';
-import { ToolCard } from './ToolCard';
+import { UserBubble } from './UserBubble';
+import { AssistantTurn, type TurnPart, type TurnTextPart } from './AssistantTurn';
 
 const COLD_START_DELAY_MS = 5000;
 /** How close to the bottom still counts as "following the stream". */
 const BOTTOM_THRESHOLD_PX = 80;
-
-interface MessageTextPart { type: 'text'; text: string }
-interface MessageToolPart {
-  type: string;
-  toolCallId: string;
-  state: 'input-streaming' | 'input-available' | 'output-available' | 'output-error';
-  input?: unknown;
-  output?: unknown;
-  errorText?: string;
-}
-type MessagePart = MessageTextPart | MessageToolPart;
-
-function isToolPart(part: { type: string }): part is MessageToolPart {
-  return part.type.startsWith('tool-');
-}
+/** Roughly six lines, after which the composer scrolls instead of growing. */
+const MAX_COMPOSER_HEIGHT_PX = 160;
 
 export interface ChatPanelProps {
   /** Dashboard category slug. Every tool query is restricted to it server-side. */
@@ -37,7 +24,7 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
   // instead of inserting one per turn.
   const [sessionId] = useState(() => crypto.randomUUID());
 
-  const { messages, sendMessage, status, error } = useChat({
+  const { messages, sendMessage, status, error, stop, regenerate } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/agent/chat',
       body: { cancerType, sessionId },
@@ -46,6 +33,7 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
 
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Follow the stream only while the reader is already at the bottom. Without
   // this, every token re-pins the view and scrolling up mid-answer is impossible.
   const pinnedToBottom = useRef(true);
@@ -54,26 +42,23 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
   // setElapsed only fires inside callbacks (setInterval, cleanup), never in the
   // synchronous effect body — required by react-hooks/purity + set-state-in-effect.
   const [elapsed, setElapsed] = useState(0);
-  const isBusyForHint = status === 'submitted' || status === 'streaming';
+  const isBusy = status === 'submitted' || status === 'streaming';
 
   useEffect(() => {
-    if (!isBusyForHint) return;
+    if (!isBusy) return;
     const start = Date.now();
     const id = setInterval(() => setElapsed(Date.now() - start), 500);
     return () => {
       clearInterval(id);
       setElapsed(0);
     };
-  }, [isBusyForHint]);
+  }, [isBusy]);
 
   const lastMsg = messages[messages.length - 1];
   const hasAssistantText =
     lastMsg?.role === 'assistant' &&
-    lastMsg.parts.some(
-      (p) => p.type === 'text' && (p as MessageTextPart).text.length > 0
-    );
-  const showColdStartHint =
-    isBusyForHint && !hasAssistantText && elapsed > COLD_START_DELAY_MS;
+    lastMsg.parts.some((p) => p.type === 'text' && (p as TurnTextPart).text.length > 0);
+  const showColdStartHint = isBusy && !hasAssistantText && elapsed > COLD_START_DELAY_MS;
 
   useEffect(() => {
     if (!pinnedToBottom.current) return;
@@ -88,7 +73,10 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
     pinnedToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < BOTTOM_THRESHOLD_PX;
   };
 
-  const isBusy = status === 'submitted' || status === 'streaming';
+  const resizeComposer = (el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT_PX)}px`;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,66 +85,72 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
     pinnedToBottom.current = true;
     sendMessage({ text: trimmed });
     setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
   return (
-    <div className="flex h-full flex-col bg-[var(--brand-bg)]">
+    <div className="flex h-full flex-col bg-(--brand-bg)">
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto px-4 py-6 sm:px-8"
       >
-        <div className="mx-auto flex max-w-3xl flex-col gap-4">
+        <div className="mx-auto flex max-w-3xl flex-col gap-6">
           {messages.length === 0 ? (
-            <EmptyState onPick={(q) => setInput(q)} />
+            <EmptyState
+              onPick={(q) => {
+                setInput(q);
+                textareaRef.current?.focus();
+              }}
+            />
           ) : (
-            messages.map((message) => (
-              <div key={message.id} className="flex flex-col gap-2">
-                {(message.parts as MessagePart[]).map((part, i) => {
-                  if (part.type === 'text') {
-                    return (
-                      <MessageBubble
-                        key={`${message.id}-${i}`}
-                        role={message.role as 'user' | 'assistant'}
-                        text={(part as MessageTextPart).text}
-                      />
-                    );
-                  }
-                  if (isToolPart(part)) {
-                    return (
-                      <ToolCard
-                        key={`${message.id}-${i}-${part.toolCallId}`}
-                        toolName={part.type.replace(/^tool-/, '')}
-                        state={part.state}
-                        input={part.input}
-                        output={part.output}
-                        errorText={part.errorText}
-                      />
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-            ))
+            messages.map((message, index) => {
+              if (message.role === 'user') {
+                const text = (message.parts as TurnPart[])
+                  .filter((p): p is TurnTextPart => p.type === 'text')
+                  .map((p) => p.text)
+                  .join('');
+                return <UserBubble key={message.id} text={text} />;
+              }
+              return (
+                <AssistantTurn
+                  key={message.id}
+                  parts={message.parts as TurnPart[]}
+                  cancerType={cancerType}
+                  isStreaming={isBusy && index === messages.length - 1}
+                />
+              );
+            })
           )}
 
-          {isBusy && (
-            <div className="flex items-center gap-2 text-sm text-slate-500">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Thinking…</span>
-            </div>
-          )}
+          {/* A turn that has not started streaming yet has no message to hang the rail off. */}
+          {isBusy && lastMsg?.role === 'user' ? (
+            <AssistantTurn parts={[]} cancerType={cancerType} isStreaming />
+          ) : null}
 
           {showColdStartHint && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-              Waking the server (free tier sleeps after idle). First request after a long pause
-              can take up to a minute.
-            </div>
+            <p className="max-w-[62ch] pl-[26px] text-[12px] text-(--brand-text-muted)">
+              Waking the server (free tier sleeps after idle). First request after a long pause can
+              take up to a minute.
+            </p>
           )}
 
           {error && (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <div className="max-w-[60ch] border-l-2 border-red-700 bg-red-50 px-4 py-3 text-[13px] text-red-700">
               {error.message || 'Something went wrong. Please try again.'}
+              <button
+                type="button"
+                onClick={() => regenerate()}
+                className={cn(
+                  'mt-2 flex items-center gap-1.5 rounded-[3px] border border-red-200 bg-white',
+                  'px-2 py-1 font-mono text-[10px] tracking-[0.06em] hover:bg-red-50'
+                )}
+              >
+                <RotateCcw className="h-3 w-3" />
+                Retry
+              </button>
             </div>
           )}
         </div>
@@ -164,12 +158,17 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
 
       <form
         onSubmit={handleSubmit}
-        className="border-t border-slate-200 bg-white px-4 py-3 sm:px-8"
+        className="border-t border-(--brand-border) bg-(--brand-surface) px-4 py-3 sm:px-8"
       >
-        <div className="mx-auto flex max-w-3xl items-end gap-2">
+        <div className="mx-auto max-w-3xl">
+          <div className="flex items-end gap-2">
           <textarea
+            ref={textareaRef}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e) => {
+              setInput(e.target.value);
+              resizeComposer(e.target);
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -179,25 +178,42 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
             placeholder="Ask about a trial, drug, target, or cancer indication…"
             rows={1}
             className={cn(
-              'flex-1 resize-none rounded-xl border border-slate-300 bg-white px-3 py-2',
-              'text-sm text-slate-900 placeholder:text-slate-400',
-              'focus:outline-none focus:ring-2 focus:ring-[var(--primary)]'
+              'flex-1 resize-none rounded-xl border border-(--brand-border) bg-(--brand-surface)',
+              'px-3.5 py-2.5 text-sm text-(--brand-text) placeholder:text-(--brand-text-muted)',
+              'focus:border-(--brand-primary) focus:ring-3 focus:ring-(--brand-primary)/12 focus:outline-none'
             )}
-            disabled={isBusy}
           />
-          <button
-            type="submit"
-            disabled={isBusy || !input.trim()}
-            className={cn(
-              'inline-flex h-10 w-10 items-center justify-center rounded-xl',
-              'bg-[var(--primary)] text-white transition',
-              'hover:bg-[var(--accent-dark)]',
-              'disabled:cursor-not-allowed disabled:opacity-50'
-            )}
-            aria-label="Send"
-          >
-            <Send className="h-4 w-4" />
-          </button>
+          {isBusy ? (
+            <button
+              type="button"
+              onClick={stop}
+              className={cn(
+                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                'border border-(--brand-border) bg-(--brand-surface) text-(--brand-primary)',
+                'hover:bg-(--brand-accent-light)'
+              )}
+              aria-label="Stop generating"
+            >
+              <Square className="h-3.5 w-3.5 fill-current" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              className={cn(
+                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)',
+                'disabled:cursor-not-allowed disabled:opacity-50'
+              )}
+              aria-label="Send"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          )}
+          </div>
+          <p className="mt-2 max-w-3xl font-mono text-[10px] tracking-[0.06em] text-(--brand-text-muted) uppercase">
+            Enter to send · Shift+Enter for a new line
+          </p>
         </div>
       </form>
     </div>
@@ -213,25 +229,27 @@ function EmptyState({ onPick }: { onPick: (q: string) => void }) {
     'Tell me about NCT00006368.',
     'Which treatments have reported overall survival data?',
   ];
+  // The page header already names and scopes the agent, so this only has to
+  // get the first question asked.
   return (
-    <div className="flex flex-col items-center gap-6 py-16 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--brand-accent-light)]">
-        <Sparkles className="h-6 w-6 text-[var(--primary)]" />
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold text-slate-900">Bionocular Research Agent</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Ask about the trials, reported outcomes, survival curves, and news Bionocular tracks for
-          this cancer type. No live registry or literature lookups.
+    <div className="flex flex-col gap-3 py-6">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-3.5 w-3.5 text-(--brand-accent)" />
+        <p className="font-mono text-[10px] tracking-[0.12em] text-(--brand-text-muted) uppercase">
+          Start with
         </p>
       </div>
-      <div className="grid w-full max-w-xl gap-2">
+      <div className="grid gap-2">
         {examples.map((q) => (
           <button
             key={q}
             type="button"
             onClick={() => onPick(q)}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-700 hover:border-[var(--primary)] hover:text-slate-900"
+            className={cn(
+              'rounded-xl border border-(--brand-border) bg-(--brand-surface) px-3.5 py-2.5',
+              'text-left text-sm text-(--brand-text) transition',
+              'hover:border-(--brand-primary) hover:bg-(--brand-accent-light)'
+            )}
           >
             {q}
           </button>

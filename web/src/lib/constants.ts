@@ -30,6 +30,12 @@ export const AUTH_ERROR_MESSAGES = {
   INVALID_EMAIL: 'Please enter a valid email address',
 } as const;
 
+/** Trial detail page for an NCT number, scoped to the dashboard category it was reached from. */
+export function trialRoute(nctId: string, categorySlug?: string): string {
+  const qs = categorySlug ? `?${new URLSearchParams({ category: categorySlug }).toString()}` : '';
+  return `/trial/nct/${nctId}${qs}`;
+}
+
 export function dashboardRoute(slug: string, section?: string, query?: Record<string, string>): string {
   const base = `/dashboard/${slug}`;
   const path = section ? `${base}/${section}` : base;

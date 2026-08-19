@@ -19,18 +19,18 @@ export const maxDuration = 60;
 /**
  * Thinking configuration lives here and nowhere else.
  *
- * Sonnet 5 runs adaptive thinking by default; Sonnet 4.6 ran thinking-off when
- * the field was omitted, so leaving it out would silently change behaviour.
- * Disabled deliberately for now: turning it on means sending `adaptive` here,
- * plus a bump to MAX_OUTPUT_TOKENS below and a check that answers are not being
- * truncated.
+ * Haiku 4.5 supports extended thinking but leaves it off unless asked. Kept
+ * explicitly disabled: turning it on means sending `enabled` with a budget
+ * here, plus a bump to MAX_OUTPUT_TOKENS below and a check that answers are not
+ * being truncated.
  *
  * It has to go on the wire by hand. `@ai-sdk/anthropic` builds the `thinking`
  * field only for `enabled` and `adaptive` and drops `disabled` on the floor, so
- * `providerOptions` cannot express "off" - the request went out with no
- * `thinking` field at all, which on Sonnet 5 means adaptive. That was invisible
- * until a tool result got big enough for the reasoning to eat the whole output
- * budget: 4096 output tokens, two empty reasoning blocks, no answer.
+ * `providerOptions` cannot express "off" - the request goes out with no
+ * `thinking` field at all, which is model-default rather than a stated choice.
+ * On Sonnet 5 that default was adaptive, and it stayed invisible until a tool
+ * result got big enough for the reasoning to eat the whole output budget: 4096
+ * output tokens, two empty reasoning blocks, no answer.
  */
 const THINKING_CONFIG = { type: 'disabled' } as const;
 
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
   let finalUsage: unknown;
 
   const result = streamText({
-    model: anthropic('claude-sonnet-5'),
+    model: anthropic('claude-haiku-4-5-20251001'),
     messages: [systemMessage, ...modelMessages],
     tools: agentTools({ userId: user.id, cancerSlug: cancerType, sessionId, traceId }),
     maxOutputTokens: MAX_OUTPUT_TOKENS,

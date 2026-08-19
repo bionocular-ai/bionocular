@@ -15,10 +15,11 @@ export default function AgentPage() {
   // layout leaves room for (3rem).
   return (
     <div className="flex h-[calc(100dvh-6.5rem)] flex-col md:h-[calc(100dvh-3.5rem)]">
-      <div className="shrink-0 border-b border-(--brand-border) px-6 py-5 sm:px-8">
+      {/* Flush left, sharing one edge with the thread and composer below. */}
+      <div className="shrink-0 px-6 py-8">
         <PageHeader
           category={categoryName}
-          title="AI Agent"
+          title="Bionocular Agent"
           description={`Answers are drawn only from Bionocular's own data for ${categoryName}. The agent has no access to live registries or literature.`}
         />
       </div>
