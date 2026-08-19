@@ -9,7 +9,7 @@
  */
 
 export interface RecordedFilter {
-  operator: 'eq' | 'in' | 'contains' | 'ilike';
+  operator: 'eq' | 'in' | 'contains' | 'overlaps' | 'ilike';
   column: string;
   value: unknown;
 }
@@ -49,6 +49,7 @@ interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown
   eq: (column: string, value: unknown) => FakeQuery;
   in: (column: string, values: readonly unknown[]) => FakeQuery;
   contains: (column: string, value: unknown) => FakeQuery;
+  overlaps: (column: string, values: readonly unknown[]) => FakeQuery;
   ilike: (column: string, value: string) => FakeQuery;
   /** Resolves the first fixture row rather than the array, as PostgREST does. */
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
@@ -97,6 +98,10 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
       },
       contains(column, value) {
         record.filters.push({ operator: 'contains', column, value });
+        return query;
+      },
+      overlaps(column, values) {
+        record.filters.push({ operator: 'overlaps', column, value: values });
         return query;
       },
       ilike(column, value) {

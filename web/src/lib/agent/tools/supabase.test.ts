@@ -7,7 +7,18 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => fake,
 }));
 
-const { buildSupabaseTools } = await import('./supabase');
+const { buildSupabaseTools, fitToBudget, MAX_RESULT_CHARS } = await import('./supabase');
+
+/** Rows whose JSON serialises to exactly `chars` characters. */
+function rowsOfSize(chars: number, count = 1) {
+  const rows = Array.from({ length: count }, () => ({ t: '' }));
+  const each = Math.floor((chars - JSON.stringify(rows).length) / count);
+  for (const row of rows) row.t = 'x'.repeat(each);
+  // Integer division leaves a remainder; put it on the first row so the total
+  // lands on `chars` exactly, which is what makes the boundary test meaningful.
+  rows[0].t += 'x'.repeat(chars - JSON.stringify(rows).length);
+  return rows;
+}
 
 const CONTEXT = {
   userId: 'user-1',
@@ -63,15 +74,140 @@ describe('query_proprietary_data', () => {
     const tools = toolsWith({ news_feed: { rows: [{ url: 'https://example.test/a' }] } });
 
     await tools.query_proprietary_data.execute!(
-      { table: 'news_feed', nctId: 'NCT00006368', limit: 10 },
+      { table: 'news_feed', nctIds: ['NCT00006368'], limit: 10 },
       RUN_OPTIONS,
     );
 
     expect(fake.queries[0].filters).toContainEqual({
-      operator: 'contains',
+      operator: 'overlaps',
       column: 'nct_ids',
       value: ['NCT00006368'],
     });
+  });
+
+  it('projects the interventions column, so treatments need no second table', async () => {
+    // The whole reason a phase-3 "which treatments" question used to fan out
+    // into an unfiltered trial_landscape scan: this table could filter by phase
+    // and status but its projection carried no treatment names.
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', limit: 10 }, RUN_OPTIONS);
+
+    expect(fake.queries[0].projection).toContain('interventions');
+  });
+
+  it('keeps intervention names and types but drops the prose around them', async () => {
+    // Measured over the 53 Phase 3 active cutaneous melanoma trials: the column
+    // as stored is 15,718 tokens, of which 12,594 are `description` and
+    // `otherNames`. "Which treatments" is answered by name and type alone.
+    const tools = toolsWith({
+      clinical_trials: {
+        rows: [
+          {
+            nct_id: 'NCT03470922',
+            interventions: [
+              {
+                name: 'Relatlimab',
+                type: 'BIOLOGICAL',
+                description: 'Specified dose on specified day',
+                otherNames: ['BMS-986016'],
+                armGroupLabels: ['Arm A: Relatlimab + Nivolumab'],
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', phase: 'PHASE3', limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    const [row] = (result as { rows: Array<{ interventions: unknown[] }> }).rows;
+    expect(row.interventions).toEqual([{ name: 'Relatlimab', type: 'BIOLOGICAL' }]);
+  });
+
+  it('leaves rows from other tables untouched', async () => {
+    const tools = toolsWith({
+      trial_landscape: { rows: [{ nct_id: 'NCT03470922', treatment_name: 'Relatlimab + Nivolumab' }] },
+    });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_landscape', nctIds: ['NCT03470922'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect((result as { rows: unknown[] }).rows).toEqual([
+      { nct_id: 'NCT03470922', treatment_name: 'Relatlimab + Nivolumab' },
+    ]);
+  });
+
+  it('matches several trials in one query rather than one call per NCT', async () => {
+    const tools = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT00006368' }], count: 2 } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'trial_landscape', nctIds: ['NCT00006368', 'NCT00084656'], limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'in',
+      column: 'nct_id',
+      value: ['NCT00006368', 'NCT00084656'],
+    });
+  });
+
+  it('matches several trials on news_feed, whose trial key is an array column', async () => {
+    // `.in()` on a text[] column compares whole arrays; membership needs overlaps.
+    const tools = toolsWith({ news_feed: { rows: [{ url: 'https://example.test/a' }] } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'news_feed', nctIds: ['NCT00006368', 'NCT00084656'], limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'overlaps',
+      column: 'nct_ids',
+      value: ['NCT00006368', 'NCT00084656'],
+    });
+  });
+
+  it('refuses a large limit when nothing but cancer scope narrows the query', async () => {
+    // 500 unfiltered trial_landscape rows measured 48k tokens, of which 3 rows
+    // were relevant. The row cap alone never stopped this.
+    const tools = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT00006368' }], count: 2163 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_landscape', limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: 'unfiltered_sweep', table: 'trial_landscape' });
+    expect(fake.queries).toHaveLength(0);
+  });
+
+  it('allows a large limit once a filter narrows the query', async () => {
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW], count: 53 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', phase: 'PHASE3', limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  it('allows an unfiltered browse at the default limit, so "what exists" still works', async () => {
+    const tools = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT00006368' }], count: 2163 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_landscape', limit: 25 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: true });
   });
 
   it('selects an explicit projection, never *', async () => {
@@ -137,8 +273,12 @@ describe('query_proprietary_data', () => {
     expect(coverage.truncatedBy).toBeUndefined();
   });
 
-  it('drops rows that do not fit the size budget and says so', async () => {
-    // Each row is ~2KB of free text, so 500 of them overrun the result budget.
+  it('blames the size budget, not the limit, when a result is trimmed for size', async () => {
+    // The trimming itself belongs to `fitToBudget` below. What only the tool can
+    // get wrong is the story it tells about the trim: a result cut for size but
+    // reported as cut by `limit` sends the model back for a higher limit that
+    // cannot help. `phase` is here only to clear the unfiltered-sweep guard -
+    // the fake drives row count from its fixture, not from `limit`.
     const rows = Array.from({ length: 500 }, (_, i) => ({
       nct_id: `NCT1000${String(i).padStart(4, '0')}`,
       brief_title: 'x'.repeat(2000),
@@ -146,17 +286,19 @@ describe('query_proprietary_data', () => {
     const tools = toolsWith({ clinical_trials: { rows, count: 500 } });
 
     const result = await tools.query_proprietary_data.execute!(
-      { table: 'clinical_trials', limit: 500 },
+      { table: 'clinical_trials', phase: 'PHASE3', limit: 500 },
       RUN_OPTIONS,
     );
 
     const { coverage, rows: kept } = result as {
-      coverage: { returned: number; complete: boolean; truncatedBy: string };
+      coverage: { returned: number; complete: boolean; truncatedBy: string; hint: string };
       rows: unknown[];
     };
     expect(coverage.complete).toBe(false);
     expect(coverage.truncatedBy).toBe('size');
-    expect(kept.length).toBeLessThan(500);
+    expect(coverage.hint).toMatch(/narrow the filters/i);
+    // The coverage report must describe the payload actually sent, not the
+    // row set before trimming.
     expect(coverage.returned).toBe(kept.length);
   });
 
@@ -222,14 +364,14 @@ describe('query_proprietary_data', () => {
     const tools = toolsWith({ trial_landscape: { rows: [] } });
 
     const result = await tools.query_proprietary_data.execute!(
-      { table: 'trial_landscape', nctId: 'NCT99999999', limit: 10 },
+      { table: 'trial_landscape', nctIds: ['NCT99999999'], limit: 10 },
       RUN_OPTIONS,
     );
 
     expect(result).toMatchObject({
       ok: false,
       reason: 'no_rows',
-      appliedFilters: { nctId: 'NCT99999999' },
+      appliedFilters: { nctIds: ['NCT99999999'] },
     });
     // Observational trials are excluded from this table by design, so an
     // absence here is not an absence from the registry.
@@ -261,4 +403,41 @@ describe('query_proprietary_data', () => {
     expect(result).toMatchObject({ ok: false, reason: 'unknown_column' });
   });
 
+});
+
+describe('fitToBudget', () => {
+  it('passes a payload under the budget through untouched', () => {
+    const rows = rowsOfSize(MAX_RESULT_CHARS - 1_000, 10);
+
+    expect(fitToBudget(rows)).toEqual({ kept: rows, droppedForSize: false });
+  });
+
+  it('keeps a payload sitting exactly on the budget', () => {
+    // The boundary is `<=`. One character either side of it decides whether a
+    // whole result gets trimmed, and nothing else pins which way it falls.
+    const rows = rowsOfSize(MAX_RESULT_CHARS, 4);
+    expect(JSON.stringify(rows)).toHaveLength(MAX_RESULT_CHARS);
+
+    expect(fitToBudget(rows)).toEqual({ kept: rows, droppedForSize: false });
+  });
+
+  it('trims from the tail until the payload fits, and says it did', () => {
+    const rows = rowsOfSize(MAX_RESULT_CHARS * 3, 60);
+
+    const { kept, droppedForSize } = fitToBudget(rows);
+
+    expect(droppedForSize).toBe(true);
+    expect(JSON.stringify(kept).length).toBeLessThanOrEqual(MAX_RESULT_CHARS);
+    expect(kept.length).toBeLessThan(rows.length);
+    // Tail-trimmed, so what survives is a prefix of the original order.
+    expect(kept).toEqual(rows.slice(0, kept.length));
+  });
+
+  it('never trims below one row, even when that row alone is over budget', () => {
+    // An empty result would read as "no rows matched" - a factual claim about
+    // the database rather than about the size of one row.
+    const rows = rowsOfSize(MAX_RESULT_CHARS * 2, 1);
+
+    expect(fitToBudget(rows).kept).toEqual(rows);
+  });
 });
