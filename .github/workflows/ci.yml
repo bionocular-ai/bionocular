@@ -14,10 +14,11 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      id: setup-python
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
     
@@ -30,18 +31,12 @@ jobs:
     
     - name: Load cached venv
       id: cached-poetry-dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: melanoma/.venv
-        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('melanoma/poetry.lock') }}
+        key: venv-${{ runner.os }}-py${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('melanoma/poetry.lock') }}
     
     - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      working-directory: ./melanoma
-      run: poetry install --no-interaction --no-root
-    
-    - name: Install dependencies (cached)
-      if: steps.cached-poetry-dependencies.outputs.cache-hit == 'true'
       working-directory: ./melanoma
       run: poetry install --no-interaction --no-root
     
@@ -66,9 +61,9 @@ jobs:
       run: poetry run bandit -r src/ -f json -o bandit-report.json || true
     
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v7
       with:
-        file: ./melanoma/coverage.xml
+        files: ./melanoma/coverage.xml
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
@@ -80,10 +75,10 @@ jobs:
         working-directory: ./web
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
 
     - name: Set up Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v7
       with:
         node-version: '20'
         cache: 'npm'
@@ -112,10 +107,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v7
       with:
         python-version: "3.11"
     
@@ -135,7 +130,7 @@ jobs:
       run: poetry build
     
     - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: dist
         path: melanoma/dist/
