@@ -102,7 +102,7 @@ export async function POST(req: Request) {
   // Dormant on Haiku 4.5, deliberately. The minimum cacheable prefix is a
   // property of the model - 4096 tokens here, against 1024 on Sonnet 5 and 512
   // on Opus 5 - and below it the marker is ignored with no error and no
-  // cache_creation_input_tokens. This prefix measures ~3.4k, so nothing caches:
+  // cache_creation_input_tokens. This prefix measures ~3.6k, so nothing caches:
   // `chat_sessions.token_usage.cachedInputTokens` reads 3161 on every Sonnet 5
   // row and 0 on the first Haiku one. Left in place because it costs nothing
   // and revives on its own if the prompt grows or the model changes; do not pad
@@ -113,8 +113,8 @@ export async function POST(req: Request) {
   // history, so tool results are re-sent at full price on every step of a turn.
   // A breakpoint on the last message would fix that (`prepareStep` can return a
   // modified `messages` array), but writes cost 1.25x against reads at 0.1x, so
-  // it wins on 3+ step turns and loses on 2-step ones. Decide it from real
-  // `totalUsage` data, not from here.
+  // it wins on 3+ step turns and loses on 2-step ones. Decide it from the
+  // per-step usage now written to `chat_sessions.token_usage.steps`.
   const systemMessage: ModelMessage = {
     role: 'system',
     content: ONCOLOGY_SYSTEM_PROMPT,
@@ -126,6 +126,9 @@ export async function POST(req: Request) {
   // Captured from the model stream, written once the UI stream has the finished
   // message list.
   let finalUsage: unknown;
+  // Per-step usage, oldest first. The turn total says a turn cost 17k tokens; it
+  // cannot say which step spent it, and a wasteful sweep hides inside the sum.
+  const stepUsage: unknown[] = [];
 
   const result = streamText({
     model: anthropic('claude-haiku-4-5-20251001'),
@@ -137,6 +140,9 @@ export async function POST(req: Request) {
     // call the model never got to explain - tool cards and silence.
     prepareStep: ({ stepNumber }) =>
       stepNumber === MAX_STEPS - 1 ? { toolChoice: 'none' } : {},
+    onStepFinish: ({ usage }) => {
+      stepUsage.push(usage);
+    },
     onFinish: ({ totalUsage, warnings }) => {
       // `usage` on this event is the final step alone. A turn that ran three
       // steps re-sends every earlier tool result on each one, so recording the
@@ -170,6 +176,7 @@ export async function POST(req: Request) {
           traceId,
           messages: finishedMessages,
           usage: finalUsage,
+          steps: stepUsage,
         });
       } catch (err) {
         // Don't fail the response if persistence breaks — just log.

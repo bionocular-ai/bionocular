@@ -16,7 +16,11 @@ const MESSAGES: UIMessage[] = [
   { id: 'm2', role: 'assistant', parts: [{ type: 'text', text: 'Three did.' }] },
 ];
 
-function persistWith(fixtures: Record<string, TableFixture> = {}, usage: unknown = {}) {
+function persistWith(
+  fixtures: Record<string, TableFixture> = {},
+  usage: unknown = {},
+  steps?: readonly unknown[],
+) {
   fake = createFakeSupabase(fixtures);
   return persistSession({
     userId: 'user-1',
@@ -24,6 +28,7 @@ function persistWith(fixtures: Record<string, TableFixture> = {}, usage: unknown
     traceId: 'trace-1',
     messages: MESSAGES,
     usage,
+    steps,
   });
 }
 
@@ -56,6 +61,43 @@ describe('persistSession', () => {
       totalTokens: 10034,
       turns: 2,
     });
+  });
+
+  it('records each step separately, so a turn\'s cost can be blamed on the step that caused it', async () => {
+    // A turn total says 17k tokens; it cannot say that the sweep in step 1 was
+    // 12k of it. Diagnosing one expensive turn meant bisecting production rows.
+    await persistWith({}, { inputTokens: 30000, outputTokens: 700 }, [
+      { inputTokens: 4000, outputTokens: 200 },
+      { inputTokens: 26000, outputTokens: 500 },
+    ]);
+
+    expect(fake.upserts[0].values.token_usage).toMatchObject({
+      inputTokens: 30000,
+      steps: [
+        { inputTokens: 4000, outputTokens: 200 },
+        { inputTokens: 26000, outputTokens: 500 },
+      ],
+    });
+  });
+
+  it('appends this turn\'s steps to the ones earlier turns left behind', async () => {
+    await persistWith(
+      { chat_sessions: priorRow({ inputTokens: 100, turns: 1, steps: [{ inputTokens: 100 }] }) },
+      { inputTokens: 300 },
+      [{ inputTokens: 300 }],
+    );
+
+    expect(fake.upserts[0].values.token_usage).toMatchObject({
+      steps: [{ inputTokens: 100 }, { inputTokens: 300 }],
+    });
+  });
+
+  it('leaves the total free of a steps key when no per-step usage was captured', async () => {
+    // `accumulateUsage` sums every numeric it finds; an array is not one, so a
+    // steps key that leaked into the total would be dead weight on every row.
+    await persistWith({}, { inputTokens: 4210 });
+
+    expect(fake.upserts[0].values.token_usage).not.toHaveProperty('steps');
   });
 
   it('carries provider-specific counters through the total too', async () => {
