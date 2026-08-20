@@ -69,3 +69,43 @@ export function checkGroundedness(answer: string, toolResults: unknown[]): Groun
   );
   return { grounded: ungrounded.length === 0, ungrounded, cited };
 }
+
+export interface CompletenessResult {
+  /** Every trial the tools returned appears in the answer. */
+  complete: boolean;
+  /** Identifiers a tool returned that the answer never mentions. */
+  uncited: string[];
+  /** Every identifier the tools returned, in order of appearance. */
+  returned: string[];
+}
+
+/**
+ * The mirror of `checkGroundedness`.
+ *
+ * That one catches `cited - returned`: an answer naming a trial nothing looked
+ * up. This catches `returned - cited`: a trial a tool handed the model that
+ * never reached the answer. A sweep of 53 Phase 3 trials was written up as 45,
+ * because the answer pivoted from one row per trial to one row per treatment
+ * and trials sharing a drug were merged away. Nothing in the code dropped them
+ * and every grounding check passed.
+ *
+ * Scoped to each result's `rows`, deliberately. Coverage notes name trials the
+ * table had no row for; those are worth mentioning but were never returned, and
+ * counting them would fail an answer for omitting what it was never given.
+ */
+export function checkCompleteness(answer: string, toolResults: unknown[]): CompletenessResult {
+  const rows = toolResults.flatMap((result) => {
+    if (!result || typeof result !== 'object') return [];
+    const { rows: resultRows } = result as { rows?: unknown };
+    return Array.isArray(resultRows) ? resultRows : [];
+  });
+
+  const returned: string[] = [];
+  for (const identifier of extractIdentifiers(collectStrings(rows).join('\n'))) {
+    if (!returned.includes(identifier)) returned.push(identifier);
+  }
+
+  const cited = new Set(extractIdentifiers(answer));
+  const uncited = returned.filter((identifier) => !cited.has(identifier));
+  return { complete: uncited.length === 0, uncited, returned };
+}
