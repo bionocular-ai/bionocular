@@ -14,7 +14,9 @@ import {
   applyTrialKeys,
   describeTables,
   projectionColumns,
+  projectionFor,
   supportedFilters,
+  type AgentColumn,
   type AgentTable,
   type FilterName,
 } from './schema';
@@ -79,6 +81,36 @@ export function fitToBudget<T>(rows: T[]): { kept: T[]; droppedForSize: boolean 
   return { kept, droppedForSize: true };
 }
 
+/**
+ * Which of the requested trials no row carried.
+ *
+ * `coverage` measured the table, not the request: 53 NCT numbers asked of
+ * `trial_landscape` came back as 48 rows and `complete: true`, which is true of
+ * the table and false of the question. The model then answered for 48 without
+ * knowing five had been asked about. Since `trial_landscape` is curated by hand
+ * and lags the daily trial sync, that gap widens on its own.
+ *
+ * The array-keyed table (`news_feed.nct_ids`) carries several trials per row,
+ * so a key counts as present if any row's array holds it.
+ */
+export function missingTrialKeys(
+  rows: readonly unknown[],
+  key: AgentColumn,
+  requested: readonly string[],
+): string[] {
+  const present = new Set<string>();
+  for (const row of rows) {
+    if (typeof row !== 'object' || row === null) continue;
+    const value = (row as Record<string, unknown>)[key.column];
+    if (key.kind === 'array') {
+      if (Array.isArray(value)) for (const entry of value) if (typeof entry === 'string') present.add(entry);
+    } else if (typeof value === 'string') {
+      present.add(value);
+    }
+  }
+  return requested.filter((id) => !present.has(id));
+}
+
 export interface AgentToolContext {
   userId: string;
   /** Dashboard slug, e.g. `cutaneous-melanoma`. Validated by the caller. */
@@ -139,6 +171,16 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           .min(2)
           .optional()
           .describe('Substring match on the treatment or arm name for this table.'),
+        detail: z
+          .enum(['concise', 'detailed'])
+          .optional()
+          .describe(
+            'How much of each row to return. `concise` carries the columns an answer is built ' +
+              'from; `detailed` adds provenance and secondary columns and costs about twice as ' +
+              'many tokens per row. Defaults to `concise`; ask for `detailed` only when the ' +
+              'question is about those columns - how a trial was classified, its conditions, ' +
+              'its keywords.',
+          ),
         limit: z
           .number()
           .int()
@@ -149,7 +191,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
       }),
       execute: async (args) =>
         runTool('query_proprietary_data', traceId, args, async () => {
-        const { table, nctIds, sponsor, phase, status, drug, limit } = args;
+        const { table, nctIds, sponsor, phase, status, drug, detail, limit } = args;
         const spec = AGENT_TABLES[table];
 
         // Cancer scope is applied to every query, so on its own it narrows
@@ -175,7 +217,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
 
         let query = supabase
           .from(table)
-          .select(spec.projection, { count: 'exact' })
+          .select(projectionFor(table, detail ?? 'concise'), { count: 'exact' })
           .limit(limit);
 
         query = applyCancerScope(query, table, dbCancerType);
@@ -238,6 +280,26 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
                   : `You asked for ${limit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
               }),
           ...(nctIds ? { trialKeyColumn: spec.trialKey?.column } : {}),
+          // Only once the result is whole: under truncation "absent from the
+          // table" and "not returned yet" are the same shape, so naming one as
+          // missing would be a guess.
+          ...(nctIds && complete && spec.trialKey
+            ? (() => {
+                const missing = missingTrialKeys(rows, spec.trialKey, nctIds);
+                return {
+                  requested: nctIds.length,
+                  ...(missing.length
+                    ? {
+                        missing,
+                        hint:
+                          `${missing.length} of the ${nctIds.length} trials you asked about have no row in ` +
+                          `\`${table}\`. Report them as present but uncovered by this table - do not drop ` +
+                          'them from the answer, and do not fill the gap from memory.',
+                      }
+                    : {}),
+                };
+              })()
+            : {}),
           ...(spec.caveat ? { caveat: spec.caveat } : {}),
         };
 

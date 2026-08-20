@@ -43,6 +43,11 @@ export interface AgentTableSpec {
     readonly status?: AgentColumn;
     readonly drug?: AgentColumn;
   };
+  /**
+   * The columns an answer is actually built from. Falls back to `projection`
+   * where a table has no leaner form worth the split.
+   */
+  readonly conciseProjection?: string;
   /** Surfaced with every result for this table so the model can qualify it. */
   readonly caveat?: string;
 }
@@ -61,6 +66,17 @@ const TABLE_DEFINITIONS = {
       // one table that can filter by phase and status, so the model reached for
       // `trial_landscape`, which can do neither, and read 500 rows to find 3.
       'interventions',
+    // Measured through `count_tokens` over 53 Phase 3 trials: the full
+    // projection is 17,036 tokens, these six are 8,384. The difference is
+    // re-sent on every later step of the turn, so it is paid more than once.
+    //
+    // `phases` and `overall_status` stay even though both are filters, because
+    // neither predicate is an equality - 10 of the 53 are PHASE2/PHASE3, and the
+    // status filter admits four values. `cancer_type` is pinned to one value by
+    // `applyCancerScope` and `study_type` was one value on all 53 rows, so
+    // neither can tell the model anything it does not already know.
+    conciseProjection:
+      'nct_id, brief_title, overall_status, phases, lead_sponsor_name, interventions',
     filters: {
       sponsor: { column: 'lead_sponsor_name', kind: 'scalar' },
       phase: { column: 'phases', kind: 'array' },
@@ -220,6 +236,14 @@ export function applyNamedFilter<Q extends FilterableQuery<Q>>(
 }
 
 /** Columns a caller may ask for by name, for error messages and descriptions. */
+/**
+ * The columns to select for this table at the requested level of detail.
+ */
+export function projectionFor(table: AgentTable, detail: 'concise' | 'detailed'): string {
+  const spec = AGENT_TABLES[table];
+  return detail === 'concise' ? (spec.conciseProjection ?? spec.projection) : spec.projection;
+}
+
 export function projectionColumns(table: AgentTable): string[] {
   return AGENT_TABLES[table].projection.split(',').map((c) => c.trim());
 }
