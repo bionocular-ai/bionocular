@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { toResultTable } from '@/lib/agent/result-table';
 import { cn } from '@/lib/utils';
 
 /**
@@ -9,6 +10,11 @@ import { cn } from '@/lib/utils';
  * Everything shown here already ships inside the tool result - `coverage`
  * carries how many rows matched, whether the set is complete, and any caveat
  * the table comes with. The previous card hid all of it behind a disclosure.
+ *
+ * The rows themselves are drawn from `output.rows` rather than left to the
+ * answer's prose. Asked for 53 trials the model received all 53 and wrote up 45,
+ * having pivoted to one row per treatment and merged the ones sharing a drug.
+ * The model keeps the analysis; the app owns the row set.
  */
 
 export type ToolState = 'input-streaming' | 'input-available' | 'output-available' | 'output-error';
@@ -152,7 +158,9 @@ export function ToolStep(props: ToolStepProps) {
   const { input, output, state } = props;
   const { subject, detail, caveat, tone } = summarise(props);
   const [showRaw, setShowRaw] = useState(false);
+  const [showRows, setShowRows] = useState(false);
   const hasRaw = state === 'output-available' || state === 'output-error';
+  const table = useMemo(() => toResultTable(output), [output]);
 
   return (
     <div className="relative mb-1.5">
@@ -174,6 +182,18 @@ export function ToolStep(props: ToolStepProps) {
         >
           {detail}
         </span>
+        {table ? (
+          <button
+            type="button"
+            onClick={() => setShowRows((open) => !open)}
+            className={cn(
+              'cursor-pointer font-mono text-[10px] tracking-[0.04em]',
+              'text-(--brand-text-muted) underline underline-offset-[3px] hover:text-(--brand-primary)'
+            )}
+          >
+            {showRows ? 'hide rows' : `${table.rows.length} rows`}
+          </button>
+        ) : null}
         {hasRaw ? (
           <button
             type="button"
@@ -188,6 +208,42 @@ export function ToolStep(props: ToolStepProps) {
         ) : null}
         {caveat ? (
           <p className="max-w-[62ch] basis-full text-[12px] text-(--brand-text-muted)">{caveat}</p>
+        ) : null}
+        {showRows && table ? (
+          <div className="max-h-96 basis-full overflow-auto rounded-[3px] border border-(--brand-border) bg-(--brand-surface)">
+            <table className="w-full border-collapse text-[11px]">
+              <thead>
+                <tr>
+                  {table.columns.map((column) => (
+                    <th
+                      key={column}
+                      className={cn(
+                        'sticky top-0 z-1 border-b border-(--brand-border) bg-(--brand-accent-light)',
+                        'px-2 py-1.5 text-left font-mono font-medium whitespace-nowrap',
+                        'text-(--brand-primary)'
+                      )}
+                    >
+                      {column}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {table.rows.map((row, rowIndex) => (
+                  <tr key={rowIndex} className="border-b border-(--brand-border)/50 last:border-b-0">
+                    {row.map((cell, cellIndex) => (
+                      <td
+                        key={table.columns[cellIndex]}
+                        className="max-w-[30ch] px-2 py-1 align-top text-(--brand-text-muted)"
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : null}
         {showRaw ? (
           <pre className="max-h-60 basis-full overflow-auto rounded-[3px] border border-(--brand-border) bg-(--brand-surface) p-2 text-[11px] text-(--brand-text-muted)">
