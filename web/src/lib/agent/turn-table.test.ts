@@ -79,7 +79,16 @@ describe('toTurnTable', () => {
   it('keeps interventions as its own column when nothing curated joins it', () => {
     const table = toTurnTable([trials, { ...trials, table: 'clinical_trials' }]);
 
-    expect(table?.columns.map((c) => c.key)).toContain('interventions');
+    // Sits where treatment_name would have, directly after trial - not at the
+    // end, behind whatever other columns the turn happens to carry.
+    expect(table?.columns.map((c) => c.key)).toEqual([
+      'nct_id',
+      'trial',
+      'interventions',
+      'overall_status',
+    ]);
+    expect(cell(table, 0, 'interventions')).toBe('Relatlimab (DRUG)');
+    expect(cell(table, 1, 'interventions')).toBe('No re-excision (PROCEDURE)');
   });
 
   it('appends a trial only a later query carried, rather than dropping it', () => {
@@ -108,5 +117,68 @@ describe('toTurnTable', () => {
     const news = { ok: true, table: 'news_feed', rows: [{ url: 'https://example.test', title: 'x' }] };
 
     expect(toTurnTable([trials, news])).toBeNull();
+  });
+
+  it('treats a result with duplicate nct_ids as non-joinable, since folding it would keep only the last arm', () => {
+    // trial_outcomes is one row per treatment arm, so two arms of the same
+    // trial share an nct_id. Folding that into the spine would silently drop
+    // every arm but the last, so the whole turn falls back to per-query tables.
+    const outcomes = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT03470922', arm_name: 'Relatlimab + Nivolumab', orr: 0.43 },
+        { nct_id: 'NCT03470922', arm_name: 'Nivolumab', orr: 0.34 },
+      ],
+    };
+
+    expect(toTurnTable([trials, outcomes])).toBeNull();
+  });
+
+  it("keeps an earlier query's real value when a later query carries an explicit null for the same column", () => {
+    // cancer_type is projected by more than one query; PostgREST returns it as
+    // an explicit null rather than omitting it, and that null must not erase a
+    // value a query earlier in the turn already supplied.
+    const first = {
+      ok: true,
+      table: 'clinical_trials',
+      rows: [{ nct_id: 'NCT03470922', brief_title: 'x', cancer_type: ['cutaneous melanoma'] }],
+    };
+    const second = {
+      ok: true,
+      table: 'trial_landscape',
+      rows: [{ nct_id: 'NCT03470922', treatment_name: 'Relatlimab + Nivolumab', cancer_type: null }],
+    };
+
+    const table = toTurnTable([first, second]);
+
+    expect(cell(table, 0, 'cancer_type')).toBe('cutaneous melanoma');
+  });
+
+  it('keeps the first query\'s order when a middle query introduces a new key, appending it once', () => {
+    const middle = {
+      ok: true,
+      table: 'trial_landscape',
+      rows: [
+        { nct_id: 'NCT03470922', treatment_name: 'Relatlimab + Nivolumab' },
+        { nct_id: 'NCT06112314', treatment_name: 'Brenetafusp + Nivolumab' },
+      ],
+    };
+    const last = {
+      ok: true,
+      table: 'trial_outcomes_summary',
+      rows: [
+        { nct_id: 'NCT03470922', orr: 0.43 },
+        { nct_id: 'NCT07530887', orr: 0.12 },
+      ],
+    };
+
+    const table = toTurnTable([trials, middle, last]);
+
+    expect(table?.rows.map((row) => row[0])).toEqual([
+      'NCT03470922',
+      'NCT07530887',
+      'NCT06112314',
+    ]);
   });
 });

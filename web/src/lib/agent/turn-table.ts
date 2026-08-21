@@ -29,7 +29,15 @@ const FALLBACK = { target: 'treatment_name', source: 'interventions', marker: 'r
 
 type Row = Record<string, unknown>;
 
-/** A tool result usable as a join input: succeeded, has rows, every row keyed. */
+/**
+ * A tool result usable as a join input: succeeded, has rows, every row keyed,
+ * and one row per key. `trial_outcomes` is one row per treatment arm and
+ * `km_curves` is one row per arm/endpoint - both keyed by nct_id, so a turn
+ * that queries either alongside `clinical_trials` has duplicate keys. Folding
+ * those into one spine would silently keep only the last arm of each trial,
+ * exactly what this module exists to prevent, so such a result disqualifies
+ * the whole turn instead.
+ */
 function asJoinable(output: unknown): Row[] | null {
   if (typeof output !== 'object' || output === null) return null;
   const { ok, rows } = output as { ok?: unknown; rows?: unknown };
@@ -39,7 +47,10 @@ function asJoinable(output: unknown): Row[] | null {
     (row): row is Row =>
       typeof row === 'object' && row !== null && typeof (row as Row)[KEY] === 'string',
   );
-  return keyed.length === rows.length ? keyed : null;
+  if (keyed.length !== rows.length) return null;
+
+  const distinct = new Set(keyed.map((row) => row[KEY]));
+  return distinct.size === keyed.length ? keyed : null;
 }
 
 function trialCell(row: Row): string {
@@ -64,17 +75,31 @@ export function toTurnTable(outputs: unknown[]): ResultTable | null {
   // Row order comes from the first query: it is the one that answered the
   // question, and the later ones were scoped to the keys it returned. A key only
   // a later query carries is appended, never dropped - this is a left join from
-  // the first query outward, not an inner one.
+  // the first query outward, not an inner one. Column conflicts go the other
+  // way: PostgREST projects every column including nulls, so a later query's
+  // null must not clobber an earlier query's real value - first non-null wins.
   const merged = new Map<string, Row>();
   for (const rows of queries) {
     for (const row of rows) {
       const key = row[KEY] as string;
-      merged.set(key, { ...merged.get(key), ...row });
+      const existing = merged.get(key) ?? {};
+      const next: Row = { ...existing };
+      for (const [column, value] of Object.entries(row)) {
+        if (value === null || value === undefined) continue;
+        next[column] = value;
+      }
+      merged.set(key, next);
     }
   }
 
   const folded: string[] = [KEY, ...TRIAL.sources, FALLBACK.source];
+  const hasTreatmentName = queries.some((rows) => rows.some((row) => FALLBACK.target in row));
   const columns: string[] = [KEY, TRIAL.target];
+  // Nothing curated joined it, so the registry list is the only treatment there
+  // is. It stands as its own column where treatment_name would otherwise have
+  // sat - directly after the trial - rather than trailing behind unrelated
+  // columns like orr or median_pfs.
+  if (!hasTreatmentName) columns.push(FALLBACK.source);
   for (const rows of queries) {
     for (const row of rows) {
       for (const column of Object.keys(row)) {
@@ -83,9 +108,6 @@ export function toTurnTable(outputs: unknown[]): ResultTable | null {
       }
     }
   }
-  // Nothing curated joined it, so the registry list is the only treatment there
-  // is and it stands as its own column rather than disappearing.
-  if (!columns.includes(FALLBACK.target)) columns.push(FALLBACK.source);
 
   const cells = [...merged.values()].map((row) =>
     columns.map((column) => {
