@@ -238,8 +238,8 @@ describe('query_proprietary_data', () => {
   });
 
   it('projects only the columns an answer is built from unless asked for more', async () => {
-    // 15 columns on every call measured 17,036 tokens over 53 trials through
-    // `count_tokens`; the six an answer is actually made of measure 8,384. The
+    // 16 columns on every call measured 24,137 tokens over 53 trials through
+    // `count_tokens`; the seven an answer is actually made of measure 11,982. The
     // difference was re-sent on every later step of the turn.
     const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
 

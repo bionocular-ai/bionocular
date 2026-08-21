@@ -67,7 +67,7 @@ const TABLE_DEFINITIONS = {
       // `trial_landscape`, which can do neither, and read 500 rows to find 3.
       'interventions',
     // Measured through `count_tokens` over 53 Phase 3 trials: the full
-    // projection is 17,036 tokens, these six are 8,384. The difference is
+    // projection is 24,137 tokens, these seven are 11,982. The difference is
     // re-sent on every later step of the turn, so it is paid more than once.
     //
     // `phases` and `overall_status` stay even though both are filters, because
