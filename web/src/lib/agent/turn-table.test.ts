@@ -183,4 +183,19 @@ describe('toTurnTable', () => {
       'NCT06112314',
     ]);
   });
+
+  it('carries every trial the tools returned, which is what the prose no longer has to', () => {
+    const rows = Array.from({ length: 53 }, (_, i) => ({ nct_id: `NCT0000${1000 + i}` }));
+    const enriched = rows
+      .slice(0, 48)
+      .map((row) => ({ ...row, treatment_name: `Drug ${row.nct_id}` }));
+
+    const table = toTurnTable([
+      { ok: true, table: 'clinical_trials', rows },
+      { ok: true, table: 'trial_landscape', rows: enriched },
+    ]);
+
+    expect(table?.rows).toHaveLength(53);
+    expect(new Set(table?.rows.map((row) => row[0])).size).toBe(53);
+  });
 });

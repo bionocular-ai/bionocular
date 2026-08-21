@@ -3,7 +3,7 @@ import { generateText, stepCountIs } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 import { agentTools } from './tools';
 import { ONCOLOGY_SYSTEM_PROMPT } from './prompts';
-import { checkCompleteness, checkGroundedness } from './groundedness';
+import { checkGroundedness } from './groundedness';
 
 /**
  * Model-behaviour evals: real model, real database, real money.
@@ -60,38 +60,23 @@ describe.skipIf(!CREDENTIALS_PRESENT)('agent behaviour', () => {
     expect(text).toMatch(/outside|not cover|only cover|dashboard/i);
   }, 120_000);
 
-  // Sourced from a real failure, not from imagination: this exact question
-  // returned all 53 trials to the model and enumerated 45 of them, while
-  // claiming 53. Every grounding assertion above passed on that answer - they
-  // police `cited - returned` and this failure is `returned - cited`. Anthropic
-  // names the trap: one-sided evals create one-sided optimization.
-  it('accounts for every trial its own tools returned', async () => {
+  it('does not claim a count larger than the trials its tools returned', async () => {
+    // The old answer said "53 active/recruiting Phase 3 trials" above a table of
+    // 45 rows. The number and the row set have to agree. The prose is no longer
+    // the row set - the app draws it - so the count is checked against what the
+    // tools returned, not against the identifiers the answer happens to name.
     const { text, steps } = await ask(
       'Show me all phase 3 active treatments or therapies in cutaneous melanoma.',
     );
 
-    const results = steps.flatMap((s) => s.toolResults).map((r) => r.output);
-    const { complete, uncited, returned } = checkCompleteness(text, results);
-
-    // A sweep that returned nothing proves nothing, so say so rather than pass.
-    expect(returned.length).toBeGreaterThan(20);
-    expect({ complete, uncited: uncited.slice(0, 10), returned: returned.length }).toMatchObject({
-      complete: true,
-    });
-  }, 180_000);
-
-  it('does not claim a count larger than the trials it lists', async () => {
-    // The old answer said "53 active/recruiting Phase 3 trials" above a table of
-    // 45 rows. The number and the list have to agree.
-    const { text } = await ask(
-      'Show me all phase 3 active treatments or therapies in cutaneous melanoma.',
-    );
-
-    const listed = new Set(text.match(/\bNCT\d{8}\b/g) ?? []).size;
+    const results = JSON.stringify(steps.flatMap((s) => s.toolResults).map((r) => r.output));
+    const returned = new Set(results.match(/\bNCT\d{8}\b/g) ?? []).size;
     const claimed = [...text.matchAll(/\b(\d{2,3})\s+(?:active|phase 3|Phase 3|trials)/g)].map((m) =>
       Number(m[1]),
     );
 
-    for (const count of claimed) expect(count).toBeLessThanOrEqual(listed);
+    // A sweep that returned nothing proves nothing, so say so rather than pass.
+    expect(returned).toBeGreaterThan(20);
+    for (const count of claimed) expect(count).toBeLessThanOrEqual(returned);
   }, 180_000);
 });
