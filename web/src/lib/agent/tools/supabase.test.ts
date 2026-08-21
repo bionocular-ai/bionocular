@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeSupabase, type FakeSupabase, type TableFixture } from './fake-supabase';
+import { projectionFor } from './schema';
 
 let fake: FakeSupabase;
 
@@ -247,6 +248,7 @@ describe('query_proprietary_data', () => {
     const columns = fake.queries[0].projection.split(',').map((c) => c.trim());
     expect(columns).toEqual([
       'nct_id',
+      'acronym',
       'brief_title',
       'overall_status',
       'phases',
@@ -507,6 +509,16 @@ describe('query_proprietary_data', () => {
     expect(result).toMatchObject({ ok: false, reason: 'unknown_column' });
   });
 
+});
+
+describe('clinical_trials projection', () => {
+  it('carries the acronym, so a trial has a label shorter than its title', () => {
+    // brief_title runs to a median of 116 characters and a max of 272 across
+    // the Phase 3 melanoma set. acronym is null on 30 of those 53, so it is a
+    // second label rather than a replacement.
+    expect(projectionFor('clinical_trials', 'concise')).toContain('acronym');
+    expect(projectionFor('clinical_trials', 'detailed')).toContain('acronym');
+  });
 });
 
 describe('fitToBudget', () => {

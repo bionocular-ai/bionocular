@@ -58,7 +58,7 @@ const TABLE_DEFINITIONS = {
     cancerType: { column: 'cancer_type', kind: 'array' },
     trialKey: { column: 'nct_id', kind: 'scalar' },
     projection:
-      'nct_id, brief_title, overall_status, phases, enrollment_count, ' +
+      'nct_id, acronym, brief_title, overall_status, phases, enrollment_count, ' +
       'lead_sponsor_name, lead_sponsor_class, cancer_type, cancer_type_evidence, ' +
       'conditions, keywords, study_type, last_update_posted_date, is_basket, ' +
       // The registry's own intervention list - drug names and types, straight
@@ -75,8 +75,11 @@ const TABLE_DEFINITIONS = {
     // status filter admits four values. `cancer_type` is pinned to one value by
     // `applyCancerScope` and `study_type` was one value on all 53 rows, so
     // neither can tell the model anything it does not already know.
+    //
+    // `acronym` is sparse (populated on 23 of 53) but brief, so it stays beside
+    // `nct_id` rather than adding rows.
     conciseProjection:
-      'nct_id, brief_title, overall_status, phases, lead_sponsor_name, interventions',
+      'nct_id, acronym, brief_title, overall_status, phases, lead_sponsor_name, interventions',
     filters: {
       sponsor: { column: 'lead_sponsor_name', kind: 'scalar' },
       phase: { column: 'phases', kind: 'array' },
