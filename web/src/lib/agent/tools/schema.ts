@@ -66,9 +66,10 @@ const TABLE_DEFINITIONS = {
       // one table that can filter by phase and status, so the model reached for
       // `trial_landscape`, which can do neither, and read 500 rows to find 3.
       'interventions',
-    // Measured through `count_tokens` over 53 Phase 3 trials: the full
-    // projection is 24,137 tokens, these seven are 11,982. The difference is
-    // re-sent on every later step of the turn, so it is paid more than once.
+    // Measured via `count_tokens` (compact JSON, interventions trimmed) over 53
+    // Phase 3 trials: the full projection is 15,492 tokens, these seven are 7,743.
+    // The difference is re-sent on every later step of the turn, so it is paid
+    // more than once.
     //
     // `phases` and `overall_status` stay even though both are filters, because
     // neither predicate is an equality - 10 of the 53 are PHASE2/PHASE3, and the

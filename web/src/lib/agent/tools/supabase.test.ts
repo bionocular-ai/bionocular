@@ -238,9 +238,10 @@ describe('query_proprietary_data', () => {
   });
 
   it('projects only the columns an answer is built from unless asked for more', async () => {
-    // 16 columns on every call measured 24,137 tokens over 53 trials through
-    // `count_tokens`; the seven an answer is actually made of measure 11,982. The
-    // difference was re-sent on every later step of the turn.
+    // 16 columns on every call measured 15,492 tokens over 53 trials via
+    // `count_tokens` (compact JSON, interventions trimmed); the seven an answer is
+    // actually made of measure 7,743. The difference was re-sent on every later
+    // step of the turn.
     const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
 
     await tools.query_proprietary_data.execute!({ table: 'clinical_trials', limit: 10 }, RUN_OPTIONS);
