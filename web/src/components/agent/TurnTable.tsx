@@ -1,15 +1,32 @@
 'use client';
 
+import Link from 'next/link';
 import type { ResultTable } from '@/lib/agent/result-table';
+import { NCT_ID_PATTERN } from '@/lib/agent/tools/schema';
+import { trialRoute } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+
+/** Anchor treatment matched to the one `createMarkdownComponents` gives an in-app link. */
+const NCT_LINK_CLASSES = cn(
+  'font-mono text-[12px] font-medium text-(--brand-primary)',
+  'border-b border-(--brand-border) pb-px no-underline',
+  'hover:border-(--brand-primary)'
+);
 
 /**
  * The turn's rows, drawn by the app rather than transcribed by the model.
  *
  * Open by default and unclamped: `ToolStep` keeps a per-query disclosure for
  * checking one call's raw result, but this is the answer itself.
+ *
+ * Dropping the trial-name column (see `turn-table.ts`) leans on `nct_id`
+ * being the row's one navigable identifier, so that cell is linked here
+ * rather than left as the plain text every other cell renders as. Any cell
+ * that does not look like a real NCT number - `ABSENT` included - fails the
+ * pattern check and falls through to plain text instead of a link to a
+ * nonsense route.
  */
-export function TurnTable({ table }: { table: ResultTable }) {
+export function TurnTable({ table, cancerType }: { table: ResultTable; cancerType: string }) {
   return (
     <div className="relative mb-1.5">
       <span
@@ -45,7 +62,13 @@ export function TurnTable({ table }: { table: ResultTable }) {
                     key={table.columns[cellIndex].key}
                     className="max-w-[34ch] px-2 py-1 align-top text-(--brand-text-muted)"
                   >
-                    {cell}
+                    {table.columns[cellIndex].key === 'nct_id' && NCT_ID_PATTERN.test(cell) ? (
+                      <Link href={trialRoute(cell, cancerType)} className={NCT_LINK_CLASSES}>
+                        {cell}
+                      </Link>
+                    ) : (
+                      cell
+                    )}
                   </td>
                 ))}
               </tr>

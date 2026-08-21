@@ -115,7 +115,7 @@ export function AssistantTurn({ parts, cancerType, isStreaming }: AssistantTurnP
         );
       })}
 
-      {turnTable ? <TurnTable table={turnTable} /> : null}
+      {turnTable ? <TurnTable table={turnTable} cancerType={cancerType} /> : null}
 
       {isStreaming && parts.length === 0 ? (
         <div className="relative mb-1.5">
