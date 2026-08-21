@@ -19,7 +19,7 @@ describe('toResultTable', () => {
       rows: [{ nct_id: 'NCT00006368', treatment_name: 'Pembrolizumab', modality: 'Monoclonal Antibody' }],
     });
 
-    expect(table?.columns).toEqual(['nct_id', 'treatment_name', 'modality']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'treatment_name', 'modality']);
   });
 
   it('covers a column that only later rows carry', () => {
@@ -29,7 +29,7 @@ describe('toResultTable', () => {
       rows: [{ nct_id: 'NCT00006368' }, { nct_id: 'NCT00084656', modality: 'Small Molecule' }],
     });
 
-    expect(table?.columns).toEqual(['nct_id', 'modality']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'modality']);
     expect(table?.rows[0]).toEqual(['NCT00006368', '—']);
   });
 
@@ -93,5 +93,43 @@ describe('toResultTable', () => {
     const table = toResultTable({ found: true, nctId: 'NCT00006368', tables: {} });
 
     expect(table).toBeNull();
+  });
+
+  it('drops a column whose value never changes, because it carries no information', () => {
+    // cancer_type is pinned by applyCancerScope, so it repeats down every row of
+    // every result. Derived, not named: study_type behaves the same way.
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_landscape',
+      rows: [
+        { nct_id: 'NCT00006368', cancer_type: ['Cutaneous Melanoma'], modality: 'Monoclonal Antibody' },
+        { nct_id: 'NCT00084656', cancer_type: ['Cutaneous Melanoma'], modality: 'Small Molecule' },
+      ],
+    });
+
+    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'modality']);
+  });
+
+  it('keeps a single-row result whole, where every column is trivially uniform', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_landscape',
+      rows: [{ nct_id: 'NCT00006368', modality: 'Monoclonal Antibody' }],
+    });
+
+    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'modality']);
+  });
+
+  it('labels columns for a reader rather than for PostgREST', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_landscape',
+      rows: [
+        { nct_id: 'NCT00006368', line_of_therapy: '1L', orr: 42 },
+        { nct_id: 'NCT00084656', line_of_therapy: 'Adjuvant', orr: 51 },
+      ],
+    });
+
+    expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'Line of therapy', 'ORR']);
   });
 });

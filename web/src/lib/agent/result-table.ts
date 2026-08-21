@@ -14,16 +14,41 @@
  * change here.
  */
 
+export interface ResultColumn {
+  key: string;
+  /** What the header reads. The key is a database identifier, not a header. */
+  label: string;
+}
+
 export interface ResultTable {
-  columns: string[];
+  columns: ResultColumn[];
   /** One array of formatted cells per row, aligned to `columns`. */
   rows: string[][];
 }
 
 /** Absent values are shown, not skipped: an uncurated trial is a finding. */
-const ABSENT = '—';
+export const ABSENT = '—';
 
-function formatCell(value: unknown): string {
+/** Initialisms a title-cased key would otherwise mangle into "Nct" or "Orr". */
+const INITIALISMS: Record<string, string> = {
+  nct_id: 'NCT',
+  orr: 'ORR',
+  dcr: 'DCR',
+  median_pfs: 'Median PFS',
+  median_os: 'Median OS',
+  hr_pfs: 'HR PFS',
+  hr_os: 'HR OS',
+  median_dor: 'Median DoR',
+};
+
+export function humanizeColumn(key: string): string {
+  const known = INITIALISMS[key];
+  if (known) return known;
+  const words = key.replace(/_/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+export function formatCell(value: unknown): string {
   if (value === null || value === undefined || value === '') return ABSENT;
   if (Array.isArray(value)) {
     if (value.length === 0) return ABSENT;
@@ -58,14 +83,29 @@ export function toResultTable(output: unknown): ResultTable | null {
   }
   if (columns.length === 0) return null;
 
-  return {
-    columns,
-    rows: rows.map((row) =>
-      columns.map((column) =>
+  const cells = new Map<string, string[]>();
+  for (const column of columns) {
+    cells.set(
+      column,
+      rows.map((row) =>
         typeof row === 'object' && row !== null
           ? formatCell((row as Record<string, unknown>)[column])
           : ABSENT,
       ),
-    ),
+    );
+  }
+
+  // A value that is identical on every row distinguishes nothing: cancer_type is
+  // pinned by applyCancerScope, study_type was one value on all 53 rows of the
+  // Phase 3 sweep. Derived rather than named, so a new such column needs no edit.
+  const kept =
+    rows.length > 1
+      ? columns.filter((column) => new Set(cells.get(column)).size > 1)
+      : columns;
+  if (kept.length === 0) return null;
+
+  return {
+    columns: kept.map((key) => ({ key, label: humanizeColumn(key) })),
+    rows: rows.map((_, rowIndex) => kept.map((column) => cells.get(column)![rowIndex])),
   };
 }

@@ -216,14 +216,14 @@ export function ToolStep(props: ToolStepProps) {
                 <tr>
                   {table.columns.map((column) => (
                     <th
-                      key={column}
+                      key={column.key}
                       className={cn(
                         'sticky top-0 z-1 border-b border-(--brand-border) bg-(--brand-accent-light)',
                         'px-2 py-1.5 text-left font-mono font-medium whitespace-nowrap',
                         'text-(--brand-primary)'
                       )}
                     >
-                      {column}
+                      {column.label}
                     </th>
                   ))}
                 </tr>
@@ -233,7 +233,7 @@ export function ToolStep(props: ToolStepProps) {
                   <tr key={rowIndex} className="border-b border-(--brand-border)/50 last:border-b-0">
                     {row.map((cell, cellIndex) => (
                       <td
-                        key={table.columns[cellIndex]}
+                        key={table.columns[cellIndex].key}
                         className="max-w-[30ch] px-2 py-1 align-top text-(--brand-text-muted)"
                       >
                         {cell}
