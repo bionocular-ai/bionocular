@@ -2,10 +2,10 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getDbCancerType } from '@/lib/api';
+import { NCT_ID_PATTERN } from '@/lib/constants';
 import {
   AGENT_TABLES,
   AGENT_TABLE_NAMES,
-  NCT_ID_PATTERN,
   applyCancerScope,
   applyTrialKeys,
   type AgentTable,

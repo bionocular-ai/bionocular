@@ -2,13 +2,13 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/service';
 import { getDbCancerType } from '@/lib/api';
+import { NCT_ID_PATTERN } from '@/lib/constants';
 import { PHASE_MAP, STATUS_MAP } from '@/lib/clinical-trials-enums';
 import { DATA_TOOL_NAMES } from './names';
 import { runTool } from './logging';
 import {
   AGENT_TABLES,
   AGENT_TABLE_NAMES,
-  NCT_ID_PATTERN,
   applyCancerScope,
   applyNamedFilter,
   applyTrialKeys,

@@ -222,6 +222,7 @@ export function ToolStep(props: ToolStepProps) {
                         'px-2 py-1.5 text-left font-mono font-medium whitespace-nowrap',
                         'text-(--brand-primary)'
                       )}
+                      scope="col"
                     >
                       {column.label}
                     </th>

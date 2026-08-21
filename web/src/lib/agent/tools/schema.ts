@@ -14,9 +14,6 @@
  * `has_outcomes` flag inherits the `trial_outcomes` linkage gap described below.
  */
 
-/** Anchored on purpose - PostgREST takes whatever string it is handed. */
-export const NCT_ID_PATTERN = /^NCT\d{8}$/;
-
 export type ColumnKind = 'array' | 'scalar' | 'exact';
 
 export interface AgentColumn {

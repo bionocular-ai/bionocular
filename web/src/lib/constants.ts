@@ -30,6 +30,12 @@ export const AUTH_ERROR_MESSAGES = {
   INVALID_EMAIL: 'Please enter a valid email address',
 } as const;
 
+/**
+ * Anchored on purpose - PostgREST takes whatever string it is handed, and the
+ * agent table links only cells that are really NCT numbers.
+ */
+export const NCT_ID_PATTERN = /^NCT\d{8}$/;
+
 /** Trial detail page for an NCT number, scoped to the dashboard category it was reached from. */
 export function trialRoute(nctId: string, categorySlug?: string): string {
   const qs = categorySlug ? `?${new URLSearchParams({ category: categorySlug }).toString()}` : '';
