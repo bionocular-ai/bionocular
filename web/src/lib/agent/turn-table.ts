@@ -7,17 +7,23 @@
  * and the five trials with no landscape row read as unasked-for. The join is
  * mechanical - one key, one direction - so the app does it rather than the model.
  *
- * Two columns know about other columns, and both are declared here rather than
- * scattered: a trial's label, and the registry fallback for a treatment that has
- * not been curated. Everything else is derived from the rows.
+ * One column knows about other columns, and it is declared here rather than
+ * scattered: the registry fallback for a treatment that has not been curated.
+ * Everything else is derived from the rows.
  */
 
 import { ABSENT, formatCell, humanizeColumn, type ResultColumn, type ResultTable } from './result-table';
 
 const KEY = 'nct_id';
 
-/** `acronym` is null on 30 of the 53 Phase 3 melanoma trials; the title always exists. */
-const TRIAL = { target: 'trial', label: 'Trial', sources: ['acronym', 'brief_title'] } as const;
+/**
+ * `acronym` and `brief_title` arrive on every `clinical_trials` row but neither
+ * is rendered: NCT is already the identity column, and a title long enough to
+ * identify a trial runs 116-272 characters - one column of those makes every
+ * row in the table multiple lines tall. The model still receives both in the
+ * row regardless, so a trial's name is not lost, only not tabled.
+ */
+const FOLDED_TRIAL_FIELDS = ['acronym', 'brief_title'] as const;
 
 /**
  * `treatment_name` is one curated regimen per trial. `interventions` is every arm
@@ -53,14 +59,6 @@ function asJoinable(output: unknown): Row[] | null {
   return distinct.size === keyed.length ? keyed : null;
 }
 
-function trialCell(row: Row): string {
-  for (const source of TRIAL.sources) {
-    const value = formatCell(row[source]);
-    if (value !== ABSENT) return value;
-  }
-  return ABSENT;
-}
-
 function treatmentCell(row: Row): string {
   const curated = formatCell(row[FALLBACK.target]);
   if (curated !== ABSENT) return curated;
@@ -92,12 +90,12 @@ export function toTurnTable(outputs: unknown[]): ResultTable | null {
     }
   }
 
-  const folded: string[] = [KEY, ...TRIAL.sources, FALLBACK.source];
+  const folded: string[] = [KEY, ...FOLDED_TRIAL_FIELDS, FALLBACK.source];
   const hasTreatmentName = queries.some((rows) => rows.some((row) => FALLBACK.target in row));
-  const columns: string[] = [KEY, TRIAL.target];
+  const columns: string[] = [KEY];
   // Nothing curated joined it, so the registry list is the only treatment there
   // is. It stands as its own column where treatment_name would otherwise have
-  // sat - directly after the trial - rather than trailing behind unrelated
+  // sat - directly after the key - rather than trailing behind unrelated
   // columns like orr or median_pfs.
   if (!hasTreatmentName) columns.push(FALLBACK.source);
   for (const rows of queries) {
@@ -111,7 +109,6 @@ export function toTurnTable(outputs: unknown[]): ResultTable | null {
 
   const cells = [...merged.values()].map((row) =>
     columns.map((column) => {
-      if (column === TRIAL.target) return trialCell(row);
       if (column === FALLBACK.target) return treatmentCell(row);
       return formatCell(row[column]);
     }),
@@ -125,7 +122,7 @@ export function toTurnTable(outputs: unknown[]): ResultTable | null {
       : columns.map(() => true);
 
   const kept: ResultColumn[] = columns
-    .map((key, i) => ({ key, label: key === TRIAL.target ? TRIAL.label : humanizeColumn(key), i }))
+    .map((key, i) => ({ key, label: humanizeColumn(key), i }))
     .filter(({ i }) => keep[i])
     .map(({ key, label }) => ({ key, label }));
   if (kept.length === 0) return null;

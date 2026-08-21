@@ -99,6 +99,13 @@ const TABLE_DEFINITIONS = {
     projection:
       'nct_id, treatment_name, modality, biomarker, stage, line_of_therapy, ' +
       'previous_treatment_criteria, cancer_type',
+    // `previous_treatment_criteria` is paragraph prose, populated on 23% of rows,
+    // and is re-sent on every later step of the turn once it is in context.
+    // `cancer_type` is pinned to one value by `applyCancerScope`, so it cannot
+    // tell the model anything it does not already know. Dropping both leaves
+    // the six columns an answer is actually built from.
+    conciseProjection:
+      'nct_id, treatment_name, modality, biomarker, stage, line_of_therapy',
     filters: { drug: { column: 'treatment_name', kind: 'scalar' } },
     caveat:
       'Observational studies are excluded from this table by design. A trial missing here ' +

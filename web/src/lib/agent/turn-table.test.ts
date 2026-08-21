@@ -44,7 +44,6 @@ describe('toTurnTable', () => {
     expect(table?.rows).toHaveLength(2);
     expect(table?.columns.map((c) => c.key)).toEqual([
       'nct_id',
-      'trial',
       'overall_status',
       'treatment_name',
       'modality',
@@ -59,11 +58,15 @@ describe('toTurnTable', () => {
     expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887']);
   });
 
-  it('names a trial by acronym, falling back to its title', () => {
+  it('folds acronym and brief_title into the row rather than rendering either as a column', () => {
+    // NCT is already the identity column and a title runs 116-272 characters -
+    // long enough to make every row several lines tall. This is the one thing
+    // that must not slip: both fields still arrive on every clinical_trials
+    // row, and dropping out of the folded list turns them into two new columns.
     const table = toTurnTable([trials, landscape]);
 
-    expect(cell(table, 0, 'trial')).toBe('RELATIVITY-047');
-    expect(cell(table, 1, 'trial')).toBe('NO Re-excision MelanomA - NORMA 2');
+    expect(table?.columns.map((c) => c.key)).not.toContain('acronym');
+    expect(table?.columns.map((c) => c.key)).not.toContain('brief_title');
   });
 
   it('fills an uncurated treatment from the registry, and says so', () => {
@@ -79,11 +82,10 @@ describe('toTurnTable', () => {
   it('keeps interventions as its own column when nothing curated joins it', () => {
     const table = toTurnTable([trials, { ...trials, table: 'clinical_trials' }]);
 
-    // Sits where treatment_name would have, directly after trial - not at the
-    // end, behind whatever other columns the turn happens to carry.
+    // Sits where treatment_name would have, directly after the key - not at
+    // the end, behind whatever other columns the turn happens to carry.
     expect(table?.columns.map((c) => c.key)).toEqual([
       'nct_id',
-      'trial',
       'interventions',
       'overall_status',
     ]);
