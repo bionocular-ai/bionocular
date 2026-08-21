@@ -1,1 +1,1 @@
-cd web && npm run build
+cd web && npm test && npm run build
