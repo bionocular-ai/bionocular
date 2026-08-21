@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeSupabase, type FakeSupabase, type TableFixture } from './fake-supabase';
-import { NCT_ID_PATTERN } from './schema';
+import { NCT_ID_PATTERN } from '@/lib/constants';
 
 let fake: FakeSupabase;
 

@@ -190,6 +190,7 @@ export function createMarkdownComponents(): Components {
           'px-3.5 py-2.5 text-left align-bottom',
           'font-mono text-[9.5px] font-semibold uppercase tracking-[0.09em] text-(--brand-primary)'
         )}
+        scope="col"
       >
         {children}
       </th>

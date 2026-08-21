@@ -7,6 +7,8 @@ export interface PersistArgs {
   traceId: string;
   messages: UIMessage[];
   usage: unknown;
+  /** Per-step usage for this turn, oldest first. Omitted when nothing captured it. */
+  steps?: readonly unknown[];
 }
 
 /**
@@ -39,6 +41,33 @@ function accumulateUsage(prior: unknown, current: unknown): Record<string, numbe
 }
 
 /**
+ * Keep every step's usage, oldest first, across the whole session.
+ *
+ * A turn total says the turn cost 17k tokens; it cannot say that one unfiltered
+ * sweep in step 1 was 12k of it. Without this, attributing a turn's cost meant
+ * bisecting production rows by hand. Only finite numbers survive, so a provider
+ * adding a nested object to its usage shape cannot bloat the row.
+ */
+function accumulateSteps(prior: unknown, current: readonly unknown[]): Record<string, number>[] {
+  const earlier =
+    prior && typeof prior === 'object' && Array.isArray((prior as { steps?: unknown }).steps)
+      ? ((prior as { steps: unknown[] }).steps as unknown[])
+      : [];
+
+  const compact = (step: unknown): Record<string, number> => {
+    const out: Record<string, number> = {};
+    if (step && typeof step === 'object') {
+      for (const [key, value] of Object.entries(step)) {
+        if (typeof value === 'number' && Number.isFinite(value)) out[key] = value;
+      }
+    }
+    return out;
+  };
+
+  return [...earlier.map(compact), ...current.map(compact)];
+}
+
+/**
  * Upsert the conversation on the client-supplied session ID.
  *
  * The ID is owned by the browser for the life of the chat, so a conversation
@@ -48,7 +77,7 @@ function accumulateUsage(prior: unknown, current: unknown): Record<string, numbe
  * user actually saw. The list saved here comes from the finished UI stream, so
  * it includes the assistant turn and its tool calls.
  */
-export async function persistSession({ userId, sessionId, traceId, messages, usage }: PersistArgs) {
+export async function persistSession({ userId, sessionId, traceId, messages, usage, steps }: PersistArgs) {
   const supabase = createServiceClient();
   const firstUserMessage = messages.find((m) => m.role === 'user');
   const titleSource = firstUserMessage?.parts.find((p) => p.type === 'text');
@@ -77,7 +106,13 @@ export async function persistSession({ userId, sessionId, traceId, messages, usa
         user_id: userId,
         title,
         messages,
-        token_usage: accumulateUsage((prior as { token_usage?: unknown } | null)?.token_usage, usage),
+        token_usage: (() => {
+          const priorUsage = (prior as { token_usage?: unknown } | null)?.token_usage;
+          const total = accumulateUsage(priorUsage, usage);
+          // Absent when nothing captured per-step usage, so the field never
+          // appears as an empty array on rows that have nothing to say.
+          return steps?.length ? { ...total, steps: accumulateSteps(priorUsage, steps) } : total;
+        })(),
         last_trace_id: traceId,
         updated_at: new Date().toISOString(),
       },

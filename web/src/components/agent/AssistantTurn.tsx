@@ -6,8 +6,10 @@ import remarkGfm from 'remark-gfm';
 import { Check, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { remarkNctLinks } from '@/lib/agent/remark-nct-links';
+import { toTurnTable } from '@/lib/agent/turn-table';
 import { createMarkdownComponents } from './markdown-components';
 import { ToolStep, type ToolState } from './ToolStep';
+import { TurnTable } from './TurnTable';
 
 /**
  * One assistant turn, rendered as a single document hung off an evidence rail.
@@ -63,6 +65,11 @@ export function AssistantTurn({ parts, cancerType, isStreaming }: AssistantTurnP
     .join('\n\n')
     .trim();
 
+  const turnTable = useMemo(
+    () => toTurnTable(parts.filter(isToolPart).map((part) => part.output)),
+    [parts]
+  );
+
   const handleCopy = async () => {
     await navigator.clipboard.writeText(answer);
     setCopied(true);
@@ -107,6 +114,8 @@ export function AssistantTurn({ parts, cancerType, isStreaming }: AssistantTurnP
           </div>
         );
       })}
+
+      {turnTable ? <TurnTable table={turnTable} cancerType={cancerType} /> : null}
 
       {isStreaming && parts.length === 0 ? (
         <div className="relative mb-1.5">

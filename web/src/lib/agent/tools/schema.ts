@@ -14,9 +14,6 @@
  * `has_outcomes` flag inherits the `trial_outcomes` linkage gap described below.
  */
 
-/** Anchored on purpose - PostgREST takes whatever string it is handed. */
-export const NCT_ID_PATTERN = /^NCT\d{8}$/;
-
 export type ColumnKind = 'array' | 'scalar' | 'exact';
 
 export interface AgentColumn {
@@ -43,6 +40,11 @@ export interface AgentTableSpec {
     readonly status?: AgentColumn;
     readonly drug?: AgentColumn;
   };
+  /**
+   * The columns an answer is actually built from. Falls back to `projection`
+   * where a table has no leaner form worth the split.
+   */
+  readonly conciseProjection?: string;
   /** Surfaced with every result for this table so the model can qualify it. */
   readonly caveat?: string;
 }
@@ -53,7 +55,7 @@ const TABLE_DEFINITIONS = {
     cancerType: { column: 'cancer_type', kind: 'array' },
     trialKey: { column: 'nct_id', kind: 'scalar' },
     projection:
-      'nct_id, brief_title, overall_status, phases, enrollment_count, ' +
+      'nct_id, acronym, brief_title, overall_status, phases, enrollment_count, ' +
       'lead_sponsor_name, lead_sponsor_class, cancer_type, cancer_type_evidence, ' +
       'conditions, keywords, study_type, last_update_posted_date, is_basket, ' +
       // The registry's own intervention list - drug names and types, straight
@@ -61,6 +63,21 @@ const TABLE_DEFINITIONS = {
       // one table that can filter by phase and status, so the model reached for
       // `trial_landscape`, which can do neither, and read 500 rows to find 3.
       'interventions',
+    // Measured via `count_tokens` (compact JSON, interventions trimmed) over 53
+    // Phase 3 trials: the full projection is 15,492 tokens, these seven are 7,743.
+    // The difference is re-sent on every later step of the turn, so it is paid
+    // more than once.
+    //
+    // `phases` and `overall_status` stay even though both are filters, because
+    // neither predicate is an equality - 10 of the 53 are PHASE2/PHASE3, and the
+    // status filter admits four values. `cancer_type` is pinned to one value by
+    // `applyCancerScope` and `study_type` was one value on all 53 rows, so
+    // neither can tell the model anything it does not already know.
+    //
+    // `acronym` is sparse (populated on 23 of 53) but brief, so it stays beside
+    // `nct_id` rather than adding rows.
+    conciseProjection:
+      'nct_id, acronym, brief_title, overall_status, phases, lead_sponsor_name, interventions',
     filters: {
       sponsor: { column: 'lead_sponsor_name', kind: 'scalar' },
       phase: { column: 'phases', kind: 'array' },
@@ -79,6 +96,13 @@ const TABLE_DEFINITIONS = {
     projection:
       'nct_id, treatment_name, modality, biomarker, stage, line_of_therapy, ' +
       'previous_treatment_criteria, cancer_type',
+    // `previous_treatment_criteria` is paragraph prose, populated on 23% of rows,
+    // and is re-sent on every later step of the turn once it is in context.
+    // `cancer_type` is pinned to one value by `applyCancerScope`, so it cannot
+    // tell the model anything it does not already know. Dropping both leaves
+    // the six columns an answer is actually built from.
+    conciseProjection:
+      'nct_id, treatment_name, modality, biomarker, stage, line_of_therapy',
     filters: { drug: { column: 'treatment_name', kind: 'scalar' } },
     caveat:
       'Observational studies are excluded from this table by design. A trial missing here ' +
@@ -220,6 +244,14 @@ export function applyNamedFilter<Q extends FilterableQuery<Q>>(
 }
 
 /** Columns a caller may ask for by name, for error messages and descriptions. */
+/**
+ * The columns to select for this table at the requested level of detail.
+ */
+export function projectionFor(table: AgentTable, detail: 'concise' | 'detailed'): string {
+  const spec = AGENT_TABLES[table];
+  return detail === 'concise' ? (spec.conciseProjection ?? spec.projection) : spec.projection;
+}
+
 export function projectionColumns(table: AgentTable): string[] {
   return AGENT_TABLES[table].projection.split(',').map((c) => c.trim());
 }

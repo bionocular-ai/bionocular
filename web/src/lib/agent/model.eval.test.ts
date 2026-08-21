@@ -59,4 +59,24 @@ describe.skipIf(!CREDENTIALS_PRESENT)('agent behaviour', () => {
 
     expect(text).toMatch(/outside|not cover|only cover|dashboard/i);
   }, 120_000);
+
+  it('does not claim a count larger than the trials its tools returned', async () => {
+    // The old answer said "53 active/recruiting Phase 3 trials" above a table of
+    // 45 rows. The number and the row set have to agree. The prose is no longer
+    // the row set - the app draws it - so the count is checked against what the
+    // tools returned, not against the identifiers the answer happens to name.
+    const { text, steps } = await ask(
+      'Show me all phase 3 active treatments or therapies in cutaneous melanoma.',
+    );
+
+    const results = JSON.stringify(steps.flatMap((s) => s.toolResults).map((r) => r.output));
+    const returned = new Set(results.match(/\bNCT\d{8}\b/g) ?? []).size;
+    const claimed = [...text.matchAll(/\b(\d{2,3})\s+(?:active|phase 3|Phase 3|trials)/g)].map((m) =>
+      Number(m[1]),
+    );
+
+    // A sweep that returned nothing proves nothing, so say so rather than pass.
+    expect(returned).toBeGreaterThan(20);
+    for (const count of claimed) expect(count).toBeLessThanOrEqual(returned);
+  }, 180_000);
 });

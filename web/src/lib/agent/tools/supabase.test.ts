@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeSupabase, type FakeSupabase, type TableFixture } from './fake-supabase';
+import { projectionFor } from './schema';
 
 let fake: FakeSupabase;
 
@@ -223,12 +224,65 @@ describe('query_proprietary_data', () => {
 
   it('returns the condition strings each cancer_type bucket was derived from', async () => {
     // cancer_type is derived from the trial's own conditions, so the evidence is
-    // the sponsor's wording. Without it the model can only assert our tag.
+    // the sponsor's wording. Without it the model can only assert our tag. It
+    // costs 8.3% of a 53-row sweep, so it moved behind `detailed` rather than
+    // being dropped - a question about our tagging asks for it explicitly.
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', detail: 'detailed', limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].projection).toContain('cancer_type_evidence');
+  });
+
+  it('projects only the columns an answer is built from unless asked for more', async () => {
+    // 16 columns on every call measured 15,492 tokens over 53 trials via
+    // `count_tokens` (compact JSON, interventions trimmed); the seven an answer is
+    // actually made of measure 7,743. The difference was re-sent on every later
+    // step of the turn.
     const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
 
     await tools.query_proprietary_data.execute!({ table: 'clinical_trials', limit: 10 }, RUN_OPTIONS);
 
-    expect(fake.queries[0].projection).toContain('cancer_type_evidence');
+    const columns = fake.queries[0].projection.split(',').map((c) => c.trim());
+    expect(columns).toEqual([
+      'nct_id',
+      'acronym',
+      'brief_title',
+      'overall_status',
+      'phases',
+      'lead_sponsor_name',
+      'interventions',
+    ]);
+  });
+
+  it('keeps the filter columns that still vary in the result', async () => {
+    // `phases` and `overall_status` are filters, but neither predicate is an
+    // equality: 10 of 53 Phase 3 trials are PHASE2/PHASE3, and the status filter
+    // admits four values. `cancer_type` is pinned to one value, so it goes.
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', limit: 10 }, RUN_OPTIONS);
+
+    const { projection } = fake.queries[0];
+    expect(projection).toContain('phases');
+    expect(projection).toContain('overall_status');
+    expect(projection).not.toContain('cancer_type');
+    expect(projection).not.toContain('study_type');
+  });
+
+  it('falls back to the full projection for a table with no concise form', async () => {
+    const tools = toolsWith({ trial_outcomes: { rows: [{ id: 'o1' }] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'trial_outcomes', limit: 10 }, RUN_OPTIONS);
+    await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', detail: 'detailed', limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].projection).toBe(fake.queries[1].projection);
   });
 
   it('reports rows with a coverage count of everything that matched', async () => {
@@ -271,6 +325,59 @@ describe('query_proprietary_data', () => {
     const { coverage } = result as { coverage: { complete: boolean; truncatedBy?: string } };
     expect(coverage).toMatchObject({ returned: 53, matched: 53, complete: true });
     expect(coverage.truncatedBy).toBeUndefined();
+  });
+
+  it('reports which requested trials had no row, so an absence is not read as completeness', async () => {
+    // 53 Phase 3 trials asked of `trial_landscape` came back as 48 rows and
+    // `complete: true` - true of the table, false of the question. The five
+    // uncurated trials were silently dropped from the answer.
+    const tools = toolsWith({
+      trial_landscape: { rows: [{ nct_id: 'NCT00006368' }, { nct_id: 'NCT00084656' }], count: 2 },
+    });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_landscape', nctIds: ['NCT00006368', 'NCT00084656', 'NCT00096083'], limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    const { coverage } = result as {
+      coverage: { complete: boolean; requested: number; missing: string[]; hint: string };
+    };
+    expect(coverage.complete).toBe(true);
+    expect(coverage.requested).toBe(3);
+    expect(coverage.missing).toEqual(['NCT00096083']);
+    expect(coverage.hint).toMatch(/no row/i);
+  });
+
+  it('says nothing about missing trials when the result was cut short', async () => {
+    // Under truncation "absent from the table" and "not returned yet" are the
+    // same shape, so naming one as missing would be a guess.
+    const tools = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT00006368' }], count: 2 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_landscape', nctIds: ['NCT00006368', 'NCT00084656'], limit: 1 },
+      RUN_OPTIONS,
+    );
+
+    const { coverage } = result as { coverage: { complete: boolean; missing?: string[] } };
+    expect(coverage.complete).toBe(false);
+    expect(coverage.missing).toBeUndefined();
+  });
+
+  it('finds requested trials inside an array trial key', async () => {
+    // `news_feed.nct_ids` holds several trials per row, so a key is present if
+    // any row's array contains it.
+    const tools = toolsWith({
+      news_feed: { rows: [{ nct_ids: ['NCT00006368', 'NCT00084656'] }], count: 1 },
+    });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'news_feed', nctIds: ['NCT00006368', 'NCT00084656', 'NCT00096083'], limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    const { coverage } = result as { coverage: { missing: string[] } };
+    expect(coverage.missing).toEqual(['NCT00096083']);
   });
 
   it('blames the size budget, not the limit, when a result is trimmed for size', async () => {
@@ -403,6 +510,16 @@ describe('query_proprietary_data', () => {
     expect(result).toMatchObject({ ok: false, reason: 'unknown_column' });
   });
 
+});
+
+describe('clinical_trials projection', () => {
+  it('carries the acronym, so a trial has a label shorter than its title', () => {
+    // brief_title runs to a median of 116 characters and a max of 272 across
+    // the Phase 3 melanoma set. acronym is null on 30 of those 53, so it is a
+    // second label rather than a replacement.
+    expect(projectionFor('clinical_trials', 'concise')).toContain('acronym');
+    expect(projectionFor('clinical_trials', 'detailed')).toContain('acronym');
+  });
 });
 
 describe('fitToBudget', () => {
