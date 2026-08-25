@@ -1,4 +1,3 @@
-import { createAnthropic } from '@ai-sdk/anthropic';
 import {
   convertToModelMessages,
   stepCountIs,
@@ -9,6 +8,7 @@ import {
 import { createClient } from '@/lib/supabase/server';
 import { checkAgentRateLimit } from '@/lib/agent/rate-limit';
 import { persistSession } from '@/lib/agent/persist-session';
+import { agentModel } from '@/lib/agent/model';
 import { agentTools } from '@/lib/agent/tools';
 import { ONCOLOGY_SYSTEM_PROMPT } from '@/lib/agent/prompts';
 import { DASHBOARD_CANCER_TYPES } from '@/lib/dashboard-constants';
@@ -17,35 +17,8 @@ export const runtime = 'nodejs';
 export const maxDuration = 60;
 
 /**
- * Thinking configuration lives here and nowhere else.
- *
- * Haiku 4.5 supports extended thinking but leaves it off unless asked. Kept
- * explicitly disabled: turning it on means sending `enabled` with a budget
- * here, plus a bump to MAX_OUTPUT_TOKENS below and a check that answers are not
- * being truncated.
- *
- * It has to go on the wire by hand. `@ai-sdk/anthropic` builds the `thinking`
- * field only for `enabled` and `adaptive` and drops `disabled` on the floor, so
- * `providerOptions` cannot express "off" - the request goes out with no
- * `thinking` field at all, which is model-default rather than a stated choice.
- * On Sonnet 5 that default was adaptive, and it stayed invisible until a tool
- * result got big enough for the reasoning to eat the whole output budget: 4096
- * output tokens, two empty reasoning blocks, no answer.
- */
-const THINKING_CONFIG = { type: 'disabled' } as const;
-
-const anthropic = createAnthropic({
-  fetch: async (input, init) => {
-    if (typeof init?.body !== 'string') return fetch(input, init);
-    const body = JSON.parse(init.body) as Record<string, unknown>;
-    body.thinking = THINKING_CONFIG;
-    return fetch(input, { ...init, body: JSON.stringify(body) });
-  },
-});
-
-/**
  * A cap on thinking *and* response text together, not on the answer alone -
- * so this has to grow if thinking is ever enabled above.
+ * so this has to grow if thinking is ever enabled in `model.ts`.
  */
 const MAX_OUTPUT_TOKENS = 4096;
 
@@ -131,7 +104,7 @@ export async function POST(req: Request) {
   const stepUsage: unknown[] = [];
 
   const result = streamText({
-    model: anthropic('claude-haiku-4-5-20251001'),
+    model: agentModel,
     messages: [systemMessage, ...modelMessages],
     tools: agentTools({ userId: user.id, cancerSlug: cancerType, sessionId, traceId }),
     maxOutputTokens: MAX_OUTPUT_TOKENS,

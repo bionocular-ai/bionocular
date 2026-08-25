@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateText, stepCountIs } from 'ai';
-import { anthropic } from '@ai-sdk/anthropic';
+import { agentModel } from './model';
 import { agentTools } from './tools';
 import { ONCOLOGY_SYSTEM_PROMPT } from './prompts';
 import { checkGroundedness } from './groundedness';
@@ -8,10 +8,10 @@ import { checkGroundedness } from './groundedness';
 /**
  * Model-behaviour evals: real model, real database, real money.
  *
- * Skipped unless both keys are present, so `npm run test` stays deterministic
- * and offline. These assert on tool choice and identifier provenance - never on
- * recorded response text - so enabling thinking or changing the model does not
- * invalidate them.
+ * Skipped unless the credentials are present, so `npm run test` stays
+ * deterministic and offline. These assert on tool choice and identifier
+ * provenance - never on recorded response text - so enabling thinking or
+ * changing the model does not invalidate them.
  */
 const CREDENTIALS_PRESENT =
   Boolean(process.env.ANTHROPIC_API_KEY) && Boolean(process.env.SUPABASE_SECRET_KEY);
@@ -24,10 +24,9 @@ const CONTEXT = {
 
 async function ask(question: string) {
   return generateText({
-    model: anthropic('claude-haiku-4-5-20251001'),
+    model: agentModel,
     system: ONCOLOGY_SYSTEM_PROMPT,
     tools: agentTools(CONTEXT),
-    providerOptions: { anthropic: { thinking: { type: 'disabled' } } },
     stopWhen: stepCountIs(6),
     prompt: question,
   });
