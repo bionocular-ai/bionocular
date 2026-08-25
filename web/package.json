@@ -10,7 +10,7 @@
     "prepare": "cd .. && git config core.hooksPath web/.husky",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:evals": "vitest run --include 'src/**/*.eval.test.ts'"
+    "test:evals": "VITEST_EVALS=1 vitest run"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
