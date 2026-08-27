@@ -59,6 +59,85 @@ describe.skipIf(!CREDENTIALS_PRESENT)('agent behaviour', () => {
     expect(text).toMatch(/outside|not cover|only cover|dashboard/i);
   }, 120_000);
 
+  it('filters trial_outcomes by phase directly, and reports the linkage gap', async () => {
+    // Sourced from a real observed failure: asked to filter outcomes by phase,
+    // the agent used to sweep clinical_trials for NCT numbers first rather than
+    // filtering trial_outcomes directly via the registry join. This is that
+    // question, run against the real model and the real database - one
+    // generateText call, every assertion drawn from it.
+    //
+    // The route (src/app/api/agent/chat/route.ts) runs stepCountIs(8),
+    // maxOutputTokens: 4096, and forces toolChoice: 'none' on the last step so
+    // a turn cannot end on an unexplained tool call. `ask()` above diverges on
+    // both step count and output cap, so this call mirrors the route directly
+    // rather than reusing it.
+    const question =
+      'show me all published efficacy parameters (ORR, PFS and others) in cutaneous melanoma. ' +
+      'strict rule: only drugs which are in phase 1 trial.';
+    const MAX_STEPS = 8;
+    const { text, steps } = await generateText({
+      model: agentModel,
+      system: ONCOLOGY_SYSTEM_PROMPT,
+      tools: agentTools(CONTEXT),
+      maxOutputTokens: 4096,
+      stopWhen: stepCountIs(MAX_STEPS),
+      prepareStep: ({ stepNumber }) =>
+        stepNumber === MAX_STEPS - 1 ? { toolChoice: 'none' } : {},
+      prompt: question,
+    });
+
+    const dataCalls = steps
+      .flatMap((s) => s.toolCalls)
+      .filter((c) => c.toolName === 'query_proprietary_data');
+
+    expect(dataCalls).toHaveLength(1);
+    expect(dataCalls[0].input).toMatchObject({ table: 'trial_outcomes', phase: 'PHASE1' });
+    expect(dataCalls.some((c) => (c.input as { table?: string }).table === 'clinical_trials')).toBe(
+      false,
+    );
+
+    const results = steps.flatMap((s) => s.toolResults).map((r) => r.output);
+    const outcomeResult = results.find(
+      (r) => (r as { table?: string })?.table === 'trial_outcomes',
+    ) as { coverage?: Record<string, unknown> } | undefined;
+    const coverage = outcomeResult?.coverage;
+
+    expect(coverage?.complete).toBe(true);
+    expect(coverage?.returned).toBe(coverage?.matched);
+    const viaJoin = coverage?.viaJoin as { table?: string; unlinked?: number } | undefined;
+    expect(viaJoin).toBeDefined();
+    expect(viaJoin?.unlinked).toBeGreaterThan(0);
+
+    // Meaning, not phrasing - the answer must not present the unlinked rows as
+    // if the phase-1 set were complete without them. Observed wording calls
+    // out rows that "lack NCT IDs" and trials "with no linked outcome data",
+    // so this matches the ideas (no NCT id / not linked / excluded / linkage)
+    // rather than one recorded sentence.
+    expect(text).toMatch(/\bno nct\b|lacks? .*nct|not linked|no linked|unlinked|excluded|linkage/i);
+
+    // Negative check for the failure a coordinator review caught in this
+    // eval's first draft: one live run said "~44% of the 189 rows lack NCT
+    // IDs", which is impossible - every returned row came through the
+    // `clinical_trials!inner` join, so carrying an nct_id was a precondition
+    // of being in the result. The root cause was `coverage` itself carrying
+    // two overlapping linkage statements (the table's static "some rows lack
+    // an nct_id" caveat alongside `viaJoin`'s "these rows all have one"),
+    // which the model merged. `supabase.ts` now suppresses the static caveat
+    // whenever `viaJoin` is active, but this assertion is what would have
+    // caught the bad merge and is what guards against it recurring: reject a
+    // "no/lacks NCT" claim tied to the returned row count or to "these/this
+    // result", the shape the wrong answer took.
+    const returned = coverage?.returned;
+    const claimsReturnedRowsLackNct = new RegExp(
+      `\\b(?:${returned}|these|this result|returned)\\b[^.]{0,40}\\b(?:no|lacks?|missing)\\b[^.]{0,30}\\bnct\\b` +
+        `|\\b(?:no|lacks?|missing)\\b[^.]{0,30}\\bnct\\b[^.]{0,40}\\b(?:${returned}|these|this result|returned)\\b`,
+      'i',
+    );
+    expect(text).not.toMatch(claimsReturnedRowsLackNct);
+
+    expect(checkGroundedness(text, results).ungrounded).toEqual([]);
+  }, 180_000);
+
   it('does not claim a count larger than the trials its tools returned', async () => {
     // The old answer said "53 active/recruiting Phase 3 trials" above a table of
     // 45 rows. The number and the row set have to agree. The prose is no longer

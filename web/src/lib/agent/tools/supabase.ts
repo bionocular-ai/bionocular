@@ -13,9 +13,11 @@ import {
   applyNamedFilter,
   applyTrialKeys,
   describeTables,
+  embedFor,
   projectionColumns,
   projectionFor,
   supportedFilters,
+  viaFilters,
   type AgentColumn,
   type AgentTable,
   type FilterName,
@@ -36,9 +38,20 @@ const UNDEFINED_COLUMN = '42703';
  */
 const MAX_ROWS = 500;
 const DEFAULT_ROWS = 25;
-/** Comfortably above the largest filtered trial set any one table returns. */
+/**
+ * Bounds `nctIds`, not the rows a filtered query can return - 1,134 Phase 1
+ * cutaneous melanoma trials measured against `clinical_trials` is exactly why
+ * a phase-scoped question has to filter `trial_outcomes` directly instead of
+ * handing this cap a trial set of that size.
+ */
 const MAX_TRIAL_KEYS = 100;
-/** ~48k tokens of JSON, measured. Every filtered sweep measured fits well under this. */
+/**
+ * ~48k tokens of JSON, measured. The Phase 1 cutaneous melanoma
+ * `trial_outcomes` sweep this branch was built for - 189 rows through the
+ * `!inner` join, `detailed`, after `dropEmpty` - measures 92,934 chars, 71%
+ * of this budget. That is the headline case, not a worst case with room to
+ * spare.
+ */
 export const MAX_RESULT_CHARS = 130_000;
 
 /**
@@ -63,6 +76,48 @@ function compactInterventions(rows: unknown[]): unknown[] {
         return { name, type };
       }),
     };
+  });
+}
+
+/**
+ * Lift a `via`-join embed onto the row itself.
+ *
+ * PostgREST returns an active via-filter's embed as a nested
+ * `{ clinical_trials: { phases, overall_status } }`, which `result-table.ts`
+ * would otherwise render as `JSON.stringify` output instead of cells. Rows
+ * from a query with no embed (the common case) pass through untouched.
+ */
+function flattenViaEmbed(rows: unknown[]): unknown[] {
+  return rows.map((row) => {
+    if (typeof row !== 'object' || row === null) return row;
+    const { clinical_trials, ...rest } = row as Record<string, unknown> & { clinical_trials?: unknown };
+    if (typeof clinical_trials !== 'object' || clinical_trials === null) return row;
+    return { ...rest, ...clinical_trials };
+  });
+}
+
+/**
+ * Drop keys that carry no information, so a wide projection sends only the
+ * columns a row actually populated. `trial_outcomes`' 198-column `detailed`
+ * projection measures ~15.7 populated keys per row once this runs - what
+ * makes that width affordable within `MAX_RESULT_CHARS`.
+ *
+ * `0` and `false` are real findings, not absence, so only the loader's own
+ * not-found spellings are treated as empty.
+ */
+const EMPTY_STRINGS = new Set(['', 'N/A', 'Not found']);
+
+export function dropEmpty(rows: unknown[]): unknown[] {
+  return rows.map((row) => {
+    if (typeof row !== 'object' || row === null) return row;
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(row as Record<string, unknown>)) {
+      if (value === null || value === undefined) continue;
+      if (typeof value === 'string' && EMPTY_STRINGS.has(value)) continue;
+      if (Array.isArray(value) && value.length === 0) continue;
+      out[key] = value;
+    }
+    return out;
   });
 }
 
@@ -133,16 +188,20 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         "Query Bionocular's own oncology database. This is the only source of data available - " +
         'there is no live registry or literature lookup. Every query is automatically restricted ' +
         `to the dashboard's cancer type, so do not ask for one.\n\nTables:\n${describeTables()}\n\n` +
-        'Filters are named parameters, not column expressions.\n\n' +
+        'Filters are named parameters, not column expressions; one marked "via clinical_trials" ' +
+          'above joins through the trial registry instead of reading a column on that table, so it ' +
+          'excludes rows with no nct_id - `coverage.viaJoin` reports how many that excluded.\n\n' +
         `Returns at most ${MAX_ROWS} rows, and every result carries a coverage report: ` +
         '`matched` is how many rows exist in total, `returned` is how many you got, and ' +
         '`complete` says whether you are looking at all of them. When `complete` is false, ' +
         'either re-run with a higher `limit` or narrow the filters - and never describe a ' +
         'partial result as if it were the full set. To sweep a whole filtered set in one ' +
         `call, ask for limit ${MAX_ROWS} - a limit above ${DEFAULT_ROWS} needs at least one ` +
-        'filter, because unfiltered it reads the table end to end. To combine tables, query ' +
-        'the one that can filter for what was asked, then pass the NCT numbers it returned ' +
-        'as `nctIds` to the table holding the rest.',
+        'filter, because unfiltered it reads the table end to end. Filter the table you need ' +
+        'directly first - phase and status reach several tables through the registry join ' +
+        'named above, not only clinical_trials. Only when the table you need has no filter ' +
+        'for what was asked, query one that does, then pass the NCT numbers it returned as ' +
+        '`nctIds` to the table holding the rest.',
       inputSchema: z.object({
         table: z.enum(AGENT_TABLE_NAMES),
         nctIds: z
@@ -156,15 +215,19 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
               'reading a table end to end.',
           ),
         sponsor: z.string().min(2).optional().describe('Substring match on the sponsor name.'),
-        phase: z.enum(PHASE_VALUES).optional().describe('clinical_trials only.'),
+        phase: z
+          .enum(PHASE_VALUES)
+          .optional()
+          .describe('Direct on clinical_trials; resolved via the join named above on the other tables that support it.'),
         status: z
           .array(z.enum(STATUS_VALUES))
           .min(1)
           .optional()
           .describe(
-            'clinical_trials only. Recruitment status; several values match any of them. ' +
-              'Trials still under way are RECRUITING, ACTIVE_NOT_RECRUITING, ' +
-              'NOT_YET_RECRUITING and ENROLLING_BY_INVITATION.',
+            'Direct on clinical_trials; resolved via the join named above on the other tables ' +
+              'that support it. Recruitment status; several values match any of them. Trials ' +
+              'still under way are RECRUITING, ACTIVE_NOT_RECRUITING, NOT_YET_RECRUITING and ' +
+              'ENROLLING_BY_INVITATION.',
           ),
         drug: z
           .string()
@@ -175,11 +238,13 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           .enum(['concise', 'detailed'])
           .optional()
           .describe(
-            'How much of each row to return. `concise` carries the columns an answer is built ' +
-              'from; `detailed` adds provenance and secondary columns and costs about twice as ' +
-              'many tokens per row. Defaults to `concise`; ask for `detailed` only when the ' +
-              'question is about those columns - how a trial was classified, its conditions, ' +
-              'its keywords.',
+            'How much of each row to return. `concise` carries the columns an answer is usually ' +
+              "built from; `detailed` is the table's full column set, at roughly twice the tokens " +
+              'per row. On `trial_outcomes` that full set is every efficacy and safety endpoint - ' +
+              'PFS, OS, EFS, RFS, MFS, response and duration measures, and the adverse-event ' +
+              'families - so a question naming specific endpoints wants `detailed`. On ' +
+              '`clinical_trials` it is provenance and classification detail: how a trial was ' +
+              'classified, its conditions, its keywords. Defaults to `concise`.',
           ),
         limit: z
           .number()
@@ -201,24 +266,44 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         // unfiltered browse, which is how "what exists here" gets answered.
         const narrowed = [nctIds, sponsor, phase, status, drug].some((f) => f !== undefined);
         if (!narrowed && limit > DEFAULT_ROWS) {
+          const filters = supportedFilters(table);
           return {
             ok: false as const,
             reason: 'unfiltered_sweep' as const,
             table,
-            supportedFilters: supportedFilters(table),
+            supportedFilters: filters,
             hint:
               `A limit above ${DEFAULT_ROWS} needs a filter - unfiltered, \`${table}\` is read ` +
-              'end to end and most of what comes back is noise. Narrow it, or find the trials ' +
-              'you want in another table first and pass their NCT numbers as `nctIds`.',
+              'end to end and most of what comes back is noise. ' +
+              (filters.length
+                ? `Narrow it with ${filters.join(', ')} - some of those may resolve through the ` +
+                  'registry join rather than a column on this table - or find the trials you ' +
+                  'want in another table first and pass their NCT numbers as `nctIds`.'
+                : 'Narrow it, or find the trials you want in another table first and pass ' +
+                  'their NCT numbers as `nctIds`.'),
           };
         }
 
         const supabase = createServiceClient();
 
-        let query = supabase
-          .from(table)
-          .select(projectionFor(table, detail ?? 'concise'), { count: 'exact' })
-          .limit(limit);
+        // Resolved before the select is built, not during the filter loop
+        // below: the `!inner` embed lives in the select string, and by the
+        // time the loop runs which filters are active it is already too late
+        // to change what was asked for.
+        const requested = (
+          [
+            ['sponsor', sponsor],
+            ['phase', phase],
+            ['status', status],
+            ['drug', drug],
+          ] as const
+        )
+          .filter(([, v]) => v !== undefined)
+          .map(([name]) => name);
+        const activeVia = viaFilters(table, requested);
+        const select = projectionFor(table, detail ?? 'concise') + embedFor(table, activeVia);
+
+        let query = supabase.from(table).select(select, { count: 'exact' }).limit(limit);
 
         query = applyCancerScope(query, table, dbCancerType);
         if (nctIds) query = applyTrialKeys(query, table, nctIds);
@@ -260,9 +345,43 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           };
         }
 
+        // One extra HEAD request, issued only when a via-filter fired: how
+        // many in-scope rows the `!inner` join above silently dropped for
+        // having no nct_id, so the result can say so instead of reading as a
+        // clean phase/status match. A failed count is logged and swallowed -
+        // a missing caveat number is better than failing the whole call.
+        let viaJoin: { table: 'clinical_trials'; unlinked?: number; hint: string } | undefined;
+        if (activeVia.length > 0 && spec.trialKey) {
+          const trialKeyColumn = spec.trialKey.column;
+          let unlinkedQuery = supabase
+            .from(table)
+            .select(trialKeyColumn, { count: 'exact', head: true });
+          unlinkedQuery = applyCancerScope(unlinkedQuery, table, dbCancerType);
+          const { count: unlinkedCount, error: unlinkedError } = await unlinkedQuery.is(trialKeyColumn, null);
+          if (unlinkedError) {
+            console.error('query_proprietary_data via-join count failed', {
+              table,
+              code: unlinkedError.code,
+              message: unlinkedError.message,
+            });
+          }
+          const unlinked = unlinkedError ? undefined : (unlinkedCount ?? undefined);
+          viaJoin = {
+            table: 'clinical_trials',
+            ...(unlinked !== undefined ? { unlinked } : {}),
+            hint:
+              'Every row returned here carries an nct_id - the registry join requires one. ' +
+              'Separately, ' +
+              (unlinked !== undefined ? `${unlinked} rows in scope` : 'other rows in scope') +
+              ' have no nct_id at all and cannot be filtered by phase or status, so they are ' +
+              'excluded from this result: that is a linkage gap, not evidence that they fail the ' +
+              'filter.',
+          };
+        }
+
         // Trimmed before the size budget runs, so the budget measures what the
         // model will actually be sent.
-        const fetched = compactInterventions(data ?? []);
+        const fetched = dropEmpty(compactInterventions(flattenViaEmbed(data ?? [])));
         const matched = count ?? fetched.length;
         const { kept: rows, droppedForSize } = fitToBudget(fetched);
         const complete = rows.length === matched;
@@ -271,6 +390,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           matched,
           complete,
           cancerType: dbCancerType,
+          ...(viaJoin ? { viaJoin } : {}),
           ...(complete
             ? {}
             : {
@@ -300,7 +420,12 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
                 };
               })()
             : {}),
-          ...(spec.caveat ? { caveat: spec.caveat } : {}),
+          // The static caveat describes an ordinary query, where a returned row
+          // may itself lack an nct_id. Under an active via-join that is no
+          // longer possible - every returned row passed the `!inner` join - so
+          // the caveat would be false about this result set, not merely
+          // redundant with `viaJoin.hint`. Suppressed here rather than merged.
+          ...(spec.caveat && !viaJoin ? { caveat: spec.caveat } : {}),
         };
 
         if (rows.length === 0) {

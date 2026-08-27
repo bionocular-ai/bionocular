@@ -7,12 +7,25 @@
  * and the five trials with no landscape row read as unasked-for. The join is
  * mechanical - one key, one direction - so the app does it rather than the model.
  *
+ * A turn with exactly one successful query has nothing to join, so it renders
+ * that query's own table (`toResultTable`) instead: the trial_outcomes shape -
+ * one row per treatment arm, duplicate nct_ids by design - is a single query as
+ * often as it is the second half of a pair, and the duplicate-key rule below
+ * exists to protect a join spine, not to gate a query that never joins anything.
+ *
  * One column knows about other columns, and it is declared here rather than
  * scattered: the registry fallback for a treatment that has not been curated.
  * Everything else is derived from the rows.
  */
 
-import { ABSENT, formatCell, humanizeColumn, type ResultColumn, type ResultTable } from './result-table';
+import {
+  ABSENT,
+  formatCell,
+  humanizeColumn,
+  toResultTable,
+  type ResultColumn,
+  type ResultTable,
+} from './result-table';
 
 const KEY = 'nct_id';
 
@@ -66,7 +79,39 @@ function treatmentCell(row: Row): string {
   return registry === ABSENT ? ABSENT : `${registry} · ${FALLBACK.marker}`;
 }
 
+/** Same success check `asJoinable` starts with, minus the join-spine rules. */
+function isSuccessful(output: unknown): boolean {
+  if (typeof output !== 'object' || output === null) return false;
+  const { ok, rows } = output as { ok?: unknown; rows?: unknown };
+  return ok === true && Array.isArray(rows) && rows.length > 0;
+}
+
+/**
+ * Strip the folded fields from a single query's rows before it reaches
+ * `toResultTable`, so a lone `clinical_trials` query agrees with the join
+ * path above: `acronym`/`brief_title` still arrive in the row the model
+ * reads, they are just never a column here either.
+ */
+function stripFolded(output: unknown): unknown {
+  if (typeof output !== 'object' || output === null) return output;
+  const { rows, ...rest } = output as { rows?: unknown };
+  if (!Array.isArray(rows)) return output;
+  return {
+    ...rest,
+    rows: rows.map((row) => {
+      if (typeof row !== 'object' || row === null) return row;
+      const next = { ...(row as Row) };
+      for (const field of FOLDED_TRIAL_FIELDS) delete next[field];
+      return next;
+    }),
+  };
+}
+
 export function toTurnTable(outputs: unknown[]): ResultTable | null {
+  const successful = outputs.filter(isSuccessful);
+  if (successful.length === 0) return null;
+  if (successful.length === 1) return toResultTable(stripFolded(successful[0]));
+
   const queries = outputs.map(asJoinable).filter((rows): rows is Row[] => rows !== null);
   if (queries.length < 2) return null;
 
