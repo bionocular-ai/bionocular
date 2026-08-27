@@ -38,9 +38,20 @@ const UNDEFINED_COLUMN = '42703';
  */
 const MAX_ROWS = 500;
 const DEFAULT_ROWS = 25;
-/** Comfortably above the largest filtered trial set any one table returns. */
+/**
+ * Bounds `nctIds`, not the rows a filtered query can return - 1,134 Phase 1
+ * cutaneous melanoma trials measured against `clinical_trials` is exactly why
+ * a phase-scoped question has to filter `trial_outcomes` directly instead of
+ * handing this cap a trial set of that size.
+ */
 const MAX_TRIAL_KEYS = 100;
-/** ~48k tokens of JSON, measured. Every filtered sweep measured fits well under this. */
+/**
+ * ~48k tokens of JSON, measured. The Phase 1 cutaneous melanoma
+ * `trial_outcomes` sweep this branch was built for - 189 rows through the
+ * `!inner` join, `detailed`, after `dropEmpty` - measures 92,934 chars, 71%
+ * of this budget. That is the headline case, not a worst case with room to
+ * spare.
+ */
 export const MAX_RESULT_CHARS = 130_000;
 
 /**
@@ -186,9 +197,11 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         'either re-run with a higher `limit` or narrow the filters - and never describe a ' +
         'partial result as if it were the full set. To sweep a whole filtered set in one ' +
         `call, ask for limit ${MAX_ROWS} - a limit above ${DEFAULT_ROWS} needs at least one ` +
-        'filter, because unfiltered it reads the table end to end. To combine tables, query ' +
-        'the one that can filter for what was asked, then pass the NCT numbers it returned ' +
-        'as `nctIds` to the table holding the rest.',
+        'filter, because unfiltered it reads the table end to end. Filter the table you need ' +
+        'directly first - phase and status reach several tables through the registry join ' +
+        'named above, not only clinical_trials. Only when the table you need has no filter ' +
+        'for what was asked, query one that does, then pass the NCT numbers it returned as ' +
+        '`nctIds` to the table holding the rest.',
       inputSchema: z.object({
         table: z.enum(AGENT_TABLE_NAMES),
         nctIds: z
@@ -253,15 +266,21 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         // unfiltered browse, which is how "what exists here" gets answered.
         const narrowed = [nctIds, sponsor, phase, status, drug].some((f) => f !== undefined);
         if (!narrowed && limit > DEFAULT_ROWS) {
+          const filters = supportedFilters(table);
           return {
             ok: false as const,
             reason: 'unfiltered_sweep' as const,
             table,
-            supportedFilters: supportedFilters(table),
+            supportedFilters: filters,
             hint:
               `A limit above ${DEFAULT_ROWS} needs a filter - unfiltered, \`${table}\` is read ` +
-              'end to end and most of what comes back is noise. Narrow it, or find the trials ' +
-              'you want in another table first and pass their NCT numbers as `nctIds`.',
+              'end to end and most of what comes back is noise. ' +
+              (filters.length
+                ? `Narrow it with ${filters.join(', ')} - some of those may resolve through the ` +
+                  'registry join rather than a column on this table - or find the trials you ' +
+                  'want in another table first and pass their NCT numbers as `nctIds`.'
+                : 'Narrow it, or find the trials you want in another table first and pass ' +
+                  'their NCT numbers as `nctIds`.'),
           };
         }
 

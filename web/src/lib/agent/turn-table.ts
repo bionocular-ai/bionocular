@@ -86,10 +86,31 @@ function isSuccessful(output: unknown): boolean {
   return ok === true && Array.isArray(rows) && rows.length > 0;
 }
 
+/**
+ * Strip the folded fields from a single query's rows before it reaches
+ * `toResultTable`, so a lone `clinical_trials` query agrees with the join
+ * path above: `acronym`/`brief_title` still arrive in the row the model
+ * reads, they are just never a column here either.
+ */
+function stripFolded(output: unknown): unknown {
+  if (typeof output !== 'object' || output === null) return output;
+  const { rows, ...rest } = output as { rows?: unknown };
+  if (!Array.isArray(rows)) return output;
+  return {
+    ...rest,
+    rows: rows.map((row) => {
+      if (typeof row !== 'object' || row === null) return row;
+      const next = { ...(row as Row) };
+      for (const field of FOLDED_TRIAL_FIELDS) delete next[field];
+      return next;
+    }),
+  };
+}
+
 export function toTurnTable(outputs: unknown[]): ResultTable | null {
   const successful = outputs.filter(isSuccessful);
   if (successful.length === 0) return null;
-  if (successful.length === 1) return toResultTable(successful[0]);
+  if (successful.length === 1) return toResultTable(stripFolded(successful[0]));
 
   const queries = outputs.map(asJoinable).filter((rows): rows is Row[] => rows !== null);
   if (queries.length < 2) return null;

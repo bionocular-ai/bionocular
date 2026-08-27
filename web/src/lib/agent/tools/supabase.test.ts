@@ -502,6 +502,25 @@ describe('query_proprietary_data', () => {
     expect((result as { supportedFilters: string[] }).supportedFilters).toEqual([]);
   });
 
+  it('reports a via-resolved filter as supported in a refusal, not just the columns this table owns', async () => {
+    // trial_landscape has no `sponsor` column, direct or via - a genuine
+    // refusal - but it does resolve phase/status through the registry join. A
+    // refusal that named only `drug` here would hide the one path that
+    // actually answers a phase- or status-scoped question and point the model
+    // at the NCT handoff this branch exists to replace.
+    const tools = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT00006368' }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_landscape', sponsor: 'Bristol', limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: 'unsupported_filter', filter: 'sponsor' });
+    expect((result as { supportedFilters: string[] }).supportedFilters).toEqual(
+      expect.arrayContaining(['drug', 'phase', 'status']),
+    );
+  });
+
   it('turns an unknown column into a structured outcome, not a throw', async () => {
     const tools = toolsWith({
       clinical_trials: { error: { code: '42703', message: 'column does not exist' } },

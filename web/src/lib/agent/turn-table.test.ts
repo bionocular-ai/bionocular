@@ -114,6 +114,17 @@ describe('toTurnTable', () => {
     expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887']);
   });
 
+  it('folds acronym and brief_title on a single-query turn too, not only the joined path', () => {
+    // clinical_trials.conciseProjection carries both on every row; a single
+    // Phase 3 sweep with nothing to join used to render them as columns -
+    // 116-272 characters wide, several lines tall - even though the join path
+    // already folds them.
+    const table = toTurnTable([trials]);
+
+    expect(table?.columns.map((c) => c.key)).not.toContain('acronym');
+    expect(table?.columns.map((c) => c.key)).not.toContain('brief_title');
+  });
+
   it('renders a lone query with duplicate nct_ids, since there is no join spine to corrupt', () => {
     // trial_outcomes is one row per treatment arm; two arms of the same trial
     // share an nct_id. That rule protects a *join*, and a single query never

@@ -111,13 +111,13 @@ const grade3PlusColumns = (family: 'ae' | 'trae' | 'teae'): string[] =>
 /**
  * Every extracted efficacy and safety endpoint `trial_outcomes` carries, built
  * from families rather than typed out by hand so a new column from the loader
- * is one array entry, not a search-and-add across a 197-name string.
+ * is one array entry, not a search-and-add across a 198-name string.
  *
- * Excludes exactly five columns from the table's 202: `all_attributes` (the
+ * Excludes exactly seven columns from the table's 205: `all_attributes` (the
  * LLM-extraction shadow copy - 3.5 MB of `"Not found"` on the target result
  * set), `created_at`, `cancer_type` (pinned to one value by
- * `applyCancerScope`, so it can tell the model nothing), `source_url`, and
- * `confidence`.
+ * `applyCancerScope`, so it can tell the model nothing), `source_url`,
+ * `confidence`, `validation_status`, and `validated_at`.
  *
  * `is_lt` postdates the CSV backup this list is checked against in
  * supabase.test.ts (added by migration 20260805000000_trial_outcomes_
@@ -393,11 +393,20 @@ export function applyNamedFilter<Q extends FilterableQuery<Q>>(
 /** The only filters a table's `via` join can resolve - `clinical_trials` is the only via-table. */
 export type ViaFilterName = Extract<FilterName, 'phase' | 'status'>;
 
-/** Which of the requested filters resolve through this table's `via` join. */
+/**
+ * Which of the requested filters resolve through this table's `via` join.
+ *
+ * Excludes a name the table also holds directly: `applyNamedFilter` always
+ * prefers the direct column (`direct ?? viaColumn`), so if a table ever
+ * declared both, treating the name as "via" here would embed the `!inner`
+ * join while the predicate actually landed on the direct column - an embed
+ * with no dotted predicate to justify it, silently dropping every row with a
+ * null `nct_id`. No table declares both today, but the check costs nothing.
+ */
 export function viaFilters(table: AgentTable, requested: readonly FilterName[]): FilterName[] {
-  const via = AGENT_TABLES[table].via;
+  const { via, filters } = AGENT_TABLES[table];
   if (!via) return [];
-  return requested.filter((name) => via.filters[name] !== undefined);
+  return requested.filter((name) => filters[name] === undefined && via.filters[name] !== undefined);
 }
 
 /**
@@ -425,8 +434,18 @@ export function projectionColumns(table: AgentTable): string[] {
   return AGENT_TABLES[table].projection.split(',').map((c) => c.trim());
 }
 
+/**
+ * Every filter name a table answers, whether the column lives on the table
+ * itself or is resolved through its `via` join. A refusal that reported only
+ * the direct names would hide `phase`/`status` on a via-enabled table and
+ * point the caller at the NCT handoff those joins exist to replace.
+ */
 export function supportedFilters(table: AgentTable): FilterName[] {
-  return Object.keys(AGENT_TABLES[table].filters) as FilterName[];
+  const { filters, via } = AGENT_TABLES[table];
+  const direct = Object.keys(filters) as FilterName[];
+  if (!via) return direct;
+  const viaNames = (Object.keys(via.filters) as FilterName[]).filter((name) => !direct.includes(name));
+  return [...direct, ...viaNames];
 }
 
 /**
@@ -436,7 +455,7 @@ export function supportedFilters(table: AgentTable): FilterName[] {
 export function describeTables(): string {
   return AGENT_TABLE_NAMES.map((name) => {
     const spec = AGENT_TABLES[name];
-    const direct = supportedFilters(name).join(', ');
+    const direct = Object.keys(spec.filters).join(', ');
     const viaNames = spec.via ? Object.keys(spec.via.filters).join(', ') : '';
     const via = viaNames ? `${viaNames} via ${spec.via!.table}` : '';
     const filterText =

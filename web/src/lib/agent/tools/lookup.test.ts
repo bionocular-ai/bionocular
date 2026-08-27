@@ -59,6 +59,29 @@ describe('lookup_trial', () => {
     expect(coverage.caveats.some((c) => /no nct_id/i.test(c))).toBe(true);
   });
 
+  it('drops null keys from a looked-up row, so a wide projection sends only what populated', async () => {
+    // trial_outcomes' projection is up to 198 columns; without dropEmpty a
+    // named-trial lookup would carry a null for every endpoint the row did not
+    // report.
+    const tools = toolsWith({
+      clinical_trials: {
+        rows: [{ nct_id: 'NCT00006368', brief_title: 'A trial', acronym: null, keywords: [] }],
+      },
+      trial_landscape: { rows: [] },
+      trial_outcomes: { rows: [] },
+      km_curves: { rows: [] },
+      news_feed: { rows: [] },
+    });
+
+    const result = await tools.lookup_trial.execute!({ nctId: 'NCT00006368' }, RUN_OPTIONS);
+
+    const row = (result as { tables: Record<string, { rows: Record<string, unknown>[] }> }).tables
+      .clinical_trials.rows[0];
+    expect(row).toEqual({ nct_id: 'NCT00006368', brief_title: 'A trial' });
+    expect(row).not.toHaveProperty('acronym');
+    expect(row).not.toHaveProperty('keywords');
+  });
+
   it('calls a trial we have never seen not_in_bionocular', async () => {
     const tools = toolsWith({});
 

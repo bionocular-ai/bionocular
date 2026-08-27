@@ -11,7 +11,7 @@ import {
   type AgentTable,
 } from './schema';
 import { runTool } from './logging';
-import type { AgentToolContext } from './supabase';
+import { dropEmpty, type AgentToolContext } from './supabase';
 
 /** Enough to show every arm or curve for one trial without dumping the table. */
 const LOOKUP_ROW_LIMIT = 10;
@@ -70,7 +70,12 @@ export function buildLookupTool({ cancerSlug, traceId }: AgentToolContext) {
               });
               return [table, null];
             }
-            const rows = data ?? [];
+            // Every table's `projection` is now the wide `detailed` set (up to
+            // 198 columns on trial_outcomes), so an all-null row skeleton would
+            // otherwise carry thousands of `"column": null` pairs per trial -
+            // dropEmpty is what keeps a named-trial lookup down to the columns
+            // that actually populated.
+            const rows = dropEmpty(data ?? []);
             if (rows.length === 0) return [table, { matched: 0, rows: [] }];
             return [table, { matched: count ?? rows.length, rows, caveat: spec.caveat }];
           }),
