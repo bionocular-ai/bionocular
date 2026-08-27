@@ -229,9 +229,9 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
               "built from; `detailed` is the table's full column set, at roughly twice the tokens " +
               'per row. On `trial_outcomes` that full set is every efficacy and safety endpoint - ' +
               'PFS, OS, EFS, RFS, MFS, response and duration measures, and the adverse-event ' +
-              'families - so a question naming specific endpoints wants `detailed`. On other ' +
-              'tables it is provenance and classification detail: how a trial was classified, its ' +
-              'conditions, its keywords. Defaults to `concise`.',
+              'families - so a question naming specific endpoints wants `detailed`. On ' +
+              '`clinical_trials` it is provenance and classification detail: how a trial was ' +
+              'classified, its conditions, its keywords. Defaults to `concise`.',
           ),
         limit: z
           .number()
