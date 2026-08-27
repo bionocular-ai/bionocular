@@ -8,7 +8,8 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => fake,
 }));
 
-const { buildSupabaseTools, fitToBudget, MAX_RESULT_CHARS } = await import('./supabase');
+const { buildSupabaseTools, dropEmpty, fitToBudget, MAX_RESULT_CHARS, missingTrialKeys } =
+  await import('./supabase');
 
 /** Rows whose JSON serialises to exactly `chars` characters. */
 function rowsOfSize(chars: number, count = 1) {
@@ -704,6 +705,163 @@ describe('via joins', () => {
     expect(text).toContain('filters: drug (phase, status via clinical_trials)');
     // news_feed has no via at all - the description must not invent one.
     expect(text).not.toMatch(/news_feed.*via clinical_trials/);
+  });
+});
+
+describe('via joins through the real tool entry point', () => {
+  // Task 1's review flagged that the via accept-path was tested only by
+  // calling schema.ts's exports directly, never through
+  // tools.query_proprietary_data.execute - the crux of this task is the
+  // ordering trap where the select has to be built before the filter loop
+  // runs, and only a call through the real tool can catch a regression there.
+
+  it('embeds the join and filters on it when a via-filter is active', async () => {
+    const tools = toolsWith({ trial_outcomes: { rows: [{ id: 'o1', nct_id: 'NCT00006368' }] } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', phase: 'PHASE1', limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].projection).toContain('clinical_trials!inner(');
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'contains',
+      column: 'clinical_trials.phases',
+      value: ['PHASE1'],
+    });
+  });
+
+  it('never embeds the join without an active via-filter, or 44% of the table silently vanishes', async () => {
+    const tools = toolsWith({ trial_outcomes: { rows: [{ id: 'o1', nct_id: 'NCT00006368' }] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'trial_outcomes', limit: 10 }, RUN_OPTIONS);
+
+    expect(fake.queries[0].projection).not.toContain('!inner');
+  });
+
+  it('flattens the clinical_trials embed onto the row', async () => {
+    const tools = toolsWith({
+      trial_outcomes: {
+        rows: [
+          {
+            id: 'o1',
+            nct_id: 'NCT00006368',
+            clinical_trials: { phases: ['PHASE1'], overall_status: 'RECRUITING' },
+          },
+        ],
+      },
+    });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', phase: 'PHASE1', limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    const [row] = (result as { rows: Array<Record<string, unknown>> }).rows;
+    expect(row).toMatchObject({ phases: ['PHASE1'], overall_status: 'RECRUITING' });
+    expect(row).not.toHaveProperty('clinical_trials');
+  });
+
+  it('adds coverage.viaJoin with the unlinked count only when a via-filter fired', async () => {
+    const tools = toolsWith({
+      trial_outcomes: {
+        rows: [{ id: 'o1', nct_id: 'NCT00006368' }],
+        count: 189,
+        unlinkedCount: 713,
+      },
+    });
+
+    const withVia = await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', phase: 'PHASE1', limit: 10 },
+      RUN_OPTIONS,
+    );
+    const { coverage: viaCoverage } = withVia as {
+      coverage: { viaJoin?: { table: string; unlinked?: number; hint: string } };
+    };
+    expect(viaCoverage.viaJoin).toMatchObject({ table: 'clinical_trials', unlinked: 713 });
+    expect(viaCoverage.viaJoin?.hint).toMatch(/no nct_id/i);
+    // The count-only check runs against the same table, scoped the same way,
+    // filtering for a null trial key - not a second read of clinical_trials.
+    const countQuery = fake.queries[1];
+    expect(countQuery.table).toBe('trial_outcomes');
+    expect(countQuery.head).toBe(true);
+    expect(countQuery.filters).toContainEqual({ operator: 'is', column: 'nct_id', value: null });
+
+    const withoutVia = await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', limit: 10 },
+      RUN_OPTIONS,
+    );
+    const { coverage: plainCoverage } = withoutVia as { coverage: { viaJoin?: unknown } };
+    expect(plainCoverage.viaJoin).toBeUndefined();
+  });
+
+  it('omits the unlinked number, but keeps the caveat, when the count query fails', async () => {
+    const fake1 = createFakeSupabase({ trial_outcomes: { rows: [{ id: 'o1', nct_id: 'NCT00006368' }] } });
+    let call = 0;
+    const original = fake1.from;
+    fake1.from = (table: string) => {
+      call += 1;
+      if (call === 2) {
+        return createFakeSupabase({
+          [table]: { error: { code: '500', message: 'boom' } },
+        }).from(table);
+      }
+      return original(table);
+    };
+    fake = fake1;
+    const tools = buildSupabaseTools(CONTEXT);
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', phase: 'PHASE1', limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    const { coverage } = result as { coverage: { viaJoin?: { unlinked?: number; hint: string } } };
+    expect(coverage.viaJoin?.unlinked).toBeUndefined();
+    expect(coverage.viaJoin?.hint).toMatch(/no nct_id/i);
+  });
+});
+
+describe('dropEmpty', () => {
+  it('removes null, empty-string, N/A, Not found and empty-array values', () => {
+    const rows = [
+      {
+        a: null,
+        b: undefined,
+        c: '',
+        d: 'N/A',
+        e: 'Not found',
+        f: [],
+        g: 'kept',
+        h: ['kept'],
+      },
+    ];
+
+    expect(dropEmpty(rows)).toEqual([{ g: 'kept', h: ['kept'] }]);
+  });
+
+  it('keeps 0 and false - a real measurement, not an absence', () => {
+    const rows = [{ pct: 0, flag: false }];
+
+    expect(dropEmpty(rows)).toEqual([{ pct: 0, flag: false }]);
+  });
+
+  it('leaves non-object rows untouched', () => {
+    expect(dropEmpty(['x', 1, null])).toEqual(['x', 1, null]);
+  });
+});
+
+describe('missingTrialKeys after dropEmpty removes a null key entirely', () => {
+  it('still treats the trial as absent when its nct_id key is gone rather than null', () => {
+    // dropEmpty strips a null nct_id from the row instead of leaving it null,
+    // so row[key.column] reads as `undefined`. missingTrialKeys must treat
+    // that the same as an explicit null - both mean "not a string", so the
+    // trial counts as not covered by this row.
+    const rows = dropEmpty([{ id: 'o1', nct_id: null, abstract_id: 'A1' }]);
+    expect(rows[0]).not.toHaveProperty('nct_id');
+
+    const key = { column: 'nct_id', kind: 'scalar' as const };
+    expect(missingTrialKeys(rows, key, ['NCT00006368'])).toEqual(['NCT00006368']);
   });
 });
 

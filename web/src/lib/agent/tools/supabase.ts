@@ -13,9 +13,11 @@ import {
   applyNamedFilter,
   applyTrialKeys,
   describeTables,
+  embedFor,
   projectionColumns,
   projectionFor,
   supportedFilters,
+  viaFilters,
   type AgentColumn,
   type AgentTable,
   type FilterName,
@@ -63,6 +65,48 @@ function compactInterventions(rows: unknown[]): unknown[] {
         return { name, type };
       }),
     };
+  });
+}
+
+/**
+ * Lift a `via`-join embed onto the row itself.
+ *
+ * PostgREST returns an active via-filter's embed as a nested
+ * `{ clinical_trials: { phases, overall_status } }`, which `result-table.ts`
+ * would otherwise render as `JSON.stringify` output instead of cells. Rows
+ * from a query with no embed (the common case) pass through untouched.
+ */
+function flattenViaEmbed(rows: unknown[]): unknown[] {
+  return rows.map((row) => {
+    if (typeof row !== 'object' || row === null) return row;
+    const { clinical_trials, ...rest } = row as Record<string, unknown> & { clinical_trials?: unknown };
+    if (typeof clinical_trials !== 'object' || clinical_trials === null) return row;
+    return { ...rest, ...clinical_trials };
+  });
+}
+
+/**
+ * Drop keys that carry no information, so a wide projection sends only the
+ * columns a row actually populated. `trial_outcomes`' 198-column `detailed`
+ * projection measures ~15.7 populated keys per row once this runs - what
+ * makes that width affordable within `MAX_RESULT_CHARS`.
+ *
+ * `0` and `false` are real findings, not absence, so only the loader's own
+ * not-found spellings are treated as empty.
+ */
+const EMPTY_STRINGS = new Set(['', 'N/A', 'Not found']);
+
+export function dropEmpty(rows: unknown[]): unknown[] {
+  return rows.map((row) => {
+    if (typeof row !== 'object' || row === null) return row;
+    const out: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(row as Record<string, unknown>)) {
+      if (value === null || value === undefined) continue;
+      if (typeof value === 'string' && EMPTY_STRINGS.has(value)) continue;
+      if (Array.isArray(value) && value.length === 0) continue;
+      out[key] = value;
+    }
+    return out;
   });
 }
 
@@ -215,10 +259,24 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
 
         const supabase = createServiceClient();
 
-        let query = supabase
-          .from(table)
-          .select(projectionFor(table, detail ?? 'concise'), { count: 'exact' })
-          .limit(limit);
+        // Resolved before the select is built, not during the filter loop
+        // below: the `!inner` embed lives in the select string, and by the
+        // time the loop runs which filters are active it is already too late
+        // to change what was asked for.
+        const requested = (
+          [
+            ['sponsor', sponsor],
+            ['phase', phase],
+            ['status', status],
+            ['drug', drug],
+          ] as const
+        )
+          .filter(([, v]) => v !== undefined)
+          .map(([name]) => name);
+        const activeVia = viaFilters(table, requested);
+        const select = projectionFor(table, detail ?? 'concise') + embedFor(table, activeVia);
+
+        let query = supabase.from(table).select(select, { count: 'exact' }).limit(limit);
 
         query = applyCancerScope(query, table, dbCancerType);
         if (nctIds) query = applyTrialKeys(query, table, nctIds);
@@ -260,9 +318,41 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           };
         }
 
+        // One extra HEAD request, issued only when a via-filter fired: how
+        // many in-scope rows the `!inner` join above silently dropped for
+        // having no nct_id, so the result can say so instead of reading as a
+        // clean phase/status match. A failed count is logged and swallowed -
+        // a missing caveat number is better than failing the whole call.
+        let viaJoin: { table: 'clinical_trials'; unlinked?: number; hint: string } | undefined;
+        if (activeVia.length > 0 && spec.trialKey) {
+          const trialKeyColumn = spec.trialKey.column;
+          let unlinkedQuery = supabase
+            .from(table)
+            .select(trialKeyColumn, { count: 'exact', head: true });
+          unlinkedQuery = applyCancerScope(unlinkedQuery, table, dbCancerType);
+          const { count: unlinkedCount, error: unlinkedError } = await unlinkedQuery.is(trialKeyColumn, null);
+          if (unlinkedError) {
+            console.error('query_proprietary_data via-join count failed', {
+              table,
+              code: unlinkedError.code,
+              message: unlinkedError.message,
+            });
+          }
+          const unlinked = unlinkedError ? undefined : (unlinkedCount ?? undefined);
+          viaJoin = {
+            table: 'clinical_trials',
+            ...(unlinked !== undefined ? { unlinked } : {}),
+            hint:
+              (unlinked !== undefined ? `${unlinked} rows in scope` : 'Rows in scope') +
+              ' have no nct_id and cannot be filtered by phase or ' +
+              'status. They are excluded from this result - that is a linkage gap, not evidence ' +
+              'that they fail the filter.',
+          };
+        }
+
         // Trimmed before the size budget runs, so the budget measures what the
         // model will actually be sent.
-        const fetched = compactInterventions(data ?? []);
+        const fetched = dropEmpty(compactInterventions(flattenViaEmbed(data ?? [])));
         const matched = count ?? fetched.length;
         const { kept: rows, droppedForSize } = fitToBudget(fetched);
         const complete = rows.length === matched;
@@ -271,6 +361,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           matched,
           complete,
           cancerType: dbCancerType,
+          ...(viaJoin ? { viaJoin } : {}),
           ...(complete
             ? {}
             : {

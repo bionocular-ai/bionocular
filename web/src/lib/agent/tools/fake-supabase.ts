@@ -9,7 +9,7 @@
  */
 
 export interface RecordedFilter {
-  operator: 'eq' | 'in' | 'contains' | 'overlaps' | 'ilike';
+  operator: 'eq' | 'in' | 'contains' | 'overlaps' | 'ilike' | 'is';
   column: string;
   value: unknown;
 }
@@ -27,6 +27,13 @@ export interface TableFixture {
   rows?: unknown[];
   count?: number;
   error?: { code: string; message: string };
+  /**
+   * Count returned to a `head: true` query on this table (the via-join
+   * "unlinked rows" check), when it must differ from `count`. Falls back to
+   * `count` when absent, since a real head query answers the same predicate
+   * space as the row query, just without materialising rows.
+   */
+  unlinkedCount?: number;
 }
 
 export interface RecordedUpsert {
@@ -51,6 +58,7 @@ interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown
   contains: (column: string, value: unknown) => FakeQuery;
   overlaps: (column: string, values: readonly unknown[]) => FakeQuery;
   ilike: (column: string, value: string) => FakeQuery;
+  is: (column: string, value: null) => FakeQuery;
   /** Resolves the first fixture row rather than the array, as PostgREST does. */
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
   upsert: (
@@ -108,6 +116,10 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
         record.filters.push({ operator: 'ilike', column, value });
         return query;
       },
+      is(column, value) {
+        record.filters.push({ operator: 'is', column, value });
+        return query;
+      },
       maybeSingle() {
         const fixture = fixtures[table] ?? {};
         return Promise.resolve(
@@ -125,7 +137,9 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
         const rows = fixture.rows ?? [];
         const result = fixture.error
           ? { data: null, error: fixture.error, count: null }
-          : { data: rows, error: null, count: fixture.count ?? rows.length };
+          : record.head
+            ? { data: null, error: null, count: fixture.unlinkedCount ?? fixture.count ?? rows.length }
+            : { data: rows, error: null, count: fixture.count ?? rows.length };
         return Promise.resolve(result).then(onfulfilled);
       },
     };
