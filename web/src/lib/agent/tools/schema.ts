@@ -27,7 +27,14 @@ export interface AgentTableSpec {
   readonly cancerType: AgentColumn;
   /** Absent where a table has no trial identifier at all. */
   readonly trialKey: AgentColumn | null;
-  /** Explicit column list. Never `*` - `trial_outcomes` alone has 205 columns. */
+  /**
+   * Explicit column list. Never `*` - `trial_outcomes` alone has 205 columns,
+   * and `select=*` on it measured 4.5 MB / 3.5s against 1.04 MB / 1.9s for the
+   * explicit list on the same result set. The invariant holds on wire cost
+   * even though the wide `detailed` projection below approaches `*` in width -
+   * `all_attributes`, `created_at`, `source_url`, `confidence`, and the
+   * cancer-scope-pinned `cancer_type` stay excluded regardless.
+   */
   readonly projection: string;
   /**
    * Named filters this table supports, mapped to their real columns. The kind
@@ -57,6 +64,95 @@ export interface AgentTableSpec {
     readonly filters: Partial<Record<FilterName, AgentColumn>>;
   };
 }
+
+// The month timepoints both PFS and OS carry a `_rate_{n}m` column for.
+const RATE_MONTHS = [6, 9, 12, 18, 24, 36, 48] as const;
+
+// Per-toxicity grade-3+ terms. Identical across the ae/trae/teae families, so
+// this list is written once and expanded three ways below.
+const GRADE_3_PLUS_TERMS = [
+  'ir_ae', 'crs', 'thrombocytopenia', 'neutropenia', 'leukopenia', 'nausea',
+  'anemia', 'diarrhea', 'colitis', 'hyperglycemia', 'neutrophil_count_decreased',
+  'dyspnea', 'pyrexia', 'bleeding', 'pruritus', 'rash', 'pneumonia',
+  'thyroiditis', 'hypophysitis', 'hepatitis', 'pneumonitis', 'alt_increased',
+  'wbc_decreased', 'ast_increased', 'fatigue', 'hyperthyroidism',
+  'hypothyroidism', 'irr', 'vomiting',
+] as const;
+
+// Safety-aggregate `_pct` columns, one list per family. Not symmetric:
+// `immune_related_ae_pct` and `serious_ir_ae_pct` exist only on the any-cause
+// `ae` family, and its discontinuation column is spelled differently from
+// trae/teae's - these are typed out rather than derived because there is no
+// naming rule that produces them.
+const AE_AGGREGATE_PCT = [
+  'ae_pct', 'grade_3_plus_ae_pct', 'ae_leading_to_discontinuation_pct',
+  'serious_ae_pct', 'immune_related_ae_pct', 'serious_ir_ae_pct', 'ae_death_pct',
+  'ae_dose_interruption_pct', 'ae_dose_reduction_pct', 'ae_hospitalization_pct',
+];
+const TRAE_AGGREGATE_PCT = [
+  'trae_pct', 'grade_3_plus_trae_pct', 'grade_3_trae_pct', 'grade_4_trae_pct',
+  'grade_5_trae_pct', 'trae_discontinuation_pct', 'trae_death_pct',
+  'trae_ir_ae_pct', 'serious_trae_pct', 'trae_dose_interruption_pct',
+  'trae_dose_reduction_pct', 'trae_hospitalization_pct',
+];
+const TEAE_AGGREGATE_PCT = [
+  'teae_pct', 'grade_3_plus_teae_pct', 'grade_3_teae_pct', 'grade_4_teae_pct',
+  'grade_5_teae_pct', 'teae_discontinuation_pct', 'teae_death_pct',
+  'teae_ir_ae_pct', 'serious_teae_pct', 'teae_dose_interruption_pct',
+  'teae_dose_reduction_pct', 'teae_hospitalization_pct',
+];
+
+const rateColumns = (endpoint: 'pfs' | 'os'): string[] =>
+  RATE_MONTHS.map((m) => `${endpoint}_rate_${m}m`);
+
+const grade3PlusColumns = (family: 'ae' | 'trae' | 'teae'): string[] =>
+  GRADE_3_PLUS_TERMS.map((term) => `grade_3_plus_${family}_${term}`);
+
+/**
+ * Every extracted efficacy and safety endpoint `trial_outcomes` carries, built
+ * from families rather than typed out by hand so a new column from the loader
+ * is one array entry, not a search-and-add across a 197-name string.
+ *
+ * Excludes exactly five columns from the table's 202: `all_attributes` (the
+ * LLM-extraction shadow copy - 3.5 MB of `"Not found"` on the target result
+ * set), `created_at`, `cancer_type` (pinned to one value by
+ * `applyCancerScope`, so it can tell the model nothing), `source_url`, and
+ * `confidence`.
+ *
+ * `is_lt` postdates the CSV backup this list is checked against in
+ * supabase.test.ts (added by migration 20260805000000_trial_outcomes_
+ * validation_columns.sql), so it is appended by hand rather than falling out
+ * of the CSV header like everything else here.
+ */
+const TRIAL_OUTCOMES_PROJECTION = [
+  // identity / metadata
+  'id', 'source_type', 'source_name', 'abstract_id', 'publication_id', 'nct_id',
+  'arm_id', 'arm_name', 'sponsors', 'line_of_treatment', 'generic_name',
+  'brand_name', 'dosage', 'type_of_dosing', 'mechanism_of_action',
+  'target_protein', 'type_of_therapy', 'sub_therapy', 'modality', 'median_age',
+  'num_patients',
+  // Column names that hold a censored measurement, not the measurement itself
+  // - see the `is_nr`/`is_lt` note on `conciseProjection` below.
+  'is_nr', 'is_lt',
+  // PFS / OS
+  'median_pfs', 'pfs_followup_months', 'p_value_pfs', 'hr_pfs', 'ci_hr_pfs',
+  ...rateColumns('pfs'),
+  'median_os', 'os_followup_months', 'p_value_os', 'hr_os', 'ci_hr_os',
+  ...rateColumns('os'),
+  // other survival
+  'efs', 'p_value_efs', 'hr_efs', 'ci_hr_efs',
+  'rfs', 'p_value_rfs', 'rfs_followup_months', 'hr_rfs', 'ci_hr_rfs',
+  'mfs', 'mfs_followup_months', 'hr_mfs', 'ci_hr_mfs',
+  // response
+  'orr', 'cr', 'pcr', 'cmr', 'dcr', 'cbr', 'median_dor', 'dor_rate', 'ttr',
+  'ttp', 'hr_ttp', 'ci_hr_ttp', 'ttnt', 'ttf',
+  // safety aggregates
+  ...AE_AGGREGATE_PCT, ...TRAE_AGGREGATE_PCT, ...TEAE_AGGREGATE_PCT,
+  // per-toxicity grade 3+
+  ...grade3PlusColumns('ae'), ...grade3PlusColumns('trae'), ...grade3PlusColumns('teae'),
+  // standalone
+  'crs_pct', 'wbc_decreased_pct', 'irr_pct',
+].join(', ');
 
 const TABLE_DEFINITIONS = {
   clinical_trials: {
@@ -131,10 +227,25 @@ const TABLE_DEFINITIONS = {
       'conference abstracts and publications',
     cancerType: { column: 'cancer_type', kind: 'array' },
     trialKey: { column: 'nct_id', kind: 'scalar' },
-    projection:
+    // The full endpoint set - see TRIAL_OUTCOMES_PROJECTION above for how it is
+    // built and what it excludes.
+    projection: TRIAL_OUTCOMES_PROJECTION,
+    // The browse-level 19 columns this table's `projection` used to be, plus
+    // `is_nr`/`is_lt`.
+    //
+    // `is_nr text[]` and `is_lt text[]` hold column names, not values: a
+    // not-reached median stores NULL in e.g. `median_os` and the string
+    // `'median_os'` in `is_nr` (melanoma/scripts/upload_to_supabase.py:~545);
+    // `is_lt` does the same for a censored value like "<1%", stored as the
+    // number 1 (melanoma/scripts/apply_publications_validation.py). Neither
+    // column was in any projection before this change, so the agent saw
+    // `median_dor: null` and reported "no DoR data" when the truth was "DoR
+    // not reached" - the opposite clinical claim. On the 189-row target result
+    // set, 33 rows carry `is_nr` and `median_dor` is the marked column on 16.
+    conciseProjection:
       'id, source_type, source_name, abstract_id, publication_id, nct_id, arm_name, ' +
       'generic_name, line_of_treatment, num_patients, median_pfs, hr_pfs, median_os, ' +
-      'hr_os, orr, dcr, median_dor, grade_3_plus_trae_pct, serious_ae_pct',
+      'hr_os, orr, dcr, median_dor, grade_3_plus_trae_pct, serious_ae_pct, is_nr, is_lt',
     filters: {
       sponsor: { column: 'sponsors', kind: 'scalar' },
       drug: { column: 'generic_name', kind: 'scalar' },

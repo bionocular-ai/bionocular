@@ -274,11 +274,11 @@ describe('query_proprietary_data', () => {
   });
 
   it('falls back to the full projection for a table with no concise form', async () => {
-    const tools = toolsWith({ trial_outcomes: { rows: [{ id: 'o1' }] } });
+    const tools = toolsWith({ km_curves: { rows: [{ id: 'k1' }] } });
 
-    await tools.query_proprietary_data.execute!({ table: 'trial_outcomes', limit: 10 }, RUN_OPTIONS);
+    await tools.query_proprietary_data.execute!({ table: 'km_curves', limit: 10 }, RUN_OPTIONS);
     await tools.query_proprietary_data.execute!(
-      { table: 'trial_outcomes', detail: 'detailed', limit: 10 },
+      { table: 'km_curves', detail: 'detailed', limit: 10 },
       RUN_OPTIONS,
     );
 
@@ -523,6 +523,109 @@ describe('clinical_trials projection', () => {
     // second label rather than a replacement.
     expect(projectionFor('clinical_trials', 'concise')).toContain('acronym');
     expect(projectionFor('clinical_trials', 'detailed')).toContain('acronym');
+  });
+});
+
+describe('trial_outcomes projection', () => {
+  // The 202 columns melanoma/data/backups/trial_outcomes_rows.csv carries as of
+  // 2026-08-27 - the authoritative source the wide `detailed` projection is
+  // built against. That backup is gitignored (melanoma/.gitignore excludes
+  // data/backups/), so CI has no copy to read live; the header is pinned here
+  // instead. `is_lt` postdates this backup (added by migration
+  // 20260805000000_trial_outcomes_validation_columns.sql) and is added to the
+  // known set by hand below rather than appearing in this list.
+  const CSV_HEADER_COLUMNS = [
+    'id', 'source_type', 'source_name', 'abstract_id', 'publication_id', 'source_url',
+    'nct_id', 'arm_id', 'arm_name', 'cancer_type', 'sponsors', 'line_of_treatment',
+    'generic_name', 'brand_name', 'dosage', 'type_of_dosing', 'mechanism_of_action',
+    'target_protein', 'type_of_therapy', 'sub_therapy', 'median_age', 'num_patients',
+    'median_pfs', 'pfs_followup_months', 'p_value_pfs', 'hr_pfs', 'pfs_rate_6m',
+    'pfs_rate_9m', 'pfs_rate_12m', 'pfs_rate_18m', 'pfs_rate_24m', 'pfs_rate_36m',
+    'pfs_rate_48m', 'median_os', 'os_followup_months', 'p_value_os', 'hr_os', 'os_rate_6m',
+    'os_rate_9m', 'os_rate_12m', 'os_rate_18m', 'os_rate_24m', 'os_rate_36m', 'os_rate_48m',
+    'efs', 'p_value_efs', 'hr_efs', 'rfs', 'p_value_rfs', 'rfs_followup_months', 'hr_rfs',
+    'mfs', 'mfs_followup_months', 'hr_mfs', 'orr', 'cr', 'pcr', 'cmr', 'dcr', 'cbr',
+    'median_dor', 'dor_rate', 'ttr', 'ttp', 'ttnt', 'ttf', 'ae_pct', 'grade_3_plus_ae_pct',
+    'ae_leading_to_discontinuation_pct', 'serious_ae_pct', 'immune_related_ae_pct',
+    'serious_ir_ae_pct', 'ae_death_pct', 'trae_pct', 'grade_3_plus_trae_pct',
+    'grade_3_trae_pct', 'grade_4_trae_pct', 'grade_5_trae_pct', 'trae_discontinuation_pct',
+    'trae_death_pct', 'trae_ir_ae_pct', 'serious_trae_pct', 'teae_pct',
+    'grade_3_plus_teae_pct', 'grade_3_teae_pct', 'grade_4_teae_pct', 'grade_5_teae_pct',
+    'teae_discontinuation_pct', 'teae_death_pct', 'teae_ir_ae_pct', 'serious_teae_pct',
+    'crs_pct', 'wbc_decreased_pct', 'grade_3_plus_ae_ir_ae', 'grade_3_plus_ae_crs',
+    'grade_3_plus_ae_thrombocytopenia', 'grade_3_plus_ae_neutropenia',
+    'grade_3_plus_ae_leukopenia', 'grade_3_plus_ae_nausea', 'grade_3_plus_ae_anemia',
+    'grade_3_plus_ae_diarrhea', 'grade_3_plus_ae_colitis', 'grade_3_plus_ae_hyperglycemia',
+    'grade_3_plus_ae_neutrophil_count_decreased', 'grade_3_plus_ae_dyspnea',
+    'grade_3_plus_ae_pyrexia', 'grade_3_plus_ae_bleeding', 'grade_3_plus_ae_pruritus',
+    'grade_3_plus_ae_rash', 'grade_3_plus_ae_pneumonia', 'grade_3_plus_ae_thyroiditis',
+    'grade_3_plus_ae_hypophysitis', 'grade_3_plus_ae_hepatitis',
+    'grade_3_plus_ae_pneumonitis', 'grade_3_plus_ae_alt_increased',
+    'grade_3_plus_ae_wbc_decreased', 'grade_3_plus_trae_ir_ae', 'grade_3_plus_trae_crs',
+    'grade_3_plus_trae_thrombocytopenia', 'grade_3_plus_trae_neutropenia',
+    'grade_3_plus_trae_leukopenia', 'grade_3_plus_trae_nausea', 'grade_3_plus_trae_anemia',
+    'grade_3_plus_trae_diarrhea', 'grade_3_plus_trae_colitis',
+    'grade_3_plus_trae_hyperglycemia', 'grade_3_plus_trae_neutrophil_count_decreased',
+    'grade_3_plus_trae_dyspnea', 'grade_3_plus_trae_pyrexia', 'grade_3_plus_trae_bleeding',
+    'grade_3_plus_trae_pruritus', 'grade_3_plus_trae_rash', 'grade_3_plus_trae_pneumonia',
+    'grade_3_plus_trae_thyroiditis', 'grade_3_plus_trae_hypophysitis',
+    'grade_3_plus_trae_hepatitis', 'grade_3_plus_trae_pneumonitis',
+    'grade_3_plus_trae_alt_increased', 'grade_3_plus_trae_wbc_decreased',
+    'grade_3_plus_teae_ir_ae', 'grade_3_plus_teae_crs', 'grade_3_plus_teae_thrombocytopenia',
+    'grade_3_plus_teae_neutropenia', 'grade_3_plus_teae_leukopenia',
+    'grade_3_plus_teae_nausea', 'grade_3_plus_teae_anemia', 'grade_3_plus_teae_diarrhea',
+    'grade_3_plus_teae_colitis', 'grade_3_plus_teae_hyperglycemia',
+    'grade_3_plus_teae_neutrophil_count_decreased', 'grade_3_plus_teae_dyspnea',
+    'grade_3_plus_teae_pyrexia', 'grade_3_plus_teae_bleeding', 'grade_3_plus_teae_pruritus',
+    'grade_3_plus_teae_rash', 'grade_3_plus_teae_pneumonia', 'grade_3_plus_teae_thyroiditis',
+    'grade_3_plus_teae_hypophysitis', 'grade_3_plus_teae_hepatitis',
+    'grade_3_plus_teae_pneumonitis', 'grade_3_plus_teae_alt_increased',
+    'grade_3_plus_teae_wbc_decreased', 'confidence', 'is_nr', 'all_attributes', 'created_at',
+    'ci_hr_pfs', 'ci_hr_os', 'ci_hr_efs', 'ci_hr_rfs', 'ci_hr_mfs', 'ci_hr_ttp', 'hr_ttp',
+    'ae_dose_interruption_pct', 'ae_dose_reduction_pct', 'ae_hospitalization_pct',
+    'teae_dose_interruption_pct', 'teae_dose_reduction_pct', 'teae_hospitalization_pct',
+    'trae_dose_interruption_pct', 'trae_dose_reduction_pct', 'trae_hospitalization_pct',
+    'irr_pct', 'grade_3_plus_ae_ast_increased', 'grade_3_plus_ae_fatigue',
+    'grade_3_plus_ae_hyperthyroidism', 'grade_3_plus_ae_hypothyroidism',
+    'grade_3_plus_ae_irr', 'grade_3_plus_ae_vomiting', 'grade_3_plus_teae_ast_increased',
+    'grade_3_plus_teae_fatigue', 'grade_3_plus_teae_hyperthyroidism',
+    'grade_3_plus_teae_hypothyroidism', 'grade_3_plus_teae_irr', 'grade_3_plus_teae_vomiting',
+    'grade_3_plus_trae_ast_increased', 'grade_3_plus_trae_fatigue',
+    'grade_3_plus_trae_hyperthyroidism', 'grade_3_plus_trae_hypothyroidism',
+    'grade_3_plus_trae_irr', 'grade_3_plus_trae_vomiting', 'modality',
+  ];
+
+  const KNOWN_COLUMNS = new Set([...CSV_HEADER_COLUMNS, 'is_lt']);
+  const EXCLUDED_COLUMNS = ['all_attributes', 'created_at', 'cancer_type', 'source_url', 'confidence'];
+
+  function columns(detail: 'concise' | 'detailed'): string[] {
+    return projectionFor('trial_outcomes', detail)
+      .split(',')
+      .map((c) => c.trim());
+  }
+
+  it('widens the detailed projection well past the concise browse level', () => {
+    const concise = columns('concise');
+    const detailed = columns('detailed');
+
+    expect(detailed.length).toBeGreaterThan(concise.length * 5);
+    expect(concise).toContain('is_nr');
+    expect(concise).toContain('is_lt');
+    expect(detailed).toContain('is_nr');
+    expect(detailed).toContain('is_lt');
+  });
+
+  it('never selects a column absent from the loader\'s own column list', () => {
+    for (const column of columns('detailed')) {
+      expect(KNOWN_COLUMNS.has(column)).toBe(true);
+    }
+  });
+
+  it('excludes the shadow copy, scope-pinned, and metadata columns', () => {
+    const detailed = columns('detailed');
+    for (const excluded of EXCLUDED_COLUMNS) {
+      expect(detailed).not.toContain(excluded);
+    }
   });
 });
 
