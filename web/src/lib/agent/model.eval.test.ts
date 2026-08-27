@@ -115,6 +115,26 @@ describe.skipIf(!CREDENTIALS_PRESENT)('agent behaviour', () => {
     // rather than one recorded sentence.
     expect(text).toMatch(/\bno nct\b|lacks? .*nct|not linked|no linked|unlinked|excluded|linkage/i);
 
+    // Negative check for the failure a coordinator review caught in this
+    // eval's first draft: one live run said "~44% of the 189 rows lack NCT
+    // IDs", which is impossible - every returned row came through the
+    // `clinical_trials!inner` join, so carrying an nct_id was a precondition
+    // of being in the result. The root cause was `coverage` itself carrying
+    // two overlapping linkage statements (the table's static "some rows lack
+    // an nct_id" caveat alongside `viaJoin`'s "these rows all have one"),
+    // which the model merged. `supabase.ts` now suppresses the static caveat
+    // whenever `viaJoin` is active, but this assertion is what would have
+    // caught the bad merge and is what guards against it recurring: reject a
+    // "no/lacks NCT" claim tied to the returned row count or to "these/this
+    // result", the shape the wrong answer took.
+    const returned = coverage?.returned;
+    const claimsReturnedRowsLackNct = new RegExp(
+      `\\b(?:${returned}|these|this result|returned)\\b[^.]{0,40}\\b(?:no|lacks?|missing)\\b[^.]{0,30}\\bnct\\b` +
+        `|\\b(?:no|lacks?|missing)\\b[^.]{0,30}\\bnct\\b[^.]{0,40}\\b(?:${returned}|these|this result|returned)\\b`,
+      'i',
+    );
+    expect(text).not.toMatch(claimsReturnedRowsLackNct);
+
     expect(checkGroundedness(text, results).ungrounded).toEqual([]);
   }, 180_000);
 

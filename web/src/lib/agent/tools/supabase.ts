@@ -351,10 +351,12 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
             table: 'clinical_trials',
             ...(unlinked !== undefined ? { unlinked } : {}),
             hint:
-              (unlinked !== undefined ? `${unlinked} rows in scope` : 'Rows in scope') +
-              ' have no nct_id and cannot be filtered by phase or ' +
-              'status. They are excluded from this result - that is a linkage gap, not evidence ' +
-              'that they fail the filter.',
+              'Every row returned here carries an nct_id - the registry join requires one. ' +
+              'Separately, ' +
+              (unlinked !== undefined ? `${unlinked} rows in scope` : 'other rows in scope') +
+              ' have no nct_id at all and cannot be filtered by phase or status, so they are ' +
+              'excluded from this result: that is a linkage gap, not evidence that they fail the ' +
+              'filter.',
           };
         }
 
@@ -399,7 +401,12 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
                 };
               })()
             : {}),
-          ...(spec.caveat ? { caveat: spec.caveat } : {}),
+          // The static caveat describes an ordinary query, where a returned row
+          // may itself lack an nct_id. Under an active via-join that is no
+          // longer possible - every returned row passed the `!inner` join - so
+          // the caveat would be false about this result set, not merely
+          // redundant with `viaJoin.hint`. Suppressed here rather than merged.
+          ...(spec.caveat && !viaJoin ? { caveat: spec.caveat } : {}),
         };
 
         if (rows.length === 0) {
