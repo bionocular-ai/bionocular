@@ -630,6 +630,40 @@ describe('trial_outcomes projection', () => {
   });
 });
 
+describe('tool description text', () => {
+  it('tells the model a via-filter joins through the registry and what that excludes', () => {
+    const tools = toolsWith();
+
+    expect(tools.query_proprietary_data.description).toMatch(/via clinical_trials/);
+    expect(tools.query_proprietary_data.description).toMatch(/excludes rows with no nct_id/);
+    expect(tools.query_proprietary_data.description).toMatch(/coverage\.viaJoin/);
+  });
+
+  it('describes `detailed` as the full endpoint set on trial_outcomes, not a clinical_trials-only column list', () => {
+    const tools = toolsWith();
+    // The SDK types `inputSchema` as its own `FlexibleSchema`, which erases the
+    // zod object's `.shape` - the schema passed in is still a real ZodObject at
+    // runtime, so this reaches back through that type to read field descriptions.
+    const { detail, phase, status } = (
+      tools.query_proprietary_data.inputSchema as unknown as { shape: Record<string, { description?: string }> }
+    ).shape;
+
+    expect(detail.description).toMatch(/trial_outcomes/);
+    expect(detail.description).toMatch(/efficacy and safety endpoint/);
+    // The old wording justified `detailed` only in clinical_trials terms, which
+    // steered the model away from the one table where `detailed` holds the
+    // endpoints the reference question asks for.
+    expect(detail.description).not.toMatch(/only when the question is about those columns/);
+
+    // phase/status used to claim "clinical_trials only", which is now false:
+    // both are resolved through the via-join on the other four tables.
+    expect(phase.description).not.toMatch(/clinical_trials only\.?$/);
+    expect(status.description).not.toMatch(/^clinical_trials only\./);
+    expect(phase.description).toMatch(/via the join/);
+    expect(status.description).toMatch(/via the join/);
+  });
+});
+
 describe('via joins', () => {
   it('resolves phase and status through the via table, and nothing else requested', () => {
     expect(viaFilters('trial_outcomes', ['sponsor', 'phase', 'status', 'drug'])).toEqual([

@@ -177,7 +177,9 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         "Query Bionocular's own oncology database. This is the only source of data available - " +
         'there is no live registry or literature lookup. Every query is automatically restricted ' +
         `to the dashboard's cancer type, so do not ask for one.\n\nTables:\n${describeTables()}\n\n` +
-        'Filters are named parameters, not column expressions.\n\n' +
+        'Filters are named parameters, not column expressions; one marked "via clinical_trials" ' +
+          'above joins through the trial registry instead of reading a column on that table, so it ' +
+          'excludes rows with no nct_id - `coverage.viaJoin` reports how many that excluded.\n\n' +
         `Returns at most ${MAX_ROWS} rows, and every result carries a coverage report: ` +
         '`matched` is how many rows exist in total, `returned` is how many you got, and ' +
         '`complete` says whether you are looking at all of them. When `complete` is false, ' +
@@ -200,15 +202,19 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
               'reading a table end to end.',
           ),
         sponsor: z.string().min(2).optional().describe('Substring match on the sponsor name.'),
-        phase: z.enum(PHASE_VALUES).optional().describe('clinical_trials only.'),
+        phase: z
+          .enum(PHASE_VALUES)
+          .optional()
+          .describe('Direct on clinical_trials; resolved via the join named above on the other tables that support it.'),
         status: z
           .array(z.enum(STATUS_VALUES))
           .min(1)
           .optional()
           .describe(
-            'clinical_trials only. Recruitment status; several values match any of them. ' +
-              'Trials still under way are RECRUITING, ACTIVE_NOT_RECRUITING, ' +
-              'NOT_YET_RECRUITING and ENROLLING_BY_INVITATION.',
+            'Direct on clinical_trials; resolved via the join named above on the other tables ' +
+              'that support it. Recruitment status; several values match any of them. Trials ' +
+              'still under way are RECRUITING, ACTIVE_NOT_RECRUITING, NOT_YET_RECRUITING and ' +
+              'ENROLLING_BY_INVITATION.',
           ),
         drug: z
           .string()
@@ -219,11 +225,13 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           .enum(['concise', 'detailed'])
           .optional()
           .describe(
-            'How much of each row to return. `concise` carries the columns an answer is built ' +
-              'from; `detailed` adds provenance and secondary columns and costs about twice as ' +
-              'many tokens per row. Defaults to `concise`; ask for `detailed` only when the ' +
-              'question is about those columns - how a trial was classified, its conditions, ' +
-              'its keywords.',
+            'How much of each row to return. `concise` carries the columns an answer is usually ' +
+              "built from; `detailed` is the table's full column set, at roughly twice the tokens " +
+              'per row. On `trial_outcomes` that full set is every efficacy and safety endpoint - ' +
+              'PFS, OS, EFS, RFS, MFS, response and duration measures, and the adverse-event ' +
+              'families - so a question naming specific endpoints wants `detailed`. On other ' +
+              'tables it is provenance and classification detail: how a trial was classified, its ' +
+              'conditions, its keywords. Defaults to `concise`.',
           ),
         limit: z
           .number()
