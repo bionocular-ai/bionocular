@@ -107,12 +107,52 @@ describe('toTurnTable', () => {
     expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887', 'NCT06112314']);
   });
 
-  it('returns null for a turn with one query, which ToolStep already renders', () => {
-    expect(toTurnTable([trials])).toBeNull();
+  it("renders a turn's only query, since there is nothing to join and it is the answer", () => {
+    const table = toTurnTable([trials]);
+
+    expect(table?.rows).toHaveLength(2);
+    expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887']);
   });
 
-  it('ignores a failed query rather than joining against nothing', () => {
-    expect(toTurnTable([trials, { ok: false, reason: 'no_rows', table: 'trial_outcomes' }])).toBeNull();
+  it('renders a lone query with duplicate nct_ids, since there is no join spine to corrupt', () => {
+    // trial_outcomes is one row per treatment arm; two arms of the same trial
+    // share an nct_id. That rule protects a *join*, and a single query never
+    // joins anything.
+    const outcomes = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT03470922', arm_name: 'Relatlimab + Nivolumab', orr: 0.43 },
+        { nct_id: 'NCT03470922', arm_name: 'Nivolumab', orr: 0.34 },
+      ],
+    };
+
+    const table = toTurnTable([outcomes]);
+
+    expect(table?.rows).toHaveLength(2);
+    expect(table?.columns.map((c) => c.key)).toEqual(['arm_name', 'orr']);
+  });
+
+  it('renders a lone query with no nct_id column at all', () => {
+    const news = { ok: true, table: 'news_feed', rows: [{ url: 'https://example.test', title: 'x' }] };
+
+    const table = toTurnTable([news]);
+
+    expect(table?.rows).toHaveLength(1);
+    expect(table?.columns.map((c) => c.key)).toEqual(['url', 'title']);
+  });
+
+  it('renders the one successful query when the other query in the turn failed', () => {
+    // A failed query is not a second query - the turn still has exactly one
+    // answer to draw.
+    const table = toTurnTable([trials, { ok: false, reason: 'no_rows', table: 'trial_outcomes' }]);
+
+    expect(table?.rows).toHaveLength(2);
+    expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887']);
+  });
+
+  it('returns null for a turn where every query failed', () => {
+    expect(toTurnTable([{ ok: false, reason: 'no_rows', table: 'trial_outcomes' }])).toBeNull();
   });
 
   it('ignores a result with no trial key, which cannot be joined', () => {
