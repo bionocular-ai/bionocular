@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeSupabase, type FakeSupabase, type TableFixture } from './fake-supabase';
-import { projectionFor } from './schema';
+import { applyNamedFilter, describeTables, embedFor, projectionFor, viaFilters } from './schema';
 
 let fake: FakeSupabase;
 
@@ -445,11 +445,13 @@ describe('query_proprietary_data', () => {
     expect(fake.queries[0].filters.some((f) => f.operator === 'ilike')).toBe(false);
   });
 
-  it('refuses a status filter on tables that have no recruitment status', async () => {
-    const tools = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT00006368' }] } });
+  it('refuses a status filter on tables with no status, direct or via a join', async () => {
+    // trial_landscape resolves status through clinical_trials now; news_feed has
+    // no nct_id at all, so it gets no `via` and still refuses outright.
+    const tools = toolsWith({ news_feed: { rows: [{ url: 'https://example.test/a' }] } });
 
     const result = await tools.query_proprietary_data.execute!(
-      { table: 'trial_landscape', status: ['RECRUITING'], limit: 10 },
+      { table: 'news_feed', status: ['RECRUITING'], limit: 10 },
       RUN_OPTIONS,
     );
 
@@ -485,16 +487,18 @@ describe('query_proprietary_data', () => {
     expect((result as { coverage: { caveat?: string } }).coverage.caveat).toMatch(/observational/i);
   });
 
-  it('refuses a filter the table does not have instead of ignoring it', async () => {
-    const tools = toolsWith({ km_curves: { rows: [{ id: 'k1' }] } });
+  it('refuses a filter the table does not have, directly or via a join, instead of ignoring it', async () => {
+    // news_feed has no nct_id column at all, so it gets no `via` and stays the
+    // one table that still refuses phase outright.
+    const tools = toolsWith({ news_feed: { rows: [{ url: 'https://example.test/a' }] } });
 
     const result = await tools.query_proprietary_data.execute!(
-      { table: 'km_curves', phase: 'PHASE3', limit: 10 },
+      { table: 'news_feed', phase: 'PHASE3', limit: 10 },
       RUN_OPTIONS,
     );
 
     expect(result).toMatchObject({ ok: false, reason: 'unsupported_filter', filter: 'phase' });
-    expect((result as { supportedFilters: string[] }).supportedFilters).toEqual(['drug']);
+    expect((result as { supportedFilters: string[] }).supportedFilters).toEqual([]);
   });
 
   it('turns an unknown column into a structured outcome, not a throw', async () => {
@@ -519,6 +523,84 @@ describe('clinical_trials projection', () => {
     // second label rather than a replacement.
     expect(projectionFor('clinical_trials', 'concise')).toContain('acronym');
     expect(projectionFor('clinical_trials', 'detailed')).toContain('acronym');
+  });
+});
+
+describe('via joins', () => {
+  it('resolves phase and status through the via table, and nothing else requested', () => {
+    expect(viaFilters('trial_outcomes', ['sponsor', 'phase', 'status', 'drug'])).toEqual([
+      'phase',
+      'status',
+    ]);
+    expect(viaFilters('trial_landscape', ['phase'])).toEqual(['phase']);
+    expect(viaFilters('km_curves', ['status'])).toEqual(['status']);
+  });
+
+  it('resolves nothing for a table with no via', () => {
+    expect(viaFilters('news_feed', ['phase', 'status'])).toEqual([]);
+    // clinical_trials holds phase/status directly, not through a join.
+    expect(viaFilters('clinical_trials', ['phase', 'status'])).toEqual([]);
+  });
+
+  it('embeds the join only when a via-filter is active', () => {
+    expect(embedFor('trial_outcomes', ['phase'])).toBe(',clinical_trials!inner(phases,overall_status)');
+  });
+
+  it('never embeds when no via-filter is active - an `!inner` join would drop unlinked rows', () => {
+    expect(embedFor('trial_outcomes', [])).toBe('');
+  });
+
+  it('never embeds for a table with no via, even if asked', () => {
+    expect(embedFor('news_feed', ['phase'])).toBe('');
+    expect(embedFor('clinical_trials', ['phase'])).toBe('');
+  });
+
+  it('applies a via array filter to the dotted clinical_trials path', () => {
+    const fake = createFakeSupabase();
+    const query = fake.from('trial_outcomes').select('id');
+
+    applyNamedFilter(query, 'trial_outcomes', 'phase', 'PHASE1');
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'contains',
+      column: 'clinical_trials.phases',
+      value: ['PHASE1'],
+    });
+  });
+
+  it('applies a via exact filter with eq for one value, in for several', () => {
+    const fake = createFakeSupabase();
+    const single = fake.from('km_curves').select('id');
+    applyNamedFilter(single, 'km_curves', 'status', ['ACTIVE_NOT_RECRUITING']);
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'eq',
+      column: 'clinical_trials.overall_status',
+      value: 'ACTIVE_NOT_RECRUITING',
+    });
+
+    const several = fake.from('km_curves').select('id');
+    applyNamedFilter(several, 'km_curves', 'status', ['RECRUITING', 'ACTIVE_NOT_RECRUITING']);
+    expect(fake.queries[1].filters).toContainEqual({
+      operator: 'in',
+      column: 'clinical_trials.overall_status',
+      value: ['RECRUITING', 'ACTIVE_NOT_RECRUITING'],
+    });
+  });
+
+  it('still returns null when neither the table nor its via-table has the filter', () => {
+    const fake = createFakeSupabase();
+    const query = fake.from('trial_landscape').select('id');
+
+    expect(applyNamedFilter(query, 'trial_landscape', 'sponsor', 'Bristol')).toBeNull();
+  });
+
+  it('names via-filters distinctly from a table\'s own filters in the tool description', () => {
+    const text = describeTables();
+
+    expect(text).toContain('filters: sponsor, drug (phase, status via clinical_trials)');
+    expect(text).toContain('filters: drug (phase, status via clinical_trials)');
+    // news_feed has no via at all - the description must not invent one.
+    expect(text).not.toMatch(/news_feed.*via clinical_trials/);
   });
 });
 

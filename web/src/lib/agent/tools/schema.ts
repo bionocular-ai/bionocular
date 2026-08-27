@@ -47,6 +47,15 @@ export interface AgentTableSpec {
   readonly conciseProjection?: string;
   /** Surfaced with every result for this table so the model can qualify it. */
   readonly caveat?: string;
+  /**
+   * Filters this table does not hold, resolved through a foreign key. PostgREST
+   * evaluates them server-side via an embedded `!inner` join, so a phase-scoped
+   * outcomes query is one request rather than a 1,134-key handoff no cap admits.
+   */
+  readonly via?: {
+    readonly table: 'clinical_trials';
+    readonly filters: Partial<Record<FilterName, AgentColumn>>;
+  };
 }
 
 const TABLE_DEFINITIONS = {
@@ -107,6 +116,13 @@ const TABLE_DEFINITIONS = {
     caveat:
       'Observational studies are excluded from this table by design. A trial missing here ' +
       'may still exist in clinical_trials.',
+    via: {
+      table: 'clinical_trials',
+      filters: {
+        phase: { column: 'phases', kind: 'array' },
+        status: { column: 'overall_status', kind: 'exact' },
+      },
+    },
   },
 
   trial_outcomes: {
@@ -127,6 +143,13 @@ const TABLE_DEFINITIONS = {
       'Roughly 44% of rows in this table have no nct_id - they are conference abstracts ' +
       'identified by abstract_id instead. A trial-ID filter cannot see them, so absence ' +
       'from an NCT-filtered result here is not evidence that no outcome data exists.',
+    via: {
+      table: 'clinical_trials',
+      filters: {
+        phase: { column: 'phases', kind: 'array' },
+        status: { column: 'overall_status', kind: 'exact' },
+      },
+    },
   },
 
   km_curves: {
@@ -140,6 +163,15 @@ const TABLE_DEFINITIONS = {
       'published_median, twin_median, rate_timepoint, published_rate, twin_rate, ' +
       'median_follow_up, match_pct, n_points, reference',
     filters: { drug: { column: 'arm_name', kind: 'scalar' } },
+    // Nullable FK: km_curves rows without a matching clinical_trials row simply
+    // never satisfy the `!inner` join, same as any other via-table.
+    via: {
+      table: 'clinical_trials',
+      filters: {
+        phase: { column: 'phases', kind: 'array' },
+        status: { column: 'overall_status', kind: 'exact' },
+      },
+    },
   },
 
   news_feed: {
@@ -231,7 +263,11 @@ export function applyNamedFilter<Q extends FilterableQuery<Q>>(
   name: FilterName,
   value: string | readonly string[],
 ): Q | null {
-  const spec = AGENT_TABLES[table].filters[name];
+  const direct = AGENT_TABLES[table].filters[name];
+  const viaColumn = AGENT_TABLES[table].via?.filters[name];
+  // `via` filters live on the joined `clinical_trials` row, so the dotted path
+  // is what PostgREST needs to filter on the embed rather than this table.
+  const spec = direct ?? (viaColumn && { column: `clinical_trials.${viaColumn.column}`, kind: viaColumn.kind });
   if (!spec) return null;
   if (spec.kind === 'exact') {
     const values = typeof value === 'string' ? [value] : value;
@@ -241,6 +277,28 @@ export function applyNamedFilter<Q extends FilterableQuery<Q>>(
   return spec.kind === 'array'
     ? query.contains(spec.column, [single])
     : query.ilike(spec.column, `%${single}%`);
+}
+
+/** The only filters a table's `via` join can resolve - `clinical_trials` is the only via-table. */
+export type ViaFilterName = Extract<FilterName, 'phase' | 'status'>;
+
+/** Which of the requested filters resolve through this table's `via` join. */
+export function viaFilters(table: AgentTable, requested: readonly FilterName[]): FilterName[] {
+  const via = AGENT_TABLES[table].via;
+  if (!via) return [];
+  return requested.filter((name) => via.filters[name] !== undefined);
+}
+
+/**
+ * The `!inner` embed to append to the select string, or '' when none applies.
+ *
+ * Never unconditional: an `!inner` join drops every row with no match on the
+ * joined side, and 44% of `trial_outcomes` rows have no `nct_id` at all. Only
+ * an active via-filter justifies paying that cost.
+ */
+export function embedFor(table: AgentTable, activeVia: readonly FilterName[]): string {
+  if (activeVia.length === 0) return '';
+  return AGENT_TABLES[table].via ? ',clinical_trials!inner(phases,overall_status)' : '';
 }
 
 /** Columns a caller may ask for by name, for error messages and descriptions. */
@@ -267,8 +325,15 @@ export function supportedFilters(table: AgentTable): FilterName[] {
 export function describeTables(): string {
   return AGENT_TABLE_NAMES.map((name) => {
     const spec = AGENT_TABLES[name];
-    const filters = supportedFilters(name);
-    const filterText = filters.length ? `filters: ${filters.join(', ')}` : 'no extra filters';
+    const direct = supportedFilters(name).join(', ');
+    const viaNames = spec.via ? Object.keys(spec.via.filters).join(', ') : '';
+    const via = viaNames ? `${viaNames} via ${spec.via!.table}` : '';
+    const filterText =
+      direct && via
+        ? `filters: ${direct} (${via})`
+        : direct || via
+          ? `filters: ${direct || via}`
+          : 'no extra filters';
     const trialText = spec.trialKey ? `trial key: ${spec.trialKey.column}` : 'no trial key';
     return `- \`${name}\`: ${spec.summary} (${trialText}; ${filterText})`;
   }).join('\n');
