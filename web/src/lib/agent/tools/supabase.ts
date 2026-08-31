@@ -104,14 +104,30 @@ function flattenViaEmbed(rows: unknown[]): unknown[] {
  *
  * `0` and `false` are real findings, not absence, so only the loader's own
  * not-found spellings are treated as empty.
+ *
+ * A null named by the row's own `is_nr` is the exception: that column is not
+ * empty, it is *not reached*, and the null is the only place the marker has to
+ * land. Dropping it left both the model and the rendered table reading "no DoR
+ * data" where the truth was "DoR not reached" - the opposite clinical claim.
  */
 const EMPTY_STRINGS = new Set(['', 'N/A', 'Not found']);
+
+/** Column names this row marks as censored rather than missing. */
+function censoredColumns(row: Record<string, unknown>): readonly unknown[] {
+  const notReached = row.is_nr;
+  return Array.isArray(notReached) ? notReached : [];
+}
 
 export function dropEmpty(rows: unknown[]): unknown[] {
   return rows.map((row) => {
     if (typeof row !== 'object' || row === null) return row;
+    const censored = censoredColumns(row as Record<string, unknown>);
     const out: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(row as Record<string, unknown>)) {
+      if ((value === null || value === undefined) && censored.includes(key)) {
+        out[key] = null;
+        continue;
+      }
       if (value === null || value === undefined) continue;
       if (typeof value === 'string' && EMPTY_STRINGS.has(value)) continue;
       if (Array.isArray(value) && value.length === 0) continue;
