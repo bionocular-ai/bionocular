@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { FilterChips } from '@/components/dashboard/FilterChips';
 import { MODALITY_VALUES, slugToCategory } from '@/lib/dashboard-constants';
+import { PHASE_MAP, STATUS_MAP } from '@/lib/clinical-trials-enums';
 import BarChart from '@/components/charts/BarChart';
 import DivergingBarChart from '@/components/charts/DivergingBarChart';
 import BubbleChart from '@/components/charts/BubbleChart';
@@ -60,6 +61,16 @@ const RESOURCE_TYPE_OPTIONS = [
   { value: 'conference', label: 'Conference' },
   { value: 'publication', label: 'Publications' },
   { value: 'live_feed_upcoming', label: 'Live Feed Upcoming', italic: true },
+];
+
+/**
+ * Derived from the CT.gov enum map rather than the display-name list in
+ * dashboard-constants, so the value in the URL is the value the query uses and
+ * the chip label is the same string the rest of the app shows for that phase.
+ */
+const PHASE_FILTER_OPTIONS = [
+  { value: 'all', label: 'All' },
+  ...Object.entries(PHASE_MAP).map(([value, label]) => ({ value, label })),
 ];
 
 const FUNDING_TYPE_OPTIONS = [
@@ -332,9 +343,26 @@ export default function CategoryAnalyticsPage() {
   }, [mode]);
 
   // Filter states - initialized based on mode
+  // Phase, status and funding may arrive from the agent's hand-off link. Read
+  // through useSearchParams like `mode` above, not from window.location, so the
+  // first client render matches the prerendered HTML.
+  const [phase, setPhase] = useState(() => searchParams.get('phase') ?? 'all');
+  const [status, setStatus] = useState<string[]>(() => {
+    const raw = searchParams.get('status');
+    return raw ? raw.split(',').filter(Boolean) : [];
+  });
   const [modality, setModality] = useState('all');
   const [resourceType, setResourceType] = useState<'all' | 'conference' | 'publication'>('all');
-  const [fundingType, setFundingType] = useState<'all' | 'industry' | 'non-industry'>('industry');
+  // Defaults to industry, as it always has. A hand-off link pins it explicitly,
+  // because that default alone hides 96 of the 189 Phase 1 rows the agent shows.
+  const [fundingType, setFundingType] = useState<'all' | 'industry' | 'non-industry'>(
+    () => {
+      const fromUrl = searchParams.get('funding');
+      return fromUrl === 'all' || fromUrl === 'industry' || fromUrl === 'non-industry'
+        ? fromUrl
+        : 'industry';
+    }
+  );
   const [advancedLineOfTherapy, setAdvancedLineOfTherapy] = useState('all');
   // Store raw treatment selections (merged approved + non-approved)
   const [rawSelectedTreatments, setRawSelectedTreatments] = useState<string[]>([]);
@@ -484,6 +512,8 @@ export default function CategoryAnalyticsPage() {
       cancer_type: categorySlug || undefined,
       modality: modality !== 'all' ? modality : undefined,
       funding_type: fundingType as 'all' | 'industry' | 'non-industry',
+      phase: phase !== 'all' ? phase : undefined,
+      status: status.length > 0 ? status : undefined,
       limit: 2000, // Request all matching records
     };
 
@@ -493,7 +523,7 @@ export default function CategoryAnalyticsPage() {
     }
 
     return filters;
-  }, [resourceType, categorySlug, modality, fundingType, safetyParam, efficacyParam]);
+  }, [resourceType, categorySlug, modality, fundingType, phase, status, safetyParam, efficacyParam]);
 
   // Fetch analytics data from backend with filters
   const { data: analyticsData, isLoading, error } = useQuery({
@@ -1358,6 +1388,47 @@ export default function CategoryAnalyticsPage() {
               value={fundingType}
               onChange={(value) => setFundingType(value as 'all' | 'industry' | 'non-industry')}
             />
+            <div className="w-px h-4 bg-(--brand-border)" />
+            <FilterChips
+              label="PHASE"
+              size="sm"
+              options={PHASE_FILTER_OPTIONS}
+              value={phase}
+              onChange={setPhase}
+            />
+            {/* Status arrives from a hand-off link and is applied to the query,
+                but it is not a chip: STATUS_OPTIONS here (Open/Closed/…) is a
+                different vocabulary from the nine CT.gov values the agent emits,
+                and the agent can send several at once. Reconciling the two
+                vocabularies is its own job; carrying the filter honestly is not.
+                ponytail: read-only pill, promote to a real control when someone
+                needs to set status from the hub itself. */}
+            {status.length > 0 ? (
+              <>
+                <div className="w-px h-4 bg-(--brand-border)" />
+                <button
+                  type="button"
+                  onClick={() => setStatus([])}
+                  title="Clear status filter"
+                  className={cn(
+                    'inline-flex items-center gap-1.5 h-7 rounded-full border border-(--brand-border)',
+                    'bg-(--brand-accent-light) pl-2.5 pr-2 text-xs text-(--brand-primary) transition',
+                    'hover:border-(--brand-primary)'
+                  )}
+                >
+                  <span
+                    className="font-medium uppercase tracking-[0.1em] text-[10px] opacity-70"
+                    style={{ fontFamily: 'var(--font-mono)' }}
+                  >
+                    STATUS
+                  </span>
+                  <span className="font-medium">
+                    {status.map((value) => STATUS_MAP[value] ?? value).join(', ')}
+                  </span>
+                  <X className="h-3 w-3 flex-shrink-0 opacity-70" />
+                </button>
+              </>
+            ) : null}
             <div className="w-px h-4 bg-(--brand-border)" />
             <FilterChips
               label="LINE"

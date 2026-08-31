@@ -7,6 +7,7 @@ import { Check, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { remarkNctLinks } from '@/lib/agent/remark-nct-links';
 import { toTurnTable } from '@/lib/agent/turn-table';
+import { efficacyLinkFor } from '@/lib/agent/efficacy-link';
 import { createMarkdownComponents } from './markdown-components';
 import { ToolStep, type ToolState } from './ToolStep';
 import { TurnTable } from './TurnTable';
@@ -65,9 +66,18 @@ export function AssistantTurn({ parts, cancerType, isStreaming }: AssistantTurnP
     .join('\n\n')
     .trim();
 
+  const toolParts = useMemo(() => parts.filter(isToolPart), [parts]);
+
   const turnTable = useMemo(
-    () => toTurnTable(parts.filter(isToolPart).map((part) => part.output)),
-    [parts]
+    () => toTurnTable(toolParts.map((part) => part.output)),
+    [toolParts]
+  );
+
+  // Built from the tool inputs rather than the rows: the filters are what the
+  // hub needs, and a capped result cannot say what was asked for.
+  const efficacyLink = useMemo(
+    () => efficacyLinkFor(toolParts, cancerType),
+    [toolParts, cancerType]
   );
 
   const handleCopy = async () => {
@@ -115,7 +125,9 @@ export function AssistantTurn({ parts, cancerType, isStreaming }: AssistantTurnP
         );
       })}
 
-      {turnTable ? <TurnTable table={turnTable} cancerType={cancerType} /> : null}
+      {turnTable ? (
+        <TurnTable table={turnTable} cancerType={cancerType} efficacyLink={efficacyLink} />
+      ) : null}
 
       {isStreaming && parts.length === 0 ? (
         <div className="relative mb-1.5">
