@@ -20,8 +20,11 @@
 
 import {
   ABSENT,
+  MARKER_COLUMNS,
   formatCell,
+  formatRowCell,
   humanizeColumn,
+  orderColumns,
   toResultTable,
   type ResultColumn,
   type ResultTable,
@@ -135,27 +138,29 @@ export function toTurnTable(outputs: unknown[]): ResultTable | null {
     }
   }
 
-  const folded: string[] = [KEY, ...FOLDED_TRIAL_FIELDS, FALLBACK.source];
+  const folded: string[] = [KEY, ...FOLDED_TRIAL_FIELDS, FALLBACK.source, ...MARKER_COLUMNS];
   const hasTreatmentName = queries.some((rows) => rows.some((row) => FALLBACK.target in row));
-  const columns: string[] = [KEY];
+  const discovered: string[] = [KEY];
   // Nothing curated joined it, so the registry list is the only treatment there
   // is. It stands as its own column where treatment_name would otherwise have
   // sat - directly after the key - rather than trailing behind unrelated
-  // columns like orr or median_pfs.
-  if (!hasTreatmentName) columns.push(FALLBACK.source);
+  // columns like orr or median_pfs. `orderColumns` ranks `interventions` among
+  // the treatment names, so that placement survives the sort below.
+  if (!hasTreatmentName) discovered.push(FALLBACK.source);
   for (const rows of queries) {
     for (const row of rows) {
       for (const column of Object.keys(row)) {
-        if (folded.includes(column) || columns.includes(column)) continue;
-        columns.push(column);
+        if (folded.includes(column) || discovered.includes(column)) continue;
+        discovered.push(column);
       }
     }
   }
+  const columns = orderColumns(discovered);
 
   const cells = [...merged.values()].map((row) =>
     columns.map((column) => {
       if (column === FALLBACK.target) return treatmentCell(row);
-      return formatCell(row[column]);
+      return formatRowCell(row, column);
     }),
   );
 

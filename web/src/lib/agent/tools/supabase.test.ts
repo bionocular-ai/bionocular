@@ -902,6 +902,23 @@ describe('dropEmpty', () => {
   it('leaves non-object rows untouched', () => {
     expect(dropEmpty(['x', 1, null])).toEqual(['x', 1, null]);
   });
+
+  it('keeps a null the row\'s own is_nr names, because it means "not reached"', () => {
+    // A not-reached median stores NULL in the endpoint column and the column
+    // name in is_nr. Stripping the null deletes the only place the marker had
+    // to land, so both the model and the table read "no DoR data" when the
+    // truth is "DoR not reached" - the opposite clinical claim.
+    const rows = dropEmpty([{ nct_id: 'NCT03470922', median_dor: null, is_nr: ['median_dor'] }]);
+
+    expect(rows[0]).toEqual({ nct_id: 'NCT03470922', median_dor: null, is_nr: ['median_dor'] });
+  });
+
+  it('still drops a null no marker names, on a row that carries markers for other columns', () => {
+    const rows = dropEmpty([{ median_dor: null, median_os: null, is_nr: ['median_dor'] }]);
+
+    expect(rows[0]).toHaveProperty('median_dor');
+    expect(rows[0]).not.toHaveProperty('median_os');
+  });
 });
 
 describe('missingTrialKeys after dropEmpty removes a null key entirely', () => {

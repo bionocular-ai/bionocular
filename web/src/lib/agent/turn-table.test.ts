@@ -44,8 +44,8 @@ describe('toTurnTable', () => {
     expect(table?.rows).toHaveLength(2);
     expect(table?.columns.map((c) => c.key)).toEqual([
       'nct_id',
-      'overall_status',
       'treatment_name',
+      'overall_status',
       'modality',
     ]);
   });
@@ -248,5 +248,47 @@ describe('toTurnTable', () => {
 
     expect(table?.rows).toHaveLength(53);
     expect(new Set(table?.rows.map((row) => row[0])).size).toBe(53);
+  });
+
+  it('orders the joined columns the same way a single query is ordered', () => {
+    // One ordering helper, called from both paths. Fixing the order only where
+    // the report happened to look leaves the sibling caller rendering 98
+    // columns led by machine keys.
+    const outcomes = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT03470922', id: 'o1', source_name: 'ASCO', orr: 43 },
+        { nct_id: 'NCT07530887', id: 'o2', source_name: 'ESMO', orr: 12 },
+      ],
+    };
+
+    const table = toTurnTable([trials, outcomes]);
+
+    expect(table?.columns.map((c) => c.key)).toEqual([
+      'nct_id',
+      'interventions',
+      'overall_status',
+      'orr',
+      'id',
+      'source_name',
+    ]);
+  });
+
+  it('renders a censored measurement on the joined path too, not only on a lone query', () => {
+    const outcomes = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT03470922', median_dor: null, is_nr: ['median_dor'] },
+        { nct_id: 'NCT07530887', median_dor: 14.2, is_nr: [] },
+      ],
+    };
+
+    const table = toTurnTable([trials, outcomes]);
+
+    expect(cell(table, 0, 'median_dor')).toBe('NR');
+    expect(cell(table, 1, 'median_dor')).toBe('14.2');
+    expect(table?.columns.map((c) => c.key)).not.toContain('is_nr');
   });
 });

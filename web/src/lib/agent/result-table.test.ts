@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toResultTable } from './result-table';
+import { orderColumns, toResultTable } from './result-table';
 
 describe('toResultTable', () => {
   it('lists every row the tool returned, never a sample', () => {
@@ -130,6 +130,97 @@ describe('toResultTable', () => {
       ],
     });
 
-    expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'Line of therapy', 'ORR']);
+    // Lead order puts orr ahead of the columns the lead list does not name.
+    expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'ORR', 'Line of therapy']);
+  });
+});
+
+describe('censored measurements', () => {
+  // `is_nr` and `is_lt` hold column *names*, not values. A null median_dor whose
+  // name appears in is_nr means "not reached" - the opposite clinical claim from
+  // "no data" - and rendering it as ABSENT states the opposite of the truth.
+  it('renders a not-reached measurement as NR rather than as an absence', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT03470922', median_dor: null, is_nr: ['median_dor'] },
+        { nct_id: 'NCT07530887', median_dor: 14.2, is_nr: [] },
+      ],
+    });
+
+    expect(table?.rows[0]).toEqual(['NCT03470922', 'NR']);
+    expect(table?.rows[1]).toEqual(['NCT07530887', '14.2']);
+  });
+
+  it('renders a censored value as a bound, keeping the number it was stored as', () => {
+    // "<1%" is loaded as the number 1 plus the column name in is_lt. Rendered
+    // bare it reads as a measured 1%.
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT03470922', orr: 1, is_lt: ['orr'] },
+        { nct_id: 'NCT07530887', orr: 43, is_lt: [] },
+      ],
+    });
+
+    expect(table?.rows[0]).toEqual(['NCT03470922', '<1']);
+    expect(table?.rows[1]).toEqual(['NCT07530887', '43']);
+  });
+
+  it('never renders the marker columns themselves, which describe other cells', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT03470922', median_dor: null, orr: 1, is_nr: ['median_dor'], is_lt: ['orr'] },
+        { nct_id: 'NCT07530887', median_dor: 14.2, orr: 43, is_nr: [], is_lt: [] },
+      ],
+    });
+
+    // Lead order, not projection order: ORR is a headline response metric and
+    // ranks ahead of duration of response.
+    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'orr', 'median_dor']);
+  });
+
+  it('leaves a null alone when no marker names it', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT03470922', median_dor: null, is_nr: ['median_os'] },
+        { nct_id: 'NCT07530887', median_dor: 14.2, is_nr: [] },
+      ],
+    });
+
+    expect(table?.rows[0]).toEqual(['NCT03470922', '—']);
+  });
+});
+
+describe('orderColumns', () => {
+  it('leads with the identity and headline columns, sinking machine keys to the tail', () => {
+    // The rendered order used to be whatever the projection listed: 98 columns
+    // led by id/source_type/abstract_id, with nct_id 5th and median_pfs 16th.
+    expect(
+      orderColumns(['id', 'source_type', 'abstract_id', 'nct_id', 'median_pfs', 'generic_name']),
+    ).toEqual(['nct_id', 'generic_name', 'median_pfs', 'id', 'source_type', 'abstract_id']);
+  });
+
+  it('keeps discovery order among columns it does not name, so an unknown table is untouched', () => {
+    expect(orderColumns(['url', 'title', 'date'])).toEqual(['url', 'title', 'date']);
+  });
+
+  it('orders a result table, not just a bare key list', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { id: 'o1', source_name: 'ASCO', nct_id: 'NCT03470922', orr: 43 },
+        { id: 'o2', source_name: 'ESMO', nct_id: 'NCT07530887', orr: 12 },
+      ],
+    });
+
+    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'orr', 'id', 'source_name']);
   });
 });
