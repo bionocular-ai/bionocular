@@ -926,6 +926,10 @@ export interface AnalyticsFilters {
   modality?: string;
   line_of_treatment?: string;
   has_metric?: string;
+  /** CT.gov phase enum, e.g. `PHASE1`. Resolved through the clinical_trials join. */
+  phase?: string;
+  /** CT.gov status enums; any of them matches. Resolved through the same join. */
+  status?: string[];
   skip?: number;
   limit?: number;
 }
@@ -1238,11 +1242,19 @@ export const analyticsApi = {
     // migration 20260518000000_trial_outcomes_nct_fk.sql).
     // Industry:     !inner join — only rows with a matching INDUSTRY clinical trial.
     // Non-Industry: !left join + OR — rows absent from clinical_trials or non-INDUSTRY class.
-    const fundingSelectMap: Record<string, string> = {
-      industry: '*, clinical_trials!inner(lead_sponsor_class)',
-      'non-industry': '*, clinical_trials!left(lead_sponsor_class)',
-    };
-    const outcomesSelect = (filters.funding_type && fundingSelectMap[filters.funding_type]) || '*';
+    // Phase and status live on clinical_trials, not here, so they reach this
+    // table through the same join — the agent resolves them the same way
+    // (schema.ts `via`). An `!inner` join is what makes such a filter mean
+    // anything: an outcome row with no nct_id has no phase, so it cannot pass a
+    // phase filter. That also makes it the stricter of the two joins, so a
+    // registry filter upgrades `!left` to `!inner`.
+    const registryFiltered = Boolean(filters.phase || filters.status?.length);
+    const wantsJoin = registryFiltered || filters.funding_type === 'industry' || filters.funding_type === 'non-industry';
+    const joinKind = registryFiltered || filters.funding_type === 'industry' ? '!inner' : '!left';
+    const embedColumns = registryFiltered
+      ? 'lead_sponsor_class, phases, overall_status'
+      : 'lead_sponsor_class';
+    const outcomesSelect = wantsJoin ? `*, clinical_trials${joinKind}(${embedColumns})` : '*';
     // any: select string determines Supabase return-type generics, which vary per funding path.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let query: any = supabase.from('trial_outcomes').select(outcomesSelect).limit(filters.limit || 200);
@@ -1265,7 +1277,17 @@ export const analyticsApi = {
     if (filters.funding_type === 'industry') {
       query = query.eq('clinical_trials.lead_sponsor_class', 'INDUSTRY');
     } else if (filters.funding_type === 'non-industry') {
-      query = query.or('lead_sponsor_class.neq.INDUSTRY,lead_sponsor_class.is.null', { foreignTable: 'clinical_trials' });
+      // The `is.null` branch is what keeps rows with no joined trial under the
+      // `!left` join. Combined with a registry filter the join is `!inner`, so
+      // those rows are already gone and only `neq` can match — the branch is
+      // dead in that combination rather than wrong.
+      query = query.or('lead_sponsor_class.neq.INDUSTRY,lead_sponsor_class.is.null', { referencedTable: 'clinical_trials' });
+    }
+    if (filters.phase) {
+      query = query.contains('clinical_trials.phases', [filters.phase]);
+    }
+    if (filters.status?.length) {
+      query = query.in('clinical_trials.overall_status', filters.status);
     }
 
     const { data, error } = await query as { data: Record<string, unknown>[] | null; error: Error | null };

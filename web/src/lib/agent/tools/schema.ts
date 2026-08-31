@@ -14,7 +14,15 @@
  * `has_outcomes` flag inherits the `trial_outcomes` linkage gap described below.
  */
 
-export type ColumnKind = 'array' | 'scalar' | 'exact';
+/**
+ * `partition` has one implementation on purpose. `funding` is not a value to
+ * match but a two-way split of one, and the alternative - `exact` over the
+ * eight non-INDUSTRY enum values - would silently exclude a row whose
+ * `lead_sponsor_class` is null. Measured 2026-08-31 there are none, in
+ * cutaneous melanoma or across all 4,350 registry rows, but `.in()` would make
+ * the first one that appears vanish from both halves rather than one.
+ */
+export type ColumnKind = 'array' | 'scalar' | 'exact' | 'partition';
 
 export interface AgentColumn {
   readonly column: string;
@@ -41,12 +49,7 @@ export interface AgentTableSpec {
    * decides the operator the same way it does for cancer scope: `array` means
    * `.contains()`, `scalar` means a case-insensitive substring match.
    */
-  readonly filters: {
-    readonly sponsor?: AgentColumn;
-    readonly phase?: AgentColumn;
-    readonly status?: AgentColumn;
-    readonly drug?: AgentColumn;
-  };
+  readonly filters: Partial<Record<FilterName, AgentColumn>>;
   /**
    * The columns an answer is actually built from. Falls back to `projection`
    * where a table has no leaner form worth the split.
@@ -189,6 +192,10 @@ const TABLE_DEFINITIONS = {
       // Exact enum value, so `exact` rather than the default substring match:
       // `ACTIVE_NOT_RECRUITING` must not also match on `NOT_YET_RECRUITING`.
       status: { column: 'overall_status', kind: 'exact' },
+      // Distinct from `sponsor`, which is a substring on the sponsor's *name*.
+      // This one splits the registry's sponsor *class* the way the product
+      // does, and the way the Efficacy Hub's FUNDING chip already labels it.
+      funding: { column: 'lead_sponsor_class', kind: 'partition' },
     },
   },
 
@@ -217,6 +224,7 @@ const TABLE_DEFINITIONS = {
       filters: {
         phase: { column: 'phases', kind: 'array' },
         status: { column: 'overall_status', kind: 'exact' },
+        funding: { column: 'lead_sponsor_class', kind: 'partition' },
       },
     },
   },
@@ -259,6 +267,7 @@ const TABLE_DEFINITIONS = {
       filters: {
         phase: { column: 'phases', kind: 'array' },
         status: { column: 'overall_status', kind: 'exact' },
+        funding: { column: 'lead_sponsor_class', kind: 'partition' },
       },
     },
   },
@@ -281,6 +290,7 @@ const TABLE_DEFINITIONS = {
       filters: {
         phase: { column: 'phases', kind: 'array' },
         status: { column: 'overall_status', kind: 'exact' },
+        funding: { column: 'lead_sponsor_class', kind: 'partition' },
       },
     },
   },
@@ -312,6 +322,7 @@ export const AGENT_TABLE_NAMES = Object.keys(AGENT_TABLES) as [AgentTable, ...Ag
  */
 export interface FilterableQuery<Q> {
   eq(column: string, value: unknown): Q;
+  neq(column: string, value: unknown): Q;
   in(column: string, values: readonly unknown[]): Q;
   contains(column: string, value: unknown): Q;
   overlaps(column: string, values: readonly unknown[]): Q;
@@ -355,7 +366,14 @@ export function applyTrialKeys<Q extends FilterableQuery<Q>>(
   return nctIds.length === 1 ? query.eq(key.column, nctIds[0]) : query.in(key.column, nctIds);
 }
 
-export type FilterName = 'sponsor' | 'phase' | 'status' | 'drug';
+export type FilterName = 'sponsor' | 'phase' | 'status' | 'drug' | 'funding';
+
+/** The two halves the product - and the Efficacy Hub's chip - divides sponsors into. */
+export const FUNDING_VALUES = ['industry', 'non-industry'] as const;
+export type FundingValue = (typeof FUNDING_VALUES)[number];
+
+/** The one `lead_sponsor_class` value that counts as industry; everything else is not. */
+const INDUSTRY_CLASS = 'INDUSTRY';
 
 /**
  * Apply one named filter, or return null if this table does not support it -
@@ -385,13 +403,22 @@ export function applyNamedFilter<Q extends FilterableQuery<Q>>(
     return values.length === 1 ? query.eq(spec.column, values[0]) : query.in(spec.column, values);
   }
   const single = typeof value === 'string' ? value : value[0];
+  // `neq` rather than the hub's `or(...neq..., ...is.null)`: that null branch
+  // exists for the hub's `!left` join, where null means "no joined trial row".
+  // A via-filter is always `!inner`, so such a row is already gone, and the
+  // column itself is never null (measured). Same partition, different join.
+  if (spec.kind === 'partition') {
+    return single === 'industry'
+      ? query.eq(spec.column, INDUSTRY_CLASS)
+      : query.neq(spec.column, INDUSTRY_CLASS);
+  }
   return spec.kind === 'array'
     ? query.contains(spec.column, [single])
     : query.ilike(spec.column, `%${single}%`);
 }
 
 /** The only filters a table's `via` join can resolve - `clinical_trials` is the only via-table. */
-export type ViaFilterName = Extract<FilterName, 'phase' | 'status'>;
+export type ViaFilterName = Extract<FilterName, 'phase' | 'status' | 'funding'>;
 
 /**
  * Which of the requested filters resolve through this table's `via` join.
@@ -417,8 +444,20 @@ export function viaFilters(table: AgentTable, requested: readonly FilterName[]):
  * an active via-filter justifies paying that cost.
  */
 export function embedFor(table: AgentTable, activeVia: readonly FilterName[]): string {
-  if (activeVia.length === 0) return '';
-  return AGENT_TABLES[table].via ? ',clinical_trials!inner(phases,overall_status)' : '';
+  const via = AGENT_TABLES[table].via;
+  if (!via || activeVia.length === 0) return '';
+  // Derived from the filters that actually fired, not a fixed column list: a
+  // funding-only query has no business embedding `phases`, which
+  // `flattenViaEmbed` would lift onto every row and turn into a table column.
+  const columns = [
+    ...new Set(
+      activeVia
+        .map((name) => via.filters[name as ViaFilterName]?.column)
+        .filter((column): column is string => column !== undefined),
+    ),
+  ];
+  if (columns.length === 0) return '';
+  return `,${via.table}!inner(${columns.join(',')})`;
 }
 
 /** Columns a caller may ask for by name, for error messages and descriptions. */

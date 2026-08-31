@@ -18,6 +18,7 @@ import {
   projectionFor,
   supportedFilters,
   viaFilters,
+  FUNDING_VALUES,
   type AgentColumn,
   type AgentTable,
   type FilterName,
@@ -250,6 +251,16 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           .min(2)
           .optional()
           .describe('Substring match on the treatment or arm name for this table.'),
+        funding: z
+          .enum(FUNDING_VALUES)
+          .optional()
+          .describe(
+            'Who sponsors the trial, as the registry classes it. Not the same as `sponsor`, ' +
+              'which matches the sponsor\'s name as a substring - asking for sponsor "industry" ' +
+              'matches nothing. `industry` is lead_sponsor_class INDUSTRY; `non-industry` is ' +
+              'every other class (NIH, NETWORK, OTHER_GOV, FED, OTHER). Direct on ' +
+              'clinical_trials; resolved via the join named above on the other tables.',
+          ),
         detail: z
           .enum(['concise', 'detailed'])
           .optional()
@@ -272,7 +283,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
       }),
       execute: async (args) =>
         runTool('query_proprietary_data', traceId, args, async () => {
-        const { table, nctIds, sponsor, phase, status, drug, detail, limit } = args;
+        const { table, nctIds, sponsor, phase, status, drug, funding, detail, limit } = args;
         const spec = AGENT_TABLES[table];
 
         // Cancer scope is applied to every query, so on its own it narrows
@@ -280,7 +291,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         // a table read: 500 unfiltered `trial_landscape` rows measured 48k
         // tokens and carried 3 that mattered. The default window still allows an
         // unfiltered browse, which is how "what exists here" gets answered.
-        const narrowed = [nctIds, sponsor, phase, status, drug].some((f) => f !== undefined);
+        const narrowed = [nctIds, sponsor, phase, status, drug, funding].some((f) => f !== undefined);
         if (!narrowed && limit > DEFAULT_ROWS) {
           const filters = supportedFilters(table);
           return {
@@ -312,6 +323,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
             ['phase', phase],
             ['status', status],
             ['drug', drug],
+            ['funding', funding],
           ] as const
         )
           .filter(([, v]) => v !== undefined)
@@ -329,6 +341,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           ['phase', phase],
           ['status', status],
           ['drug', drug],
+          ['funding', funding],
         ];
         const applied: Record<string, string | readonly string[]> = {};
         for (const [name, value] of named) {
@@ -382,6 +395,13 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
             });
           }
           const unlinked = unlinkedError ? undefined : (unlinkedCount ?? undefined);
+          // Names the filters that actually fired rather than a fixed
+          // "phase or status": a funding-scoped result would otherwise claim
+          // the exclusion was about a filter the caller never asked for.
+          const byName =
+            activeVia.length === 1
+              ? activeVia[0]
+              : `${activeVia.slice(0, -1).join(', ')} or ${activeVia[activeVia.length - 1]}`;
           viaJoin = {
             table: 'clinical_trials',
             ...(unlinked !== undefined ? { unlinked } : {}),
@@ -389,7 +409,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
               'Every row returned here carries an nct_id - the registry join requires one. ' +
               'Separately, ' +
               (unlinked !== undefined ? `${unlinked} rows in scope` : 'other rows in scope') +
-              ' have no nct_id at all and cannot be filtered by phase or status, so they are ' +
+              ` have no nct_id at all and cannot be filtered by ${byName}, so they are ` +
               'excluded from this result: that is a linkage gap, not evidence that they fail the ' +
               'filter.',
           };
