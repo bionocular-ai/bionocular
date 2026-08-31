@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { ArrowUpRight } from 'lucide-react';
 import type { ResultTable } from '@/lib/agent/result-table';
+import type { EfficacyLink } from '@/lib/agent/efficacy-link';
 import { NCT_ID_PATTERN, trialRoute } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +33,16 @@ const NCT_LINK_CLASSES = cn(
  * pattern check and falls through to plain text instead of a link to a
  * nonsense route.
  */
-export function TurnTable({ table, cancerType }: { table: ResultTable; cancerType: string }) {
+export function TurnTable({
+  table,
+  cancerType,
+  efficacyLink,
+}: {
+  table: ResultTable;
+  cancerType: string;
+  /** Present only when this turn's filters are ones the hub can reproduce. */
+  efficacyLink?: EfficacyLink | null;
+}) {
   const scroller = useRef<HTMLDivElement>(null);
   const [clipped, setClipped] = useState(false);
 
@@ -111,6 +122,28 @@ export function TurnTable({ table, cancerType }: { table: ResultTable; cancerTyp
             'bg-gradient-to-l from-(--brand-surface) to-transparent'
           )}
         />
+      ) : null}
+      {efficacyLink ? (
+        <div className="flex items-baseline gap-2 pt-1.5">
+          <Link
+            href={efficacyLink.href}
+            className={cn(
+              'inline-flex items-center gap-1 font-mono text-[10px] tracking-[0.05em]',
+              'text-(--brand-text-muted) no-underline transition hover:text-(--brand-primary)'
+            )}
+          >
+            Open in Efficacy Hub
+            <ArrowUpRight className="h-3 w-3" />
+          </Link>
+          {/* The hub applies no size budget, so it legitimately shows rows this
+              result was capped before reaching. Said out loud rather than left
+              for the reader to discover as a discrepancy. */}
+          {efficacyLink.showsMore ? (
+            <span className="font-mono text-[10px] text-(--brand-text-muted)/70">
+              shows the full set
+            </span>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
