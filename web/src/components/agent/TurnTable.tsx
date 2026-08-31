@@ -94,7 +94,13 @@ export function TurnTable({
           </thead>
           <tbody>
             {table.rows.map((row, rowIndex) => (
-              <tr key={row[0] ?? rowIndex} className="border-b border-(--brand-border)/50 last:border-b-0">
+              // Keyed by position, not by the first cell. That cell used to be
+              // a unique `id`; `orderColumns` now leads with `nct_id`, and
+              // `trial_outcomes` is one row per treatment arm - two arms of one
+              // trial share an nct_id by design, which React reads as duplicate
+              // keys and is free to drop rows over. Rows are positional and the
+              // whole table re-renders per turn, so the index is the identity.
+              <tr key={rowIndex} className="border-b border-(--brand-border)/50 last:border-b-0">
                 {row.map((cell, cellIndex) => (
                   <td
                     key={table.columns[cellIndex].key}
