@@ -700,7 +700,54 @@ describe('via joins', () => {
   });
 
   it('embeds the join only when a via-filter is active', () => {
-    expect(embedFor('trial_outcomes', ['phase'])).toBe(',clinical_trials!inner(phases,overall_status)');
+    expect(embedFor('trial_outcomes', ['phase'])).toBe(',clinical_trials!inner(phases)');
+  });
+
+  it('embeds only the columns the active filters need, not a fixed list', () => {
+    // `flattenViaEmbed` lifts every embedded column onto the row, where
+    // `result-table` turns it into a table column. A funding-scoped question
+    // has no business growing a `phases` column it never asked about.
+    expect(embedFor('trial_outcomes', ['funding'])).toBe(
+      ',clinical_trials!inner(lead_sponsor_class)',
+    );
+    expect(embedFor('trial_outcomes', ['phase', 'status', 'funding'])).toBe(
+      ',clinical_trials!inner(phases,overall_status,lead_sponsor_class)',
+    );
+  });
+
+  it('splits funding on the sponsor class, matching the Efficacy Hub, without an `in` over the enum', () => {
+    // `.in()` over the eight non-INDUSTRY classes would drop a null-class row
+    // out of both halves instead of one. There are none today; the operator is
+    // what keeps that true if one appears.
+    const fake = createFakeSupabase();
+    const industry = fake.from('trial_outcomes').select('id');
+    applyNamedFilter(industry, 'trial_outcomes', 'funding', 'industry');
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'eq',
+      column: 'clinical_trials.lead_sponsor_class',
+      value: 'INDUSTRY',
+    });
+
+    const other = fake.from('trial_outcomes').select('id');
+    applyNamedFilter(other, 'trial_outcomes', 'funding', 'non-industry');
+    expect(fake.queries[1].filters).toContainEqual({
+      operator: 'neq',
+      column: 'clinical_trials.lead_sponsor_class',
+      value: 'INDUSTRY',
+    });
+  });
+
+  it('applies funding directly on clinical_trials, with no dotted path', () => {
+    const fake = createFakeSupabase();
+    const query = fake.from('clinical_trials').select('nct_id');
+
+    applyNamedFilter(query, 'clinical_trials', 'funding', 'industry');
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'eq',
+      column: 'lead_sponsor_class',
+      value: 'INDUSTRY',
+    });
   });
 
   it('never embeds when no via-filter is active - an `!inner` join would drop unlinked rows', () => {
@@ -754,8 +801,10 @@ describe('via joins', () => {
   it('names via-filters distinctly from a table\'s own filters in the tool description', () => {
     const text = describeTables();
 
-    expect(text).toContain('filters: sponsor, drug (phase, status via clinical_trials)');
-    expect(text).toContain('filters: drug (phase, status via clinical_trials)');
+    expect(text).toContain('filters: sponsor, drug (phase, status, funding via clinical_trials)');
+    expect(text).toContain('filters: drug (phase, status, funding via clinical_trials)');
+    // clinical_trials holds all four itself, so none of them read as "via".
+    expect(text).toContain('filters: sponsor, phase, status, funding');
     // news_feed has no via at all - the description must not invent one.
     expect(text).not.toMatch(/news_feed.*via clinical_trials/);
   });

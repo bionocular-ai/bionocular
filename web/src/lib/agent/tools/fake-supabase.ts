@@ -9,7 +9,7 @@
  */
 
 export interface RecordedFilter {
-  operator: 'eq' | 'in' | 'contains' | 'overlaps' | 'ilike' | 'is';
+  operator: 'eq' | 'neq' | 'in' | 'contains' | 'overlaps' | 'ilike' | 'is';
   column: string;
   value: unknown;
 }
@@ -54,6 +54,7 @@ interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown
   select: (projection: string, options?: { count?: string; head?: boolean }) => FakeQuery;
   limit: (n: number) => FakeQuery;
   eq: (column: string, value: unknown) => FakeQuery;
+  neq: (column: string, value: unknown) => FakeQuery;
   in: (column: string, values: readonly unknown[]) => FakeQuery;
   contains: (column: string, value: unknown) => FakeQuery;
   overlaps: (column: string, values: readonly unknown[]) => FakeQuery;
@@ -98,6 +99,10 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
       },
       eq(column, value) {
         record.filters.push({ operator: 'eq', column, value });
+        return query;
+      },
+      neq(column, value) {
+        record.filters.push({ operator: 'neq', column, value });
         return query;
       },
       in(column, values) {
