@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ListFilter, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -141,7 +141,10 @@ function computeApproxHR(cmpArm: KmCurveRow, refArm: KmCurveRow): number | null 
 
 export default function HeadToHeadEfficacyPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const categorySlug = params?.category as string;
+  // Deep link from the endpoints table's KM Curve column: preselect that trial's arms.
+  const linkedNctId = searchParams.get('nct');
 
   const { data, isLoading } = useQuery({
     queryKey: ['km-curves', categorySlug],
@@ -164,8 +167,12 @@ export default function HeadToHeadEfficacyPage() {
 
   const [endpoint, setEndpoint] = React.useState<string>('');
   React.useEffect(() => {
-    if (endpoints.length && !endpoints.includes(endpoint)) setEndpoint(endpoints[0]);
-  }, [endpoints, endpoint]);
+    if (!endpoints.length || endpoints.includes(endpoint)) return;
+    const linked = linkedNctId
+      ? allCurves.find((c) => c.nct_id === linkedNctId)
+      : undefined;
+    setEndpoint(linked ? canonicalEndpoint(linked.endpoint) : endpoints[0]);
+  }, [endpoints, endpoint, allCurves, linkedNctId]);
 
   // All arms for the selected endpoint, across every publication/cohort.
   const armsForEndpoint = React.useMemo(
@@ -194,9 +201,12 @@ export default function HeadToHeadEfficacyPage() {
   // Selected curve ids (default: arms of the first comparison only).
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   React.useEffect(() => {
-    const first = armGroups[0];
-    setSelectedIds(new Set(first ? first.arms.map((c) => c.id) : []));
-  }, [armGroups]);
+    const linked = linkedNctId
+      ? armGroups.find((g) => g.arms.some((c) => c.nct_id === linkedNctId))
+      : undefined;
+    const group = linked ?? armGroups[0];
+    setSelectedIds(new Set(group ? group.arms.map((c) => c.id) : []));
+  }, [armGroups, linkedNctId]);
 
   const visibleCurves: KmCurveRow[] = React.useMemo(
     () =>
