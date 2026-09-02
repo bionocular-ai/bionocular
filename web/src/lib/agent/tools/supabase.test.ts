@@ -647,6 +647,30 @@ describe('trial_outcomes projection', () => {
       expect(detailed).not.toContain(excluded);
     }
   });
+
+  it('drops the other family when the question is about only one', () => {
+    const efficacy = projectionFor('trial_outcomes', 'detailed', 'efficacy').split(', ');
+    const safety = projectionFor('trial_outcomes', 'detailed', 'safety').split(', ');
+
+    expect(efficacy).toContain('median_os');
+    expect(efficacy).not.toContain('grade_3_plus_trae_pct');
+    expect(safety).toContain('grade_3_plus_trae_pct');
+    expect(safety).not.toContain('median_os');
+
+    // Whose arm the numbers belong to survives either way - a column of
+    // adverse-event rates with no arm or drug name is not an answer.
+    for (const identity of ['nct_id', 'arm_name', 'generic_name', 'num_patients', 'is_nr']) {
+      expect(efficacy).toContain(identity);
+      expect(safety).toContain(identity);
+    }
+  });
+
+  it('narrows the concise projection by the same families', () => {
+    const safety = projectionFor('trial_outcomes', 'concise', 'safety').split(', ');
+
+    expect(safety).toContain('serious_ae_pct');
+    expect(safety).not.toContain('orr');
+  });
 });
 
 describe('tool description text', () => {

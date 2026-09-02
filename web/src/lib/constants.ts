@@ -42,6 +42,18 @@ export function trialRoute(nctId: string, categorySlug?: string): string {
   return `/trial/nct/${nctId}${qs}`;
 }
 
+/**
+ * The Analytics page, per `?mode`. One page, three hubs: the page header and
+ * the agent's hand-off link name the destination from here so they cannot drift.
+ */
+export const HUB_TITLES = {
+  efficacy: 'Efficacy Intelligence Hub',
+  safety: 'Safety Intelligence Hub',
+  all: 'Efficacy vs Safety Index Hub',
+} as const;
+
+export type HubMode = keyof typeof HUB_TITLES;
+
 export function dashboardRoute(slug: string, section?: string, query?: Record<string, string>): string {
   const base = `/dashboard/${slug}`;
   const path = section ? `${base}/${section}` : base;

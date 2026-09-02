@@ -42,6 +42,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { HUB_TITLES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -320,23 +321,25 @@ export default function CategoryAnalyticsPage() {
     modeParam === 'all' ? 'all' : modeParam === 'safety' ? 'safety' : 'efficacy';
 
   // Per-mode page header (sidebar owns mode selection; this page reads ?mode).
+  // The title comes from HUB_TITLES, which the agent's hand-off link also reads,
+  // so the link names the page the reader lands on.
   const { hubTitle, hubDescription } = useMemo(() => {
     if (mode === 'safety') {
       return {
-        hubTitle: 'Safety Intelligence Hub',
+        hubTitle: HUB_TITLES.safety,
         hubDescription:
           'Compare adverse-event, TEAE, and TRAE rates across treatments to weigh tolerability head to head.',
       };
     }
     if (mode === 'all') {
       return {
-        hubTitle: 'Efficacy vs Safety Index Hub',
+        hubTitle: HUB_TITLES.all,
         hubDescription:
           'Plot efficacy against safety to surface the benefit–risk trade-offs between treatments.',
       };
     }
     return {
-      hubTitle: 'Efficacy Intelligence Hub',
+      hubTitle: HUB_TITLES.efficacy,
       hubDescription:
         'Compare response, survival, and hazard-ratio outcomes across treatments head to head.',
     };
