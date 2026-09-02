@@ -133,6 +133,18 @@ describe('toResultTable', () => {
     // Lead order puts orr ahead of the columns the lead list does not name.
     expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'ORR', 'Line of therapy']);
   });
+
+  it('labels the safety endpoints as families and grades, not as words', () => {
+    const table = toResultTable({
+      ok: true,
+      rows: [
+        { nct_id: 'NCT01', grade_3_plus_trae_pct: 41, serious_ae_pct: 12 },
+        { nct_id: 'NCT02', grade_3_plus_trae_pct: 59, serious_ae_pct: 20 },
+      ],
+    });
+
+    expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'Grade 3+ TRAE %', 'Serious AE %']);
+  });
 });
 
 describe('censored measurements', () => {

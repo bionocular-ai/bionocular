@@ -123,6 +123,12 @@ const INITIALISMS: Record<string, string> = {
   hr_pfs: 'HR PFS',
   hr_os: 'HR OS',
   median_dor: 'Median DoR',
+  // The two safety endpoints the concise projection carries. Word-splitting
+  // renders them "Grade 3 plus trae pct" and "Serious ae pct" - the wider
+  // `detailed` safety columns are the same shape, and get the same treatment
+  // if a question ever puts one on screen.
+  grade_3_plus_trae_pct: 'Grade 3+ TRAE %',
+  serious_ae_pct: 'Serious AE %',
 };
 
 export function humanizeColumn(key: string): string {

@@ -20,8 +20,29 @@ describe('efficacyLinkFor', () => {
     const link = efficacyLinkFor([outcomes({ phase: 'PHASE1' })], 'cutaneous-melanoma');
 
     expect(link?.href.startsWith('/dashboard/cutaneous-melanoma/analytics?')).toBe(true);
-    expect(params(link!.href).get('mode')).toBe('efficacy');
     expect(params(link!.href).get('phase')).toBe('PHASE1');
+  });
+
+  it('opens the hub that charts the endpoints the answer carries', () => {
+    const efficacy = efficacyLinkFor([outcomes({ endpoints: 'efficacy' })], 'cutaneous-melanoma');
+    const safety = efficacyLinkFor([outcomes({ endpoints: 'safety' })], 'cutaneous-melanoma');
+    const both = efficacyLinkFor([outcomes({ endpoints: 'both' })], 'cutaneous-melanoma');
+
+    expect(params(efficacy!.href).get('mode')).toBe('efficacy');
+    expect(efficacy!.title).toBe('Efficacy Intelligence Hub');
+    expect(params(safety!.href).get('mode')).toBe('safety');
+    expect(safety!.title).toBe('Safety Intelligence Hub');
+    expect(params(both!.href).get('mode')).toBe('all');
+    expect(both!.title).toBe('Efficacy vs Safety Index Hub');
+  });
+
+  it('falls back to the index hub when the agent named no endpoint family', () => {
+    // `endpoints` is optional and defaults to `both`, so the answer carries
+    // efficacy and safety columns alike - the index is the view of both.
+    const link = efficacyLinkFor([outcomes({ phase: 'PHASE1' })], 'cutaneous-melanoma');
+
+    expect(params(link!.href).get('mode')).toBe('all');
+    expect(link!.title).toBe('Efficacy vs Safety Index Hub');
   });
 
   it('pins funding to all when the agent did not constrain it', () => {

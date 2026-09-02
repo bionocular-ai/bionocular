@@ -273,6 +273,17 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
               '`clinical_trials` it is provenance and classification detail: how a trial was ' +
               'classified, its conditions, its keywords. Defaults to `concise`.',
           ),
+        endpoints: z
+          .enum(['efficacy', 'safety', 'both'])
+          .optional()
+          .describe(
+            'Which half of `trial_outcomes` the question is about, so the answer is not padded ' +
+              'with the other half. `efficacy` keeps survival, response and duration endpoints; ' +
+              '`safety` keeps the adverse-event families and per-toxicity rates; `both` keeps ' +
+              'everything. Arm, drug and patient counts are kept either way. Set it to what was ' +
+              'asked - it also decides which hub the user can open the answer in. Defaults to ' +
+              '`both`. No effect on the other tables.',
+          ),
         limit: z
           .number()
           .int()
@@ -283,7 +294,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
       }),
       execute: async (args) =>
         runTool('query_proprietary_data', traceId, args, async () => {
-        const { table, nctIds, sponsor, phase, status, drug, funding, detail, limit } = args;
+        const { table, nctIds, sponsor, phase, status, drug, funding, detail, endpoints, limit } = args;
         const spec = AGENT_TABLES[table];
 
         // Cancer scope is applied to every query, so on its own it narrows
@@ -329,7 +340,8 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           .filter(([, v]) => v !== undefined)
           .map(([name]) => name);
         const activeVia = viaFilters(table, requested);
-        const select = projectionFor(table, detail ?? 'concise') + embedFor(table, activeVia);
+        const select =
+          projectionFor(table, detail ?? 'concise', endpoints ?? 'both') + embedFor(table, activeVia);
 
         let query = supabase.from(table).select(select, { count: 'exact' }).limit(limit);
 

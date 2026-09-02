@@ -112,6 +112,48 @@ const grade3PlusColumns = (family: 'ae' | 'trae' | 'teae'): string[] =>
   GRADE_3_PLUS_TERMS.map((term) => `grade_3_plus_${family}_${term}`);
 
 /**
+ * Who the arm is and where the numbers came from. Neither an efficacy nor a
+ * safety endpoint, so an `endpoints`-narrowed query keeps all of it - a table
+ * of adverse-event rates with no arm name is not an answer.
+ */
+const TRIAL_OUTCOMES_IDENTITY = [
+  'id', 'source_type', 'source_name', 'abstract_id', 'publication_id', 'nct_id',
+  'arm_id', 'arm_name', 'sponsors', 'line_of_treatment', 'generic_name',
+  'brand_name', 'dosage', 'type_of_dosing', 'mechanism_of_action',
+  'target_protein', 'type_of_therapy', 'sub_therapy', 'modality', 'median_age',
+  'num_patients',
+  // Column names that hold a censored measurement, not the measurement itself
+  // - see the `is_nr`/`is_lt` note on `conciseProjection` below.
+  'is_nr', 'is_lt',
+];
+
+/** Did it work: survival, response, and duration of response. */
+const TRIAL_OUTCOMES_EFFICACY = [
+  // PFS / OS
+  'median_pfs', 'pfs_followup_months', 'p_value_pfs', 'hr_pfs', 'ci_hr_pfs',
+  ...rateColumns('pfs'),
+  'median_os', 'os_followup_months', 'p_value_os', 'hr_os', 'ci_hr_os',
+  ...rateColumns('os'),
+  // other survival
+  'efs', 'p_value_efs', 'hr_efs', 'ci_hr_efs',
+  'rfs', 'p_value_rfs', 'rfs_followup_months', 'hr_rfs', 'ci_hr_rfs',
+  'mfs', 'mfs_followup_months', 'hr_mfs', 'ci_hr_mfs',
+  // response
+  'orr', 'cr', 'pcr', 'cmr', 'dcr', 'cbr', 'median_dor', 'dor_rate', 'ttr',
+  'ttp', 'hr_ttp', 'ci_hr_ttp', 'ttnt', 'ttf',
+];
+
+/** What it cost: the adverse-event families and the standalone toxicities. */
+const TRIAL_OUTCOMES_SAFETY = [
+  // safety aggregates
+  ...AE_AGGREGATE_PCT, ...TRAE_AGGREGATE_PCT, ...TEAE_AGGREGATE_PCT,
+  // per-toxicity grade 3+
+  ...grade3PlusColumns('ae'), ...grade3PlusColumns('trae'), ...grade3PlusColumns('teae'),
+  // standalone
+  'crs_pct', 'wbc_decreased_pct', 'irr_pct',
+];
+
+/**
  * Every extracted efficacy and safety endpoint `trial_outcomes` carries, built
  * from families rather than typed out by hand so a new column from the loader
  * is one array entry, not a search-and-add across a 198-name string.
@@ -128,33 +170,9 @@ const grade3PlusColumns = (family: 'ae' | 'trae' | 'teae'): string[] =>
  * of the CSV header like everything else here.
  */
 const TRIAL_OUTCOMES_PROJECTION = [
-  // identity / metadata
-  'id', 'source_type', 'source_name', 'abstract_id', 'publication_id', 'nct_id',
-  'arm_id', 'arm_name', 'sponsors', 'line_of_treatment', 'generic_name',
-  'brand_name', 'dosage', 'type_of_dosing', 'mechanism_of_action',
-  'target_protein', 'type_of_therapy', 'sub_therapy', 'modality', 'median_age',
-  'num_patients',
-  // Column names that hold a censored measurement, not the measurement itself
-  // - see the `is_nr`/`is_lt` note on `conciseProjection` below.
-  'is_nr', 'is_lt',
-  // PFS / OS
-  'median_pfs', 'pfs_followup_months', 'p_value_pfs', 'hr_pfs', 'ci_hr_pfs',
-  ...rateColumns('pfs'),
-  'median_os', 'os_followup_months', 'p_value_os', 'hr_os', 'ci_hr_os',
-  ...rateColumns('os'),
-  // other survival
-  'efs', 'p_value_efs', 'hr_efs', 'ci_hr_efs',
-  'rfs', 'p_value_rfs', 'rfs_followup_months', 'hr_rfs', 'ci_hr_rfs',
-  'mfs', 'mfs_followup_months', 'hr_mfs', 'ci_hr_mfs',
-  // response
-  'orr', 'cr', 'pcr', 'cmr', 'dcr', 'cbr', 'median_dor', 'dor_rate', 'ttr',
-  'ttp', 'hr_ttp', 'ci_hr_ttp', 'ttnt', 'ttf',
-  // safety aggregates
-  ...AE_AGGREGATE_PCT, ...TRAE_AGGREGATE_PCT, ...TEAE_AGGREGATE_PCT,
-  // per-toxicity grade 3+
-  ...grade3PlusColumns('ae'), ...grade3PlusColumns('trae'), ...grade3PlusColumns('teae'),
-  // standalone
-  'crs_pct', 'wbc_decreased_pct', 'irr_pct',
+  ...TRIAL_OUTCOMES_IDENTITY,
+  ...TRIAL_OUTCOMES_EFFICACY,
+  ...TRIAL_OUTCOMES_SAFETY,
 ].join(', ');
 
 const TABLE_DEFINITIONS = {
@@ -461,12 +479,37 @@ export function embedFor(table: AgentTable, activeVia: readonly FilterName[]): s
 }
 
 /** Columns a caller may ask for by name, for error messages and descriptions. */
+/** Which half of `trial_outcomes` a question is about. `both` narrows nothing. */
+export type EndpointFamily = 'efficacy' | 'safety' | 'both';
+
+/** The endpoints to leave out when a question is about only one family. */
+const OTHER_FAMILY: Record<Exclude<EndpointFamily, 'both'>, Set<string>> = {
+  efficacy: new Set(TRIAL_OUTCOMES_SAFETY),
+  safety: new Set(TRIAL_OUTCOMES_EFFICACY),
+};
+
 /**
  * The columns to select for this table at the requested level of detail.
+ *
+ * `endpoints` drops the family the question is not about, so "what are the
+ * grade 3+ rates" comes back - and renders - as adverse-event columns rather
+ * than as those buried among every survival and response endpoint. Only
+ * `trial_outcomes` carries either family, so it is a no-op on the other four.
  */
-export function projectionFor(table: AgentTable, detail: 'concise' | 'detailed'): string {
+export function projectionFor(
+  table: AgentTable,
+  detail: 'concise' | 'detailed',
+  endpoints: EndpointFamily = 'both',
+): string {
   const spec = AGENT_TABLES[table];
-  return detail === 'concise' ? (spec.conciseProjection ?? spec.projection) : spec.projection;
+  const selected = detail === 'concise' ? (spec.conciseProjection ?? spec.projection) : spec.projection;
+  if (endpoints === 'both') return selected;
+  const dropped = OTHER_FAMILY[endpoints];
+  return selected
+    .split(',')
+    .map((column) => column.trim())
+    .filter((column) => !dropped.has(column))
+    .join(', ');
 }
 
 export function projectionColumns(table: AgentTable): string[] {
