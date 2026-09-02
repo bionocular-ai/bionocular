@@ -1,17 +1,23 @@
 /**
- * The turn's answer, as a link into the Efficacy Intelligence Hub.
+ * The turn's answer, as a link into the analytics hub that charts it.
  *
  * The hub charts `trial_outcomes`, which is the table a question about ORR or
  * PFS is answered from - so when a turn queried that table under filters the
  * hub can express, the same population can be opened as charts rather than
  * ending at a table in the chat.
  *
+ * Which of the three hubs is the turn's own `endpoints` answer: a question
+ * about survival opens the Efficacy hub, one about toxicity the Safety hub,
+ * and one about both the index that plots them against each other. Same
+ * parameter that decided which endpoint columns the answer carries, so the
+ * link cannot promise a view of columns the table never showed.
+ *
  * Derived from the tool *inputs*, not the rows. The filters are what the hub
  * needs, and re-deriving them from a capped result would be guessing at the
  * question from a sample of its answer.
  */
 
-import { dashboardRoute } from '@/lib/constants';
+import { dashboardRoute, HUB_TITLES, type HubMode } from '@/lib/constants';
 
 /** The one table the hub reads. A turn that never touched it has nothing to open. */
 const HUB_TABLE = 'trial_outcomes';
@@ -30,8 +36,17 @@ const HUB_TABLE = 'trial_outcomes';
  */
 const UNREPRODUCIBLE = ['drug', 'nctIds'] as const;
 
+/** The tool's `endpoints` values, in the hub's own spelling for `?mode`. */
+const HUB_MODES: Record<string, HubMode> = {
+  efficacy: 'efficacy',
+  safety: 'safety',
+  both: 'all',
+};
+
 export interface EfficacyLink {
   href: string;
+  /** What the destination page calls itself, so the link names where it goes. */
+  title: string;
   /**
    * The agent's own result was capped, so the hub - which applies no size
    * budget - will legitimately show more rows than the answer did.
@@ -67,7 +82,12 @@ export function efficacyLinkFor(
   if (!part) return null;
   const input = usableQuery(part)!;
 
-  const query: Record<string, string> = { mode: 'efficacy' };
+  // An unset `endpoints` is the tool's own default: the answer carries both
+  // families, so it opens in the hub that charts both.
+  const mode =
+    typeof input.endpoints === 'string' ? (HUB_MODES[input.endpoints] ?? 'all') : 'all';
+
+  const query: Record<string, string> = { mode };
   // Every hub filter the agent left open is pinned to its `all` value, not left
   // to the hub's default. Funding is the one that bites: the hub defaults to
   // `industry`, and the agent applies no funding filter unless asked - on the
@@ -81,6 +101,7 @@ export function efficacyLinkFor(
   const coverage = asRecord(asRecord(part.output)?.coverage);
   return {
     href: dashboardRoute(cancerSlug, 'analytics', query),
+    title: HUB_TITLES[mode],
     showsMore: coverage?.complete === false,
   };
 }

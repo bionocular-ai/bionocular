@@ -133,12 +133,14 @@ export function TurnTable({
         <div className="flex items-baseline gap-2 pt-1.5">
           <Link
             href={efficacyLink.href}
+            target="_blank"
+            rel="noopener noreferrer"
             className={cn(
               'inline-flex items-center gap-1 font-mono text-[10px] tracking-[0.05em]',
               'text-(--brand-text-muted) no-underline transition hover:text-(--brand-primary)'
             )}
           >
-            Open in Efficacy Hub
+            Open in {efficacyLink.title}
             <ArrowUpRight className="h-3 w-3" />
           </Link>
           {/* The hub applies no size budget, so it legitimately shows rows this
