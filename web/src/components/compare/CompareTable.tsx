@@ -1,8 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Check, ChevronDown, Activity, ShieldAlert } from 'lucide-react';
+import Link from 'next/link';
+import { Check, ChevronDown, Activity, ShieldAlert, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { dashboardRoute } from '@/lib/constants';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,6 +33,8 @@ interface CompareTableProps {
   selections: CompareSelection[];
   onToggleSelection: (s: CompareSelection) => void;
   activeMetricKeys: string[];
+  survivalNctIds: Set<string>;
+  categorySlug: string;
 }
 
 const SORT_LABELS: Record<CompareSortMode, string> = {
@@ -133,6 +137,8 @@ function CompareSectionTable({
   onToggleSelection,
   activeMetricKeys,
   treatmentMeta,
+  survivalNctIds,
+  categorySlug,
 }: {
   rows: CompareRow[];
   treatments: string[];
@@ -140,6 +146,8 @@ function CompareSectionTable({
   onToggleSelection: (s: CompareSelection) => void;
   activeMetricKeys: string[];
   treatmentMeta: Record<string, TreatmentMeta>;
+  survivalNctIds: Set<string>;
+  categorySlug: string;
 }) {
   const orderedRows = useMemo(() => {
     if (activeMetricKeys.length === 0) return rows;
@@ -195,6 +203,14 @@ function CompareSectionTable({
               <span className="block leading-tight">Line</span>
               <span className="invisible block text-[9px] mt-0.5">{'\u00A0'}</span>
             </th>
+            <th
+              className="text-left text-[10px] font-bold text-slate-500 uppercase tracking-[0.12em] px-3 pb-2 pt-2 border-l border-slate-200 align-bottom"
+              style={{ width: 104, minWidth: 104 }}
+            >
+              <span className="invisible block text-[8px] mb-1.5">{'\u00A0'}</span>
+              <span className="block leading-tight">KM Curve</span>
+              <span className="invisible block text-[9px] mt-0.5">{'\u00A0'}</span>
+            </th>
             {orderedRows.map(row => {
               const isActive = activeMetricKeys.length === 0 || activeMetricKeys.includes(row.metricKey);
               const isFirst = firstInGroup.has(row.metricKey);
@@ -240,6 +256,7 @@ function CompareSectionTable({
         <tbody>
           {treatments.map(treatment => {
             const cov = rows.filter(r => r.cells[treatment]?.status === 'value').length;
+            const nctId = treatmentMeta[treatment]?.nctId ?? null;
             return (
               <tr
                 key={treatment}
@@ -255,7 +272,7 @@ function CompareSectionTable({
                 </td>
                 <td className="px-3 py-0 border-l border-slate-100 align-middle" style={{ width: 110, minWidth: 110 }}>
                   <span className="text-[13px] font-semibold text-slate-800 leading-tight block py-3">
-                    {treatmentMeta[treatment]?.nctId ?? '—'}
+                    {nctId ?? '—'}
                   </span>
                 </td>
                 <td className="px-3 py-0 border-l border-slate-100 align-middle" style={{ width: 120, minWidth: 120 }}>
@@ -267,6 +284,19 @@ function CompareSectionTable({
                   <span className="text-[13px] font-semibold text-slate-800 leading-tight block py-3">
                     {treatmentMeta[treatment]?.lineOfTreatment ?? '—'}
                   </span>
+                </td>
+                <td className="px-3 py-0 border-l border-slate-100 align-middle" style={{ width: 104, minWidth: 104 }}>
+                  {nctId && survivalNctIds.has(nctId) ? (
+                    <Link
+                      href={dashboardRoute(categorySlug, 'head-to-head-survival', { nct: nctId })}
+                      className="inline-flex items-center gap-1 py-3 text-[13px] font-semibold text-[var(--brand-primary)] leading-tight hover:underline"
+                    >
+                      View
+                      <ArrowUpRight className="w-3 h-3" />
+                    </Link>
+                  ) : (
+                    <span className="text-[13px] font-semibold text-slate-800 leading-tight block py-3">—</span>
+                  )}
                 </td>
                 {orderedRows.map(row => {
                   const cell = row.cells[treatment];
@@ -330,6 +360,8 @@ export function CompareTable({
   selections,
   onToggleSelection,
   activeMetricKeys,
+  survivalNctIds,
+  categorySlug,
 }: CompareTableProps) {
   const { treatments } = data;
   const total = treatments.length;
@@ -422,6 +454,8 @@ export function CompareTable({
                   onToggleSelection={onToggleSelection}
                   activeMetricKeys={activeMetricKeys}
                   treatmentMeta={data.treatmentMeta}
+                  survivalNctIds={survivalNctIds}
+                  categorySlug={categorySlug}
                 />
               </div>
             )}
@@ -443,6 +477,8 @@ export function CompareTable({
                   onToggleSelection={onToggleSelection}
                   activeMetricKeys={activeMetricKeys}
                   treatmentMeta={data.treatmentMeta}
+                  survivalNctIds={survivalNctIds}
+                  categorySlug={categorySlug}
                 />
               </div>
             )}

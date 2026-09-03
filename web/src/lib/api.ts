@@ -1465,6 +1465,21 @@ export const kmCurvesApi = {
     }
     return (data ?? []) as KmCurveRow[];
   },
+
+  /** NCT ids that have reconstructed curves for a cancer type, for cross-hub linking. */
+  getNctIdsByCancerType: async (slug: string): Promise<string[]> => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('km_curves')
+      .select('nct_id')
+      .eq('cancer_type', getDbCancerType(slug))
+      .not('nct_id', 'is', null);
+    if (error) {
+      console.error('[kmCurvesApi.getNctIdsByCancerType] query failed:', error.message);
+      return [];
+    }
+    return [...new Set((data ?? []).map((r) => (r as { nct_id: string }).nct_id))];
+  },
 };
 
 

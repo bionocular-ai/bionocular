@@ -31,7 +31,7 @@ import DivergingBarChart from '@/components/charts/DivergingBarChart';
 import BubbleChart from '@/components/charts/BubbleChart';
 import DumbbellChart, { DumbbellDataPoint } from '@/components/charts/DumbbellChart';
 import { transformHeadToHeadData, transformEfficacySafetyData, transformBubbleChartData, normalizeTreatmentName } from '@/lib/chart-transformers';
-import { analyticsApi } from '@/lib/api';
+import { analyticsApi, kmCurvesApi } from '@/lib/api';
 import { HeadToHeadDataPoint, ChartMetric, TrialDataFile, EfficacySafetyDataPoint, BubbleChartDataPoint, EFFICACY_METRICS, SAFETY_METRICS } from '@/types/analytics';
 import { CompareTable } from '@/components/compare/CompareTable';
 import { buildCompareTable } from '@/lib/compare-transformers';
@@ -542,6 +542,13 @@ export default function CategoryAnalyticsPage() {
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
+  const { data: survivalNctIdList } = useQuery({
+    queryKey: ['km-curves', 'nct-ids', categorySlug],
+    queryFn: () => kmCurvesApi.getNctIdsByCancerType(categorySlug),
+    staleTime: 5 * 60 * 1000,
+  });
+  const survivalNctIds = useMemo(() => new Set(survivalNctIdList ?? []), [survivalNctIdList]);
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [windowHeight, setWindowHeight] = useState(700);
   const [chartType, setChartType] = useState<'bar' | 'diverging' | 'bubble' | 'dumbbell'>(
@@ -1817,6 +1824,8 @@ export default function CategoryAnalyticsPage() {
           selections={compareSelections}
           onToggleSelection={toggleCompareSelection}
           activeMetricKeys={activeMetricKeys}
+          survivalNctIds={survivalNctIds}
+          categorySlug={categorySlug}
         />
       </div>
       </div>
