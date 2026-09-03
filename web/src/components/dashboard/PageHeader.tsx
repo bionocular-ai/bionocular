@@ -2,8 +2,9 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 export interface PageHeaderProps {
-  /** Eyebrow / breadcrumb — e.g. the cancer category name. */
-  category: string;
+  /** Eyebrow / breadcrumb — e.g. the cancer category name. Omit when the
+   * scope is already carried by a badge in `right`. */
+  category?: string;
   /** Large serif section title — e.g. "Trial Updates". */
   title: string;
   /** Optional muted one-line description. */
@@ -17,17 +18,19 @@ const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
   ({ category, title, description, right, className }, ref) => {
     return (
       <header ref={ref} className={cn('flex flex-col gap-2', className)}>
-        <p
-          className="text-[11px] font-medium uppercase tracking-[0.14em] text-(--brand-text-muted)"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          {category}
-        </p>
+        {category ? (
+          <p
+            className="text-[11px] font-medium uppercase tracking-[0.14em] text-(--brand-text-muted)"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            {category}
+          </p>
+        ) : null}
 
         <div
           className={cn(
             'flex gap-4',
-            right ? 'items-start justify-between' : 'flex-col'
+            right ? 'flex-wrap items-start justify-between' : 'flex-col'
           )}
         >
           <h1
@@ -40,7 +43,7 @@ const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
             {title}
           </h1>
 
-          {right ? <div className="shrink-0">{right}</div> : null}
+          {right ? <div className="max-w-full shrink-0">{right}</div> : null}
         </div>
 
         {description ? (

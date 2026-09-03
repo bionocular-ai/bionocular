@@ -71,9 +71,8 @@ function NavItemLink({
       <span
         className={cn(
           'text-center leading-tight',
-          isChild ? 'text-[9px] font-medium uppercase tracking-[0.03em]' : 'text-[11px] font-medium tracking-tight',
+          isChild ? 'text-[10px] font-medium tracking-tight' : 'text-[11px] font-medium tracking-tight',
         )}
-        style={isChild ? { fontFamily: 'var(--font-mono)' } : undefined}
       >
         {item.label}
       </span>
@@ -93,7 +92,7 @@ function NavItemLink({
         aria-disabled="true"
         className={cn(
           baseClasses,
-          'cursor-not-allowed text-(--brand-text-muted) opacity-45',
+          'cursor-not-allowed text-(--brand-text-muted) opacity-70',
         )}
       >
         {content}
