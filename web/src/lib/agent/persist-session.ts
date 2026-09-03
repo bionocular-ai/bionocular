@@ -5,6 +5,8 @@ export interface PersistArgs {
   userId: string;
   sessionId: string;
   traceId: string;
+  /** Dashboard category slug the chat ran under, already validated by the route. */
+  cancerType: string;
   messages: UIMessage[];
   usage: unknown;
   /** Per-step usage for this turn, oldest first. Omitted when nothing captured it. */
@@ -77,7 +79,7 @@ function accumulateSteps(prior: unknown, current: readonly unknown[]): Record<st
  * user actually saw. The list saved here comes from the finished UI stream, so
  * it includes the assistant turn and its tool calls.
  */
-export async function persistSession({ userId, sessionId, traceId, messages, usage, steps }: PersistArgs) {
+export async function persistSession({ userId, sessionId, traceId, cancerType, messages, usage, steps }: PersistArgs) {
   const supabase = createServiceClient();
   const firstUserMessage = messages.find((m) => m.role === 'user');
   const titleSource = firstUserMessage?.parts.find((p) => p.type === 'text');
@@ -104,6 +106,7 @@ export async function persistSession({ userId, sessionId, traceId, messages, usa
       {
         id: sessionId,
         user_id: userId,
+        cancer_type: cancerType,
         title,
         messages,
         token_usage: (() => {

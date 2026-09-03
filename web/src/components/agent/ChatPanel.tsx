@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
+import { DefaultChatTransport, type UIMessage } from 'ai';
 import { Send, Square, RotateCcw, FlaskConical, Hash, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { agentFeedbackApi, type FeedbackRating } from '@/lib/api';
 import { UserBubble } from './UserBubble';
 import { AssistantTurn, type TurnPart, type TurnTextPart } from './AssistantTurn';
 
@@ -17,21 +18,40 @@ const MAX_COMPOSER_HEIGHT_PX = 160;
 export interface ChatPanelProps {
   /** Dashboard category slug. Every tool query is restricted to it server-side. */
   cancerType: string;
+  /**
+   * The conversation to write to. Owned by the page so the history drawer and
+   * the panel agree on which chat is open; the server upserts a single row on
+   * it rather than inserting one per turn.
+   */
+  sessionId: string;
+  /** Transcript of a reopened conversation. Empty for a new one. */
+  initialMessages?: UIMessage[];
+  /** Fires when a turn finishes, so a new chat appears in the history list. */
+  onTurnFinished?: () => void;
 }
 
-export function ChatPanel({ cancerType }: ChatPanelProps) {
-  // One ID for the life of this chat, so the server upserts a single row
-  // instead of inserting one per turn.
-  const [sessionId] = useState(() => crypto.randomUUID());
-
+export function ChatPanel({
+  cancerType,
+  sessionId,
+  initialMessages,
+  onTurnFinished,
+}: ChatPanelProps) {
+  // `id` and `messages` seed the chat on mount only, so the page remounts this
+  // component (keyed on sessionId) when another conversation is opened.
   const { messages, sendMessage, status, error, stop, regenerate } = useChat({
+    id: sessionId,
+    messages: initialMessages,
     transport: new DefaultChatTransport({
       api: '/api/agent/chat',
       body: { cancerType, sessionId },
     }),
+    onFinish: () => onTurnFinished?.(),
   });
 
   const [input, setInput] = useState('');
+  // Ratings this user has already given, by assistant message id. Seeded from
+  // the database so a reopened conversation shows the thumbs it was given.
+  const [ratings, setRatings] = useState<Record<string, FeedbackRating>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Follow the stream only while the reader is already at the bottom. Without
@@ -59,6 +79,30 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
     lastMsg?.role === 'assistant' &&
     lastMsg.parts.some((p) => p.type === 'text' && (p as TurnTextPart).text.length > 0);
   const showColdStartHint = isBusy && !hasAssistantText && elapsed > COLD_START_DELAY_MS;
+
+  useEffect(() => {
+    if (!initialMessages?.length) return;
+    let cancelled = false;
+    agentFeedbackApi.listForSession(sessionId).then((saved) => {
+      if (!cancelled) setRatings(saved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, initialMessages?.length]);
+
+  const rate = (messageId: string, rating: FeedbackRating) => {
+    const withdrawing = ratings[messageId] === rating;
+    // Optimistic: a thumb that lags behind the click reads as a dropped one.
+    setRatings((prev) => {
+      const next = { ...prev };
+      if (withdrawing) delete next[messageId];
+      else next[messageId] = rating;
+      return next;
+    });
+    if (withdrawing) agentFeedbackApi.clear(messageId);
+    else agentFeedbackApi.rate(sessionId, messageId, rating);
+  };
 
   useEffect(() => {
     if (!pinnedToBottom.current) return;
@@ -128,6 +172,8 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
                   parts={message.parts as TurnPart[]}
                   cancerType={cancerType}
                   isStreaming={isBusy && index === messages.length - 1}
+                  rating={ratings[message.id]}
+                  onRate={(rating) => rate(message.id, rating)}
                 />
               );
             })
