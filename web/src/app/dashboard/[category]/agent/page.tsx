@@ -1,7 +1,6 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { Info } from 'lucide-react';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { ChatPanel } from '@/components/agent/ChatPanel';
 import { slugToCategory } from '@/lib/dashboard-constants';
@@ -19,22 +18,12 @@ export default function AgentPage() {
       {/* Same measure and gutters as the thread and composer below, so the
           header, the messages and the input all share one left edge. */}
       <div className="shrink-0 px-4 pt-6 pb-4 sm:px-8">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-2">
-          <PageHeader category={categoryName} title="Bionocular Agent" />
-          {/* What the agent does draw on, then what it does not - the badge
-              carries the registry caveat rather than a second sentence. */}
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm leading-relaxed text-(--brand-text-muted)">
-            Answers are drawn only from Bionocular&apos;s own data.
-            <span
-              title="The agent has no access to live registries or literature. It answers from Bionocular's own database only."
-              className="inline-flex cursor-help items-center gap-1 rounded-full border border-(--brand-border) bg-(--brand-surface) px-2.5 py-1 text-[11px] font-medium tracking-[0.06em] text-(--brand-text-muted) uppercase"
-              style={{ fontFamily: 'var(--font-mono)' }}
-            >
-              Internal data only
-              <Info className="h-3 w-3" aria-hidden />
-            </span>
-          </p>
-        </div>
+        <PageHeader
+          className="mx-auto w-full max-w-3xl"
+          category={categoryName}
+          title="Bionocular Agent"
+          description="Bionocular's own data only - no live registries or literature."
+        />
       </div>
 
       <div className="min-h-0 flex-1">
