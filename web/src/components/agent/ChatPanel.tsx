@@ -169,55 +169,61 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
         className="border-t border-(--brand-border) bg-(--brand-surface) px-4 py-3 sm:px-8"
       >
         <div className="mx-auto max-w-3xl">
-          <div className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              resizeComposer(e.target);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e as unknown as React.FormEvent);
-              }
-            }}
-            placeholder="Ask about a trial, drug, or target…"
-            rows={1}
+          {/* The box is the bordered control; the textarea inside it is bare,
+              so the send button reads as part of the same field. */}
+          <div
             className={cn(
-              'flex-1 resize-none rounded-xl border border-(--brand-border) bg-(--brand-surface)',
-              'px-3.5 py-2.5 text-sm text-(--brand-text) placeholder:text-(--brand-text-muted)',
-              'focus:border-(--brand-primary) focus:ring-3 focus:ring-(--brand-primary)/12 focus:outline-none'
+              'flex items-end gap-2 rounded-xl border border-(--brand-border) bg-(--brand-surface)',
+              'py-1.5 pr-1.5 pl-3.5',
+              'focus-within:border-(--brand-primary) focus-within:ring-3 focus-within:ring-(--brand-primary)/12'
             )}
-          />
-          {isBusy ? (
-            <button
-              type="button"
-              onClick={stop}
+          >
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                resizeComposer(e.target);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e as unknown as React.FormEvent);
+                }
+              }}
+              placeholder="Ask about a trial, drug, or target…"
+              rows={1}
               className={cn(
-                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                'border border-(--brand-border) bg-(--brand-surface) text-(--brand-primary)',
-                'hover:bg-(--brand-accent-light)'
+                'flex-1 resize-none border-0 bg-transparent py-2 text-sm',
+                'text-(--brand-text) placeholder:text-(--brand-text-muted) focus:outline-none'
               )}
-              aria-label="Stop generating"
-            >
-              <Square className="h-3.5 w-3.5 fill-current" />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!input.trim()}
-              className={cn(
-                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)',
-                'disabled:cursor-not-allowed disabled:opacity-50'
-              )}
-              aria-label="Send"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          )}
+            />
+            {isBusy ? (
+              <button
+                type="button"
+                onClick={stop}
+                className={cn(
+                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)'
+                )}
+                aria-label="Stop generating"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                className={cn(
+                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)',
+                  'disabled:cursor-not-allowed disabled:opacity-50'
+                )}
+                aria-label="Send"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <p className="mt-2 max-w-3xl font-mono text-[10px] tracking-[0.06em] text-(--brand-text-muted) uppercase">
             Enter to send · Shift+Enter for a new line
