@@ -21,25 +21,18 @@ export default function AgentPage() {
       <div className="shrink-0 px-4 pt-6 pb-4 sm:px-8">
         <PageHeader
           className="mx-auto w-full max-w-3xl"
+          category={categoryName}
           title="Bionocular Agent"
           description="Answers are drawn only from Bionocular's own data."
           right={
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="rounded-full border border-(--brand-accent) bg-(--brand-accent-light) px-2.5 py-1 text-[11px] font-medium tracking-[0.06em] text-(--brand-primary) uppercase"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              >
-                {categoryName}
-              </span>
-              <span
-                title="The agent has no access to live registries or literature. It answers from Bionocular's own database only."
-                className="inline-flex cursor-help items-center gap-1 rounded-full border border-(--brand-border) bg-(--brand-surface) px-2.5 py-1 text-[11px] font-medium tracking-[0.06em] text-(--brand-text-muted) uppercase"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              >
-                Internal data only
-                <Info className="h-3 w-3" aria-hidden />
-              </span>
-            </div>
+            <span
+              title="The agent has no access to live registries or literature. It answers from Bionocular's own database only."
+              className="inline-flex cursor-help items-center gap-1 rounded-full border border-(--brand-border) bg-(--brand-surface) px-2.5 py-1 text-[11px] font-medium tracking-[0.06em] text-(--brand-text-muted) uppercase"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              Internal data only
+              <Info className="h-3 w-3" aria-hidden />
+            </span>
           }
         />
       </div>
