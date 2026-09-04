@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Check, Copy } from 'lucide-react';
+import { Check, Copy, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { FeedbackRating } from '@/lib/api';
 import { remarkNctLinks } from '@/lib/agent/remark-nct-links';
 import { toTurnTable } from '@/lib/agent/turn-table';
 import { efficacyLinkFor } from '@/lib/agent/efficacy-link';
@@ -42,13 +43,17 @@ export interface AssistantTurnProps {
   cancerType: string;
   /** True while this turn is still being streamed. */
   isStreaming: boolean;
+  /** Rating this user already gave this answer, if any. */
+  rating?: FeedbackRating;
+  /** Passing the rating already showing withdraws it. */
+  onRate?: (rating: FeedbackRating) => void;
 }
 
 function isToolPart(part: TurnPart): part is TurnToolPart {
   return part.type.startsWith('tool-');
 }
 
-export function AssistantTurn({ parts, cancerType, isStreaming }: AssistantTurnProps) {
+export function AssistantTurn({ parts, cancerType, isStreaming, rating, onRate }: AssistantTurnProps) {
   const [copied, setCopied] = useState(false);
 
   const remarkPlugins = useMemo(() => [remarkGfm, remarkNctLinks(cancerType)], [cancerType]);
@@ -146,21 +151,69 @@ export function AssistantTurn({ parts, cancerType, isStreaming }: AssistantTurnP
 
       {!isStreaming && answer ? (
         <div className="flex gap-1 pt-2">
-          <button
-            type="button"
-            onClick={handleCopy}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-[3px] border border-transparent px-2 py-1',
-              'font-mono text-[10px] tracking-[0.05em] text-(--brand-text-muted) transition',
-              'opacity-0 group-hover/turn:opacity-100 focus-visible:opacity-100',
-              'hover:border-(--brand-border) hover:bg-(--brand-surface) hover:text-(--brand-primary)'
-            )}
-          >
+          <button type="button" onClick={handleCopy} className={ACTION_CLASSES}>
             {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
             {copied ? 'Copied' : 'Copy answer'}
           </button>
+
+          {onRate ? (
+            <>
+              <RateButton
+                icon={ThumbsUp}
+                label="Helpful"
+                active={rating === 'up'}
+                onClick={() => onRate('up')}
+              />
+              <RateButton
+                icon={ThumbsDown}
+                label="Not helpful"
+                active={rating === 'down'}
+                onClick={() => onRate('down')}
+              />
+            </>
+          ) : null}
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Actions under a finished turn stay out of the way until the turn is hovered,
+ * so a long transcript is not a column of buttons.
+ */
+const ACTION_CLASSES = cn(
+  'inline-flex items-center gap-1.5 rounded-[3px] border border-transparent px-2 py-1',
+  'font-mono text-[10px] tracking-[0.05em] text-(--brand-text-muted) transition',
+  'opacity-0 group-hover/turn:opacity-100 focus-visible:opacity-100',
+  'hover:border-(--brand-border) hover:bg-(--brand-surface) hover:text-(--brand-primary)'
+);
+
+function RateButton({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: typeof ThumbsUp;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      // A rating the user gave stays visible after the pointer leaves - it is
+      // the state of the answer now, not an action still on offer.
+      className={cn(
+        ACTION_CLASSES,
+        active && 'border-(--brand-border) bg-(--brand-surface) text-(--brand-primary) opacity-100'
+      )}
+    >
+      <Icon className="h-3 w-3" />
+      {label}
+    </button>
   );
 }

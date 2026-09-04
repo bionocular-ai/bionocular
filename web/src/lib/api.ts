@@ -1,3 +1,4 @@
+import type { UIMessage } from 'ai';
 import { createClient } from './supabase/client';
 import type { TrialDataFile } from '@/types/analytics';
 
@@ -1483,3 +1484,113 @@ export const kmCurvesApi = {
 };
 
 
+
+export interface ChatSessionSummary {
+  id: string;
+  title: string | null;
+  updated_at: string;
+}
+
+/**
+ * Saved agent conversations.
+ *
+ * Reads go straight from the browser: `chat_sessions` carries an RLS policy
+ * (`own_sessions`) scoping every row to `auth.uid()`, so the publishable key
+ * cannot reach another user's chats and no server route has to re-check it.
+ */
+export const chatSessionsApi = {
+  /**
+   * One indication's conversations, newest first.
+   *
+   * Rows saved before `cancer_type` existed hold NULL and are excluded - their
+   * scope was never recorded, so they cannot be shown under any indication.
+   */
+  list: async (cancerSlug: string, limit = 50): Promise<ChatSessionSummary[]> => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('chat_sessions')
+      .select('id, title, updated_at')
+      .eq('cancer_type', cancerSlug)
+      .order('updated_at', { ascending: false })
+      .limit(limit);
+    if (error) {
+      console.error('[chatSessionsApi.list] query failed:', error.message);
+      return [];
+    }
+    return (data ?? []) as ChatSessionSummary[];
+  },
+
+  /** The transcript of one conversation, for reopening it in the chat panel. */
+  getMessages: async (sessionId: string): Promise<UIMessage[]> => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('chat_sessions')
+      .select('messages')
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (error) {
+      console.error('[chatSessionsApi.getMessages] query failed:', error.message);
+      return [];
+    }
+    return ((data as { messages?: UIMessage[] } | null)?.messages ?? []) as UIMessage[];
+  },
+};
+
+export type FeedbackRating = 'up' | 'down';
+
+/**
+ * Thumbs up/down on individual agent answers.
+ *
+ * Like `chat_sessions`, these are read and written straight from the browser:
+ * the `own_feedback` RLS policy scopes every row to `auth.uid()`.
+ */
+export const agentFeedbackApi = {
+  /** Ratings this user has already given in one conversation, by message id. */
+  listForSession: async (sessionId: string): Promise<Record<string, FeedbackRating>> => {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('agent_feedback')
+      .select('message_id, rating')
+      .eq('session_id', sessionId);
+    if (error) {
+      console.error('[agentFeedbackApi.listForSession] query failed:', error.message);
+      return {};
+    }
+    return Object.fromEntries(
+      (data ?? []).map((r) => [
+        (r as { message_id: string }).message_id,
+        (r as { rating: FeedbackRating }).rating,
+      ]),
+    );
+  },
+
+  /**
+   * Record a rating, replacing whatever this user said about the answer before.
+   * `user_id` is filled from the session rather than trusted from the caller.
+   */
+  rate: async (sessionId: string, messageId: string, rating: FeedbackRating): Promise<void> => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from('agent_feedback')
+      .upsert(
+        {
+          user_id: user.id,
+          session_id: sessionId,
+          message_id: messageId,
+          rating,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,message_id' },
+      );
+    if (error) console.error('[agentFeedbackApi.rate] write failed:', error.message);
+  },
+
+  /** Withdraw a rating - clicking the thumb that is already lit. */
+  clear: async (messageId: string): Promise<void> => {
+    const supabase = createClient();
+    const { error } = await supabase.from('agent_feedback').delete().eq('message_id', messageId);
+    if (error) console.error('[agentFeedbackApi.clear] delete failed:', error.message);
+  },
+};

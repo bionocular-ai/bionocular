@@ -147,6 +147,7 @@ export async function POST(req: Request) {
           userId: user.id,
           sessionId,
           traceId,
+          cancerType,
           messages: finishedMessages,
           usage: finalUsage,
           steps: stepUsage,

@@ -26,6 +26,7 @@ function persistWith(
     userId: 'user-1',
     sessionId: 'session-1',
     traceId: 'trace-1',
+    cancerType: 'cutaneous-melanoma',
     messages: MESSAGES,
     usage,
     steps,
@@ -141,6 +142,12 @@ describe('persistSession', () => {
       onConflict: 'id',
       values: { id: 'session-1', user_id: 'user-1', title: 'Which trials read out in 2026?' },
     });
+  });
+
+  it('records the indication the chat ran under, so history stays scoped to it', async () => {
+    await persistWith();
+
+    expect(fake.upserts[0].values.cancer_type).toBe('cutaneous-melanoma');
   });
 
   it('throws when chat_sessions is unreachable, so the caller can log it', async () => {

@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
-import { Send, Square, RotateCcw, Sparkles } from 'lucide-react';
+import { DefaultChatTransport, type UIMessage } from 'ai';
+import { Send, Square, RotateCcw, FlaskConical, Hash, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { agentFeedbackApi, type FeedbackRating } from '@/lib/api';
 import { UserBubble } from './UserBubble';
 import { AssistantTurn, type TurnPart, type TurnTextPart } from './AssistantTurn';
 
@@ -17,21 +18,40 @@ const MAX_COMPOSER_HEIGHT_PX = 160;
 export interface ChatPanelProps {
   /** Dashboard category slug. Every tool query is restricted to it server-side. */
   cancerType: string;
+  /**
+   * The conversation to write to. Owned by the page so the history drawer and
+   * the panel agree on which chat is open; the server upserts a single row on
+   * it rather than inserting one per turn.
+   */
+  sessionId: string;
+  /** Transcript of a reopened conversation. Empty for a new one. */
+  initialMessages?: UIMessage[];
+  /** Fires when a turn finishes, so a new chat appears in the history list. */
+  onTurnFinished?: () => void;
 }
 
-export function ChatPanel({ cancerType }: ChatPanelProps) {
-  // One ID for the life of this chat, so the server upserts a single row
-  // instead of inserting one per turn.
-  const [sessionId] = useState(() => crypto.randomUUID());
-
+export function ChatPanel({
+  cancerType,
+  sessionId,
+  initialMessages,
+  onTurnFinished,
+}: ChatPanelProps) {
+  // `id` and `messages` seed the chat on mount only, so the page remounts this
+  // component (keyed on sessionId) when another conversation is opened.
   const { messages, sendMessage, status, error, stop, regenerate } = useChat({
+    id: sessionId,
+    messages: initialMessages,
     transport: new DefaultChatTransport({
       api: '/api/agent/chat',
       body: { cancerType, sessionId },
     }),
+    onFinish: () => onTurnFinished?.(),
   });
 
   const [input, setInput] = useState('');
+  // Ratings this user has already given, by assistant message id. Seeded from
+  // the database so a reopened conversation shows the thumbs it was given.
+  const [ratings, setRatings] = useState<Record<string, FeedbackRating>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // Follow the stream only while the reader is already at the bottom. Without
@@ -59,6 +79,30 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
     lastMsg?.role === 'assistant' &&
     lastMsg.parts.some((p) => p.type === 'text' && (p as TurnTextPart).text.length > 0);
   const showColdStartHint = isBusy && !hasAssistantText && elapsed > COLD_START_DELAY_MS;
+
+  useEffect(() => {
+    if (!initialMessages?.length) return;
+    let cancelled = false;
+    agentFeedbackApi.listForSession(sessionId).then((saved) => {
+      if (!cancelled) setRatings(saved);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, initialMessages?.length]);
+
+  const rate = (messageId: string, rating: FeedbackRating) => {
+    const withdrawing = ratings[messageId] === rating;
+    // Optimistic: a thumb that lags behind the click reads as a dropped one.
+    setRatings((prev) => {
+      const next = { ...prev };
+      if (withdrawing) delete next[messageId];
+      else next[messageId] = rating;
+      return next;
+    });
+    if (withdrawing) agentFeedbackApi.clear(messageId);
+    else agentFeedbackApi.rate(sessionId, messageId, rating);
+  };
 
   useEffect(() => {
     if (!pinnedToBottom.current) return;
@@ -95,9 +139,17 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto px-4 py-6 sm:px-8"
+        className="flex flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-8"
       >
-        <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <div
+          className={cn(
+            'mx-auto flex w-full max-w-3xl flex-col gap-6',
+            // With nothing said yet the thread is three short cards in a tall
+            // box. Centring them strands them between two empty bands, so they
+            // sit against the composer instead - the input is what they feed.
+            messages.length === 0 && 'mt-auto'
+          )}
+        >
           {messages.length === 0 ? (
             <EmptyState
               onPick={(q) => {
@@ -120,6 +172,8 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
                   parts={message.parts as TurnPart[]}
                   cancerType={cancerType}
                   isStreaming={isBusy && index === messages.length - 1}
+                  rating={ratings[message.id]}
+                  onRate={(rating) => rate(message.id, rating)}
                 />
               );
             })
@@ -161,55 +215,61 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
         className="border-t border-(--brand-border) bg-(--brand-surface) px-4 py-3 sm:px-8"
       >
         <div className="mx-auto max-w-3xl">
-          <div className="flex items-end gap-2">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => {
-              setInput(e.target.value);
-              resizeComposer(e.target);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e as unknown as React.FormEvent);
-              }
-            }}
-            placeholder="Ask about a trial, drug, target, or cancer indication…"
-            rows={1}
+          {/* The box is the bordered control; the textarea inside it is bare,
+              so the send button reads as part of the same field. */}
+          <div
             className={cn(
-              'flex-1 resize-none rounded-xl border border-(--brand-border) bg-(--brand-surface)',
-              'px-3.5 py-2.5 text-sm text-(--brand-text) placeholder:text-(--brand-text-muted)',
-              'focus:border-(--brand-primary) focus:ring-3 focus:ring-(--brand-primary)/12 focus:outline-none'
+              'flex items-end gap-2 rounded-xl border border-(--brand-border) bg-(--brand-surface)',
+              'py-1.5 pr-1.5 pl-3.5',
+              'focus-within:border-(--brand-primary) focus-within:ring-3 focus-within:ring-(--brand-primary)/12'
             )}
-          />
-          {isBusy ? (
-            <button
-              type="button"
-              onClick={stop}
+          >
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => {
+                setInput(e.target.value);
+                resizeComposer(e.target);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e as unknown as React.FormEvent);
+                }
+              }}
+              placeholder="Ask about a trial, drug, or target…"
+              rows={1}
               className={cn(
-                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                'border border-(--brand-border) bg-(--brand-surface) text-(--brand-primary)',
-                'hover:bg-(--brand-accent-light)'
+                'flex-1 resize-none border-0 bg-transparent py-2 text-sm',
+                'text-(--brand-text) placeholder:text-(--brand-text-muted) focus:outline-none'
               )}
-              aria-label="Stop generating"
-            >
-              <Square className="h-3.5 w-3.5 fill-current" />
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!input.trim()}
-              className={cn(
-                'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)',
-                'disabled:cursor-not-allowed disabled:opacity-50'
-              )}
-              aria-label="Send"
-            >
-              <Send className="h-4 w-4" />
-            </button>
-          )}
+            />
+            {isBusy ? (
+              <button
+                type="button"
+                onClick={stop}
+                className={cn(
+                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)'
+                )}
+                aria-label="Stop generating"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                className={cn(
+                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)',
+                  'disabled:cursor-not-allowed disabled:opacity-50'
+                )}
+                aria-label="Send"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <p className="mt-2 max-w-3xl font-mono text-[10px] tracking-[0.06em] text-(--brand-text-muted) uppercase">
             Enter to send · Shift+Enter for a new line
@@ -223,35 +283,50 @@ export function ChatPanel({ cancerType }: ChatPanelProps) {
 function EmptyState({ onPick }: { onPick: (q: string) => void }) {
   // Every example has to be answerable from the database, for whichever cancer
   // type the dashboard is on - naming another one would ask the agent for
-  // something it is scoped out of.
+  // something it is scoped out of. The label names the kind of question, so the
+  // three together show the breadth rather than just seeding one query.
   const examples = [
-    'What phase 3 trials do we have for BRAF-mutant disease?',
-    'Tell me about NCT00006368.',
-    'Which treatments have reported overall survival data?',
+    {
+      label: 'Trial phase',
+      icon: FlaskConical,
+      question: 'What phase 3 trials do we have for BRAF-mutant disease?',
+    },
+    {
+      label: 'NCT registry',
+      icon: Hash,
+      question: 'Tell me about NCT00006368.',
+    },
+    {
+      label: 'Survival metrics',
+      icon: Activity,
+      question: 'Which treatments have reported overall survival data?',
+    },
   ];
   // The page header already names and scopes the agent, so this only has to
   // get the first question asked.
   return (
-    <div className="flex flex-col gap-3 py-6">
-      <div className="flex items-center gap-2">
-        <Sparkles className="h-3.5 w-3.5 text-(--brand-accent)" />
-        <p className="font-mono text-[10px] tracking-[0.12em] text-(--brand-text-muted) uppercase">
-          Start with
-        </p>
-      </div>
-      <div className="grid gap-2">
-        {examples.map((q) => (
+    <div className="flex flex-col gap-3">
+      <p className="font-mono text-[10px] tracking-[0.12em] text-(--brand-text-muted) uppercase">
+        Start with
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {examples.map(({ label, icon: Icon, question }) => (
           <button
-            key={q}
+            key={question}
             type="button"
-            onClick={() => onPick(q)}
+            onClick={() => onPick(question)}
             className={cn(
-              'rounded-xl border border-(--brand-border) bg-(--brand-surface) px-3.5 py-2.5',
-              'text-left text-sm text-(--brand-text) transition',
-              'hover:border-(--brand-primary) hover:bg-(--brand-accent-light)'
+              'group flex flex-col gap-2 rounded-xl border border-(--brand-border)',
+              'bg-(--brand-surface) px-3.5 py-3 text-left transition',
+              'hover:border-(--brand-primary) hover:bg-(--brand-accent-light)',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
             )}
           >
-            {q}
+            <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.12em] text-(--brand-text-muted) uppercase group-hover:text-(--brand-primary)">
+              <Icon className="h-3.5 w-3.5 text-(--brand-accent)" aria-hidden />
+              {label}
+            </span>
+            <span className="text-sm leading-snug text-(--brand-text)">{question}</span>
           </button>
         ))}
       </div>

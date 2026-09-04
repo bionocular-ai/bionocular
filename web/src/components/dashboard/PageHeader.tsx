@@ -27,7 +27,7 @@ const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
         <div
           className={cn(
             'flex gap-4',
-            right ? 'items-start justify-between' : 'flex-col'
+            right ? 'flex-wrap items-start justify-between' : 'flex-col'
           )}
         >
           <h1
@@ -40,7 +40,7 @@ const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
             {title}
           </h1>
 
-          {right ? <div className="shrink-0">{right}</div> : null}
+          {right ? <div className="max-w-full shrink-0">{right}</div> : null}
         </div>
 
         {description ? (

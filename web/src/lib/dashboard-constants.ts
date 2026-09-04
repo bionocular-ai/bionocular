@@ -51,21 +51,32 @@ export interface DashboardNavItem {
   children?: DashboardNavItem[];
 }
 
-export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
-  { key: 'trial-updates',       label: 'Trial Updates',              icon: ClipboardList, section: 'trial-updates',       status: 'live' },
-  { key: 'live-news',           label: 'Live News',                  icon: Newspaper,     section: 'live-ticker',         status: 'live' },
-  { key: 'landscape',           label: 'Trial Landscape',            icon: Target,        section: 'landscape',           status: 'live' },
-  {
-    key: 'efficacy', label: 'Efficacy Intelligence Hub', icon: TrendingUp, section: 'analytics', query: { mode: 'efficacy' }, status: 'live',
-    children: [
-      { key: 'survival', label: 'Survival Intelligence Hub', icon: SurvivalCurveIcon, section: 'head-to-head-survival', status: 'live' },
-    ],
-  },
-  { key: 'safety',              label: 'Safety Intelligence Hub',    icon: ShieldCheck,   section: 'analytics', query: { mode: 'safety' },   status: 'live' },
-  { key: 'index',               label: 'Efficacy vs Safety Index Hub', icon: Scale,       section: 'analytics', query: { mode: 'all' },      status: 'live' },
-  { key: 'treatment-algorithm', label: 'Treatment Algorithm',        icon: Workflow,                                                         status: 'upcoming' },
-  { key: 'regulatory',          label: 'Regulatory Timeline',        icon: Landmark,      section: 'regulatory-timeline',                    status: 'upcoming' },
-  { key: 'ai-agent',            label: 'Bionocular Agent',           icon: Sparkles,      section: 'agent',                                  status: 'upcoming' },
+/**
+ * Nav items in rail order, split into the groups the sidebar separates with a
+ * hairline rule. The rail is sized to fit the longest label on one line
+ * ("Efficacy vs Safety Index Hub"), so no label wraps or truncates.
+ */
+export const DASHBOARD_NAV_GROUPS: DashboardNavItem[][] = [
+  [
+    { key: 'trial-updates', label: 'Trial Updates',    icon: ClipboardList, section: 'trial-updates', status: 'live' },
+    { key: 'live-news',     label: 'Live News',        icon: Newspaper,     section: 'live-ticker',   status: 'live' },
+    { key: 'landscape',     label: 'Trial Landscape',  icon: Target,        section: 'landscape',     status: 'live' },
+  ],
+  [
+    {
+      key: 'efficacy', label: 'Efficacy Intelligence Hub', icon: TrendingUp, section: 'analytics', query: { mode: 'efficacy' }, status: 'live',
+      children: [
+        { key: 'survival', label: 'Survival Intelligence Hub', icon: SurvivalCurveIcon, section: 'head-to-head-survival', status: 'live' },
+      ],
+    },
+    { key: 'safety', label: 'Safety Intelligence Hub',     icon: ShieldCheck, section: 'analytics', query: { mode: 'safety' }, status: 'live' },
+    { key: 'index',  label: 'Efficacy vs Safety Index Hub', icon: Scale,       section: 'analytics', query: { mode: 'all' },    status: 'live' },
+  ],
+  [
+    { key: 'treatment-algorithm', label: 'Treatment Algorithm', icon: Workflow,  status: 'upcoming' },
+    { key: 'regulatory',          label: 'Regulatory Timeline', icon: Landmark,  status: 'upcoming' },
+    { key: 'ai-agent',            label: 'Bionocular Agent',    icon: Sparkles,  section: 'agent', status: 'upcoming' },
+  ],
 ];
 
 export const DEFAULT_CANCER_TYPE_SLUG = 'cutaneous-melanoma';
