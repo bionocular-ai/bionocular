@@ -75,7 +75,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavItem[][] = [
   [
     { key: 'treatment-algorithm', label: 'Treatment Algorithm', icon: Workflow,  status: 'upcoming' },
     { key: 'regulatory',          label: 'Regulatory Timeline', icon: Landmark,  status: 'upcoming' },
-    { key: 'ai-agent',            label: 'Bionocular Agent',    icon: Sparkles,  section: 'agent', status: 'upcoming' },
+    { key: 'ai-agent',            label: 'AI Agent',            icon: Sparkles,  section: 'agent', status: 'upcoming' },
   ],
 ];
 

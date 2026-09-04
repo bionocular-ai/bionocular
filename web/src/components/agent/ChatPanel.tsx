@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
-import { Send, Square, RotateCcw, FlaskConical, Hash, Activity } from 'lucide-react';
+import { Send, Square, RotateCcw, FlaskConical, Activity, Layers, Newspaper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { agentFeedbackApi, type FeedbackRating } from '@/lib/api';
 import { UserBubble } from './UserBubble';
@@ -134,29 +134,26 @@ export function ChatPanel({
     }
   };
 
+  // Before the first question the thread and the composer sit together in the
+  // middle of the page, the way every other chat product opens; once there is a
+  // transcript the thread takes the height and the composer pins to the bottom.
+  const isEmpty = messages.length === 0;
+
   return (
-    <div className="flex h-full flex-col bg-(--brand-bg)">
+    <div className={cn('flex h-full flex-col bg-(--brand-bg)', isEmpty && 'justify-center')}>
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-8"
+        className={cn(
+          'flex flex-col overflow-y-auto px-4 py-6 sm:px-8',
+          isEmpty ? 'shrink-0' : 'flex-1'
+        )}
       >
-        <div
-          className={cn(
-            'mx-auto flex w-full max-w-3xl flex-col gap-6',
-            // With nothing said yet the thread is three short cards in a tall
-            // box. Centring them strands them between two empty bands, so they
-            // sit against the composer instead - the input is what they feed.
-            messages.length === 0 && 'mt-auto'
-          )}
-        >
-          {messages.length === 0 ? (
-            <EmptyState
-              onPick={(q) => {
-                setInput(q);
-                textareaRef.current?.focus();
-              }}
-            />
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+          {isEmpty ? (
+            <h2 className="text-center text-2xl font-medium text-balance text-(--brand-text)">
+              What do you want to know?
+            </h2>
           ) : (
             messages.map((message, index) => {
               if (message.role === 'user') {
@@ -212,7 +209,7 @@ export function ChatPanel({
 
       <form
         onSubmit={handleSubmit}
-        className="border-t border-(--brand-border) bg-(--brand-surface) px-4 py-3 sm:px-8"
+        className="px-4 py-3 sm:px-8"
       >
         <div className="mx-auto max-w-3xl">
           {/* The box is the bordered control; the textarea inside it is bare,
@@ -271,65 +268,66 @@ export function ChatPanel({
               </button>
             )}
           </div>
-          <p className="mt-2 max-w-3xl font-mono text-[10px] tracking-[0.06em] text-(--brand-text-muted) uppercase">
-            Enter to send · Shift+Enter for a new line
-          </p>
+          {isEmpty && (
+            <Suggestions
+              onPick={(q) => {
+                setInput(q);
+                textareaRef.current?.focus();
+              }}
+            />
+          )}
         </div>
       </form>
     </div>
   );
 }
 
-function EmptyState({ onPick }: { onPick: (q: string) => void }) {
-  // Every example has to be answerable from the database, for whichever cancer
-  // type the dashboard is on - naming another one would ask the agent for
-  // something it is scoped out of. The label names the kind of question, so the
-  // three together show the breadth rather than just seeding one query.
+function Suggestions({ onPick }: { onPick: (q: string) => void }) {
+  // One per table the agent can reach - registry, outcomes, landscape, news -
+  // so the four together show what it holds rather than seeding one query. None
+  // of them names a drug, a biomarker or an NCT number: the same chips are
+  // shown on every cancer-type dashboard, and the agent is scoped to that type,
+  // so anything specific would be a question it cannot answer half the time.
   const examples = [
     {
-      label: 'Trial phase',
+      label: 'Recruiting phase 3',
       icon: FlaskConical,
-      question: 'What phase 3 trials do we have for BRAF-mutant disease?',
+      question: 'Which phase 3 trials are currently recruiting?',
     },
     {
-      label: 'NCT registry',
-      icon: Hash,
-      question: 'Tell me about NCT00006368.',
-    },
-    {
-      label: 'Survival metrics',
+      label: 'Survival reported',
       icon: Activity,
-      question: 'Which treatments have reported overall survival data?',
+      question: 'Which treatments have reported a median overall survival?',
+    },
+    {
+      label: 'First-line treatments',
+      icon: Layers,
+      question: 'What treatment modalities show up most in first-line trials?',
+    },
+    {
+      label: 'Latest news',
+      icon: Newspaper,
+      question: 'What is the most recent news coverage we have?',
     },
   ];
-  // The page header already names and scopes the agent, so this only has to
-  // get the first question asked.
   return (
-    <div className="flex flex-col gap-3">
-      <p className="font-mono text-[10px] tracking-[0.12em] text-(--brand-text-muted) uppercase">
-        Start with
-      </p>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {examples.map(({ label, icon: Icon, question }) => (
-          <button
-            key={question}
-            type="button"
-            onClick={() => onPick(question)}
-            className={cn(
-              'group flex flex-col gap-2 rounded-xl border border-(--brand-border)',
-              'bg-(--brand-surface) px-3.5 py-3 text-left transition',
-              'hover:border-(--brand-primary) hover:bg-(--brand-accent-light)',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
-            )}
-          >
-            <span className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.12em] text-(--brand-text-muted) uppercase group-hover:text-(--brand-primary)">
-              <Icon className="h-3.5 w-3.5 text-(--brand-accent)" aria-hidden />
-              {label}
-            </span>
-            <span className="text-sm leading-snug text-(--brand-text)">{question}</span>
-          </button>
-        ))}
-      </div>
+    <div className="mt-3 flex flex-wrap justify-center gap-2">
+      {examples.map(({ label, icon: Icon, question }) => (
+        <button
+          key={question}
+          type="button"
+          onClick={() => onPick(question)}
+          className={cn(
+            'flex items-center gap-1.5 rounded-full border border-(--brand-border)',
+            'px-3 py-1.5 text-[13px] text-(--brand-text-muted) transition',
+            'hover:border-(--brand-primary) hover:bg-(--brand-accent-light) hover:text-(--brand-primary)',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
+          )}
+        >
+          <Icon className="h-3.5 w-3.5 text-(--brand-accent)" aria-hidden />
+          {label}
+        </button>
+      ))}
     </div>
   );
 }

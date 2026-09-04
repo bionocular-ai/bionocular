@@ -50,13 +50,15 @@ export function ChatHistoryDrawer({
     <aside
       aria-label="Chat history"
       className={cn(
-        'hidden shrink-0 flex-col border-r border-(--brand-border) bg-(--brand-bg) transition-[width] duration-200 md:flex',
-        collapsed ? 'w-12' : 'w-64'
+        'hidden shrink-0 flex-col bg-(--brand-bg) transition-[width] duration-200 md:flex',
+        // Collapsed the rail is a single icon, so the border would be a line
+        // down an otherwise empty column.
+        collapsed ? 'w-12' : 'w-64 border-r border-(--brand-border)'
       )}
     >
       <div
         className={cn(
-          'flex h-12 shrink-0 items-center border-b border-(--brand-border) px-1.5',
+          'flex h-12 shrink-0 items-center px-1.5',
           collapsed ? 'justify-center' : 'justify-between pl-3'
         )}
       >
@@ -77,24 +79,25 @@ export function ChatHistoryDrawer({
         </button>
       </div>
 
-      <div className={cn('shrink-0 p-1.5', !collapsed && 'px-2 pt-2')}>
-        <button
-          type="button"
-          onClick={onNewChat}
-          title="New chat"
-          aria-label="New chat"
-          className={cn(
-            'flex h-9 items-center gap-2 rounded-lg border border-(--brand-border) bg-(--brand-surface)',
-            'text-sm font-medium text-(--brand-primary) transition',
-            'hover:border-(--brand-primary) hover:bg-(--brand-accent-light)',
-            'focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none',
-            collapsed ? 'w-9 justify-center' : 'w-full px-3'
-          )}
-        >
-          <Plus className="h-4 w-4 shrink-0" aria-hidden />
-          {!collapsed && 'New chat'}
-        </button>
-      </div>
+      {!collapsed && (
+        <div className="shrink-0 px-2 pt-2 pb-1.5">
+          <button
+            type="button"
+            onClick={onNewChat}
+            title="New chat"
+            aria-label="New chat"
+            className={cn(
+              'flex h-9 w-full items-center gap-2 rounded-lg border border-(--brand-border) bg-(--brand-surface)',
+              'px-3 text-sm font-medium text-(--brand-primary) transition',
+              'hover:border-(--brand-primary) hover:bg-(--brand-accent-light)',
+              'focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none'
+            )}
+          >
+            <Plus className="h-4 w-4 shrink-0" aria-hidden />
+            New chat
+          </button>
+        </div>
+      )}
 
       {!collapsed && (
         <nav className="min-h-0 flex-1 overflow-y-auto px-2 pt-1 pb-3">

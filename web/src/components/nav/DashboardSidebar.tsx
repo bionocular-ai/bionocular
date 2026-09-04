@@ -278,7 +278,7 @@ function SidebarModeControl({
   onModeChange: (mode: SidebarMode) => void;
 }) {
   return (
-    <div className="mt-auto border-t border-(--brand-border) px-2 py-2">
+    <div className="mt-auto px-2 py-2">
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(
@@ -353,8 +353,16 @@ export function DashboardSidebar() {
             'group/rail absolute inset-y-0 left-0 flex flex-col overflow-hidden',
             'border-r border-(--brand-border) bg-(--brand-bg) transition-[width,box-shadow] duration-200 ease-out',
             isExpanded ? 'w-64' : 'w-14',
+            // Floating over the page, the rail is lit rather than scrimmed: a
+            // near-invisible contact shadow holds the edge and a wide, low-alpha
+            // ambient one carries the lift. Both are tinted with the brand teal
+            // (#1B4F65) - a neutral black at this alpha greys the mint page
+            // background into mud.
             sidebarMode === 'hover' &&
-              'hover:w-64 hover:bg-(--brand-surface) hover:shadow-[18px_0_40px_-28px_rgba(16,43,54,0.75)]',
+              cn(
+                'hover:w-64 hover:bg-(--brand-surface)',
+                'hover:shadow-[1px_0_2px_0_rgba(27,79,101,0.05),24px_0_32px_-16px_rgba(27,79,101,0.16)]',
+              ),
           )}
         >
           <NavList

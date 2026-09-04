@@ -50,8 +50,7 @@ export default function AgentPage() {
           <PageHeader
             className="mx-auto w-full max-w-3xl"
             category={categoryName}
-            title="Bionocular Agent"
-            description="Bionocular's own data only - no live registries or literature."
+            title="AI Agent"
           />
         </div>
 
