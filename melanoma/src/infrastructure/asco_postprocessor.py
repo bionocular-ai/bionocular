@@ -12,6 +12,51 @@ import re
 from domain.interfaces import PostprocessorInterface
 from domain.models import ConferenceType, ParsedAbstract, PostprocessingConfiguration
 
+# LaTeX math emitted by cloud PDF converters (Datalab); Marker did not produce it.
+# Only spans that are unambiguously math are unwrapped: currency ("$405,663 ($402,936)",
+# "$500 vs $1200") and superscripts ("$^{89}$Zr") must survive untouched. Subscripted variables and
+# scientific notation ($p_{adj}$, $1 \times 10^6$) are left as-is rather than risk
+# mangling the "^{" forms that guard prior years.
+_MATH_SYMBOLS = {
+    r"\geq": "\u2265",
+    r"\leq": "\u2264",
+    r"\pm": "\u00b1",
+    r"\times": "\u00d7",
+    r"\mu": "\u03bc",
+    r"\alpha": "\u03b1",
+    r"\beta": "\u03b2",
+    r"\gamma": "\u03b3",
+    r"\rho": "\u03c1",
+    r"\chi": "\u03c7",
+    r"\Delta": "\u0394",
+    r"\uparrow": "\u2191",
+    r"\downarrow": "\u2193",
+}
+
+_MATH_SAFE = re.compile(
+    r"^[\sA-Za-z0-9.<>=+\-%\u2265\u2264\u00b1\u00d7\u03bc\u03b1\u03b2\u03b3\u03c1\u03c7\u0394\u2191\u2193]*$"
+)
+
+
+def _unwrap_math(match: "re.Match[str]") -> str:
+    """Unwrap an inline LaTeX math span to plain text, or leave it untouched."""
+    inner = match.group(1)
+
+    # Currency and superscript spans are not math - never touch them.
+    if "^{" in inner or "(" in inner or "," in inner:
+        return match.group(0)
+
+    text = re.sub(r"\\text\{([^}]*)\}", r"\1", inner)
+    for command, symbol in _MATH_SYMBOLS.items():
+        text = text.replace(command, symbol)
+    text = text.replace(r"\%", "%")
+
+    # Anything with a leftover command or unexpected character stays as-is.
+    if "\\" in text or not _MATH_SAFE.match(text):
+        return match.group(0)
+
+    return text.strip()
+
 
 class ASCOPostprocessor(PostprocessorInterface):
     """Postprocessor for ASCO conference abstracts."""
@@ -71,6 +116,11 @@ class ASCOPostprocessor(PostprocessorInterface):
         if not text:
             return ""
 
+        # Normalize LaTeX math before any line/section/table parsing sees it.
+        # A closing "$" followed by a digit means the pair was two currency
+        # amounts ("$500 vs $1200"), not one math span - leave those alone.
+        text = re.sub(r"\$([^$]*)\$(?!\d)", _unwrap_math, text)
+
         lines = text.split("\n")
         cleaned_lines = []
 
@@ -92,7 +142,11 @@ class ASCOPostprocessor(PostprocessorInterface):
                 continue
             if line_stripped == "</footer>":
                 continue
-            if "Visit abstracts.asco.org" in line:
+            if re.match(
+                r"^Visit\s+\[?(?:meetings|abstracts)\.asco\.org",
+                line_stripped,
+                re.IGNORECASE,
+            ):
                 continue
 
             # Skip page separators
@@ -131,8 +185,8 @@ class ASCOPostprocessor(PostprocessorInterface):
         cleaned = re.sub(r"<sub>(.*?)</sub>", r"\1", cleaned)
         cleaned = re.sub(r"\*([A-Za-z0-9\-]+)\*", r"\1", cleaned)
 
-        # Normalize whitespace
-        cleaned = re.sub(r"\s+", " ", cleaned)
+        # Normalize whitespace within lines; newlines delimit markdown table rows
+        cleaned = re.sub(r"[ \t]+", " ", cleaned)
 
         # Expand common medical abbreviations for better RAG retrieval
         abbreviation_map = {
