@@ -23,22 +23,12 @@ os.environ.setdefault("EXTRACTION_MODEL", "gemini-3.1-pro-preview")
 load_dotenv()
 
 from src.app.enhanced_extraction_service import EnhancedExtractionService
-from src.domain.constants import get_ordered_attribute_list, get_ordered_attributes
+from src.domain.constants import get_ordered_attributes
 from src.domain.extraction_models import ABSTRACT_ATTRIBUTES
-from src.domain.models import (
-    ChunkingConfiguration,
-    ChunkWithEmbedding,
-    EmbeddingConfiguration,
-)
-from src.infrastructure.arm_aware_rag_provider import ArmAwareRAGContextProvider
-from src.infrastructure.attribute_extractor import LLMAttributeExtractor
+from src.domain.models import DocumentType
 from src.infrastructure.cost_calculator import CostCalculator, ModelType
 from src.infrastructure.family_extractor import FamilyExtractor
 from src.infrastructure.gemini_service import GeminiLLMService
-from src.infrastructure.langchain.chunking import LangChainChunkingService
-from src.infrastructure.langchain.embeddings import LangChainEmbeddingService
-from src.infrastructure.langchain.vector_store import LangChainVectorStore
-from src.infrastructure.prompt_templates import ExtractionPromptTemplateProvider
 from src.infrastructure.treatment_arm_separator import TreatmentArmSeparator
 
 # Configure logging
@@ -56,7 +46,7 @@ CONFERENCES: dict[str, Path] = {
     "ASCO": Path("data/postprocessed/ASCO_Abstracts"),
     "ESMO": Path("data/postprocessed/ESMO_Abstracts"),
 }
-YEARS = [2020, 2021, 2022, 2023, 2024, 2025]
+YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026]
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -177,14 +167,8 @@ async def _process_conference_year(
     conference: str,
     year: int,
     abstracts_dir: Path,
-    embedding_service: LangChainEmbeddingService,
-    chunking_strategy: LangChainChunkingService,
-    chunking_config: ChunkingConfiguration,
-    arm_separator: TreatmentArmSeparator,
-    attribute_extractor: LLMAttributeExtractor,
-    llm_service: GeminiLLMService,
+    extraction_service: EnhancedExtractionService,
     canonical_attributes: list,
-    attributes_to_extract: list,
     output_file: Path,
 ) -> int:
     """Process all abstracts for a single conference-year. Returns number of abstracts processed."""
@@ -213,108 +197,35 @@ async def _process_conference_year(
 
     logger.info(f"Found {len(abstracts)} abstracts to process in {abstract_file.name}")
 
-    # --- Reset vector store for this conference-year ---
-    # Use in-memory store (no persist_directory) to avoid SQLite file handle
-    # conflicts between conference-years when running back-to-back.
-    vector_store_service = LangChainVectorStore(
-        embedding_service=embedding_service,
-        collection_name="abstract_pipeline_trials",
-        persist_directory=None,
-    )
-    rag_provider = ArmAwareRAGContextProvider(
-        vector_store=vector_store_service,
-        embedding_service=embedding_service,
-    )
-    family_extractor = FamilyExtractor(gemini=llm_service)
-    extraction_service = EnhancedExtractionService(
-        treatment_arm_separator=arm_separator,
-        arm_aware_rag_provider=rag_provider,
-        attribute_extractor=attribute_extractor,
-        llm_service=llm_service,
-        clinical_trials_api_service=None,
-        enable_cost_tracking=False,
-        family_extractor=family_extractor,
-        gemini=llm_service,
-    )
-
-    # --- Chunk all abstracts for this year ---
-    logger.info(f"Chunking {len(abstracts)} abstracts...")
-    embedding_config = EmbeddingConfiguration()
-    all_raw_chunks = []  # (abstract_idx, chunk) pairs preserving order
+    # --- Collect per-abstract metadata ---
     abstracts_metadata = []
-
     for idx, abstract_text in enumerate(abstracts):
         first_line = abstract_text.strip().split("\n")[0].strip()
         raw_abstract_id = first_line if first_line else f"{idx+1:03d}"
-        abstract_id = f"{conference}_{year}_{raw_abstract_id}"
-
-        full_abstract_text = "### Abstract ID:" + abstract_text
-        chunks = await chunking_strategy.chunk_content(
-            content=full_abstract_text,
-            configuration=chunking_config,
-            document_id=abstract_id,
-            filename=str(abstract_file),
-        )
-        for chunk in chunks:
-            all_raw_chunks.append((idx, chunk))
-
         abstracts_metadata.append(
             {
                 "year": year,
                 "file": abstract_file,
-                "abstract_text": abstract_text,
-                "abstract_id": abstract_id,
+                "abstract_text": "### Abstract ID:" + abstract_text,
+                "abstract_id": f"{conference}_{year}_{raw_abstract_id}",
                 "index": idx,
             }
         )
-
-    # --- Batch-embed all chunks in one vectorized pass ---
-    logger.info(f"Embedding {len(all_raw_chunks)} chunks in one batch...")
-    all_texts = [chunk.content for _, chunk in all_raw_chunks]
-    batch_embeddings = await embedding_service.generate_embeddings_batch(all_texts, embedding_config)
-
-    all_chunks_with_embeddings = [
-        ChunkWithEmbedding(
-            id=chunk.id,
-            document_id=chunk.document_id,
-            content=chunk.content,
-            chunk_type=chunk.chunk_type,
-            metadata=chunk.metadata,
-            sequence_number=chunk.sequence_number,
-            token_count=chunk.token_count,
-            created_at=chunk.created_at,
-            embedding=emb,
-        )
-        for (_, chunk), emb in zip(all_raw_chunks, batch_embeddings)
-    ]
-    logger.info(f"Embedded {len(all_chunks_with_embeddings)} chunks for {len(abstracts_metadata)} abstracts")
-
-    await vector_store_service.upsert_chunks(all_chunks_with_embeddings)
-    logger.info(
-        f"Loaded {len(all_chunks_with_embeddings)} chunks for "
-        f"{len(abstracts_metadata)} abstracts into vector store"
-    )
 
     # --- Extract attributes, saving incrementally after each abstract ---
     output_header = {"conference": conference, "year": year, "test_mode": TEST_MODE}
     serialized_abstracts: list[dict] = []
 
     for idx, abstract_meta in enumerate(abstracts_metadata):
-        abstract_id = abstract_meta["abstract_id"]
-        abstract_text = abstract_meta["abstract_text"]
+        abstract_id = str(abstract_meta["abstract_id"])
+        abstract_text = str(abstract_meta["abstract_text"])
 
         logger.info(f"\n{'='*60}")
         logger.info(f"PROCESSING ABSTRACT {idx+1}/{len(abstracts_metadata)}: {abstract_id}")
         logger.info(f"{'='*60}")
 
-        result = await extraction_service.extract_attributes_from_abstract_batch(
-            abstract_text=abstract_text,
-            abstract_id=abstract_id,
-            attributes=attributes_to_extract,
-            context_chunks_per_arm=10,
-            similarity_threshold=0.1,
-            include_api_data=False,
-            file_path=str(abstract_meta["file"]),
+        result = await extraction_service.extract(
+            abstract_text, abstract_id, DocumentType.ABSTRACT
         )
 
         logger.info(f"Abstract {abstract_id} completed!")
@@ -362,27 +273,20 @@ async def main():
             model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT.value,
             cost_calculator=cost_calculator,
         )
-        embedding_service = LangChainEmbeddingService()
-        chunking_config = ChunkingConfiguration(
-            max_chunk_size=1000,
-            chunk_overlap=200,
-            preserve_tables=True,
-            include_headers=True,
-        )
-        chunking_strategy = LangChainChunkingService(chunking_config)
         arm_separator = TreatmentArmSeparator(llm_service=llm_service)
-        prompt_provider = ExtractionPromptTemplateProvider()
-        attribute_extractor = LLMAttributeExtractor(
-            llm_service=llm_service,
-            prompt_provider=prompt_provider,
+        family_extractor = FamilyExtractor(gemini=llm_service)
+        extraction_service = EnhancedExtractionService(
+            treatment_arm_separator=arm_separator,
+            clinical_trials_api_service=None,
+            enable_cost_tracking=False,  # GeminiLLMService tracks costs internally
+            family_extractor=family_extractor,
+            gemini=llm_service,
         )
 
         logger.info("Services initialized successfully")
 
         # ── Canonical attribute list ───────────────────────────────────────────
         canonical_attributes = ABSTRACT_ATTRIBUTES
-
-        attributes_to_extract = get_ordered_attribute_list(canonical_attributes)
 
         # ── Output directory ───────────────────────────────────────────────────
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -402,14 +306,8 @@ async def main():
                     conference=conference,
                     year=year,
                     abstracts_dir=abstracts_dir,
-                    embedding_service=embedding_service,
-                    chunking_strategy=chunking_strategy,
-                    chunking_config=chunking_config,
-                    arm_separator=arm_separator,
-                    attribute_extractor=attribute_extractor,
-                    llm_service=llm_service,
+                    extraction_service=extraction_service,
                     canonical_attributes=canonical_attributes,
-                    attributes_to_extract=attributes_to_extract,
                     output_file=output_file,
                 )
                 total_processed += processed
