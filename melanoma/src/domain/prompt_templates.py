@@ -313,11 +313,11 @@ _COMPARATOR_ATTRIBUTION_RULE = (
 )
 
 _FOLLOWUP_SCOPE_RULE = (
-    "FOLLOW-UP SCOPE: the follow-up fields in this family (median_followup_*, length_*) mean the "
-    "follow-up FOR THAT ARM. Documents usually print one study-level median follow-up covering "
-    "the whole population ('median follow-up was 19 months'). That is not an arm value — leave "
-    "the field empty rather than copying it onto every arm. Fill it only where the document "
-    "gives a per-arm follow-up figure.\n"
+    "FOLLOW-UP SCOPE: the follow-up fields in this family (median_followup_*, length_*) take the "
+    "median follow-up for that arm. Prefer a per-arm figure; where the document prints one "
+    "study-level median for the whole population ('median planned follow-up, 60.3 mo'), put "
+    "that value on EVERY arm. Leave the field empty only if several study-level figures "
+    "disagree and none is tied to an arm.\n"
     "Two things are never follow-up. A LANDMARK LABEL names when a RATE was measured: in "
     "'5-year RFS was 60%' the value is 60 — never store the 5 years as follow-up. And the "
     "ENDPOINT'S OWN MEDIAN is not follow-up: 'median RFS was 18 months' fills rfs, not "

@@ -127,6 +127,20 @@ def test_followup_families_reject_landmarks_and_endpoint_medians() -> None:
         ), f"{fam} prompt confuses median with follow-up"
 
 
+def test_followup_families_carry_study_level_value_onto_every_arm() -> None:
+    """A single study-level median follow-up belongs on all arms, not nowhere."""
+    for fam in [
+        AttributeFamily.PFS_FAMILY,
+        AttributeFamily.OS_FAMILY,
+        AttributeFamily.EFS_RFS_MFS,
+        AttributeFamily.TIME_TO_METRICS,
+    ]:
+        p = FAMILY_PROMPTS[fam]
+        assert (
+            "on EVERY arm" in p
+        ), f"{fam} prompt drops a study-level follow-up instead of sharing it"
+
+
 def test_cancer_type_is_documented_as_multi_valued() -> None:
     """Basket trials span several skin cancers; the column is multi-valued by design."""
     p = FAMILY_PROMPTS[AttributeFamily.IDENTIFICATION]
