@@ -277,3 +277,36 @@ class TestParsedAbstract:
         assert abstract.doi == ""
         assert abstract.full_text_reference == ""
         assert abstract.additional_content == ""
+
+
+class TestMathNormalization:
+    """LaTeX math from cloud PDF conversion must normalize without eating currency."""
+
+    @pytest.fixture
+    def processor(self):
+        return ASCOPostprocessor()
+
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            (r"aged $\geq 18$ y", "aged ≥ 18 y"),
+            (r"($p < 0.001$)", "(p < 0.001)"),
+            (r"$\geq 20\%$ risk", "≥ 20% risk"),
+            (r"$\alpha$-bias IL-2", "α-bias IL-2"),
+            (r"n of $<40$", "n of <40"),
+        ],
+    )
+    def test_math_is_unwrapped(self, processor, raw, expected):
+        assert processor.remove_pdf_artifacts(raw) == expected
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "cost of $405,663 ($402,936) per QALY",  # currency, not math
+            "higher: US$595 (95% CI US-$555 to 1,200)",  # currency pair
+            r"$^{89}$Zr-radiolabeled tracer",  # superscript isotope
+            r"dose of $1 \times 10^6$ cells",  # scientific notation, left as-is
+        ],
+    )
+    def test_non_math_is_untouched(self, processor, raw):
+        assert processor.remove_pdf_artifacts(raw) == raw
