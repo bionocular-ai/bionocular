@@ -229,7 +229,7 @@ class EnhancedExtractionService:
                     arm_results={},
                     overall_confidence=0.0,
                     processing_time_ms=processing_time,
-                    errors=["No treatment arms identified"],
+                    errors=arm_result.errors or ["No treatment arms identified"],
                     prompt_version=PROMPT_VERSION,
                 )
 
@@ -279,6 +279,7 @@ class EnhancedExtractionService:
                 ],
                 return_exceptions=True,
             )
+            transient_errors: list[str] = []
             for fam, fr in zip(families, family_results):
                 if isinstance(fr, BaseException):
                     logger.error(
@@ -287,6 +288,7 @@ class EnhancedExtractionService:
                         fam.value,
                         fr,
                     )
+                    transient_errors.append(f"family_extraction_failed: {fam.value}")
                     continue
                 for arm_id, attrs in fr.items():
                     if arm_id in per_arm:
@@ -361,15 +363,27 @@ class EnhancedExtractionService:
                         extracted.value = normalized
                         extracted.validation_status = ValidationStatus.VALID
                     else:
-                        attrs[attr_type] = await verify_low_confidence(
-                            self.gemini,
-                            cache_id,
-                            doc_text,
-                            arms_by_id[arm_id],
-                            attr_type,
-                            str(raw_value),
-                            reason,
-                        )
+                        try:
+                            attrs[attr_type] = await verify_low_confidence(
+                                self.gemini,
+                                cache_id,
+                                doc_text,
+                                arms_by_id[arm_id],
+                                attr_type,
+                                str(raw_value),
+                                reason,
+                            )
+                        except Exception as exc:  # noqa: BLE001 - transient API failure
+                            logger.error(
+                                "verifier_failed doc_id=%s arm=%s attribute=%s error=%s",
+                                doc_id,
+                                arm_id,
+                                attr_type.value,
+                                exc,
+                            )
+                            transient_errors.append(
+                                f"verifier_failed: {attr_type.value}"
+                            )
 
             processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
             result = self._assemble_result(
@@ -378,6 +392,7 @@ class EnhancedExtractionService:
                 per_arm=per_arm,
                 processing_time_ms=processing_time,
                 prompt_version=PROMPT_VERSION,
+                errors=transient_errors,
             )
             return enrich_result(result)
         finally:
@@ -404,6 +419,7 @@ class EnhancedExtractionService:
         per_arm: dict[str, dict[AttributeType, ExtractedAttribute]],
         processing_time_ms: int,
         prompt_version: str,
+        errors: list[str] | None = None,
     ) -> TreatmentArmExtractionResult:
         """Build a :class:`TreatmentArmExtractionResult` from the new-path data.
 
@@ -483,6 +499,7 @@ class EnhancedExtractionService:
             processing_time_ms=processing_time_ms,
             total_attributes_extracted=total_attributes,
             prompt_version=prompt_version,
+            errors=errors or [],
         )
 
     async def _legacy_rag_extract(
@@ -766,7 +783,8 @@ class EnhancedExtractionService:
                     processing_time_ms=int(
                         (datetime.now() - start_time).total_seconds() * 1000
                     ),
-                    errors=["No treatment arms identified"],
+                    errors=separation_result.errors
+                    or ["No treatment arms identified"],
                 )
 
             logger.info(
@@ -931,7 +949,8 @@ class EnhancedExtractionService:
                     processing_time_ms=int(
                         (datetime.now() - start_time).total_seconds() * 1000
                     ),
-                    errors=["No treatment arms identified"],
+                    errors=separation_result.errors
+                    or ["No treatment arms identified"],
                 )
 
             logger.info(

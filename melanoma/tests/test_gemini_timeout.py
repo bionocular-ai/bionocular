@@ -16,7 +16,7 @@ import pytest
 from src.infrastructure.gemini_service import (
     _REQUEST_TIMEOUT_MS,
     GeminiLLMService,
-    _is_retryable_error,
+    is_retryable_error,
 )
 
 
@@ -31,11 +31,11 @@ from src.infrastructure.gemini_service import (
     ],
 )
 def test_retryable_errors(message: str) -> None:
-    assert _is_retryable_error(Exception(message)) is True
+    assert is_retryable_error(Exception(message)) is True
 
 
 def test_asyncio_timeout_is_retryable() -> None:
-    assert _is_retryable_error(asyncio.TimeoutError()) is True
+    assert is_retryable_error(asyncio.TimeoutError()) is True
 
 
 @pytest.mark.parametrize(
@@ -43,7 +43,7 @@ def test_asyncio_timeout_is_retryable() -> None:
     ["invalid JSON in response", "400 INVALID_ARGUMENT", "permission denied"],
 )
 def test_non_retryable_errors(message: str) -> None:
-    assert _is_retryable_error(Exception(message)) is False
+    assert is_retryable_error(Exception(message)) is False
 
 
 def test_client_built_with_request_timeout(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -15,7 +15,7 @@ from ..domain.treatment_arm_models import (
     TreatmentArmSeparationResult,
     TreatmentArmSeparationSchema,
 )
-from .gemini_service import GeminiLLMService
+from .gemini_service import GeminiLLMService, is_retryable_error
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +95,15 @@ class TreatmentArmSeparator:
             return result
 
         except Exception as e:
+            if is_retryable_error(e):
+                # A throttled or timed-out call is not an extraction result. Returning
+                # an empty arm list here is indistinguishable from an abstract that
+                # genuinely has no arms, so callers silently drop the abstract instead
+                # of retrying it. Let it propagate; callers decide how to degrade.
+                logger.error(
+                    f"Treatment arm separation hit a transient error for {abstract_id}: {e}"
+                )
+                raise
             logger.error(f"Treatment arm separation failed: {e}")
             processing_time = int((datetime.now() - start_time).total_seconds() * 1000)
 

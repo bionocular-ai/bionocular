@@ -212,21 +212,53 @@ async def _process_conference_year(
             }
         )
 
-    # --- Extract attributes, saving incrementally after each abstract ---
+    # --- Resume: keep abstracts already written to the output file ---
     output_header = {"conference": conference, "year": year, "test_mode": TEST_MODE}
     serialized_abstracts: list[dict] = []
+    if output_file.exists():
+        with open(output_file, encoding="utf-8") as f:
+            serialized_abstracts = json.load(f).get("abstracts", [])
+        # Abstracts left partial by a failed family (e.g. a 429) are dropped so
+        # this run retries them; other errors are permanent and stay as-is.
+        serialized_abstracts = [
+            a
+            for a in serialized_abstracts
+            if not any(
+                str(e).startswith(
+                    ("family_extraction_failed", "verifier_failed", "Separation failed")
+                )
+                for e in a.get("errors", [])
+            )
+        ]
+        logger.info(
+            f"Resuming {conference} {year}: {len(serialized_abstracts)} abstracts "
+            f"already complete in {output_file}"
+        )
+    done_ids = {a["abstract_id"] for a in serialized_abstracts}
 
+    # --- Extract attributes, saving incrementally after each abstract ---
+    processed = 0
     for idx, abstract_meta in enumerate(abstracts_metadata):
         abstract_id = str(abstract_meta["abstract_id"])
         abstract_text = str(abstract_meta["abstract_text"])
+
+        if abstract_id in done_ids:
+            continue
 
         logger.info(f"\n{'='*60}")
         logger.info(f"PROCESSING ABSTRACT {idx+1}/{len(abstracts_metadata)}: {abstract_id}")
         logger.info(f"{'='*60}")
 
-        result = await extraction_service.extract(
-            abstract_text, abstract_id, DocumentType.ABSTRACT
-        )
+        try:
+            result = await extraction_service.extract(
+                abstract_text, abstract_id, DocumentType.ABSTRACT
+            )
+        except Exception as exc:  # noqa: BLE001 - one bad abstract must not end the run
+            logger.error(
+                f"Abstract {abstract_id} failed and was not saved "
+                f"(re-run to retry it): {exc}"
+            )
+            continue
 
         logger.info(f"Abstract {abstract_id} completed!")
         logger.info(f"  Arms: {len(result.arm_results)}")
@@ -246,11 +278,30 @@ async def _process_conference_year(
             _serialize_result(result, abstract_meta, canonical_attributes)
         )
         _save_results(output_file, serialized_abstracts, output_header)
+        processed += 1
         logger.info(
             f"  Progress saved ({idx+1}/{len(abstracts_metadata)}) → {output_file}"
         )
 
-    return len(abstracts_metadata)
+    return processed
+
+
+def build_services(google_api_key: str) -> tuple[EnhancedExtractionService, CostCalculator]:
+    """Build the extraction service and its cost calculator."""
+    cost_calculator = CostCalculator(default_model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT)
+    llm_service = GeminiLLMService(
+        api_key=google_api_key,
+        model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT.value,
+        cost_calculator=cost_calculator,
+    )
+    extraction_service = EnhancedExtractionService(
+        treatment_arm_separator=TreatmentArmSeparator(llm_service=llm_service),
+        clinical_trials_api_service=None,
+        enable_cost_tracking=False,  # GeminiLLMService tracks costs internally
+        family_extractor=FamilyExtractor(gemini=llm_service),
+        gemini=llm_service,
+    )
+    return extraction_service, cost_calculator
 
 
 async def main():
@@ -264,25 +315,7 @@ async def main():
 
         # ── Services initialized once for the entire run ──────────────────────
         logger.info("Initializing services...")
-
-        cost_calculator = CostCalculator(
-            default_model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT
-        )
-        llm_service = GeminiLLMService(
-            api_key=google_api_key,
-            model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT.value,
-            cost_calculator=cost_calculator,
-        )
-        arm_separator = TreatmentArmSeparator(llm_service=llm_service)
-        family_extractor = FamilyExtractor(gemini=llm_service)
-        extraction_service = EnhancedExtractionService(
-            treatment_arm_separator=arm_separator,
-            clinical_trials_api_service=None,
-            enable_cost_tracking=False,  # GeminiLLMService tracks costs internally
-            family_extractor=family_extractor,
-            gemini=llm_service,
-        )
-
+        extraction_service, cost_calculator = build_services(google_api_key)
         logger.info("Services initialized successfully")
 
         # ── Canonical attribute list ───────────────────────────────────────────
@@ -299,9 +332,6 @@ async def main():
         for conference, abstracts_dir in CONFERENCES.items():
             for year in YEARS:
                 output_file = data_dir / f"extraction_results_{conference}_{year}.json"
-                if output_file.exists():
-                    logger.info(f"Skipping {conference} {year} — output already exists: {output_file}")
-                    continue
                 processed = await _process_conference_year(
                     conference=conference,
                     year=year,
