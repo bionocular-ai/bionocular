@@ -783,8 +783,7 @@ class EnhancedExtractionService:
                     processing_time_ms=int(
                         (datetime.now() - start_time).total_seconds() * 1000
                     ),
-                    errors=separation_result.errors
-                    or ["No treatment arms identified"],
+                    errors=separation_result.errors or ["No treatment arms identified"],
                 )
 
             logger.info(
@@ -949,8 +948,7 @@ class EnhancedExtractionService:
                     processing_time_ms=int(
                         (datetime.now() - start_time).total_seconds() * 1000
                     ),
-                    errors=separation_result.errors
-                    or ["No treatment arms identified"],
+                    errors=separation_result.errors or ["No treatment arms identified"],
                 )
 
             logger.info(
