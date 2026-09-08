@@ -306,6 +306,8 @@ class TestMathNormalization:
             "higher: US$595 (95% CI US-$555 to 1,200)",  # currency pair
             r"$^{89}$Zr-radiolabeled tracer",  # superscript isotope
             r"dose of $1 \times 10^6$ cells",  # scientific notation, left as-is
+            "cost of $500 vs $1200 per cycle",  # comma-free currency pair
+            "median cost $890 and $940",  # comma-free currency pair
         ],
     )
     def test_non_math_is_untouched(self, processor, raw):

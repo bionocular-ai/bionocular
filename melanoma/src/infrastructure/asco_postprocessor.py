@@ -13,8 +13,8 @@ from domain.interfaces import PostprocessorInterface
 from domain.models import ConferenceType, ParsedAbstract, PostprocessingConfiguration
 
 # LaTeX math emitted by cloud PDF converters (Datalab); Marker did not produce it.
-# Only spans that are unambiguously math are unwrapped: currency ("$405,663 ($402,936)")
-# and superscripts ("$^{89}$Zr") must survive untouched. Subscripted variables and
+# Only spans that are unambiguously math are unwrapped: currency ("$405,663 ($402,936)",
+# "$500 vs $1200") and superscripts ("$^{89}$Zr") must survive untouched. Subscripted variables and
 # scientific notation ($p_{adj}$, $1 \times 10^6$) are left as-is rather than risk
 # mangling the "^{" forms that guard prior years.
 _MATH_SYMBOLS = {
@@ -117,7 +117,9 @@ class ASCOPostprocessor(PostprocessorInterface):
             return ""
 
         # Normalize LaTeX math before any line/section/table parsing sees it.
-        text = re.sub(r"\$([^$]*)\$", _unwrap_math, text)
+        # A closing "$" followed by a digit means the pair was two currency
+        # amounts ("$500 vs $1200"), not one math span - leave those alone.
+        text = re.sub(r"\$([^$]*)\$(?!\d)", _unwrap_math, text)
 
         lines = text.split("\n")
         cleaned_lines = []
