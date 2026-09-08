@@ -18,6 +18,12 @@ data/processed/ESMO_Abstracts/
 # Output files directory (all generated output files)
 data/output/
 
+# One-abstract smoke-test results (scripts/smoke_9500.py)
+data/smoke/
+
+# Abstract pipeline output (archived under data/output/ when a run is kept)
+data/extraction_results_*.json
+
 # Full-table dumps taken before a destructive write (backfill_modality.py)
 data/backups/
 

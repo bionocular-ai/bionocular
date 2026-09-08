@@ -58,7 +58,7 @@ _RETRYABLE_TOKENS = (
 )
 
 
-def _is_retryable_error(exc: BaseException) -> bool:
+def is_retryable_error(exc: BaseException) -> bool:
     """True for transient errors worth retrying: 429/quota and timeout/deadline.
 
     Retrying a timed-out generate call is safe - the call is side-effect-free,
@@ -298,7 +298,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         model_name: Optional[str] = None,
         operation: str = "trial_extraction",
         attribute_type: Optional[str] = None,
-        max_retries: int = 3,
+        max_retries: int = 6,
     ) -> str:
         from google.genai import types
 
@@ -339,7 +339,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                 return text
             except Exception as exc:
                 last_exc = exc
-                if _is_retryable_error(exc) and attempt < max_retries - 1:
+                if is_retryable_error(exc) and attempt < max_retries - 1:
                     # DSQ-aware backoff: honor a server retry hint, else a small
                     # exponential with jitter (see _backoff_seconds).
                     wait_sec = _backoff_seconds(attempt, _parse_retry_after(str(exc)))
@@ -387,7 +387,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         model_name: Optional[str] = None,
         operation: str = "structured_extraction",
         attribute_type: Optional[str] = None,
-        max_retries: int = 3,
+        max_retries: int = 6,
     ) -> T:
         """Generate a response constrained to `response_schema` (a Pydantic class).
 
@@ -451,7 +451,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                     raise
             except Exception as exc:
                 last_exc = exc
-                if _is_retryable_error(exc) and attempt < max_retries - 1:
+                if is_retryable_error(exc) and attempt < max_retries - 1:
                     wait_sec = _backoff_seconds(attempt, _parse_retry_after(str(exc)))
                     logger.warning(
                         "Transient error (429/timeout) on attempt %d/%d — retrying in %.0fs",
