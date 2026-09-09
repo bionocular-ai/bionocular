@@ -277,22 +277,21 @@ async def _build_services() -> tuple[Any, Any, Any]:
     from src.infrastructure.attribute_extractor import LLMAttributeExtractor
     from src.infrastructure.cost_calculator import CostCalculator, ModelType
     from src.infrastructure.family_extractor import FamilyExtractor
-    from src.infrastructure.gemini_service import GeminiLLMService
+    from src.infrastructure.gemini_service import GeminiLLMService, vertex_env
     from src.infrastructure.langchain.chunking import LangChainChunkingService
     from src.infrastructure.langchain.embeddings import LangChainEmbeddingService
     from src.infrastructure.langchain.vector_store import LangChainVectorStore
     from src.infrastructure.prompt_templates import ExtractionPromptTemplateProvider
     from src.infrastructure.treatment_arm_separator import TreatmentArmSeparator
 
-    google_api_key = os.getenv("GOOGLE_API_KEY", "")
-    if not google_api_key:
-        raise RuntimeError("GOOGLE_API_KEY is not set in the environment")
+    project, location = vertex_env()
 
     cost_calculator = CostCalculator(
         default_model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT
     )
     llm_service = GeminiLLMService(
-        api_key=google_api_key,
+        project=project,
+        location=location,
         model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT.value,
         cost_calculator=cost_calculator,
     )

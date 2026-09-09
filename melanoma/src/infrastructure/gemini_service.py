@@ -4,6 +4,7 @@
 import asyncio
 import json
 import logging
+import os
 import random
 import re
 from typing import Any, Optional, TypeVar
@@ -226,6 +227,27 @@ def _parse_json_response(text: str) -> dict[str, Any]:
 
     logger.warning("Could not parse JSON from response: %s", text[:200])
     return {}
+
+
+def vertex_env() -> tuple[str, str]:
+    """Read the Vertex ADC project and location from the environment.
+
+    Raises:
+        RuntimeError: if either variable is unset, naming the missing ones.
+    """
+    project = os.getenv("GOOGLE_CLOUD_PROJECT", "")
+    location = os.getenv("GOOGLE_CLOUD_LOCATION", "")
+    missing = [
+        name
+        for name, value in (
+            ("GOOGLE_CLOUD_PROJECT", project),
+            ("GOOGLE_CLOUD_LOCATION", location),
+        )
+        if not value
+    ]
+    if missing:
+        raise RuntimeError(f"{', '.join(missing)} is not set in the environment")
+    return project, location
 
 
 class GeminiLLMService(LLMService, StructuredLLMService):

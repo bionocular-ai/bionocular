@@ -28,7 +28,7 @@ from src.domain.extraction_models import ABSTRACT_ATTRIBUTES
 from src.domain.models import DocumentType
 from src.infrastructure.cost_calculator import CostCalculator, ModelType
 from src.infrastructure.family_extractor import FamilyExtractor
-from src.infrastructure.gemini_service import GeminiLLMService
+from src.infrastructure.gemini_service import GeminiLLMService, vertex_env
 from src.infrastructure.treatment_arm_separator import TreatmentArmSeparator
 
 # Configure logging
@@ -298,11 +298,14 @@ async def _process_conference_year(
     return processed
 
 
-def build_services(google_api_key: str) -> tuple[EnhancedExtractionService, CostCalculator]:
+def build_services(
+    project: str, location: str
+) -> tuple[EnhancedExtractionService, CostCalculator]:
     """Build the extraction service and its cost calculator."""
     cost_calculator = CostCalculator(default_model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT)
     llm_service = GeminiLLMService(
-        api_key=google_api_key,
+        project=project,
+        location=location,
         model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT.value,
         cost_calculator=cost_calculator,
     )
@@ -321,13 +324,11 @@ async def main():
     logger.info("Starting Abstract Extraction Pipeline")
 
     try:
-        google_api_key = os.getenv("GOOGLE_API_KEY", "")
-        if not google_api_key:
-            raise RuntimeError("GOOGLE_API_KEY is not set in the environment")
+        project, location = vertex_env()
 
         # ── Services initialized once for the entire run ──────────────────────
         logger.info("Initializing services...")
-        extraction_service, cost_calculator = build_services(google_api_key)
+        extraction_service, cost_calculator = build_services(project, location)
         logger.info("Services initialized successfully")
 
         # ── Canonical attribute list ───────────────────────────────────────────
