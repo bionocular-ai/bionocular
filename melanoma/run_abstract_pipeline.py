@@ -50,7 +50,8 @@ CONFERENCES: dict[str, Path] = {
     "ESMO": Path("data/postprocessed/ESMO_Abstracts"),
 }
 YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026]
-CONCURRENCY = 2  # Abstracts extracted in parallel; Vertex 429s above ~2
+CONCURRENCY = 1  # Abstracts in parallel; each already fans out to the
+# family extractor, and Vertex refuses the overlap (see FamilyExtractor).
 # ─────────────────────────────────────────────────────────────────────────────
 
 
