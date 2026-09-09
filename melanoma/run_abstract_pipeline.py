@@ -218,23 +218,25 @@ async def _process_conference_year(
     if output_file.exists():
         with open(output_file, encoding="utf-8") as f:
             serialized_abstracts = json.load(f).get("abstracts", [])
-        # Abstracts left partial by a failed family (e.g. a 429) are dropped so
-        # this run retries them; other errors are permanent and stay as-is.
-        serialized_abstracts = [
-            a
-            for a in serialized_abstracts
-            if not any(
-                str(e).startswith(
-                    ("family_extraction_failed", "verifier_failed", "Separation failed")
-                )
-                for e in a.get("errors", [])
+    # Abstracts left partial by a failed family (e.g. a 429) are reprocessed, but
+    # stay on disk until their replacement exists - a retry that fails must not
+    # delete the partial content we already had.
+    retry_ids = {
+        a["abstract_id"]
+        for a in serialized_abstracts
+        if any(
+            str(e).startswith(
+                ("family_extraction_failed", "verifier_failed", "Separation failed")
             )
-        ]
-        logger.info(
-            f"Resuming {conference} {year}: {len(serialized_abstracts)} abstracts "
-            f"already complete in {output_file}"
+            for e in a.get("errors", [])
         )
-    done_ids = {a["abstract_id"] for a in serialized_abstracts}
+    }
+    done_ids = {a["abstract_id"] for a in serialized_abstracts} - retry_ids
+    if serialized_abstracts:
+        logger.info(
+            f"Resuming {conference} {year}: {len(done_ids)} abstracts already complete, "
+            f"{len(retry_ids)} partial to retry in {output_file}"
+        )
 
     # --- Extract attributes, saving incrementally after each abstract ---
     processed = 0
@@ -274,9 +276,19 @@ async def _process_conference_year(
             if arm_result.get("errors"):
                 logger.warning(f"    Errors: {arm_result['errors']}")
 
-        serialized_abstracts.append(
-            _serialize_result(result, abstract_meta, canonical_attributes)
+        record = _serialize_result(result, abstract_meta, canonical_attributes)
+        replaced = next(
+            (
+                i
+                for i, a in enumerate(serialized_abstracts)
+                if a["abstract_id"] == abstract_id
+            ),
+            None,
         )
+        if replaced is None:
+            serialized_abstracts.append(record)
+        else:
+            serialized_abstracts[replaced] = record
         _save_results(output_file, serialized_abstracts, output_header)
         processed += 1
         logger.info(

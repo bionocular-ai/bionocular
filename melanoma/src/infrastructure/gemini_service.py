@@ -97,6 +97,31 @@ def _backoff_seconds(attempt: int, retry_after: float | None = None) -> float:
     return exp + random.uniform(0, _BACKOFF_BASE_SECONDS)
 
 
+# Quota rejections that arrive with no server retry hint are admission-control
+# refusals, not congestion: the answer does not change however long we wait, and
+# every attempt re-sends the whole prompt. One ASCO run burned ~2.7M input tokens
+# on 455 such retries, all of which failed. Retry a quota error only when the
+# server tells us to; a run-level resume is the real retry mechanism.
+_QUOTA_TOKENS = ("429", "RESOURCE_EXHAUSTED", "RATE_LIMIT")
+
+
+def retry_delay_for(exc: BaseException, attempt: int) -> float | None:
+    """Seconds to wait before retrying ``exc``, or None to stop retrying now.
+
+    Deliberately distinct from :func:`is_retryable_error`, which answers a
+    different question - "is this transient?" - for callers that degrade rather
+    than retry (see treatment_arm_separator).
+    """
+    if not is_retryable_error(exc):
+        return None
+    retry_after = _parse_retry_after(str(exc))
+    if retry_after is not None:
+        return _backoff_seconds(attempt, retry_after)
+    if any(token in str(exc).upper() for token in _QUOTA_TOKENS):
+        return None
+    return _backoff_seconds(attempt)
+
+
 def _inline_pydantic_schema(schema_cls: type[BaseModel]) -> dict[str, Any]:
     """Render a Pydantic JSON schema with all ``$ref`` / ``$defs`` inlined.
 
@@ -339,10 +364,8 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                 return text
             except Exception as exc:
                 last_exc = exc
-                if is_retryable_error(exc) and attempt < max_retries - 1:
-                    # DSQ-aware backoff: honor a server retry hint, else a small
-                    # exponential with jitter (see _backoff_seconds).
-                    wait_sec = _backoff_seconds(attempt, _parse_retry_after(str(exc)))
+                wait_sec = retry_delay_for(exc, attempt)
+                if wait_sec is not None and attempt < max_retries - 1:
                     logger.warning(
                         "Transient error (429/timeout) on attempt %d/%d — retrying in %.0fs",
                         attempt + 1,
@@ -451,8 +474,8 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                     raise
             except Exception as exc:
                 last_exc = exc
-                if is_retryable_error(exc) and attempt < max_retries - 1:
-                    wait_sec = _backoff_seconds(attempt, _parse_retry_after(str(exc)))
+                wait_sec = retry_delay_for(exc, attempt)
+                if wait_sec is not None and attempt < max_retries - 1:
                     logger.warning(
                         "Transient error (429/timeout) on attempt %d/%d — retrying in %.0fs",
                         attempt + 1,
