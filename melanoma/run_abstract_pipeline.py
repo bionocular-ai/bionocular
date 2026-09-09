@@ -50,6 +50,7 @@ CONFERENCES: dict[str, Path] = {
     "ESMO": Path("data/postprocessed/ESMO_Abstracts"),
 }
 YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026]
+CONCURRENCY = 2  # Abstracts extracted in parallel; Vertex 429s above ~2
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -184,8 +185,16 @@ async def _process_conference_year(
     extraction_service: EnhancedExtractionService,
     canonical_attributes: list,
     output_file: Path,
+    concurrency: int,
 ) -> int:
-    """Process all abstracts for a single conference-year. Returns number of abstracts processed."""
+    """Process all abstracts for a single conference-year.
+
+    Up to `concurrency` abstracts are extracted in parallel. Results are
+    accumulated in a single list guarded by a lock and flushed after every
+    abstract, so an interrupted run resumes from the output file.
+
+    Returns the number of abstracts processed.
+    """
     abstract_file = abstracts_dir / f"{conference}_{year}.md"
     if not abstract_file.exists():
         logger.warning(f"Abstract file not found, skipping: {abstract_file}")
@@ -253,64 +262,73 @@ async def _process_conference_year(
             f"{len(retry_ids)} partial to retry in {output_file}"
         )
 
-    # --- Extract attributes, saving incrementally after each abstract ---
+    # --- Extract attributes in parallel, saving after each abstract ---
+    pending = [
+        meta for meta in abstracts_metadata if str(meta["abstract_id"]) not in done_ids
+    ]
+    logger.info(f"Extracting {len(pending)} abstracts with concurrency={concurrency}")
+
     processed = 0
-    for idx, abstract_meta in enumerate(abstracts_metadata):
+    write_lock = asyncio.Lock()
+    semaphore = asyncio.Semaphore(max(1, concurrency))
+
+    async def _worker(abstract_meta: dict) -> None:
+        nonlocal processed
         abstract_id = str(abstract_meta["abstract_id"])
         abstract_text = str(abstract_meta["abstract_text"])
 
-        if abstract_id in done_ids:
-            continue
+        async with semaphore:
+            logger.info(f"Processing abstract {abstract_id}")
+            try:
+                result = await extraction_service.extract(
+                    abstract_text, abstract_id, DocumentType.ABSTRACT
+                )
+            except (
+                Exception
+            ) as exc:  # noqa: BLE001 - one bad abstract must not end the run
+                logger.error(
+                    f"Abstract {abstract_id} failed and was not saved "
+                    f"(re-run to retry it): {exc}"
+                )
+                return
 
-        logger.info(f"\n{'='*60}")
-        logger.info(
-            f"PROCESSING ABSTRACT {idx+1}/{len(abstracts_metadata)}: {abstract_id}"
-        )
-        logger.info(f"{'='*60}")
+        # The result list and the output file are shared, so mutate and flush
+        # under the lock - concurrent writers would interleave otherwise.
+        async with write_lock:
+            logger.info(f"Abstract {abstract_id} completed!")
+            logger.info(f"  Arms: {len(result.arm_results)}")
+            logger.info(f"  Attributes extracted: {result.total_attributes_extracted}")
+            logger.info(f"  Confidence: {result.overall_confidence:.2f}")
+            logger.info(f"  Processing time: {result.processing_time_ms}ms")
 
-        try:
-            result = await extraction_service.extract(
-                abstract_text, abstract_id, DocumentType.ABSTRACT
+            for arm_id, arm_result in result.arm_results.items():
+                logger.info(
+                    f"  Arm {arm_id}: {arm_result.get('arm_name', 'Unknown')} - "
+                    f"{arm_result.get('total_attributes', 0)} attributes"
+                )
+                if arm_result.get("errors"):
+                    logger.warning(f"    Errors: {arm_result['errors']}")
+
+            record = _serialize_result(result, abstract_meta, canonical_attributes)
+            replaced = next(
+                (
+                    i
+                    for i, a in enumerate(serialized_abstracts)
+                    if a["abstract_id"] == abstract_id
+                ),
+                None,
             )
-        except Exception as exc:  # noqa: BLE001 - one bad abstract must not end the run
-            logger.error(
-                f"Abstract {abstract_id} failed and was not saved "
-                f"(re-run to retry it): {exc}"
-            )
-            continue
-
-        logger.info(f"Abstract {abstract_id} completed!")
-        logger.info(f"  Arms: {len(result.arm_results)}")
-        logger.info(f"  Attributes extracted: {result.total_attributes_extracted}")
-        logger.info(f"  Confidence: {result.overall_confidence:.2f}")
-        logger.info(f"  Processing time: {result.processing_time_ms}ms")
-
-        for arm_id, arm_result in result.arm_results.items():
+            if replaced is None:
+                serialized_abstracts.append(record)
+            else:
+                serialized_abstracts[replaced] = record
+            _save_results(output_file, serialized_abstracts, output_header)
+            processed += 1
             logger.info(
-                f"  Arm {arm_id}: {arm_result.get('arm_name', 'Unknown')} — "
-                f"{arm_result.get('total_attributes', 0)} attributes"
+                f"  Progress saved ({processed}/{len(pending)}) → {output_file}"
             )
-            if arm_result.get("errors"):
-                logger.warning(f"    Errors: {arm_result['errors']}")
 
-        record = _serialize_result(result, abstract_meta, canonical_attributes)
-        replaced = next(
-            (
-                i
-                for i, a in enumerate(serialized_abstracts)
-                if a["abstract_id"] == abstract_id
-            ),
-            None,
-        )
-        if replaced is None:
-            serialized_abstracts.append(record)
-        else:
-            serialized_abstracts[replaced] = record
-        _save_results(output_file, serialized_abstracts, output_header)
-        processed += 1
-        logger.info(
-            f"  Progress saved ({idx+1}/{len(abstracts_metadata)}) → {output_file}"
-        )
+    await asyncio.gather(*(_worker(meta) for meta in pending))
 
     return processed
 
@@ -371,6 +389,7 @@ async def main():
                     extraction_service=extraction_service,
                     canonical_attributes=canonical_attributes,
                     output_file=output_file,
+                    concurrency=CONCURRENCY,
                 )
                 total_processed += processed
                 if processed:

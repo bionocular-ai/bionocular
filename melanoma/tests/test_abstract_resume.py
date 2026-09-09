@@ -69,6 +69,7 @@ def _run(tmp_path: Path) -> dict:
             extraction_service=_FailingOnPartial(),
             canonical_attributes=ABSTRACT_ATTRIBUTES,
             output_file=output_file,
+            concurrency=1,
         )
     )
     return json.loads(output_file.read_text(encoding="utf-8"))
@@ -111,6 +112,7 @@ def test_partial_is_actually_retried_not_skipped(tmp_path: Path) -> None:
             extraction_service=_Recording(),
             canonical_attributes=ABSTRACT_ATTRIBUTES,
             output_file=output_file,
+            concurrency=1,
         )
     )
     assert attempted == ["ASCO_2026_9511"]
