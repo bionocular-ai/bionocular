@@ -535,7 +535,9 @@ async def _run_eval_legacy_cached(out_path: Path | None) -> int:
     return 0
 
 
-async def _run_eval(pipeline: str, out_path: Path | None, doc_filter: str | None = None) -> int:
+async def _run_eval(
+    pipeline: str, out_path: Path | None, doc_filter: str | None = None
+) -> int:
     if pipeline == "legacy-cached":
         return await _run_eval_legacy_cached(out_path)
 
@@ -706,7 +708,9 @@ def main() -> int:
         help="Which extraction path to run. 'legacy-cached' scores pre-extracted deployed data without LLM calls.",
     )
     _ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M")
-    _default_out = Path("data/output/Eval_holdout_May_2026") / f"eval_new_pipeline_{_ts}.json"
+    _default_out = (
+        Path("data/output/Eval_holdout_May_2026") / f"eval_new_pipeline_{_ts}.json"
+    )
     parser.add_argument(
         "--out",
         type=Path,

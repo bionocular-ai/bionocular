@@ -6,6 +6,9 @@ using Google Gemini as the LLM backend.
 Output: one JSON file per conference-year in melanoma/data/.
 """
 
+# ruff: noqa: E402 - env vars must be set before the service imports below,
+# so the imports deliberately sit after that setup.
+
 import asyncio
 import json
 import logging
@@ -39,8 +42,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── Pipeline configuration ────────────────────────────────────────────────────
-TEST_MODE = False          # Set True for test mode (single abstract)
-MAX_ABSTRACTS_TEST = 1     # Number of abstracts to process in test mode
+TEST_MODE = False  # Set True for test mode (single abstract)
+MAX_ABSTRACTS_TEST = 1  # Number of abstracts to process in test mode
 
 CONFERENCES: dict[str, Path] = {
     "ASCO": Path("data/postprocessed/ASCO_Abstracts"),
@@ -61,7 +64,9 @@ class _PydanticJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def _serialize_result(result: object, abstract_meta: dict, canonical_attributes: list) -> dict:
+def _serialize_result(
+    result: object, abstract_meta: dict, canonical_attributes: list
+) -> dict:
     """Serialize a single abstract extraction result to a JSON-safe dict."""
     allowed_fields = {attr.value for attr in canonical_attributes}
 
@@ -112,7 +117,9 @@ def _serialize_result(result: object, abstract_meta: dict, canonical_attributes:
                     "value": clean_value,
                     "confidence": getattr(attr_data, "confidence", 0.0),
                     "source": getattr(attr_data, "source", "unknown"),
-                    "validation_status": str(getattr(attr_data, "validation_status", "unknown")),
+                    "validation_status": str(
+                        getattr(attr_data, "validation_status", "unknown")
+                    ),
                     "validation_errors": getattr(attr_data, "validation_errors", []),
                     "context_chunks": len(getattr(attr_data, "source_chunks", [])),
                     "extracted_at": extracted_at,
@@ -121,7 +128,9 @@ def _serialize_result(result: object, abstract_meta: dict, canonical_attributes:
                 serializable_attributes[str(attr_type)] = attr_data
 
         ordered_attributes = get_ordered_attributes(serializable_attributes)
-        ordered_attributes = {k: v for k, v in ordered_attributes.items() if k in allowed_fields}
+        ordered_attributes = {
+            k: v for k, v in ordered_attributes.items() if k in allowed_fields
+        }
 
         abstract_data["arm_results"][arm_id] = {
             "arm_id": arm_result.get("arm_id"),
@@ -151,12 +160,17 @@ def _save_results(output_file: Path, abstracts_data: list, header: dict) -> None
         **header,
         "total_abstracts": len(abstracts_data),
         "total_arms": sum(a["total_arms"] for a in abstracts_data),
-        "total_attributes_extracted": sum(a["total_attributes_extracted"] for a in abstracts_data),
+        "total_attributes_extracted": sum(
+            a["total_attributes_extracted"] for a in abstracts_data
+        ),
         "average_confidence": (
             sum(a["overall_confidence"] for a in abstracts_data) / len(abstracts_data)
-            if abstracts_data else 0
+            if abstracts_data
+            else 0
         ),
-        "total_processing_time_ms": sum(a["processing_time_ms"] for a in abstracts_data),
+        "total_processing_time_ms": sum(
+            a["processing_time_ms"] for a in abstracts_data
+        ),
         "abstracts": abstracts_data,
     }
     with open(output_file, "w", encoding="utf-8") as f:
@@ -192,6 +206,7 @@ async def _process_conference_year(
 
     if TEST_MODE and len(abstracts) > MAX_ABSTRACTS_TEST:
         import random
+
         abstracts = random.sample(abstracts, MAX_ABSTRACTS_TEST)
         logger.info(f"  (TEST MODE: randomly sampled {MAX_ABSTRACTS_TEST} abstracts)")
 
@@ -248,7 +263,9 @@ async def _process_conference_year(
             continue
 
         logger.info(f"\n{'='*60}")
-        logger.info(f"PROCESSING ABSTRACT {idx+1}/{len(abstracts_metadata)}: {abstract_id}")
+        logger.info(
+            f"PROCESSING ABSTRACT {idx+1}/{len(abstracts_metadata)}: {abstract_id}"
+        )
         logger.info(f"{'='*60}")
 
         try:
@@ -302,7 +319,9 @@ def build_services(
     project: str, location: str
 ) -> tuple[EnhancedExtractionService, CostCalculator]:
     """Build the extraction service and its cost calculator."""
-    cost_calculator = CostCalculator(default_model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT)
+    cost_calculator = CostCalculator(
+        default_model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT
+    )
     llm_service = GeminiLLMService(
         project=project,
         location=location,
