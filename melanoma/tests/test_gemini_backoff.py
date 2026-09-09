@@ -8,7 +8,13 @@ server-provided retry delay when present.
 
 from __future__ import annotations
 
-from src.infrastructure.gemini_service import _backoff_seconds, _parse_retry_after
+import asyncio
+
+from src.infrastructure.gemini_service import (
+    _backoff_seconds,
+    _parse_retry_after,
+    retry_delay_for,
+)
 
 _CAP = 30.0
 
@@ -51,3 +57,28 @@ def test_parse_retry_after_from_google_style_error() -> None:
 def test_parse_retry_after_absent_returns_none() -> None:
     """No retry hint in the error yields None (fall back to exponential)."""
     assert _parse_retry_after("429 RESOURCE_EXHAUSTED quota exceeded") is None
+
+
+# --- Quota rejections without a server hint are refusals, not congestion ---
+
+
+def test_instant_quota_rejection_is_not_retried() -> None:
+    """A 429 with no retryDelay hint stops immediately - waiting changes nothing."""
+    exc = Exception("429 RESOURCE_EXHAUSTED. {'error': {'code': 429}}")
+    assert retry_delay_for(exc, 0) is None
+
+
+def test_quota_rejection_with_server_hint_is_still_retried() -> None:
+    """The server hint stays authoritative: told to wait, we wait."""
+    exc = Exception("429 RESOURCE_EXHAUSTED ... 'retryDelay': '7s' ...")
+    assert retry_delay_for(exc, 0) == 7.0
+
+
+def test_timeouts_are_still_retried_without_a_hint() -> None:
+    """Only quota refusals are affected; a timeout is still worth another try."""
+    assert retry_delay_for(asyncio.TimeoutError(), 0) is not None
+    assert retry_delay_for(Exception("504 DEADLINE_EXCEEDED"), 0) is not None
+
+
+def test_non_retryable_error_yields_no_delay() -> None:
+    assert retry_delay_for(Exception("400 INVALID_ARGUMENT"), 0) is None
