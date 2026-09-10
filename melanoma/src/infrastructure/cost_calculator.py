@@ -33,6 +33,7 @@ class ModelType(str, Enum):
     GEMINI_31_PRO_PREVIEW_DIRECT = "gemini-3.1-pro-preview"
     GEMINI_25_PRO_DIRECT = "gemini-2.5-pro"
     GEMINI_25_FLASH_DIRECT = "gemini-2.5-flash"
+    GEMINI_38_FLASH_DIRECT = "gemini-3.8-flash"
 
 
 @dataclass
@@ -158,6 +159,13 @@ class CostCalculator:
             completion_cost_per_1m=2.50,
             max_tokens=1048576,
             description="Gemini 2.5 Flash - Fast and cost-effective Gemini (Gemini API)",
+        ),
+        ModelType.GEMINI_38_FLASH_DIRECT: ModelPricing(
+            model=ModelType.GEMINI_38_FLASH_DIRECT,
+            prompt_cost_per_1m=0.75,
+            completion_cost_per_1m=3.75,
+            max_tokens=1048576,
+            description="Gemini 3.8 Flash - GA, allocated quota (Gemini API)",
         ),
     }
 
