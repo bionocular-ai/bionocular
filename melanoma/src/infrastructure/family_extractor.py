@@ -16,12 +16,6 @@ import logging
 from typing import Any
 
 from pydantic import BaseModel, Field, create_model
-from tenacity import (
-    retry,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from ..domain.extraction_models import (
     FAMILY_TO_ATTRIBUTES,
@@ -50,14 +44,6 @@ _TOKEN_BUDGET_PER_CELL = 60
 # Source quotes are populated only for verifier-corrected cells (verifier.py).
 _CONFIDENCE_VALUE_PRESENT = 0.9
 _CONFIDENCE_EMPTY_VALUE = 0.3
-
-
-def _is_transient_error(exc: BaseException) -> bool:
-    """Match 429 / RESOURCE_EXHAUSTED / 5xx errors worth retrying."""
-    msg = str(exc).upper()
-    if "429" in msg or "RESOURCE_EXHAUSTED" in msg or "RATE_LIMIT" in msg:
-        return True
-    return any(code in msg for code in ("500", "502", "503", "504"))
 
 
 class FamilyExtractor:
@@ -101,7 +87,7 @@ class FamilyExtractor:
         max_tokens = self._max_tokens_for(family, len(arms))
 
         async with self._sem:
-            response = await self._call_with_retry(
+            response = await self._call(
                 cache_id=cache_id,
                 doc_text=doc_text,
                 prompt=prompt,
@@ -210,16 +196,13 @@ class FamilyExtractor:
         )
 
     # ------------------------------------------------------------------ #
-    # LLM call + retry
+    # LLM call
     # ------------------------------------------------------------------ #
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=20),
-        retry=retry_if_exception(_is_transient_error),
-        reraise=True,
-    )
-    async def _call_with_retry(
+    # Retries belong to GeminiLLMService, which honours the server's retry
+    # hint. A layer here would re-send the whole prompt for hintless 429s -
+    # admission-control refusals that never succeed (see gemini_service).
+    async def _call(
         self,
         cache_id: str | None,
         doc_text: str,

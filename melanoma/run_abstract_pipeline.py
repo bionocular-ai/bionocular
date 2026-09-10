@@ -6,6 +6,9 @@ using Google Gemini as the LLM backend.
 Output: one JSON file per conference-year in melanoma/data/.
 """
 
+# ruff: noqa: E402 - env vars must be set before the service imports below,
+# so the imports deliberately sit after that setup.
+
 import asyncio
 import json
 import logging
@@ -28,7 +31,7 @@ from src.domain.extraction_models import ABSTRACT_ATTRIBUTES
 from src.domain.models import DocumentType
 from src.infrastructure.cost_calculator import CostCalculator, ModelType
 from src.infrastructure.family_extractor import FamilyExtractor
-from src.infrastructure.gemini_service import GeminiLLMService
+from src.infrastructure.gemini_service import GeminiLLMService, vertex_env
 from src.infrastructure.treatment_arm_separator import TreatmentArmSeparator
 
 # Configure logging
@@ -39,14 +42,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── Pipeline configuration ────────────────────────────────────────────────────
-TEST_MODE = False          # Set True for test mode (single abstract)
-MAX_ABSTRACTS_TEST = 1     # Number of abstracts to process in test mode
+TEST_MODE = False  # Set True for test mode (single abstract)
+MAX_ABSTRACTS_TEST = 1  # Number of abstracts to process in test mode
 
 CONFERENCES: dict[str, Path] = {
     "ASCO": Path("data/postprocessed/ASCO_Abstracts"),
     "ESMO": Path("data/postprocessed/ESMO_Abstracts"),
 }
-YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026]
+YEARS = [2026]  # Earlier years are already extracted; re-add one to reprocess it.
+CONCURRENCY = 1  # Abstracts in parallel; each already fans out to the
+# family extractor, and Vertex refuses the overlap (see FamilyExtractor).
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -61,7 +66,9 @@ class _PydanticJSONEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def _serialize_result(result: object, abstract_meta: dict, canonical_attributes: list) -> dict:
+def _serialize_result(
+    result: object, abstract_meta: dict, canonical_attributes: list
+) -> dict:
     """Serialize a single abstract extraction result to a JSON-safe dict."""
     allowed_fields = {attr.value for attr in canonical_attributes}
 
@@ -112,7 +119,9 @@ def _serialize_result(result: object, abstract_meta: dict, canonical_attributes:
                     "value": clean_value,
                     "confidence": getattr(attr_data, "confidence", 0.0),
                     "source": getattr(attr_data, "source", "unknown"),
-                    "validation_status": str(getattr(attr_data, "validation_status", "unknown")),
+                    "validation_status": str(
+                        getattr(attr_data, "validation_status", "unknown")
+                    ),
                     "validation_errors": getattr(attr_data, "validation_errors", []),
                     "context_chunks": len(getattr(attr_data, "source_chunks", [])),
                     "extracted_at": extracted_at,
@@ -121,7 +130,9 @@ def _serialize_result(result: object, abstract_meta: dict, canonical_attributes:
                 serializable_attributes[str(attr_type)] = attr_data
 
         ordered_attributes = get_ordered_attributes(serializable_attributes)
-        ordered_attributes = {k: v for k, v in ordered_attributes.items() if k in allowed_fields}
+        ordered_attributes = {
+            k: v for k, v in ordered_attributes.items() if k in allowed_fields
+        }
 
         abstract_data["arm_results"][arm_id] = {
             "arm_id": arm_result.get("arm_id"),
@@ -151,12 +162,17 @@ def _save_results(output_file: Path, abstracts_data: list, header: dict) -> None
         **header,
         "total_abstracts": len(abstracts_data),
         "total_arms": sum(a["total_arms"] for a in abstracts_data),
-        "total_attributes_extracted": sum(a["total_attributes_extracted"] for a in abstracts_data),
+        "total_attributes_extracted": sum(
+            a["total_attributes_extracted"] for a in abstracts_data
+        ),
         "average_confidence": (
             sum(a["overall_confidence"] for a in abstracts_data) / len(abstracts_data)
-            if abstracts_data else 0
+            if abstracts_data
+            else 0
         ),
-        "total_processing_time_ms": sum(a["processing_time_ms"] for a in abstracts_data),
+        "total_processing_time_ms": sum(
+            a["processing_time_ms"] for a in abstracts_data
+        ),
         "abstracts": abstracts_data,
     }
     with open(output_file, "w", encoding="utf-8") as f:
@@ -170,8 +186,16 @@ async def _process_conference_year(
     extraction_service: EnhancedExtractionService,
     canonical_attributes: list,
     output_file: Path,
+    concurrency: int,
 ) -> int:
-    """Process all abstracts for a single conference-year. Returns number of abstracts processed."""
+    """Process all abstracts for a single conference-year.
+
+    Up to `concurrency` abstracts are extracted in parallel. Results are
+    accumulated in a single list guarded by a lock and flushed after every
+    abstract, so an interrupted run resumes from the output file.
+
+    Returns the number of abstracts processed.
+    """
     abstract_file = abstracts_dir / f"{conference}_{year}.md"
     if not abstract_file.exists():
         logger.warning(f"Abstract file not found, skipping: {abstract_file}")
@@ -192,6 +216,7 @@ async def _process_conference_year(
 
     if TEST_MODE and len(abstracts) > MAX_ABSTRACTS_TEST:
         import random
+
         abstracts = random.sample(abstracts, MAX_ABSTRACTS_TEST)
         logger.info(f"  (TEST MODE: randomly sampled {MAX_ABSTRACTS_TEST} abstracts)")
 
@@ -238,71 +263,87 @@ async def _process_conference_year(
             f"{len(retry_ids)} partial to retry in {output_file}"
         )
 
-    # --- Extract attributes, saving incrementally after each abstract ---
+    # --- Extract attributes in parallel, saving after each abstract ---
+    pending = [
+        meta for meta in abstracts_metadata if str(meta["abstract_id"]) not in done_ids
+    ]
+    logger.info(f"Extracting {len(pending)} abstracts with concurrency={concurrency}")
+
     processed = 0
-    for idx, abstract_meta in enumerate(abstracts_metadata):
+    write_lock = asyncio.Lock()
+    semaphore = asyncio.Semaphore(max(1, concurrency))
+
+    async def _worker(abstract_meta: dict) -> None:
+        nonlocal processed
         abstract_id = str(abstract_meta["abstract_id"])
         abstract_text = str(abstract_meta["abstract_text"])
 
-        if abstract_id in done_ids:
-            continue
+        async with semaphore:
+            logger.info(f"Processing abstract {abstract_id}")
+            try:
+                result = await extraction_service.extract(
+                    abstract_text, abstract_id, DocumentType.ABSTRACT
+                )
+            except (
+                Exception
+            ) as exc:  # noqa: BLE001 - one bad abstract must not end the run
+                logger.error(
+                    f"Abstract {abstract_id} failed and was not saved "
+                    f"(re-run to retry it): {exc}"
+                )
+                return
 
-        logger.info(f"\n{'='*60}")
-        logger.info(f"PROCESSING ABSTRACT {idx+1}/{len(abstracts_metadata)}: {abstract_id}")
-        logger.info(f"{'='*60}")
+        # The result list and the output file are shared, so mutate and flush
+        # under the lock - concurrent writers would interleave otherwise.
+        async with write_lock:
+            logger.info(f"Abstract {abstract_id} completed!")
+            logger.info(f"  Arms: {len(result.arm_results)}")
+            logger.info(f"  Attributes extracted: {result.total_attributes_extracted}")
+            logger.info(f"  Confidence: {result.overall_confidence:.2f}")
+            logger.info(f"  Processing time: {result.processing_time_ms}ms")
 
-        try:
-            result = await extraction_service.extract(
-                abstract_text, abstract_id, DocumentType.ABSTRACT
+            for arm_id, arm_result in result.arm_results.items():
+                logger.info(
+                    f"  Arm {arm_id}: {arm_result.get('arm_name', 'Unknown')} - "
+                    f"{arm_result.get('total_attributes', 0)} attributes"
+                )
+                if arm_result.get("errors"):
+                    logger.warning(f"    Errors: {arm_result['errors']}")
+
+            record = _serialize_result(result, abstract_meta, canonical_attributes)
+            replaced = next(
+                (
+                    i
+                    for i, a in enumerate(serialized_abstracts)
+                    if a["abstract_id"] == abstract_id
+                ),
+                None,
             )
-        except Exception as exc:  # noqa: BLE001 - one bad abstract must not end the run
-            logger.error(
-                f"Abstract {abstract_id} failed and was not saved "
-                f"(re-run to retry it): {exc}"
-            )
-            continue
-
-        logger.info(f"Abstract {abstract_id} completed!")
-        logger.info(f"  Arms: {len(result.arm_results)}")
-        logger.info(f"  Attributes extracted: {result.total_attributes_extracted}")
-        logger.info(f"  Confidence: {result.overall_confidence:.2f}")
-        logger.info(f"  Processing time: {result.processing_time_ms}ms")
-
-        for arm_id, arm_result in result.arm_results.items():
+            if replaced is None:
+                serialized_abstracts.append(record)
+            else:
+                serialized_abstracts[replaced] = record
+            _save_results(output_file, serialized_abstracts, output_header)
+            processed += 1
             logger.info(
-                f"  Arm {arm_id}: {arm_result.get('arm_name', 'Unknown')} — "
-                f"{arm_result.get('total_attributes', 0)} attributes"
+                f"  Progress saved ({processed}/{len(pending)}) → {output_file}"
             )
-            if arm_result.get("errors"):
-                logger.warning(f"    Errors: {arm_result['errors']}")
 
-        record = _serialize_result(result, abstract_meta, canonical_attributes)
-        replaced = next(
-            (
-                i
-                for i, a in enumerate(serialized_abstracts)
-                if a["abstract_id"] == abstract_id
-            ),
-            None,
-        )
-        if replaced is None:
-            serialized_abstracts.append(record)
-        else:
-            serialized_abstracts[replaced] = record
-        _save_results(output_file, serialized_abstracts, output_header)
-        processed += 1
-        logger.info(
-            f"  Progress saved ({idx+1}/{len(abstracts_metadata)}) → {output_file}"
-        )
+    await asyncio.gather(*(_worker(meta) for meta in pending))
 
     return processed
 
 
-def build_services(google_api_key: str) -> tuple[EnhancedExtractionService, CostCalculator]:
+def build_services(
+    project: str, location: str
+) -> tuple[EnhancedExtractionService, CostCalculator]:
     """Build the extraction service and its cost calculator."""
-    cost_calculator = CostCalculator(default_model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT)
+    cost_calculator = CostCalculator(
+        default_model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT
+    )
     llm_service = GeminiLLMService(
-        api_key=google_api_key,
+        project=project,
+        location=location,
         model=ModelType.GEMINI_31_PRO_PREVIEW_DIRECT.value,
         cost_calculator=cost_calculator,
     )
@@ -321,13 +362,11 @@ async def main():
     logger.info("Starting Abstract Extraction Pipeline")
 
     try:
-        google_api_key = os.getenv("GOOGLE_API_KEY", "")
-        if not google_api_key:
-            raise RuntimeError("GOOGLE_API_KEY is not set in the environment")
+        project, location = vertex_env()
 
         # ── Services initialized once for the entire run ──────────────────────
         logger.info("Initializing services...")
-        extraction_service, cost_calculator = build_services(google_api_key)
+        extraction_service, cost_calculator = build_services(project, location)
         logger.info("Services initialized successfully")
 
         # ── Canonical attribute list ───────────────────────────────────────────
@@ -351,6 +390,7 @@ async def main():
                     extraction_service=extraction_service,
                     canonical_attributes=canonical_attributes,
                     output_file=output_file,
+                    concurrency=CONCURRENCY,
                 )
                 total_processed += processed
                 if processed:

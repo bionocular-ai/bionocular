@@ -123,10 +123,12 @@ async def test_cached_or_inline_generate_inline_path_prepends_doc(
         response_schema: type[_DummySchema],
         temperature: float = 0.0,
         max_tokens: int = 4096,
+        **kwargs: Any,
     ) -> _DummySchema:
         captured["prompt"] = prompt
         captured["temperature"] = temperature
         captured["max_tokens"] = max_tokens
+        captured["cache_id"] = kwargs.get("cache_id")
         return response_schema(answer="ok")
 
     service.generate_structured = fake_generate_structured  # type: ignore[method-assign]
@@ -144,6 +146,7 @@ async def test_cached_or_inline_generate_inline_path_prepends_doc(
     assert captured["prompt"].startswith("DOCBODY")
     assert "EXTRACT" in captured["prompt"]
     assert captured["temperature"] == 0.2
+    assert captured["cache_id"] is None
     assert captured["max_tokens"] == 1234
     service._client.models.generate_content.assert_not_called()
 
@@ -152,12 +155,11 @@ async def test_cached_or_inline_generate_inline_path_prepends_doc(
 async def test_cached_or_inline_generate_cached_path_references_cache(
     service: GeminiLLMService,
 ) -> None:
-    parsed = _DummySchema(answer="cached-ok")
-    response = MagicMock()
-    response.parsed = parsed
-    response.text = '{"answer": "cached-ok"}'
-    response.usage_metadata = MagicMock(prompt_token_count=10, candidates_token_count=2)
-    service._client.models.generate_content.return_value = response
+    chunk = MagicMock()
+    chunk.text = '{"answer": "cached-ok"}'
+    chunk.usage_metadata = MagicMock(prompt_token_count=10, candidates_token_count=2)
+    chunk.candidates = []
+    service._client.models.generate_content_stream.return_value = [chunk]
 
     result = await service.cached_or_inline_generate(
         cache_id="cachedContents/abc",
@@ -167,8 +169,8 @@ async def test_cached_or_inline_generate_cached_path_references_cache(
     )
 
     assert result.answer == "cached-ok"
-    service._client.models.generate_content.assert_called_once()
-    kwargs = service._client.models.generate_content.call_args.kwargs
+    service._client.models.generate_content_stream.assert_called_once()
+    kwargs = service._client.models.generate_content_stream.call_args.kwargs
     assert kwargs["contents"] == "EXTRACT"  # doc not inlined when cached
     assert kwargs["config"].cached_content == "cachedContents/abc"
 

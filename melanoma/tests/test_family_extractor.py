@@ -242,12 +242,18 @@ async def test_semaphore_caps_in_flight() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tenacity retry behaviour
+# Retry behaviour: none here, it belongs to GeminiLLMService
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_retries_on_transient_429() -> None:
+async def test_does_not_retry_a_429_itself() -> None:
+    """A 429 propagates on the first call.
+
+    GeminiLLMService already decides whether a quota error is worth retrying,
+    and refuses hintless ones because they are admission-control refusals. A
+    retry layer here re-sent the whole prompt twice more and undid that.
+    """
     family = AttributeFamily.OS_FAMILY
     arms = [_arm("arm_1", "Nivolumab")]
 
@@ -257,19 +263,16 @@ async def test_retries_on_transient_429() -> None:
         cache_id, doc_text, prompt, response_schema, temperature=0.1, max_tokens=4000
     ):
         calls["n"] += 1
-        if calls["n"] == 1:
-            raise RuntimeError("429 Too Many Requests: RATE_LIMIT_EXCEEDED")
-        payload = {"arms": {"arm_1": {"median_os": "12.0"}}}
-        return response_schema.model_validate(payload)
+        raise RuntimeError("429 Too Many Requests: RATE_LIMIT_EXCEEDED")
 
     gemini = AsyncMock()
     gemini.cached_or_inline_generate = fake_call
 
     fe = FamilyExtractor(gemini=gemini)
-    result = await fe.extract(None, "doc", family, arms)
+    with pytest.raises(RuntimeError, match="429"):
+        await fe.extract(None, "doc", family, arms)
 
-    assert calls["n"] == 2
-    assert result["arm_1"][AttributeType.MEDIAN_OS].value == "12.0"
+    assert calls["n"] == 1
 
 
 @pytest.mark.asyncio
