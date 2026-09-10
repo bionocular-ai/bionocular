@@ -106,6 +106,52 @@ def _backoff_seconds(attempt: int, retry_after: float | None = None) -> float:
 _QUOTA_TOKENS = ("429", "RESOURCE_EXHAUSTED", "RATE_LIMIT")
 
 
+# A run that has been refused this many times in a row is not going to recover
+# inside the same run: the refusals are admission control, not congestion. One
+# ASCO 2026 run attempted 62 abstracts, completed 2, and spent a separator call
+# on each of the other 60 before anyone noticed. Stop and let resume retry later.
+QUOTA_BREAKER_THRESHOLD = 5
+
+
+class QuotaRefusedError(Exception):
+    """Raised when consecutive quota refusals show the run cannot make progress.
+
+    An ordinary exception on purpose. Making it travel was tried twice and lost
+    twice: the separator degrades on ``except Exception``, and the family
+    ``gather(return_exceptions=True)`` captures ``BaseException`` too and turns
+    it into a "family_extraction_failed" string. So the breaker is *state* on
+    this service - see :attr:`quota_tripped` - and it does not matter who eats
+    this exception, because the next call short-circuits regardless.
+    """
+
+
+class TruncatedResponseError(RuntimeError):
+    """Raised when the model stopped at max_output_tokens.
+
+    The JSON repair path can make a truncated response parse, which turns a
+    cut-off answer into a plausible-looking one. Truncation is a real failure -
+    surface it so the caller records it and a re-run can retry the document.
+    """
+
+
+def _is_hintless_quota_refusal(exc: BaseException) -> bool:
+    """True for a quota rejection carrying no server retry hint."""
+    if _parse_retry_after(str(exc)) is not None:
+        return False
+    return any(token in str(exc).upper() for token in _QUOTA_TOKENS)
+
+
+def _finish_reason_of(response: Any) -> str:
+    """Best-effort finish reason of a response or stream chunk, "" when absent."""
+    candidates = getattr(response, "candidates", None) or []
+    if not isinstance(candidates, (list, tuple)) or not candidates:
+        return ""
+    reason = getattr(candidates[0], "finish_reason", None)
+    if reason is None:
+        return ""
+    return getattr(reason, "name", None) or str(reason)
+
+
 def retry_delay_for(exc: BaseException, attempt: int) -> float | None:
     """Seconds to wait before retrying ``exc``, or None to stop retrying now.
 
@@ -286,6 +332,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         self._temperature = temperature
         self._max_tokens = max_tokens
         self._cost_calculator = cost_calculator
+        self._consecutive_quota_refusals = 0
         self._client = self._build_client()
 
         logger.info(
@@ -293,6 +340,43 @@ class GeminiLLMService(LLMService, StructuredLLMService):
             model,
             "api_key" if api_key else "adc",
         )
+
+    @property
+    def quota_tripped(self) -> bool:
+        """True once consecutive refusals show the run cannot make progress."""
+        return self._consecutive_quota_refusals >= QUOTA_BREAKER_THRESHOLD
+
+    def _raise_if_quota_tripped(self) -> None:
+        """Refuse to send a request the service already knows will be refused.
+
+        ponytail: a tripped run drains its queue as instant failures rather than
+        halting - each remaining document costs no network call but is still
+        written as a partial, and resume retries it. Check `quota_tripped` in
+        the pipeline loop if a run must stop dead instead.
+        """
+        if not self.quota_tripped:
+            return
+        raise QuotaRefusedError(
+            f"{self._consecutive_quota_refusals} consecutive quota refusals from "
+            f"{self._model} - not sending further requests. Progress already "
+            "written is kept; re-run to resume."
+        )
+
+    def _note_quota_refusal(self, exc: BaseException) -> None:
+        """Count a hintless quota refusal; raise once the run is clearly stuck.
+
+        Any successful call resets the count, so intermittent refusals never
+        accumulate into a trip.
+        """
+        if not _is_hintless_quota_refusal(exc):
+            return
+        self._consecutive_quota_refusals += 1
+        if self.quota_tripped:
+            logger.error(
+                "Quota breaker tripped after %d consecutive refusals from %s",
+                self._consecutive_quota_refusals,
+                self._model,
+            )
 
     def _build_client(self) -> Any:
         from google import genai
@@ -347,6 +431,8 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         attribute_type: Optional[str] = None,
         max_retries: int = 6,
     ) -> str:
+        self._raise_if_quota_tripped()
+
         from google.genai import types
 
         effective_model = (model_name or self._model).removeprefix("google/")
@@ -383,6 +469,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                     operation,
                     len(text),
                 )
+                self._consecutive_quota_refusals = 0
                 return text
             except Exception as exc:
                 last_exc = exc
@@ -410,6 +497,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                         success=False,
                         error_message=str(exc),
                     )
+                    self._note_quota_refusal(exc)
                     raise
 
         assert last_exc is not None
@@ -433,6 +521,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         operation: str = "structured_extraction",
         attribute_type: Optional[str] = None,
         max_retries: int = 6,
+        cache_id: str | None = None,
     ) -> T:
         """Generate a response constrained to `response_schema` (a Pydantic class).
 
@@ -440,6 +529,8 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         exhaustion or unrecoverable API failure (same retry policy as
         `generate_response`).
         """
+        self._raise_if_quota_tripped()
+
         from google.genai import types
 
         effective_model = (model_name or self._model).removeprefix("google/")
@@ -449,15 +540,17 @@ class GeminiLLMService(LLMService, StructuredLLMService):
             max_output_tokens=effective_max_tokens,
             response_mime_type="application/json",
             response_schema=_inline_pydantic_schema(response_schema),
+            cached_content=cache_id,
         )
 
-        def _sync_call() -> tuple[str, Any]:
+        def _sync_call() -> tuple[str, Any, str]:
             # Streamed, not buffered: a non-streaming call sends nothing until the
             # whole generation finishes, so the client read timeout ends up bounding
             # total generation time and long judge responses trip it. Streaming makes
             # the same timeout bound the gap between chunks instead.
             text_parts: list[str] = []
             usage: Any = None
+            finish_reason = ""
             for chunk in self._client.models.generate_content_stream(
                 model=effective_model,
                 contents=prompt,
@@ -466,15 +559,20 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                 part = chunk.text
                 if part:
                     text_parts.append(part)
-                # Usage arrives on the final chunk.
+                # Usage and the finish reason arrive on the final chunk.
                 if getattr(chunk, "usage_metadata", None) is not None:
                     usage = chunk.usage_metadata
-            return "".join(text_parts), usage
+                reason = _finish_reason_of(chunk)
+                if reason:
+                    finish_reason = reason
+            return "".join(text_parts), usage, finish_reason
 
         last_exc: Optional[Exception] = None
         for attempt in range(max_retries):
             try:
-                text, usage_metadata = await asyncio.to_thread(_sync_call)
+                text, usage_metadata, finish_reason = await asyncio.to_thread(
+                    _sync_call
+                )
                 self._record_usage(
                     usage_metadata,
                     model=effective_model,
@@ -482,6 +580,14 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                     attribute_type=attribute_type,
                     success=True,
                 )
+                self._consecutive_quota_refusals = 0
+                if finish_reason == "MAX_TOKENS":
+                    # Repairing this would close the dangling braces and hand the
+                    # caller a cut-off answer stamped with a normal confidence.
+                    raise TruncatedResponseError(
+                        f"{operation} stopped at max_output_tokens "
+                        f"({effective_max_tokens}); response is incomplete"
+                    )
                 # `response.parsed` is not populated for streamed responses, so the
                 # accumulated text always goes through the JSON path below.
                 try:
@@ -494,6 +600,8 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                     if repaired:
                         return response_schema.model_validate(repaired)
                     raise
+            except TruncatedResponseError:
+                raise
             except Exception as exc:
                 last_exc = exc
                 wait_sec = retry_delay_for(exc, attempt)
@@ -520,6 +628,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                         success=False,
                         error_message=str(exc),
                     )
+                    self._note_quota_refusal(exc)
                     raise
 
         assert last_exc is not None
@@ -587,55 +696,25 @@ class GeminiLLMService(LLMService, StructuredLLMService):
     ) -> T:
         """Generate structured output, transparently using a cache when available.
 
-        If `cache_id` is provided, generates against the cached document context.
-        Otherwise prepends `doc_text` inline to `prompt` and falls through to
-        `generate_structured`. Callers receive the same parsed `response_schema`
-        instance regardless of branch.
+        If `cache_id` is provided, the document context comes from the cache;
+        otherwise `doc_text` is prepended inline to `prompt`. Both branches go
+        through `generate_structured`, so both get its retry policy, streaming
+        read-timeout behaviour, usage recording and truncation guard - an
+        earlier version issued the cached call bare, which bypassed all four on
+        exactly the path the 429s arrive on.
         """
-        if cache_id is None:
-            inline_prompt = f"{doc_text}\n\n{prompt}"
-            return await self.generate_structured(
-                inline_prompt,
-                response_schema=response_schema,
-                temperature=temperature,
-                max_tokens=max_tokens,
-            )
-
-        from google.genai import types
-
-        config = types.GenerateContentConfig(
+        return await self.generate_structured(
+            prompt if cache_id is not None else f"{doc_text}\n\n{prompt}",
+            response_schema=response_schema,
             temperature=temperature,
-            max_output_tokens=max(max_tokens, self._max_tokens),
-            response_mime_type="application/json",
-            response_schema=_inline_pydantic_schema(response_schema),
-            cached_content=cache_id,
+            max_tokens=max_tokens,
+            operation=(
+                "cached_structured_extraction"
+                if cache_id is not None
+                else "structured_extraction"
+            ),
+            cache_id=cache_id,
         )
-
-        def _sync_call() -> Any:
-            return self._client.models.generate_content(
-                model=self._model,
-                contents=prompt,
-                config=config,
-            )
-
-        response = await asyncio.to_thread(_sync_call)
-        self._record_usage(
-            getattr(response, "usage_metadata", None),
-            model=self._model,
-            operation="cached_structured_extraction",
-            success=True,
-        )
-        parsed = getattr(response, "parsed", None)
-        if isinstance(parsed, response_schema):
-            return parsed
-        text = response.text or ""
-        try:
-            return response_schema.model_validate_json(text)
-        except ValidationError:
-            repaired = _parse_json_response(text)
-            if repaired:
-                return response_schema.model_validate(repaired)
-            raise
 
     async def delete_cache(self, cache_id: str | None) -> None:
         """Delete a previously created context cache. No-op when `cache_id` is None."""
