@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "prepare": "cd .. && git config core.hooksPath web/.husky",
     "test": "vitest run",
     "test:watch": "vitest",

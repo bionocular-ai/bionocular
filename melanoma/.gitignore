@@ -210,5 +210,3 @@ config.local.*
 *.secret.key
 tests/fixtures/holdout/csv/
 
-# Agent instructions (local only)
-/CLAUDE.md
