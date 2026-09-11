@@ -52,6 +52,9 @@ CONFERENCES: dict[str, Path] = {
 YEARS = [2026]  # Earlier years are already extracted; re-add one to reprocess it.
 CONCURRENCY = 1  # Abstracts in parallel; each already fans out to the
 # family extractor, and Vertex refuses the overlap (see FamilyExtractor).
+FAMILY_CONCURRENCY = 1  # Families in parallel per abstract. A 4-wide burst spends
+# the shared-pool admission budget and the NEXT call eats the refusal - which is
+# why the sequential separation call was seen 429ing with nothing in flight.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -279,6 +282,17 @@ async def _process_conference_year(
         abstract_text = str(abstract_meta["abstract_text"])
 
         async with semaphore:
+            # The breaker trips mid-run and every later call short-circuits into an
+            # empty result. Writing that is not a no-op: it REPLACES a partial that
+            # may hold real arms. Stop instead - resume picks these up next run.
+            if getattr(
+                getattr(extraction_service, "gemini", None), "quota_tripped", False
+            ):
+                logger.error(
+                    f"Quota breaker tripped - stopping before {abstract_id}. "
+                    f"Re-run to resume."
+                )
+                return
             logger.info(f"Processing abstract {abstract_id}")
             try:
                 result = await extraction_service.extract(
@@ -351,7 +365,9 @@ def build_services(
         treatment_arm_separator=TreatmentArmSeparator(llm_service=llm_service),
         clinical_trials_api_service=None,
         enable_cost_tracking=False,  # GeminiLLMService tracks costs internally
-        family_extractor=FamilyExtractor(gemini=llm_service),
+        family_extractor=FamilyExtractor(
+            gemini=llm_service, concurrency=FAMILY_CONCURRENCY
+        ),
         gemini=llm_service,
     )
     return extraction_service, cost_calculator

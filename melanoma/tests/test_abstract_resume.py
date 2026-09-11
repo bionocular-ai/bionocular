@@ -116,3 +116,48 @@ def test_partial_is_actually_retried_not_skipped(tmp_path: Path) -> None:
         )
     )
     assert attempted == ["ASCO_2026_9511"]
+
+
+def test_tripped_breaker_does_not_overwrite_partials(tmp_path: Path) -> None:
+    """Once the quota breaker trips, no further abstract is written.
+
+    The breaker makes every later call short-circuit into a 0-arm result. Saving
+    that replaces the partial already on disk, which is how 15 ASCO_2026 partials
+    lost their extracted arms.
+    """
+
+    class _Tripped:
+        class gemini:  # noqa: N801 - stands in for the live service attribute
+            quota_tripped = True
+
+        async def extract(
+            self, _text: str, _abstract_id: str, _doc_type: object
+        ) -> _Result:
+            raise AssertionError("no request may be sent after the breaker trips")
+
+    abstracts_dir = tmp_path / "abstracts"
+    abstracts_dir.mkdir()
+    (abstracts_dir / "ASCO_2026.md").write_text(
+        "### Abstract ID: 9511\nPartial abstract body.\n", encoding="utf-8"
+    )
+    output_file = tmp_path / "extraction_results_ASCO_2026.json"
+    output_file.write_text(
+        json.dumps({"conference": "ASCO", "year": 2026, "abstracts": [PARTIAL]}),
+        encoding="utf-8",
+    )
+    asyncio.run(
+        _process_conference_year(
+            conference="ASCO",
+            year=2026,
+            abstracts_dir=abstracts_dir,
+            extraction_service=_Tripped(),
+            canonical_attributes=ABSTRACT_ATTRIBUTES,
+            output_file=output_file,
+            concurrency=1,
+        )
+    )
+    written = {
+        a["abstract_id"]: a for a in json.loads(output_file.read_text())["abstracts"]
+    }
+    assert written["ASCO_2026_9511"]["total_arms"] == 1
+    assert written["ASCO_2026_9511"]["total_attributes_extracted"] == 7

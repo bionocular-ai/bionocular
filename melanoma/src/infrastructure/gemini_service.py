@@ -349,10 +349,10 @@ class GeminiLLMService(LLMService, StructuredLLMService):
     def _raise_if_quota_tripped(self) -> None:
         """Refuse to send a request the service already knows will be refused.
 
-        ponytail: a tripped run drains its queue as instant failures rather than
-        halting - each remaining document costs no network call but is still
-        written as a partial, and resume retries it. Check `quota_tripped` in
-        the pipeline loop if a run must stop dead instead.
+        A tripped run drains its queue as instant failures rather than halting.
+        Callers must not write that empty result: it replaces whatever partial
+        was already on disk. `run_abstract_pipeline` checks `quota_tripped` and
+        stops; any new pipeline loop must do the same.
         """
         if not self.quota_tripped:
             return
