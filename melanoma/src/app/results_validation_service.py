@@ -575,11 +575,20 @@ class ResultsValidationService:
     async def _judge_groups(
         self, source_text: str, arms: dict[str, dict]
     ) -> dict[AttributeGroup, GroupVerdict]:
-        """Run all three group judges for one document concurrently."""
+        """Run the three group judges for one document.
+
+        Concurrent by default; strictly one call at a time when concurrency
+        is 1, so a quota-starved run never has more than one request in flight.
+        """
         groups = list(AttributeGroup)
-        verdicts = await asyncio.gather(
-            *(self._judge_group(group, source_text, arms) for group in groups)
-        )
+        if self._config.concurrency <= 1:
+            verdicts = [
+                await self._judge_group(group, source_text, arms) for group in groups
+            ]
+        else:
+            verdicts = await asyncio.gather(
+                *(self._judge_group(group, source_text, arms) for group in groups)
+            )
         return dict(zip(groups, verdicts))
 
     async def _judge_group(
