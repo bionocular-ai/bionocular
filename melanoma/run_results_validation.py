@@ -108,7 +108,8 @@ def _build_parser() -> argparse.ArgumentParser:
         default=3,
         metavar="N",
         help="Max documents judged in parallel. Each document issues 3 group "
-        "calls at once, so in-flight requests are 3x this (default: 3).",
+        "calls at once, so in-flight requests are 3x this (default: 3). "
+        "1 = strictly sequential, one request in flight.",
     )
     parser.add_argument(
         "--apply-fixes",
