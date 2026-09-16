@@ -9,6 +9,7 @@ Output: one JSON file per conference-year in melanoma/data/.
 # ruff: noqa: E402 - env vars must be set before the service imports below,
 # so the imports deliberately sit after that setup.
 
+import argparse
 import asyncio
 import json
 import logging
@@ -45,11 +46,13 @@ logger = logging.getLogger(__name__)
 TEST_MODE = False  # Set True for test mode (single abstract)
 MAX_ABSTRACTS_TEST = 1  # Number of abstracts to process in test mode
 
-CONFERENCES: dict[str, Path] = {
-    "ASCO": Path("data/postprocessed/ASCO_Abstracts"),
-    "ESMO": Path("data/postprocessed/ESMO_Abstracts"),
+# Conference -> (abstracts dir, years to run). Earlier years are already
+# extracted; re-add one to reprocess it.
+CONFERENCES: dict[str, tuple[Path, list[int]]] = {
+    "ASCO": (Path("data/postprocessed/ASCO_Abstracts"), [2026]),
+    "ESMO": (Path("data/postprocessed/ESMO_Abstracts"), [2026]),
+    "SITC": (Path("data/postprocessed/SITC_Abstracts"), [2025]),
 }
-YEARS = [2026]  # Earlier years are already extracted; re-add one to reprocess it.
 CONCURRENCY = 1  # Abstracts in parallel; each already fans out to the
 # family extractor, and Vertex refuses the overlap (see FamilyExtractor).
 FAMILY_CONCURRENCY = 1  # Families in parallel per abstract. A 4-wide burst spends
@@ -373,8 +376,27 @@ def build_services(
     return extraction_service, cost_calculator
 
 
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run the abstract extraction pipeline")
+    parser.add_argument(
+        "--conference",
+        choices=sorted(CONFERENCES),
+        help="Run only this conference (default: every entry in CONFERENCES)",
+    )
+    parser.add_argument(
+        "--year", type=int, help="Run only this year (default: the years configured)"
+    )
+    return parser.parse_args()
+
+
 async def main():
-    """Run the abstract extraction pipeline across all conferences and years."""
+    """Run the abstract extraction pipeline across the configured conferences and years."""
+    args = _parse_args()
+    runs = {
+        conference: (abstracts_dir, [y for y in years if args.year in (None, y)])
+        for conference, (abstracts_dir, years) in CONFERENCES.items()
+        if args.conference in (None, conference)
+    }
     logger.info("Starting Abstract Extraction Pipeline")
 
     try:
@@ -396,8 +418,8 @@ async def main():
 
         # ── Outer loop: conference × year ──────────────────────────────────────
         total_processed = 0
-        for conference, abstracts_dir in CONFERENCES.items():
-            for year in YEARS:
+        for conference, (abstracts_dir, years) in runs.items():
+            for year in years:
                 output_file = data_dir / f"extraction_results_{conference}_{year}.json"
                 processed = await _process_conference_year(
                     conference=conference,

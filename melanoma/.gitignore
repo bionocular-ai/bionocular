@@ -1,6 +1,6 @@
 # Processed data files (generated from PDFs)
 data/processed/*.json
-data/processed/*.md
+data/processed/**/*.md
 data/processed/*_meta.json
 data/processed/Publications/
 data/processed/Publications/*
@@ -11,6 +11,7 @@ data/processed/Publications/*
 # Postprocessed data directories (generated from processed data)
 data/postprocessed/ASCO_Abstracts/
 data/postprocessed/ESMO_Abstracts/
+data/postprocessed/SITC_Abstracts/
 data/postprocessed/Publications/
 data/processed/ASCO_Abstracts/
 data/processed/ESMO_Abstracts/
