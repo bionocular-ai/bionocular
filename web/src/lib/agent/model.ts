@@ -6,11 +6,12 @@
  *
  * `MODELS` holds every model the agent can be run on, so the evals can pit
  * them against each other with the same tools, prompt and cases. The model
- * the route serves is `AGENT_MODEL_NAME`, overridable per deployment with the
- * `AGENT_MODEL` environment variable so a rollback is a config change.
+ * the route serves is `DEFAULT_MODEL_NAME`, overridable per deployment with
+ * the `AGENT_MODEL` environment variable so a rollback is a config change.
  */
 
 import { createAnthropic } from '@ai-sdk/anthropic';
+import { createVertex } from '@ai-sdk/google-vertex';
 import type { LanguageModel, ToolLoopAgentSettings } from 'ai';
 
 export interface AgentModelSpec {
@@ -44,7 +45,35 @@ const anthropic = createAnthropic({
   },
 });
 
+/**
+ * Gemini on Vertex AI, the same endpoint the extraction pipeline uses:
+ * Application Default Credentials locally, a service-account key in
+ * `GOOGLE_VERTEX_CREDENTIALS_JSON` where there is no gcloud login (Render).
+ * `GOOGLE_VERTEX_PROJECT` names the project; the location is `global`.
+ */
+function vertex() {
+  const credentials = process.env.GOOGLE_VERTEX_CREDENTIALS_JSON;
+  return createVertex({
+    location: process.env.GOOGLE_VERTEX_LOCATION ?? 'global',
+    ...(credentials ? { googleAuthOptions: { credentials: JSON.parse(credentials) } } : {}),
+  });
+}
+
 export const MODELS: Record<string, AgentModelSpec> = {
+  'gemini-3.8-flash': {
+    name: 'gemini-3.8-flash',
+    provider: 'google-vertex',
+    id: 'gemini-3.8-flash',
+    pricing: { inputPer1M: 0.75, outputPer1M: 3.75 },
+    // Gemini 3 models take a thinking level rather than a token budget. `low`
+    // is enough for choosing a filter and reading a coverage report, and it
+    // keeps thinking from eating the shared output cap the way an unstated
+    // default once did. Thoughts are not returned: nothing renders them.
+    providerOptions: {
+      google: { thinkingConfig: { thinkingLevel: 'low', includeThoughts: false } },
+    },
+    create: () => vertex()('gemini-3.8-flash'),
+  },
   'haiku-4.5': {
     name: 'haiku-4.5',
     provider: 'anthropic',
@@ -54,7 +83,7 @@ export const MODELS: Record<string, AgentModelSpec> = {
   },
 };
 
-export const DEFAULT_MODEL_NAME = 'haiku-4.5';
+export const DEFAULT_MODEL_NAME = 'gemini-3.8-flash';
 
 export function resolveModel(name: string = process.env.AGENT_MODEL ?? DEFAULT_MODEL_NAME): AgentModelSpec {
   const spec = MODELS[name];
