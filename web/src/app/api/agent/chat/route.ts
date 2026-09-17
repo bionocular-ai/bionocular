@@ -10,7 +10,8 @@ import { checkAgentRateLimit } from '@/lib/agent/rate-limit';
 import { persistSession } from '@/lib/agent/persist-session';
 import { agentModel } from '@/lib/agent/model';
 import { agentTools } from '@/lib/agent/tools';
-import { ONCOLOGY_SYSTEM_PROMPT } from '@/lib/agent/prompts';
+import { buildInstructions } from '@/lib/agent/prompts';
+import { getDbCancerType } from '@/lib/api';
 import { DASHBOARD_CANCER_TYPES } from '@/lib/dashboard-constants';
 
 export const runtime = 'nodejs';
@@ -90,7 +91,7 @@ export async function POST(req: Request) {
   // per-step usage now written to `chat_sessions.token_usage.steps`.
   const systemMessage: ModelMessage = {
     role: 'system',
-    content: ONCOLOGY_SYSTEM_PROMPT,
+    content: buildInstructions({ cancerType: getDbCancerType(cancerType) }),
     providerOptions: {
       anthropic: { cacheControl: { type: 'ephemeral' } },
     },

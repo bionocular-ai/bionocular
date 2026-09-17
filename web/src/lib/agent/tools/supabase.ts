@@ -277,24 +277,16 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           .enum(['concise', 'detailed'])
           .optional()
           .describe(
-            'How much of each row to return. `concise` carries the columns an answer is usually ' +
-              "built from; `detailed` is the table's full column set, at roughly twice the tokens " +
-              'per row. On `trial_outcomes` that full set is every efficacy and safety endpoint - ' +
-              'PFS, OS, EFS, RFS, MFS, response and duration measures, and the adverse-event ' +
-              'families - so a question naming specific endpoints wants `detailed`. On ' +
-              '`clinical_trials` it is provenance and classification detail: how a trial was ' +
-              'classified, its conditions, its keywords. Defaults to `concise`.',
+            '`concise` (default) carries the columns an answer is usually built from; ' +
+              "`detailed` is the table's full column set - on trial_outcomes, every efficacy " +
+              'and safety endpoint.',
           ),
         endpoints: z
           .enum(['efficacy', 'safety', 'both'])
           .optional()
           .describe(
-            'Which half of `trial_outcomes` the question is about, so the answer is not padded ' +
-              'with the other half. `efficacy` keeps survival, response and duration endpoints; ' +
-              '`safety` keeps the adverse-event families and per-toxicity rates; `both` keeps ' +
-              'everything. Arm, drug and patient counts are kept either way. Set it to what was ' +
-              'asked - it also decides which hub the user can open the answer in. Defaults to ' +
-              '`both`. No effect on the other tables.',
+            'Which half of trial_outcomes the question is about; the other half is left out. ' +
+              'Defaults to `both`. No effect on the other tables.',
           ),
         limit: z
           .number()

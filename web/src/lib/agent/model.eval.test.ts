@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generateText, stepCountIs } from 'ai';
 import { agentModel } from './model';
 import { agentTools } from './tools';
-import { ONCOLOGY_SYSTEM_PROMPT } from './prompts';
+import { buildInstructions } from './prompts';
 import { checkGroundedness } from './groundedness';
 
 /**
@@ -25,7 +25,7 @@ const CONTEXT = {
 async function ask(question: string) {
   return generateText({
     model: agentModel,
-    system: ONCOLOGY_SYSTEM_PROMPT,
+    system: buildInstructions({ cancerType: 'Cutaneous Melanoma' }),
     tools: agentTools(CONTEXT),
     stopWhen: stepCountIs(6),
     prompt: question,
@@ -77,7 +77,7 @@ describe.skipIf(!CREDENTIALS_PRESENT)('agent behaviour', () => {
     const MAX_STEPS = 8;
     const { text, steps } = await generateText({
       model: agentModel,
-      system: ONCOLOGY_SYSTEM_PROMPT,
+      system: buildInstructions({ cancerType: 'Cutaneous Melanoma' }),
       tools: agentTools(CONTEXT),
       maxOutputTokens: 4096,
       stopWhen: stepCountIs(MAX_STEPS),

@@ -1,3 +1,4 @@
+import { buildLoadSkillTool } from './load-skill';
 import { buildLookupTool } from './lookup';
 import { buildSupabaseTools, type AgentToolContext } from './supabase';
 import { createTurnState, type TurnStateOptions } from './turn';
@@ -13,6 +14,7 @@ export function agentTools({ limitChars, retainedEvidence, ...request }: AgentRe
   return {
     ...buildSupabaseTools(context),
     ...buildLookupTool(context),
+    ...buildLoadSkillTool(context),
   };
 }
 

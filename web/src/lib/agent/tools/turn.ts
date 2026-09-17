@@ -42,6 +42,8 @@ export interface TurnState {
   readonly evidence: Set<string>;
   /** Record the identifiers in a result's rows. */
   recordEvidence(rows: readonly unknown[]): void;
+  /** Skills the model loaded this turn, for the run record. */
+  readonly skillsLoaded: Set<string>;
 }
 
 export interface TurnStateOptions {
@@ -77,5 +79,6 @@ export function createTurnState({
     },
     evidence,
     recordEvidence: (rows) => record(rows),
+    skillsLoaded: new Set(),
   };
 }
