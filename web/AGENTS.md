@@ -10,7 +10,7 @@ This is the production Next.js 16 application. It uses the App Router, React 19,
 - Reusable UI belongs in `src/components/`; keep feature components in their feature directory.
 - Browser-safe Supabase access belongs in `src/lib/supabase/client.ts`; server-only access belongs in `src/lib/supabase/server.ts` or `src/lib/supabase/service.ts`.
 - The service-role client and model-provider keys are server-only. Never import them into client components or expose them through `NEXT_PUBLIC_*` variables.
-- Agent behavior, tools, prompts, and agent tests live in `src/lib/agent/`. Preserve its source grounding and rate-limit safeguards.
+- Agent behavior, tools, prompts, and agent tests live in `src/lib/agent/`. Preserve its source grounding and rate-limit safeguards. The provider and model are chosen only in `model.ts`; table-specific method lives in `skills/*/SKILL.md`, never in the system prompt; no live counts or dates go into either. After changing a prompt or skill, bump `PROMPT_VERSION` and run the golden set: `EVAL_MODELS=gemini-3.8-flash npm run test:evals` (reports in `.evals/`).
 
 ## Supabase and schema changes
 
