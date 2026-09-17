@@ -24,6 +24,11 @@ export const MAX_OUTPUT_TOKENS = 4096;
  */
 export const MAX_STEPS = 8;
 
+/** Appended as the final user turn when the step cap is reached. */
+export const LAST_STEP_NOTICE =
+  'No further tool calls are available this turn. Answer now from the results above: state what ' +
+  'was found, what was not, and which questions remain unverified. Do not describe what you would query next.';
+
 export interface CreateAgentOptions {
   instructions: string;
   tools: AgentTools;
@@ -52,10 +57,18 @@ export function createAgent({
     stopWhen: stepCountIs(MAX_STEPS),
     providerOptions: model.providerOptions,
     experimental_telemetry: telemetry,
-    prepareStep: ({ stepNumber }) => {
+    prepareStep: ({ stepNumber, messages }) => {
       // Take the tools away for the last step so the turn cannot end on a
       // tool call the model never got to explain - tool cards and silence.
-      if (stepNumber === MAX_STEPS - 1) return { toolChoice: 'none' };
+      // Removing the tools is not enough on its own: with only the tool
+      // choice withdrawn, Gemini returned an empty message on every run that
+      // reached this step. Told in words that the loop is over, it answers.
+      if (stepNumber === MAX_STEPS - 1) {
+        return {
+          toolChoice: 'none',
+          messages: [...messages, { role: 'user', content: LAST_STEP_NOTICE }],
+        };
+      }
       if (stepNumber === 0 && forceLookupFirst) {
         return { toolChoice: { type: 'tool', toolName: 'lookup_trial' }, activeTools: ['lookup_trial'] };
       }

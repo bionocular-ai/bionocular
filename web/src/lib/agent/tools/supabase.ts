@@ -262,7 +262,12 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           .string()
           .min(2)
           .optional()
-          .describe('Substring match on the treatment or arm name for this table.'),
+          .describe('Substring match on the treatment or arm name for this table (on news_feed, the headline).'),
+        biomarker: z
+          .string()
+          .min(2)
+          .optional()
+          .describe('Substring match on the curated biomarker label, e.g. BRAF, PD-L1.'),
         funding: z
           .enum(FUNDING_VALUES)
           .optional()
@@ -298,7 +303,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
       }),
       execute: async (args) =>
         runTool('query_proprietary_data', { traceId, turn }, args, async () => {
-        const { table, nctIds, sponsor, phase, status, drug, funding, detail, endpoints, limit } = args;
+        const { table, nctIds, sponsor, phase, status, drug, funding, biomarker, detail, endpoints, limit } = args;
         const spec = AGENT_TABLES[table];
 
         // Cancer scope is applied to every query, so on its own it narrows
@@ -306,7 +311,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         // a table read: 500 unfiltered `trial_landscape` rows measured 48k
         // tokens and carried 3 that mattered. The default window still allows an
         // unfiltered browse, which is how "what exists here" gets answered.
-        const narrowed = [nctIds, sponsor, phase, status, drug, funding].some((f) => f !== undefined);
+        const narrowed = [nctIds, sponsor, phase, status, drug, funding, biomarker].some((f) => f !== undefined);
         if (!narrowed && limit > DEFAULT_ROWS) {
           const filters = supportedFilters(table);
           return {
@@ -339,6 +344,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
             ['status', status],
             ['drug', drug],
             ['funding', funding],
+            ['biomarker', biomarker],
           ] as const
         )
           .filter(([, v]) => v !== undefined)
@@ -359,6 +365,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           ['status', status],
           ['drug', drug],
           ['funding', funding],
+          ['biomarker', biomarker],
         ];
         const applied: Record<string, string | readonly string[]> = {};
         for (const [name, value] of named) {

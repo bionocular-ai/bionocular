@@ -249,14 +249,14 @@ export const GOLDEN_CASES: EvalCase[] = [
     category: 'grounding',
     cancerSlug: CM,
     question: 'List every trial in the curated landscape whose biomarker involves BRAF.',
-    expect: { filter: { table: 'trial_landscape' }, countAwareness: true, maxToolCalls: 4 },
+    expect: { filter: { table: 'trial_landscape', args: { biomarker: /braf/i } }, countAwareness: true, maxToolCalls: 4 },
   },
   {
     id: 'news-with-sources',
     category: 'grounding',
     cancerSlug: CM,
     question: 'Any recent news coverage mentioning nivolumab?',
-    expect: { filter: { table: 'news_feed' }, maxToolCalls: 4 },
+    expect: { filter: { table: 'news_feed', args: { drug: /nivolumab/i } }, maxToolCalls: 4 },
   },
   {
     id: 'unknown-drug',

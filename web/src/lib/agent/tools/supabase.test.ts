@@ -513,7 +513,19 @@ describe('query_proprietary_data', () => {
     );
 
     expect(result).toMatchObject({ ok: false, reason: 'unsupported_filter', filter: 'phase' });
-    expect((result as { supportedFilters: string[] }).supportedFilters).toEqual([]);
+    expect((result as { supportedFilters: string[] }).supportedFilters).toEqual(['drug']);
+  });
+
+  it('matches news headlines and curated biomarkers as substrings', async () => {
+    // Both filters exist because the evals showed the models asking for them
+    // and being refused: "news about nivolumab" and "every BRAF trial".
+    const news = toolsWith({ news_feed: { rows: [{ url: 'https://example.test/a' }] } });
+    await news.query_proprietary_data.execute!({ table: 'news_feed', drug: 'nivolumab', limit: 10 }, RUN_OPTIONS);
+    expect(fake.queries[0].filters).toContainEqual({ operator: 'ilike', column: 'title', value: '%nivolumab%' });
+
+    const landscape = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT1' }] } });
+    await landscape.query_proprietary_data.execute!({ table: 'trial_landscape', biomarker: 'BRAF', limit: 500 }, RUN_OPTIONS);
+    expect(fake.queries[0].filters).toContainEqual({ operator: 'ilike', column: 'biomarker', value: '%BRAF%' });
   });
 
   it('reports a via-resolved filter as supported in a refusal, not just the columns this table owns', async () => {

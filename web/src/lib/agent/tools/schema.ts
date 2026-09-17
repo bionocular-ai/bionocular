@@ -254,7 +254,12 @@ const TABLE_DEFINITIONS = {
     // the six columns an answer is actually built from.
     conciseProjection:
       'nct_id, treatment_name, modality, biomarker, stage, line_of_therapy',
-    filters: { drug: { column: 'treatment_name', kind: 'scalar' } },
+    filters: {
+      drug: { column: 'treatment_name', kind: 'scalar' },
+      // "Every BRAF trial" has no other way in: without this the model swept
+      // the table phase by phase, 500 rows at a time, to find them.
+      biomarker: { column: 'biomarker', kind: 'scalar' },
+    },
     caveat:
       'Observational studies are excluded from this table by design. A trial missing here ' +
       'may still exist in clinical_trials.',
@@ -355,7 +360,10 @@ const TABLE_DEFINITIONS = {
       { column: 'url', ascending: true },
     ],
     projection: 'url, title, date, nct_ids, cancer_type, has_efficacy, has_safety',
-    filters: {},
+    // A headline is the only text the row carries, so "news about nivolumab"
+    // is a substring on it; the models asked for exactly this filter and were
+    // refused.
+    filters: { drug: { column: 'title', kind: 'scalar' } },
   },
 } as const satisfies Record<string, AgentTableSpec>;
 
@@ -433,7 +441,7 @@ export function applyTrialKeys<Q extends FilterableQuery<Q>>(
   return nctIds.length === 1 ? query.eq(key.column, nctIds[0]) : query.in(key.column, nctIds);
 }
 
-export type FilterName = 'sponsor' | 'phase' | 'status' | 'drug' | 'funding';
+export type FilterName = 'sponsor' | 'phase' | 'status' | 'drug' | 'funding' | 'biomarker';
 
 /** The two halves the product - and the Efficacy Hub's chip - divides sponsors into. */
 export const FUNDING_VALUES = ['industry', 'non-industry'] as const;
