@@ -1,37 +1,74 @@
+/**
+ * The provider/model boundary. Everything provider-specific lives here: which
+ * SDK provider is constructed, the model id, its pricing, and the provider
+ * options (thinking configuration) sent with every call. Nothing outside this
+ * file names a provider or a model id.
+ *
+ * `MODELS` holds every model the agent can be run on, so the evals can pit
+ * them against each other with the same tools, prompt and cases. The model
+ * the route serves is `AGENT_MODEL_NAME`, overridable per deployment with the
+ * `AGENT_MODEL` environment variable so a rollback is a config change.
+ */
+
 import { createAnthropic } from '@ai-sdk/anthropic';
+import type { LanguageModel, ToolLoopAgentSettings } from 'ai';
+
+export interface AgentModelSpec {
+  /** Short name used in run records, eval reports and `AGENT_MODEL`. */
+  name: string;
+  provider: string;
+  id: string;
+  /** USD per million tokens, for the cost estimate on every run record. */
+  pricing: { inputPer1M: number; outputPer1M: number };
+  /** Sent with every call; the one place model-specific behaviour is set. */
+  providerOptions?: ToolLoopAgentSettings['providerOptions'];
+  create(): LanguageModel;
+}
 
 /**
- * Thinking configuration lives here and nowhere else.
- *
- * Haiku 4.5 supports extended thinking but leaves it off unless asked. Kept
- * explicitly disabled: turning it on means sending `enabled` with a budget
- * here, plus a bump to MAX_OUTPUT_TOKENS in the route and a check that answers
- * are not being truncated.
- *
- * It has to go on the wire by hand. `@ai-sdk/anthropic` builds the `thinking`
- * field only for `enabled` and `adaptive` and drops `disabled` on the floor, so
- * `providerOptions` cannot express "off" - the request goes out with no
- * `thinking` field at all, which is model-default rather than a stated choice.
- * On Sonnet 5 that default was adaptive, and it stayed invisible until a tool
- * result got big enough for the reasoning to eat the whole output budget: 4096
- * output tokens, two empty reasoning blocks, no answer.
+ * Haiku 4.5 supports extended thinking but leaves it off unless asked, and
+ * `@ai-sdk/anthropic` builds the `thinking` field only for `enabled` and
+ * `adaptive`, dropping `disabled` on the floor. So "off" has to go on the wire
+ * by hand: without it the request carries no `thinking` field at all, which is
+ * model-default rather than a stated choice, and on Sonnet 5 that default ate
+ * the whole output budget on a large tool result.
  */
-const THINKING_CONFIG = { type: 'disabled' } as const;
+const ANTHROPIC_THINKING = { type: 'disabled' } as const;
 
 const anthropic = createAnthropic({
   fetch: async (input, init) => {
     if (typeof init?.body !== 'string') return fetch(input, init);
     const body = JSON.parse(init.body) as Record<string, unknown>;
-    body.thinking = THINKING_CONFIG;
+    body.thinking = ANTHROPIC_THINKING;
     return fetch(input, { ...init, body: JSON.stringify(body) });
   },
 });
 
-/**
- * The model the agent and its evals both run on.
- *
- * One definition rather than two: the evals used to name the model and its
- * thinking config themselves, so they could drift from what the route actually
- * sent and still pass.
- */
-export const agentModel = anthropic('claude-haiku-4-5-20251001');
+export const MODELS: Record<string, AgentModelSpec> = {
+  'haiku-4.5': {
+    name: 'haiku-4.5',
+    provider: 'anthropic',
+    id: 'claude-haiku-4-5-20251001',
+    pricing: { inputPer1M: 1, outputPer1M: 5 },
+    create: () => anthropic('claude-haiku-4-5-20251001'),
+  },
+};
+
+export const DEFAULT_MODEL_NAME = 'haiku-4.5';
+
+export function resolveModel(name: string = process.env.AGENT_MODEL ?? DEFAULT_MODEL_NAME): AgentModelSpec {
+  const spec = MODELS[name];
+  if (!spec) throw new Error(`Unknown agent model ${JSON.stringify(name)}; known: ${Object.keys(MODELS).join(', ')}`);
+  return spec;
+}
+
+/** USD for one run, from the provider's reported token counts. */
+export function estimateCostUsd(
+  usage: { inputTokens?: number; outputTokens?: number } | undefined,
+  spec: AgentModelSpec,
+): number | undefined {
+  if (!usage) return undefined;
+  const input = usage.inputTokens ?? 0;
+  const output = usage.outputTokens ?? 0;
+  return (input * spec.pricing.inputPer1M + output * spec.pricing.outputPer1M) / 1_000_000;
+}

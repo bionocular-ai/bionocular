@@ -1,22 +1,33 @@
 import { buildLoadSkillTool } from './load-skill';
 import { buildLookupTool } from './lookup';
 import { buildSupabaseTools, type AgentToolContext } from './supabase';
-import { createTurnState, type TurnStateOptions } from './turn';
+import { createTurnState, type TurnState, type TurnStateOptions } from './turn';
 
 /** Everything a request has to supply; the turn state is built here. */
 export type AgentRequestContext = Omit<AgentToolContext, 'turn'> & TurnStateOptions;
 
-export function agentTools({ limitChars, retainedEvidence, ...request }: AgentRequestContext) {
-  const context: AgentToolContext = {
-    ...request,
-    turn: createTurnState({ limitChars, retainedEvidence }),
-  };
+/**
+ * The tool set for one turn, and the state its tools share. The state comes
+ * back to the caller because the run record is built from it once the turn
+ * is over.
+ */
+export function buildAgentTools({ limitChars, retainedEvidence, ...request }: AgentRequestContext): {
+  tools: AgentTools;
+  turn: TurnState;
+} {
+  const turn = createTurnState({ limitChars, retainedEvidence });
+  const context: AgentToolContext = { ...request, turn };
   return {
-    ...buildSupabaseTools(context),
-    ...buildLookupTool(context),
-    ...buildLoadSkillTool(context),
+    tools: {
+      ...buildSupabaseTools(context),
+      ...buildLookupTool(context),
+      ...buildLoadSkillTool(context),
+    },
+    turn,
   };
 }
 
-export type AgentTools = ReturnType<typeof agentTools>;
+export type AgentTools = ReturnType<typeof buildSupabaseTools> &
+  ReturnType<typeof buildLookupTool> &
+  ReturnType<typeof buildLoadSkillTool>;
 export type { AgentToolContext };

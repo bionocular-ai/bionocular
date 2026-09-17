@@ -297,7 +297,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           .describe(`Raise toward ${MAX_ROWS} when the user asks for a complete set.`),
       }),
       execute: async (args) =>
-        runTool('query_proprietary_data', traceId, args, async () => {
+        runTool('query_proprietary_data', { traceId, turn }, args, async () => {
         const { table, nctIds, sponsor, phase, status, drug, funding, detail, endpoints, limit } = args;
         const spec = AGENT_TABLES[table];
 
@@ -549,7 +549,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         citations: z.array(z.string().min(1)).max(50).default([]),
       }),
       execute: async (args) =>
-        runTool('store_finding', traceId, args, async () => {
+        runTool('store_finding', { traceId, turn }, args, async () => {
         const { findingType, title, summary, sourceTool, citations } = args;
         // A finding is only as good as what it cites, so every citation has to
         // be an identifier a tool result actually carried this conversation.

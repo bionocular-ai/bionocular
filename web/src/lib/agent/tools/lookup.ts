@@ -92,7 +92,7 @@ export function buildLookupTool({ cancerSlug, traceId, turn }: AgentToolContext)
           ),
       }),
       execute: async (args) =>
-        runTool('lookup_trial', traceId, args, async () => {
+        runTool('lookup_trial', { traceId, turn }, args, async () => {
         const { nctId, detail = 'concise', endpoints = 'both' } = args;
         const supabase = createServiceClient();
 

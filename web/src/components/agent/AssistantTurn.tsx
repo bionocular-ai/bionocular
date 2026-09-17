@@ -35,7 +35,17 @@ export interface TurnToolPart {
   errorText?: string;
 }
 
-export type TurnPart = TurnTextPart | TurnToolPart;
+/**
+ * Written by the route after the answer has streamed, when it names an
+ * identifier no tool result this turn carried. The answer is already on
+ * screen, so the flag sits beside it rather than rewriting it.
+ */
+export interface TurnGroundingPart {
+  type: 'data-grounding';
+  data: { ungrounded: string[] };
+}
+
+export type TurnPart = TurnTextPart | TurnToolPart | TurnGroundingPart;
 
 export interface AssistantTurnProps {
   parts: TurnPart[];
@@ -51,6 +61,10 @@ export interface AssistantTurnProps {
 
 function isToolPart(part: TurnPart): part is TurnToolPart {
   return part.type.startsWith('tool-');
+}
+
+function isGroundingPart(part: TurnPart): part is TurnGroundingPart {
+  return part.type === 'data-grounding';
 }
 
 export function AssistantTurn({ parts, cancerType, isStreaming, rating, onRate }: AssistantTurnProps) {
@@ -72,6 +86,7 @@ export function AssistantTurn({ parts, cancerType, isStreaming, rating, onRate }
     .trim();
 
   const toolParts = useMemo(() => parts.filter(isToolPart), [parts]);
+  const ungrounded = parts.filter(isGroundingPart).flatMap((part) => part.data.ungrounded);
 
   const turnTable = useMemo(
     () => toTurnTable(toolParts.map((part) => part.output)),
@@ -111,6 +126,7 @@ export function AssistantTurn({ parts, cancerType, isStreaming, rating, onRate }
             />
           );
         }
+        if (isGroundingPart(part)) return null;
         if (part.type !== 'text' || !part.text) return null;
         return (
           <div key={`text-${i}`} className="relative mb-1.5">
@@ -129,6 +145,16 @@ export function AssistantTurn({ parts, cancerType, isStreaming, rating, onRate }
           </div>
         );
       })}
+
+      {ungrounded.length > 0 ? (
+        <p
+          role="note"
+          className="mb-1.5 border-l-2 border-amber-600 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"
+        >
+          Not found in the retrieved data, so treat with caution:{' '}
+          <span className="font-mono">{ungrounded.join(', ')}</span>
+        </p>
+      ) : null}
 
       {turnTable ? (
         <TurnTable table={turnTable} cancerType={cancerType} efficacyLink={efficacyLink} />

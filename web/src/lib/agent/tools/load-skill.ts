@@ -19,7 +19,7 @@ export function buildLoadSkillTool({ traceId, turn }: AgentToolContext) {
         skill: z.enum(SKILL_NAMES),
       }),
       execute: async (args) =>
-        runTool('load_skill', traceId, args, async () => {
+        runTool('load_skill', { traceId, turn }, args, async () => {
           const skill = loadSkill(args.skill);
           turn.skillsLoaded.add(skill.name);
           return { ok: true as const, name: skill.name, content: skill.body };

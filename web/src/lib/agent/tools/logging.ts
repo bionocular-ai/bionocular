@@ -1,10 +1,13 @@
 /**
- * One log line per tool call, keyed by the request's trace ID.
+ * One log line per tool call, keyed by the request's trace ID, and one record
+ * per call on the turn state for the run summary.
  *
  * The trace ID is also written to the chat session row, so a line here can be
  * tied back to the conversation that produced it - previously a tool call left
  * no trace at all, and a wrong answer could not be traced to the query behind it.
  */
+
+import type { TurnState } from './turn';
 
 const MAX_LOGGED_STRING = 80;
 
@@ -40,6 +43,18 @@ function rowCount(result: unknown): number | undefined {
   return undefined;
 }
 
+/** The coverage counts a result carries, when it has them. */
+function coverageOf(result: unknown): { matched?: number; truncatedBy?: string } {
+  if (!result || typeof result !== 'object') return {};
+  const coverage = (result as { coverage?: unknown }).coverage;
+  if (!coverage || typeof coverage !== 'object') return {};
+  const { matched, truncatedBy } = coverage as { matched?: unknown; truncatedBy?: unknown };
+  return {
+    ...(typeof matched === 'number' ? { matched } : {}),
+    ...(typeof truncatedBy === 'string' ? { truncatedBy } : {}),
+  };
+}
+
 /** How the call ended, in the tools' own vocabulary. */
 function outcomeOf(result: unknown): string {
   if (!result || typeof result !== 'object') return 'ok';
@@ -50,32 +65,41 @@ function outcomeOf(result: unknown): string {
   return 'ok';
 }
 
+export interface ToolRunContext {
+  traceId: string;
+  turn: TurnState;
+}
+
 export async function runTool<T>(
   name: string,
-  traceId: string,
+  { traceId, turn }: ToolRunContext,
   args: unknown,
   execute: () => Promise<T>,
 ): Promise<T> {
   const startedAt = Date.now();
   try {
     const result = await execute();
-    console.info('agent tool', {
-      traceId,
+    const record = {
       tool: name,
-      args: redactArgs(args),
       outcome: outcomeOf(result),
-      rows: rowCount(result),
       ms: Date.now() - startedAt,
-    });
+      chars: JSON.stringify(result).length,
+      rows: rowCount(result),
+      ...coverageOf(result),
+    };
+    turn.toolCalls.push(record);
+    console.info('agent tool', { traceId, args: redactArgs(args), ...record });
     return result;
   } catch (err) {
     // The tools return structured failures rather than throwing, so anything
     // caught here is unexpected and worth the louder level.
+    const ms = Date.now() - startedAt;
+    turn.toolCalls.push({ tool: name, outcome: 'threw', ms, chars: 0 });
     console.error('agent tool threw', {
       traceId,
       tool: name,
       args: redactArgs(args),
-      ms: Date.now() - startedAt,
+      ms,
       error: err instanceof Error ? err.message : String(err),
     });
     throw err;
