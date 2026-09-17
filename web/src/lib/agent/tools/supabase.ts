@@ -6,6 +6,7 @@ import { NCT_ID_PATTERN } from '@/lib/constants';
 import { PHASE_MAP, STATUS_MAP } from '@/lib/clinical-trials-enums';
 import { DATA_TOOL_NAMES } from './names';
 import { runTool } from './logging';
+import { MIN_RESULT_CHARS, type TurnState } from './turn';
 import {
   AGENT_TABLES,
   AGENT_TABLE_NAMES,
@@ -142,13 +143,21 @@ export function dropEmpty(rows: unknown[]): unknown[] {
 /**
  * Drop rows from the tail until the payload fits the budget. Returns the kept
  * rows and whether anything was dropped, so the caller can say so out loud.
+ *
+ * The tail is deterministic because every query is ordered (`applyOrder`), so
+ * two identical calls trim the same rows. Never below one row: an empty result
+ * would read as "no rows matched", a claim about the database rather than
+ * about the size of a row.
  */
-export function fitToBudget<T>(rows: T[]): { kept: T[]; droppedForSize: boolean } {
-  if (JSON.stringify(rows).length <= MAX_RESULT_CHARS) {
+export function fitToBudget<T>(
+  rows: T[],
+  limitChars: number = MAX_RESULT_CHARS,
+): { kept: T[]; droppedForSize: boolean } {
+  if (JSON.stringify(rows).length <= limitChars) {
     return { kept: rows, droppedForSize: false };
   }
   let kept = rows;
-  while (kept.length > 1 && JSON.stringify(kept).length > MAX_RESULT_CHARS) {
+  while (kept.length > 1 && JSON.stringify(kept).length > limitChars) {
     kept = kept.slice(0, Math.floor(kept.length * 0.8));
   }
   return { kept, droppedForSize: true };
@@ -192,12 +201,17 @@ export interface AgentToolContext {
   sessionId?: string;
   /** Per-request ID tying every tool log line to one chat session row. */
   traceId: string;
+  /** Budget and evidence shared by every tool call in this turn. */
+  turn: TurnState;
 }
 
 const PHASE_VALUES = Object.keys(PHASE_MAP) as [string, ...string[]];
+
+/** What a saved finding is about: one value per kind of row the data tools return. */
+export const FINDING_TYPES = ['trial', 'outcome', 'landscape', 'news', 'other'] as const;
 const STATUS_VALUES = Object.keys(STATUS_MAP) as [string, ...string[]];
 
-export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: AgentToolContext) {
+export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, turn }: AgentToolContext) {
   const dbCancerType = getDbCancerType(cancerSlug);
 
   return {
@@ -215,11 +229,8 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         'either re-run with a higher `limit` or narrow the filters - and never describe a ' +
         'partial result as if it were the full set. To sweep a whole filtered set in one ' +
         `call, ask for limit ${MAX_ROWS} - a limit above ${DEFAULT_ROWS} needs at least one ` +
-        'filter, because unfiltered it reads the table end to end. Filter the table you need ' +
-        'directly first - phase and status reach several tables through the registry join ' +
-        'named above, not only clinical_trials. Only when the table you need has no filter ' +
-        'for what was asked, query one that does, then pass the NCT numbers it returned as ' +
-        '`nctIds` to the table holding the rest.',
+        'filter, because unfiltered it reads the table end to end. The whole turn shares one ' +
+        'result budget; once it is spent, further calls return coverage counts but no rows.',
       inputSchema: z.object({
         table: z.enum(AGENT_TABLE_NAMES),
         nctIds: z
@@ -430,10 +441,40 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         }
 
         // Trimmed before the size budget runs, so the budget measures what the
-        // model will actually be sent.
+        // model will actually be sent. The per-call cap and what is left of the
+        // turn's budget both apply; whichever is tighter names the truncation.
         const fetched = dropEmpty(compactInterventions(flattenViaEmbed(data ?? [])));
         const matched = count ?? fetched.length;
-        const { kept: rows, droppedForSize } = fitToBudget(fetched);
+        const remaining = turn.remainingChars();
+
+        // The turn has spent its budget: the counts still go back so the
+        // model can report what matched, but no rows do.
+        if (remaining < MIN_RESULT_CHARS && fetched.length > 0) {
+          return {
+            ok: false as const,
+            reason: 'turn_budget_exhausted' as const,
+            table,
+            appliedFilters: { ...applied, ...(nctIds ? { nctIds } : {}) },
+            coverage: {
+              returned: 0,
+              matched,
+              complete: false,
+              cancerType: dbCancerType,
+              truncatedBy: 'turn_budget' as const,
+            },
+            hint:
+              `${matched} rows matched but this turn's result budget is spent, so none were returned. ` +
+              'Answer from the results already in this conversation and say this query could not be read.',
+          };
+        }
+
+        const limitChars = Math.min(MAX_RESULT_CHARS, remaining);
+        const { kept: rows, droppedForSize } = fitToBudget(fetched, limitChars);
+        const truncatedBy = !droppedForSize
+          ? ('limit' as const)
+          : remaining < MAX_RESULT_CHARS
+            ? ('turn_budget' as const)
+            : ('size' as const);
         const complete = rows.length === matched;
         const coverage = {
           returned: rows.length,
@@ -444,10 +485,13 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           ...(complete
             ? {}
             : {
-                truncatedBy: droppedForSize ? ('size' as const) : ('limit' as const),
-                hint: droppedForSize
-                  ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.`
-                  : `You asked for ${limit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
+                truncatedBy,
+                hint:
+                  truncatedBy === 'turn_budget'
+                    ? `Only ${rows.length} of ${matched} rows fit in what remains of this turn's result budget. Answer from what you have and say the result is partial; a narrower query may fit.`
+                    : truncatedBy === 'size'
+                      ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.`
+                      : `You asked for ${limit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
               }),
           ...(nctIds ? { trialKeyColumn: spec.trialKey?.column } : {}),
           // Only once the result is whole: under truncation "absent from the
@@ -489,7 +533,10 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
           };
         }
 
-        return { ok: true as const, table, coverage, rows };
+        const result = { ok: true as const, table, coverage, rows };
+        turn.spend(JSON.stringify(result).length);
+        turn.recordEvidence(rows);
+        return result;
         }),
     }),
 
@@ -498,17 +545,31 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
         'Persist a research finding for the user. Call only when the user explicitly asks to ' +
         'save, bookmark, or remember something. Provide a concise title, a 1-3 sentence summary, ' +
         'the tool the finding came from, and the identifiers it rests on (NCT numbers, ' +
-        'abstract or publication IDs) exactly as they appeared in that tool result.',
+        'abstract or publication IDs) exactly as they appeared in that tool result - a ' +
+        'citation no result in this conversation carried is refused.',
       inputSchema: z.object({
-        findingType: z.enum(['trial', 'literature', 'compound', 'target', 'landscape', 'other']),
+        // One value per kind of row the data tools can return; the old
+        // `literature`/`compound`/`target` values named tools deleted long ago.
+        findingType: z.enum(FINDING_TYPES),
         title: z.string().min(3).max(200),
         summary: z.string().min(10).max(2000),
         sourceTool: z.enum(DATA_TOOL_NAMES),
-        citations: z.array(z.string()).default([]),
+        citations: z.array(z.string().min(1)).max(50).default([]),
       }),
       execute: async (args) =>
         runTool('store_finding', traceId, args, async () => {
         const { findingType, title, summary, sourceTool, citations } = args;
+        // A finding is only as good as what it cites, so every citation has to
+        // be an identifier a tool result actually carried this conversation.
+        const uncited = citations.filter((c) => !turn.evidence.has(c));
+        if (uncited.length > 0) {
+          return {
+            ok: false as const,
+            reason: 'uncited_evidence' as const,
+            uncited,
+            hint: 'These identifiers appeared in no tool result. Cite only identifiers from results in this conversation, or save without them.',
+          };
+        }
         const supabase = createServiceClient();
         const { data, error } = await supabase
           .from('agent_findings')

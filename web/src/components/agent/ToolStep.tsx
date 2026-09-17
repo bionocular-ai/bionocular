@@ -31,7 +31,7 @@ interface Coverage {
   returned?: number;
   matched?: number;
   complete?: boolean;
-  truncatedBy?: 'size' | 'limit';
+  truncatedBy?: 'size' | 'limit' | 'turn_budget';
   caveat?: string;
 }
 
@@ -58,6 +58,8 @@ const MISS_REASONS: Record<string, string> = {
 
 const FAILURE_REASONS: Record<string, string> = {
   no_rows: 'no rows matched',
+  turn_budget_exhausted: 'result budget spent for this turn',
+  uncited_evidence: 'citation not found in results',
   unknown_column: 'unknown column',
   unsupported_filter: 'filter not supported on this table',
   query_failed: 'query failed',
@@ -75,7 +77,8 @@ function coverageDetail(coverage: Coverage | undefined): string {
   if (!coverage) return 'complete';
   const rows = `${count(coverage.returned)} of ${count(coverage.matched)} rows`;
   if (coverage.complete) return `${rows} · complete`;
-  return `${rows} · truncated by ${coverage.truncatedBy ?? 'limit'}`;
+  const by = coverage.truncatedBy === 'turn_budget' ? 'turn budget' : (coverage.truncatedBy ?? 'limit');
+  return `${rows} · truncated by ${by}`;
 }
 
 function summarise({ toolName, state, output, errorText }: ToolStepProps): Summary {

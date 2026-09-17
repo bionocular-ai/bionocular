@@ -11,6 +11,7 @@ import {
   viaFilters,
   type AgentTable,
 } from './schema';
+import { createTurnState } from './turn';
 
 let fake: FakeSupabase;
 
@@ -18,7 +19,7 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => fake,
 }));
 
-const { buildSupabaseTools, dropEmpty, fitToBudget, MAX_RESULT_CHARS, missingTrialKeys } =
+const { buildSupabaseTools, dropEmpty, fitToBudget, FINDING_TYPES, MAX_RESULT_CHARS, missingTrialKeys } =
   await import('./supabase');
 
 /** Rows whose JSON serialises to exactly `chars` characters. */
@@ -36,6 +37,7 @@ const CONTEXT = {
   userId: 'user-1',
   cancerSlug: 'cutaneous-melanoma',
   traceId: 'trace-1',
+  turn: createTurnState(),
 };
 
 function toolsWith(fixtures: Record<string, TableFixture> = {}) {
@@ -1103,5 +1105,121 @@ describe('deterministic ordering', () => {
       RUN_OPTIONS,
     );
     expect(fake.queries[0].order.map((o) => o.column)).toEqual(['nct_id', 'id']);
+  });
+});
+
+describe('per-turn result budget', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  function toolsWithTurn(fixtures: Record<string, TableFixture>, limitChars: number) {
+    fake = createFakeSupabase(fixtures);
+    return buildSupabaseTools({ ...CONTEXT, turn: createTurnState({ limitChars }) });
+  }
+
+  it('charges every successful result against one budget shared across calls', async () => {
+    // Two calls of ~30k each against a 50k turn: the first is whole, the
+    // second is trimmed to what is left and says why.
+    const rows = rowsOfSize(30_000, 30);
+    const tools = toolsWithTurn({ clinical_trials: { rows, count: 30 } }, 50_000);
+
+    const first = (await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', sponsor: 'BMS', limit: 100 },
+      RUN_OPTIONS,
+    )) as { ok: boolean; coverage: { complete: boolean; truncatedBy?: string } };
+    expect(first.ok).toBe(true);
+    expect(first.coverage.complete).toBe(true);
+
+    const second = (await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', sponsor: 'Merck', limit: 100 },
+      RUN_OPTIONS,
+    )) as { ok: boolean; rows: unknown[]; coverage: { complete: boolean; truncatedBy?: string; hint?: string } };
+    expect(second.ok).toBe(true);
+    expect(second.rows.length).toBeLessThan(30);
+    expect(second.coverage.complete).toBe(false);
+    expect(second.coverage.truncatedBy).toBe('turn_budget');
+    expect(second.coverage.hint).toMatch(/turn's result budget/);
+  });
+
+  it('returns counts but no rows once the budget is spent, rather than a one-row sample', async () => {
+    const rows = rowsOfSize(30_000, 30);
+    const tools = toolsWithTurn({ clinical_trials: { rows, count: 30 } }, 31_000);
+
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', sponsor: 'BMS', limit: 100 }, RUN_OPTIONS);
+    const result = (await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', sponsor: 'Merck', limit: 100 },
+      RUN_OPTIONS,
+    )) as { ok: boolean; reason: string; coverage: { matched: number; returned: number; truncatedBy: string }; hint: string };
+
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('turn_budget_exhausted');
+    // The count is still a fact the model can report.
+    expect(result.coverage).toMatchObject({ matched: 30, returned: 0, truncatedBy: 'turn_budget' });
+    expect(result.hint).toMatch(/30 rows matched/);
+  });
+
+  it('blames the per-call cap, not the turn, when the turn still has room', async () => {
+    const rows = rowsOfSize(MAX_RESULT_CHARS * 2, 40);
+    const tools = toolsWithTurn({ clinical_trials: { rows, count: 40 } }, MAX_RESULT_CHARS * 10);
+
+    const result = (await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', sponsor: 'BMS', limit: 100 },
+      RUN_OPTIONS,
+    )) as { coverage: { truncatedBy: string } };
+
+    expect(result.coverage.truncatedBy).toBe('size');
+  });
+
+  it('records every identifier a result carried as evidence', async () => {
+    const turn = createTurnState();
+    fake = createFakeSupabase({
+      trial_outcomes: {
+        rows: [
+          { id: 'o1', nct_id: 'NCT00006368', abstract_id: 'ASCO2026_9500', arm_name: 'A' },
+          { id: 'o2', publication_id: 'PUB-7', arm_name: 'see NCT01234567' },
+        ],
+      },
+    });
+    const tools = buildSupabaseTools({ ...CONTEXT, turn });
+
+    await tools.query_proprietary_data.execute!({ table: 'trial_outcomes', drug: 'nivo', limit: 10 }, RUN_OPTIONS);
+
+    for (const id of ['o1', 'NCT00006368', 'ASCO2026_9500', 'PUB-7', 'NCT01234567']) {
+      expect(turn.evidence.has(id), id).toBe(true);
+    }
+    expect(turn.evidence.has('A')).toBe(false);
+  });
+});
+
+describe('store_finding', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  it('refuses a citation no result in this turn carried', async () => {
+    const turn = createTurnState({ retainedEvidence: ['NCT00006368'] });
+    fake = createFakeSupabase({ agent_findings: { rows: [{ id: 'f1' }] } });
+    const tools = buildSupabaseTools({ ...CONTEXT, turn });
+
+    const result = await tools.store_finding.execute!(
+      {
+        findingType: 'trial',
+        title: 'A finding',
+        summary: 'Something the user asked to keep.',
+        sourceTool: 'lookup_trial',
+        citations: ['NCT00006368', 'NCT99999999'],
+      },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: 'uncited_evidence', uncited: ['NCT99999999'] });
+    expect(fake.upserts).toHaveLength(0);
+  });
+
+  it('only offers finding types the data tools can produce', () => {
+    expect(FINDING_TYPES).not.toContain('literature');
+    expect(FINDING_TYPES).not.toContain('compound');
+    expect(FINDING_TYPES).not.toContain('target');
   });
 });
