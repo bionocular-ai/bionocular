@@ -14,10 +14,18 @@ export interface RecordedFilter {
   value: unknown;
 }
 
+export interface RecordedOrder {
+  column: string;
+  ascending: boolean;
+  nullsFirst: boolean;
+}
+
 export interface RecordedQuery {
   table: string;
   projection: string;
   filters: RecordedFilter[];
+  /** Every `.order()` term, in the order they were chained. */
+  order: RecordedOrder[];
   limit?: number;
   head: boolean;
   countRequested: boolean;
@@ -60,6 +68,7 @@ interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown
   overlaps: (column: string, values: readonly unknown[]) => FakeQuery;
   ilike: (column: string, value: string) => FakeQuery;
   is: (column: string, value: null) => FakeQuery;
+  order: (column: string, options: { ascending: boolean; nullsFirst: boolean }) => FakeQuery;
   /** Resolves the first fixture row rather than the array, as PostgREST does. */
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
   upsert: (
@@ -81,6 +90,7 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
       table,
       projection: '',
       filters: [],
+      order: [],
       head: false,
       countRequested: false,
     };
@@ -123,6 +133,10 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
       },
       is(column, value) {
         record.filters.push({ operator: 'is', column, value });
+        return query;
+      },
+      order(column, { ascending, nullsFirst }) {
+        record.order.push({ column, ascending, nullsFirst });
         return query;
       },
       maybeSingle() {

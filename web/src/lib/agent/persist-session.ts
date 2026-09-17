@@ -1,5 +1,6 @@
 import type { UIMessage } from 'ai';
 import { createServiceClient } from '@/lib/supabase/service';
+import type { AgentRunRecord } from './run';
 
 export interface PersistArgs {
   userId: string;
@@ -11,6 +12,23 @@ export interface PersistArgs {
   usage: unknown;
   /** Per-step usage for this turn, oldest first. Omitted when nothing captured it. */
   steps?: readonly unknown[];
+  /** This turn's run record; kept per turn so a slow or costly turn can be found. */
+  run?: AgentRunRecord;
+}
+
+/**
+ * Keep every turn's run record, oldest first. `stepUsage` is dropped because
+ * `steps` already holds it; the rest is a few hundred bytes a turn.
+ */
+function accumulateRuns(prior: unknown, run: AgentRunRecord | undefined): unknown[] {
+  const earlier =
+    prior && typeof prior === 'object' && Array.isArray((prior as { runs?: unknown }).runs)
+      ? ((prior as { runs: unknown[] }).runs as unknown[])
+      : [];
+  if (!run) return earlier;
+  const { stepUsage: _stepUsage, ...compact } = run;
+  void _stepUsage;
+  return [...earlier, compact];
 }
 
 /**
@@ -79,7 +97,7 @@ function accumulateSteps(prior: unknown, current: readonly unknown[]): Record<st
  * user actually saw. The list saved here comes from the finished UI stream, so
  * it includes the assistant turn and its tool calls.
  */
-export async function persistSession({ userId, sessionId, traceId, cancerType, messages, usage, steps }: PersistArgs) {
+export async function persistSession({ userId, sessionId, traceId, cancerType, messages, usage, steps, run }: PersistArgs) {
   const supabase = createServiceClient();
   const firstUserMessage = messages.find((m) => m.role === 'user');
   const titleSource = firstUserMessage?.parts.find((p) => p.type === 'text');
@@ -112,9 +130,14 @@ export async function persistSession({ userId, sessionId, traceId, cancerType, m
         token_usage: (() => {
           const priorUsage = (prior as { token_usage?: unknown } | null)?.token_usage;
           const total = accumulateUsage(priorUsage, usage);
+          const runs = accumulateRuns(priorUsage, run);
           // Absent when nothing captured per-step usage, so the field never
           // appears as an empty array on rows that have nothing to say.
-          return steps?.length ? { ...total, steps: accumulateSteps(priorUsage, steps) } : total;
+          return {
+            ...total,
+            ...(steps?.length ? { steps: accumulateSteps(priorUsage, steps) } : {}),
+            ...(runs.length ? { runs } : {}),
+          };
         })(),
         last_trace_id: traceId,
         updated_at: new Date().toISOString(),

@@ -45,3 +45,4 @@ data/
 
 # Seed SQL (proprietary curve data + local fixtures)
 supabase/seed/
+.evals/
