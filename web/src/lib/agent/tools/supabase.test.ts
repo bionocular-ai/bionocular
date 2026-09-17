@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeSupabase, type FakeSupabase, type TableFixture } from './fake-supabase';
-import { applyNamedFilter, describeTables, embedFor, projectionFor, viaFilters } from './schema';
+import {
+  AGENT_TABLES,
+  AGENT_TABLE_NAMES,
+  applyNamedFilter,
+  describeTables,
+  embedFor,
+  projectionColumns,
+  projectionFor,
+  viaFilters,
+  type AgentTable,
+} from './schema';
 
 let fake: FakeSupabase;
 
@@ -1042,5 +1052,56 @@ describe('fitToBudget', () => {
     const rows = rowsOfSize(MAX_RESULT_CHARS * 2, 1);
 
     expect(fitToBudget(rows).kept).toEqual(rows);
+  });
+});
+
+describe('deterministic ordering', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  it('orders every table by a total key, never relying on heap order', async () => {
+    for (const table of AGENT_TABLE_NAMES) {
+      const tools = toolsWith({ [table]: { rows: [{ id: 'x' }] } });
+      await tools.query_proprietary_data.execute!({ table, limit: 10 }, RUN_OPTIONS);
+      const [query] = fake.queries;
+      expect(query.order.length, table).toBeGreaterThan(0);
+      // Nulls last on every term: a missing date must never lead the window.
+      expect(query.order.every((o) => o.nullsFirst === false), table).toBe(true);
+      // Every order term is a projected or key column of that table, so the
+      // ORDER BY can never name a column the select does not know.
+      const known = new Set([
+        ...projectionColumns(table),
+        AGENT_TABLES[table].trialKey?.column ?? '',
+      ]);
+      for (const { column } of query.order) expect(known.has(column), `${table}.${column}`).toBe(true);
+    }
+  });
+
+  it('ends every order on the table\'s unique key so the order is total', () => {
+    const lastTerm = (table: AgentTable) => AGENT_TABLES[table].order.at(-1)!.column;
+    expect(lastTerm('clinical_trials')).toBe('nct_id');
+    expect(lastTerm('trial_landscape')).toBe('nct_id');
+    expect(lastTerm('trial_outcomes')).toBe('id');
+    expect(lastTerm('km_curves')).toBe('id');
+    expect(lastTerm('news_feed')).toBe('url');
+  });
+
+  it('puts the newest registry update first on clinical_trials', async () => {
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', limit: 10 }, RUN_OPTIONS);
+    expect(fake.queries[0].order).toEqual([
+      { column: 'last_update_posted_date', ascending: false, nullsFirst: false },
+      { column: 'nct_id', ascending: true, nullsFirst: false },
+    ]);
+  });
+
+  it('applies the same order to a via-joined query, so a filtered window is reproducible', async () => {
+    const tools = toolsWith({ trial_outcomes: { rows: [{ id: 'o1', nct_id: 'NCT00000001' }] } });
+    await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', phase: 'PHASE1', limit: 500 },
+      RUN_OPTIONS,
+    );
+    expect(fake.queries[0].order.map((o) => o.column)).toEqual(['nct_id', 'id']);
   });
 });

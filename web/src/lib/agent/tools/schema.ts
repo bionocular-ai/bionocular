@@ -29,12 +29,25 @@ export interface AgentColumn {
   readonly kind: ColumnKind;
 }
 
+/** One `ORDER BY` term. Nulls always sort last so a missing date never leads. */
+export interface AgentOrder {
+  readonly column: string;
+  readonly ascending: boolean;
+}
+
 export interface AgentTableSpec {
   /** One line describing the table, used to generate the tool description. */
   readonly summary: string;
   readonly cancerType: AgentColumn;
   /** Absent where a table has no trial identifier at all. */
   readonly trialKey: AgentColumn | null;
+  /**
+   * Applied to every bounded read of this table. Without it Postgres returns
+   * heap order, so a 25-row window was a different sample on two identical
+   * calls and `fitToBudget` trimmed an arbitrary tail. The last term is always
+   * a unique key, so the order is total and a window is reproducible.
+   */
+  readonly order: readonly AgentOrder[];
   /**
    * Explicit column list. Never `*` - `trial_outcomes` alone has 205 columns,
    * and `select=*` on it measured 4.5 MB / 3.5s against 1.04 MB / 1.9s for the
@@ -180,6 +193,12 @@ const TABLE_DEFINITIONS = {
     summary: 'trial registry mirror - one row per trial, with our cancer-type tagging',
     cancerType: { column: 'cancer_type', kind: 'array' },
     trialKey: { column: 'nct_id', kind: 'scalar' },
+    // Most recently changed on the registry first - the same order the
+    // dashboard's recent-updates feed uses (`lib/api.ts`).
+    order: [
+      { column: 'last_update_posted_date', ascending: false },
+      { column: 'nct_id', ascending: true },
+    ],
     projection:
       'nct_id, acronym, brief_title, overall_status, phases, enrollment_count, ' +
       'lead_sponsor_name, lead_sponsor_class, cancer_type, cancer_type_evidence, ' +
@@ -223,6 +242,8 @@ const TABLE_DEFINITIONS = {
       'with treatment, modality, biomarker, stage and line of therapy',
     cancerType: { column: 'cancer_type', kind: 'array' },
     trialKey: { column: 'nct_id', kind: 'scalar' },
+    // One row per trial and no date column, so the key alone is total.
+    order: [{ column: 'nct_id', ascending: true }],
     projection:
       'nct_id, treatment_name, modality, biomarker, stage, line_of_therapy, ' +
       'previous_treatment_criteria, cancer_type',
@@ -253,6 +274,12 @@ const TABLE_DEFINITIONS = {
       'conference abstracts and publications',
     cancerType: { column: 'cancer_type', kind: 'array' },
     trialKey: { column: 'nct_id', kind: 'scalar' },
+    // Arms of the same trial sit together; the 44% with no nct_id sort last
+    // rather than first, so a trial-keyed window is not filled with them.
+    order: [
+      { column: 'nct_id', ascending: true },
+      { column: 'id', ascending: true },
+    ],
     // The full endpoint set - see TRIAL_OUTCOMES_PROJECTION above for how it is
     // built and what it excludes.
     projection: TRIAL_OUTCOMES_PROJECTION,
@@ -296,6 +323,10 @@ const TABLE_DEFINITIONS = {
     // The one scalar cancer_type in the set. Do not "fix" this to an array.
     cancerType: { column: 'cancer_type', kind: 'scalar' },
     trialKey: { column: 'nct_id', kind: 'scalar' },
+    order: [
+      { column: 'nct_id', ascending: true },
+      { column: 'id', ascending: true },
+    ],
     projection:
       'id, nct_id, publication_id, cancer_type, comparison_label, arm_name, endpoint, ' +
       'published_median, twin_median, rate_timepoint, published_rate, twin_rate, ' +
@@ -318,6 +349,11 @@ const TABLE_DEFINITIONS = {
     cancerType: { column: 'cancer_type', kind: 'array' },
     // No nct_id column - an article can reference several trials.
     trialKey: { column: 'nct_ids', kind: 'array' },
+    // Newest coverage first; `url` is the row's identity.
+    order: [
+      { column: 'date', ascending: false },
+      { column: 'url', ascending: true },
+    ],
     projection: 'url, title, date, nct_ids, cancer_type, has_efficacy, has_safety',
     filters: {},
   },
@@ -345,6 +381,19 @@ export interface FilterableQuery<Q> {
   contains(column: string, value: unknown): Q;
   overlaps(column: string, values: readonly unknown[]): Q;
   ilike(column: string, pattern: string): Q;
+  order(column: string, options: { ascending: boolean; nullsFirst: boolean }): Q;
+}
+
+/**
+ * Apply the table's total order. Every bounded read goes through here, so no
+ * query in this directory relies on heap order.
+ */
+export function applyOrder<Q extends FilterableQuery<Q>>(query: Q, table: AgentTable): Q {
+  let ordered = query;
+  for (const { column, ascending } of AGENT_TABLES[table].order) {
+    ordered = ordered.order(column, { ascending, nullsFirst: false });
+  }
+  return ordered;
 }
 
 /**

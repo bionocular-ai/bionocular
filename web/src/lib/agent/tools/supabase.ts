@@ -11,6 +11,7 @@ import {
   AGENT_TABLE_NAMES,
   applyCancerScope,
   applyNamedFilter,
+  applyOrder,
   applyTrialKeys,
   describeTables,
   embedFor,
@@ -345,6 +346,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId }: A
 
         let query = supabase.from(table).select(select, { count: 'exact' }).limit(limit);
 
+        query = applyOrder(query, table);
         query = applyCancerScope(query, table, dbCancerType);
         if (nctIds) query = applyTrialKeys(query, table, nctIds);
 
