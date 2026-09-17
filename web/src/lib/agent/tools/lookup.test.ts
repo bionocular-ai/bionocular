@@ -12,16 +12,18 @@ vi.mock('@/lib/supabase/service', () => ({
 const { buildLookupTool, fitLookupToBudget } = await import('./lookup');
 const { projectionFor } = await import('./schema');
 
-const CONTEXT = {
+const REQUEST = {
   userId: 'user-1',
   cancerSlug: 'cutaneous-melanoma',
   traceId: 'trace-1',
-  turn: createTurnState(),
 };
+
+/** A fresh turn per test: the duplicate-call guard is per turn. */
+const CONTEXT = () => ({ ...REQUEST, turn: createTurnState() });
 
 function toolsWith(fixtures: Record<string, TableFixture> = {}) {
   fake = createFakeSupabase(fixtures);
-  return buildLookupTool(CONTEXT);
+  return buildLookupTool(CONTEXT());
 }
 
 // The SDK passes execute a second argument none of these tools read.
@@ -105,7 +107,7 @@ describe('lookup_trial', () => {
       if (call === 6) return createFakeSupabase({ [table]: { rows: [], count: 1 } }).from(table);
       return original(table);
     };
-    const tools = buildLookupTool(CONTEXT);
+    const tools = buildLookupTool(CONTEXT());
 
     const result = await tools.lookup_trial.execute!({ nctId: 'NCT00604890' }, RUN_OPTIONS);
 
@@ -178,7 +180,7 @@ describe('lookup_trial projection and budget', () => {
         rows: Array.from({ length: 10 }, (_, i) => ({ id: `o${i}`, nct_id: 'NCT00006368', arm_name: 'x'.repeat(300) })),
       },
     });
-    const tools = buildLookupTool({ ...CONTEXT, turn });
+    const tools = buildLookupTool({ ...REQUEST, turn });
 
     const result = (await tools.lookup_trial.execute!({ nctId: 'NCT00006368' }, RUN_OPTIONS)) as {
       coverage: { truncated?: string[]; hint?: string };

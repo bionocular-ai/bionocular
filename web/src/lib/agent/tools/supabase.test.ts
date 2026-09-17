@@ -33,16 +33,18 @@ function rowsOfSize(chars: number, count = 1) {
   return rows;
 }
 
-const CONTEXT = {
+const REQUEST = {
   userId: 'user-1',
   cancerSlug: 'cutaneous-melanoma',
   traceId: 'trace-1',
-  turn: createTurnState(),
 };
+
+/** A fresh turn per test: the duplicate-call guard is per turn. */
+const CONTEXT = () => ({ ...REQUEST, turn: createTurnState() });
 
 function toolsWith(fixtures: Record<string, TableFixture> = {}) {
   fake = createFakeSupabase(fixtures);
-  return buildSupabaseTools(CONTEXT);
+  return buildSupabaseTools(CONTEXT());
 }
 
 // The SDK passes execute a second argument none of these tools read.
@@ -947,7 +949,7 @@ describe('via joins through the real tool entry point', () => {
       return original(table);
     };
     fake = fake1;
-    const tools = buildSupabaseTools(CONTEXT);
+    const tools = buildSupabaseTools(CONTEXT());
 
     const result = await tools.query_proprietary_data.execute!(
       { table: 'trial_outcomes', phase: 'PHASE1', limit: 10 },
@@ -1115,7 +1117,7 @@ describe('per-turn result budget', () => {
 
   function toolsWithTurn(fixtures: Record<string, TableFixture>, limitChars: number) {
     fake = createFakeSupabase(fixtures);
-    return buildSupabaseTools({ ...CONTEXT, turn: createTurnState({ limitChars }) });
+    return buildSupabaseTools({ ...REQUEST, turn: createTurnState({ limitChars }) });
   }
 
   it('charges every successful result against one budget shared across calls', async () => {
@@ -1181,7 +1183,7 @@ describe('per-turn result budget', () => {
         ],
       },
     });
-    const tools = buildSupabaseTools({ ...CONTEXT, turn });
+    const tools = buildSupabaseTools({ ...REQUEST, turn });
 
     await tools.query_proprietary_data.execute!({ table: 'trial_outcomes', drug: 'nivo', limit: 10 }, RUN_OPTIONS);
 
@@ -1200,7 +1202,7 @@ describe('store_finding', () => {
   it('refuses a citation no result in this turn carried', async () => {
     const turn = createTurnState({ retainedEvidence: ['NCT00006368'] });
     fake = createFakeSupabase({ agent_findings: { rows: [{ id: 'f1' }] } });
-    const tools = buildSupabaseTools({ ...CONTEXT, turn });
+    const tools = buildSupabaseTools({ ...REQUEST, turn });
 
     const result = await tools.store_finding.execute!(
       {
@@ -1221,5 +1223,37 @@ describe('store_finding', () => {
     expect(FINDING_TYPES).not.toContain('literature');
     expect(FINDING_TYPES).not.toContain('compound');
     expect(FINDING_TYPES).not.toContain('target');
+  });
+});
+
+describe('duplicate call guard', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  it('refuses an exact repeat of an earlier call this turn without touching the database', async () => {
+    const turn = createTurnState();
+    fake = createFakeSupabase({ clinical_trials: { rows: [TRIAL_ROW] } });
+    const tools = buildSupabaseTools({ ...REQUEST, turn });
+    const args = { table: 'clinical_trials' as const, phase: 'PHASE3', limit: 10 };
+
+    const first = await tools.query_proprietary_data.execute!(args, RUN_OPTIONS);
+    const second = await tools.query_proprietary_data.execute!({ ...args }, RUN_OPTIONS);
+
+    expect(first).toMatchObject({ ok: true });
+    expect(second).toMatchObject({ ok: false, reason: 'duplicate_call' });
+    expect(fake.queries.filter((q) => q.table === 'clinical_trials')).toHaveLength(1);
+    expect(turn.toolCalls.map((c) => c.outcome)).toEqual(['ok', 'duplicate_call']);
+  });
+
+  it('lets a call with different arguments through', async () => {
+    const turn = createTurnState();
+    fake = createFakeSupabase({ clinical_trials: { rows: [TRIAL_ROW] } });
+    const tools = buildSupabaseTools({ ...REQUEST, turn });
+
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', phase: 'PHASE3', limit: 10 }, RUN_OPTIONS);
+    const second = await tools.query_proprietary_data.execute!({ table: 'clinical_trials', phase: 'PHASE3', limit: 500 }, RUN_OPTIONS);
+
+    expect(second).toMatchObject({ ok: true });
   });
 });

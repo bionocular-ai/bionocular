@@ -78,6 +78,8 @@ export interface TurnState {
   readonly skillsLoaded: Set<string>;
   /** Every tool call this turn, in order. */
   readonly toolCalls: ToolCallRecord[];
+  /** `tool:args` keys already executed this turn, so an exact repeat is refused. */
+  readonly seenCalls: Set<string>;
 }
 
 export interface TurnStateOptions {
@@ -106,5 +108,6 @@ export function createTurnState({
     },
     skillsLoaded: new Set(),
     toolCalls: [],
+    seenCalls: new Set(),
   };
 }

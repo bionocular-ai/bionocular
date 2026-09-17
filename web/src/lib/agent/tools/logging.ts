@@ -70,13 +70,36 @@ export interface ToolRunContext {
   turn: TurnState;
 }
 
+/**
+ * What an exact repeat of an earlier call gets instead of the database. The
+ * first result is still in context; re-running it would re-send the same rows
+ * and spend a step, which is the loop this exists to stop.
+ */
+export interface DuplicateCall {
+  ok: false;
+  reason: 'duplicate_call';
+  hint: string;
+}
+
 export async function runTool<T>(
   name: string,
   { traceId, turn }: ToolRunContext,
   args: unknown,
   execute: () => Promise<T>,
-): Promise<T> {
+): Promise<T | DuplicateCall> {
   const startedAt = Date.now();
+  const key = `${name}:${JSON.stringify(args)}`;
+  if (turn.seenCalls.has(key)) {
+    const result: DuplicateCall = {
+      ok: false,
+      reason: 'duplicate_call',
+      hint: 'This exact call already ran this turn; its result is above. Use it, or change the arguments.',
+    };
+    turn.toolCalls.push({ tool: name, outcome: result.reason, ms: 0, chars: JSON.stringify(result).length });
+    console.info('agent tool', { traceId, args: redactArgs(args), tool: name, outcome: result.reason, ms: 0 });
+    return result;
+  }
+  turn.seenCalls.add(key);
   try {
     const result = await execute();
     const record = {

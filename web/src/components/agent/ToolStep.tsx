@@ -59,6 +59,7 @@ const MISS_REASONS: Record<string, string> = {
 const FAILURE_REASONS: Record<string, string> = {
   no_rows: 'no rows matched',
   turn_budget_exhausted: 'result budget spent for this turn',
+  duplicate_call: 'same call already ran this turn',
   uncited_evidence: 'citation not found in results',
   unknown_column: 'unknown column',
   unsupported_filter: 'filter not supported on this table',
