@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeSupabase, type FakeSupabase, type TableFixture } from './fake-supabase';
 import { NCT_ID_PATTERN } from '@/lib/constants';
+import { createTurnState } from './turn';
 
 let fake: FakeSupabase;
 
@@ -8,17 +9,21 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => fake,
 }));
 
-const { buildLookupTool } = await import('./lookup');
+const { buildLookupTool, fitLookupToBudget } = await import('./lookup');
+const { projectionFor } = await import('./schema');
 
-const CONTEXT = {
+const REQUEST = {
   userId: 'user-1',
   cancerSlug: 'cutaneous-melanoma',
   traceId: 'trace-1',
 };
 
+/** A fresh turn per test: the duplicate-call guard is per turn. */
+const CONTEXT = () => ({ ...REQUEST, turn: createTurnState() });
+
 function toolsWith(fixtures: Record<string, TableFixture> = {}) {
   fake = createFakeSupabase(fixtures);
-  return buildLookupTool(CONTEXT);
+  return buildLookupTool(CONTEXT());
 }
 
 // The SDK passes execute a second argument none of these tools read.
@@ -102,11 +107,90 @@ describe('lookup_trial', () => {
       if (call === 6) return createFakeSupabase({ [table]: { rows: [], count: 1 } }).from(table);
       return original(table);
     };
-    const tools = buildLookupTool(CONTEXT);
+    const tools = buildLookupTool(CONTEXT());
 
     const result = await tools.lookup_trial.execute!({ nctId: 'NCT00604890' }, RUN_OPTIONS);
 
     expect(result).toMatchObject({ found: false, reason: 'other_cancer_type' });
     expect((result as { hint: string }).hint).toMatch(/not tagged to Cutaneous Melanoma/);
+  });
+});
+
+describe('lookup_trial projection and budget', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  it('reads the concise projection by default, not every column', async () => {
+    const tools = toolsWith({});
+    await tools.lookup_trial.execute!({ nctId: 'NCT00006368' }, RUN_OPTIONS);
+
+    const outcomes = fake.queries.find((q) => q.table === 'trial_outcomes')!;
+    expect(outcomes.projection).toBe(projectionFor('trial_outcomes', 'concise', 'both'));
+    expect(outcomes.projection).not.toContain('grade_3_plus_trae_rash');
+    // Order applies to lookups too: two lookups of a ten-arm trial show the
+    // same ten arms.
+    expect(outcomes.order.map((o) => o.column)).toEqual(['nct_id', 'id']);
+  });
+
+  it('widens to the full endpoint set, narrowed by family, when asked', async () => {
+    const tools = toolsWith({});
+    await tools.lookup_trial.execute!(
+      { nctId: 'NCT00006368', detail: 'detailed', endpoints: 'safety' },
+      RUN_OPTIONS,
+    );
+
+    const outcomes = fake.queries.find((q) => q.table === 'trial_outcomes')!;
+    expect(outcomes.projection).toContain('grade_3_plus_trae_rash');
+    expect(outcomes.projection).not.toContain('median_pfs');
+    // The other tables have one projection either way.
+    const trials = fake.queries.find((q) => q.table === 'clinical_trials')!;
+    expect(trials.projection).toBe(projectionFor('clinical_trials', 'detailed', 'safety'));
+  });
+
+  it('trims the widest table one row at a time until the lookup fits, and says so', () => {
+    const wide = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({ id: `r${i}`, pad: 'x'.repeat(400) }));
+    const tables = {
+      clinical_trials: { matched: 1, rows: wide(1) },
+      trial_landscape: { matched: 1, rows: wide(1) },
+      trial_outcomes: { matched: 10, rows: wide(10) },
+      km_curves: { matched: 6, rows: wide(6) },
+      news_feed: null,
+    };
+    const before = JSON.stringify(tables).length;
+
+    const { tables: fitted, truncated } = fitLookupToBudget(tables, Math.floor(before / 2));
+
+    expect(JSON.stringify(fitted).length).toBeLessThanOrEqual(Math.floor(before / 2));
+    // Single-row tables are never emptied; the multi-row ones share the cut.
+    expect(fitted.clinical_trials!.rows).toHaveLength(1);
+    expect(fitted.trial_landscape!.rows).toHaveLength(1);
+    expect(fitted.trial_outcomes!.rows.length).toBeLessThan(10);
+    expect(truncated).toContain('trial_outcomes');
+    // Prefix of the ordered rows, so the trim is deterministic.
+    expect(fitted.trial_outcomes!.rows).toEqual(tables.trial_outcomes.rows.slice(0, fitted.trial_outcomes!.rows.length));
+  });
+
+  it('applies the turn budget, and records the trial as evidence', async () => {
+    const turn = createTurnState({ limitChars: 3_000 });
+    fake = createFakeSupabase({
+      clinical_trials: { rows: [{ nct_id: 'NCT00006368', brief_title: 'A trial' }] },
+      trial_outcomes: {
+        rows: Array.from({ length: 10 }, (_, i) => ({ id: `o${i}`, nct_id: 'NCT00006368', arm_name: 'x'.repeat(300) })),
+      },
+    });
+    const tools = buildLookupTool({ ...REQUEST, turn });
+
+    const result = (await tools.lookup_trial.execute!({ nctId: 'NCT00006368' }, RUN_OPTIONS)) as {
+      coverage: { truncated?: string[]; hint?: string };
+      tables: Record<string, { rows: unknown[] } | null>;
+    };
+
+    expect(result.coverage.truncated).toEqual(['trial_outcomes']);
+    expect(result.coverage.hint).toMatch(/subset/);
+    expect(result.tables.trial_outcomes!.rows.length).toBeLessThan(10);
+    expect(turn.evidence.has('NCT00006368')).toBe(true);
+    expect(turn.remainingChars()).toBeLessThan(3_000);
   });
 });

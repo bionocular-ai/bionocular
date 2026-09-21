@@ -1,6 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFakeSupabase, type FakeSupabase, type TableFixture } from './fake-supabase';
-import { applyNamedFilter, describeTables, embedFor, projectionFor, viaFilters } from './schema';
+import {
+  AGENT_TABLES,
+  AGENT_TABLE_NAMES,
+  applyNamedFilter,
+  describeTables,
+  embedFor,
+  projectionColumns,
+  projectionFor,
+  viaFilters,
+  type AgentTable,
+} from './schema';
+import { createTurnState } from './turn';
 
 let fake: FakeSupabase;
 
@@ -8,7 +19,7 @@ vi.mock('@/lib/supabase/service', () => ({
   createServiceClient: () => fake,
 }));
 
-const { buildSupabaseTools, dropEmpty, fitToBudget, MAX_RESULT_CHARS, missingTrialKeys } =
+const { buildSupabaseTools, dropEmpty, fitToBudget, FINDING_TYPES, MAX_RESULT_CHARS, missingTrialKeys } =
   await import('./supabase');
 
 /** Rows whose JSON serialises to exactly `chars` characters. */
@@ -22,15 +33,18 @@ function rowsOfSize(chars: number, count = 1) {
   return rows;
 }
 
-const CONTEXT = {
+const REQUEST = {
   userId: 'user-1',
   cancerSlug: 'cutaneous-melanoma',
   traceId: 'trace-1',
 };
 
+/** A fresh turn per test: the duplicate-call guard is per turn. */
+const CONTEXT = () => ({ ...REQUEST, turn: createTurnState() });
+
 function toolsWith(fixtures: Record<string, TableFixture> = {}) {
   fake = createFakeSupabase(fixtures);
-  return buildSupabaseTools(CONTEXT);
+  return buildSupabaseTools(CONTEXT());
 }
 
 // The SDK passes execute a second argument none of these tools read.
@@ -499,7 +513,19 @@ describe('query_proprietary_data', () => {
     );
 
     expect(result).toMatchObject({ ok: false, reason: 'unsupported_filter', filter: 'phase' });
-    expect((result as { supportedFilters: string[] }).supportedFilters).toEqual([]);
+    expect((result as { supportedFilters: string[] }).supportedFilters).toEqual(['drug']);
+  });
+
+  it('matches news headlines and curated biomarkers as substrings', async () => {
+    // Both filters exist because the evals showed the models asking for them
+    // and being refused: "news about nivolumab" and "every BRAF trial".
+    const news = toolsWith({ news_feed: { rows: [{ url: 'https://example.test/a' }] } });
+    await news.query_proprietary_data.execute!({ table: 'news_feed', drug: 'nivolumab', limit: 10 }, RUN_OPTIONS);
+    expect(fake.queries[0].filters).toContainEqual({ operator: 'ilike', column: 'title', value: '%nivolumab%' });
+
+    const landscape = toolsWith({ trial_landscape: { rows: [{ nct_id: 'NCT1' }] } });
+    await landscape.query_proprietary_data.execute!({ table: 'trial_landscape', biomarker: 'BRAF', limit: 500 }, RUN_OPTIONS);
+    expect(fake.queries[0].filters).toContainEqual({ operator: 'ilike', column: 'biomarker', value: '%BRAF%' });
   });
 
   it('reports a via-resolved filter as supported in a refusal, not just the columns this table owns', async () => {
@@ -935,7 +961,7 @@ describe('via joins through the real tool entry point', () => {
       return original(table);
     };
     fake = fake1;
-    const tools = buildSupabaseTools(CONTEXT);
+    const tools = buildSupabaseTools(CONTEXT());
 
     const result = await tools.query_proprietary_data.execute!(
       { table: 'trial_outcomes', phase: 'PHASE1', limit: 10 },
@@ -1042,5 +1068,204 @@ describe('fitToBudget', () => {
     const rows = rowsOfSize(MAX_RESULT_CHARS * 2, 1);
 
     expect(fitToBudget(rows).kept).toEqual(rows);
+  });
+});
+
+describe('deterministic ordering', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  it('orders every table by a total key, never relying on heap order', async () => {
+    for (const table of AGENT_TABLE_NAMES) {
+      const tools = toolsWith({ [table]: { rows: [{ id: 'x' }] } });
+      await tools.query_proprietary_data.execute!({ table, limit: 10 }, RUN_OPTIONS);
+      const [query] = fake.queries;
+      expect(query.order.length, table).toBeGreaterThan(0);
+      // Nulls last on every term: a missing date must never lead the window.
+      expect(query.order.every((o) => o.nullsFirst === false), table).toBe(true);
+      // Every order term is a projected or key column of that table, so the
+      // ORDER BY can never name a column the select does not know.
+      const known = new Set([
+        ...projectionColumns(table),
+        AGENT_TABLES[table].trialKey?.column ?? '',
+      ]);
+      for (const { column } of query.order) expect(known.has(column), `${table}.${column}`).toBe(true);
+    }
+  });
+
+  it('ends every order on the table\'s unique key so the order is total', () => {
+    const lastTerm = (table: AgentTable) => AGENT_TABLES[table].order.at(-1)!.column;
+    expect(lastTerm('clinical_trials')).toBe('nct_id');
+    expect(lastTerm('trial_landscape')).toBe('nct_id');
+    expect(lastTerm('trial_outcomes')).toBe('id');
+    expect(lastTerm('km_curves')).toBe('id');
+    expect(lastTerm('news_feed')).toBe('url');
+  });
+
+  it('puts the newest registry update first on clinical_trials', async () => {
+    const tools = toolsWith({ clinical_trials: { rows: [TRIAL_ROW] } });
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', limit: 10 }, RUN_OPTIONS);
+    expect(fake.queries[0].order).toEqual([
+      { column: 'last_update_posted_date', ascending: false, nullsFirst: false },
+      { column: 'nct_id', ascending: true, nullsFirst: false },
+    ]);
+  });
+
+  it('applies the same order to a via-joined query, so a filtered window is reproducible', async () => {
+    const tools = toolsWith({ trial_outcomes: { rows: [{ id: 'o1', nct_id: 'NCT00000001' }] } });
+    await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', phase: 'PHASE1', limit: 500 },
+      RUN_OPTIONS,
+    );
+    expect(fake.queries[0].order.map((o) => o.column)).toEqual(['nct_id', 'id']);
+  });
+});
+
+describe('per-turn result budget', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  function toolsWithTurn(fixtures: Record<string, TableFixture>, limitChars: number) {
+    fake = createFakeSupabase(fixtures);
+    return buildSupabaseTools({ ...REQUEST, turn: createTurnState({ limitChars }) });
+  }
+
+  it('charges every successful result against one budget shared across calls', async () => {
+    // Two calls of ~30k each against a 50k turn: the first is whole, the
+    // second is trimmed to what is left and says why.
+    const rows = rowsOfSize(30_000, 30);
+    const tools = toolsWithTurn({ clinical_trials: { rows, count: 30 } }, 50_000);
+
+    const first = (await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', sponsor: 'BMS', limit: 100 },
+      RUN_OPTIONS,
+    )) as { ok: boolean; coverage: { complete: boolean; truncatedBy?: string } };
+    expect(first.ok).toBe(true);
+    expect(first.coverage.complete).toBe(true);
+
+    const second = (await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', sponsor: 'Merck', limit: 100 },
+      RUN_OPTIONS,
+    )) as { ok: boolean; rows: unknown[]; coverage: { complete: boolean; truncatedBy?: string; hint?: string } };
+    expect(second.ok).toBe(true);
+    expect(second.rows.length).toBeLessThan(30);
+    expect(second.coverage.complete).toBe(false);
+    expect(second.coverage.truncatedBy).toBe('turn_budget');
+    expect(second.coverage.hint).toMatch(/turn's result budget/);
+  });
+
+  it('returns counts but no rows once the budget is spent, rather than a one-row sample', async () => {
+    const rows = rowsOfSize(30_000, 30);
+    const tools = toolsWithTurn({ clinical_trials: { rows, count: 30 } }, 31_000);
+
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', sponsor: 'BMS', limit: 100 }, RUN_OPTIONS);
+    const result = (await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', sponsor: 'Merck', limit: 100 },
+      RUN_OPTIONS,
+    )) as { ok: boolean; reason: string; coverage: { matched: number; returned: number; truncatedBy: string }; hint: string };
+
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe('turn_budget_exhausted');
+    // The count is still a fact the model can report.
+    expect(result.coverage).toMatchObject({ matched: 30, returned: 0, truncatedBy: 'turn_budget' });
+    expect(result.hint).toMatch(/30 rows matched/);
+  });
+
+  it('blames the per-call cap, not the turn, when the turn still has room', async () => {
+    const rows = rowsOfSize(MAX_RESULT_CHARS * 2, 40);
+    const tools = toolsWithTurn({ clinical_trials: { rows, count: 40 } }, MAX_RESULT_CHARS * 10);
+
+    const result = (await tools.query_proprietary_data.execute!(
+      { table: 'clinical_trials', sponsor: 'BMS', limit: 100 },
+      RUN_OPTIONS,
+    )) as { coverage: { truncatedBy: string } };
+
+    expect(result.coverage.truncatedBy).toBe('size');
+  });
+
+  it('records every identifier a result carried as evidence', async () => {
+    const turn = createTurnState();
+    fake = createFakeSupabase({
+      trial_outcomes: {
+        rows: [
+          { id: 'o1', nct_id: 'NCT00006368', abstract_id: 'ASCO2026_9500', arm_name: 'A' },
+          { id: 'o2', publication_id: 'PUB-7', arm_name: 'see NCT01234567' },
+        ],
+      },
+    });
+    const tools = buildSupabaseTools({ ...REQUEST, turn });
+
+    await tools.query_proprietary_data.execute!({ table: 'trial_outcomes', drug: 'nivo', limit: 10 }, RUN_OPTIONS);
+
+    for (const id of ['o1', 'NCT00006368', 'ASCO2026_9500', 'PUB-7', 'NCT01234567']) {
+      expect(turn.evidence.has(id), id).toBe(true);
+    }
+    expect(turn.evidence.has('A')).toBe(false);
+  });
+});
+
+describe('store_finding', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  it('refuses a citation no result in this turn carried', async () => {
+    const turn = createTurnState({ retainedEvidence: ['NCT00006368'] });
+    fake = createFakeSupabase({ agent_findings: { rows: [{ id: 'f1' }] } });
+    const tools = buildSupabaseTools({ ...REQUEST, turn });
+
+    const result = await tools.store_finding.execute!(
+      {
+        findingType: 'trial',
+        title: 'A finding',
+        summary: 'Something the user asked to keep.',
+        sourceTool: 'lookup_trial',
+        citations: ['NCT00006368', 'NCT99999999'],
+      },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: 'uncited_evidence', uncited: ['NCT99999999'] });
+    expect(fake.upserts).toHaveLength(0);
+  });
+
+  it('only offers finding types the data tools can produce', () => {
+    expect(FINDING_TYPES).not.toContain('literature');
+    expect(FINDING_TYPES).not.toContain('compound');
+    expect(FINDING_TYPES).not.toContain('target');
+  });
+});
+
+describe('duplicate call guard', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+  });
+
+  it('refuses an exact repeat of an earlier call this turn without touching the database', async () => {
+    const turn = createTurnState();
+    fake = createFakeSupabase({ clinical_trials: { rows: [TRIAL_ROW] } });
+    const tools = buildSupabaseTools({ ...REQUEST, turn });
+    const args = { table: 'clinical_trials' as const, phase: 'PHASE3', limit: 10 };
+
+    const first = await tools.query_proprietary_data.execute!(args, RUN_OPTIONS);
+    const second = await tools.query_proprietary_data.execute!({ ...args }, RUN_OPTIONS);
+
+    expect(first).toMatchObject({ ok: true });
+    expect(second).toMatchObject({ ok: false, reason: 'duplicate_call' });
+    expect(fake.queries.filter((q) => q.table === 'clinical_trials')).toHaveLength(1);
+    expect(turn.toolCalls.map((c) => c.outcome)).toEqual(['ok', 'duplicate_call']);
+  });
+
+  it('lets a call with different arguments through', async () => {
+    const turn = createTurnState();
+    fake = createFakeSupabase({ clinical_trials: { rows: [TRIAL_ROW] } });
+    const tools = buildSupabaseTools({ ...REQUEST, turn });
+
+    await tools.query_proprietary_data.execute!({ table: 'clinical_trials', phase: 'PHASE3', limit: 10 }, RUN_OPTIONS);
+    const second = await tools.query_proprietary_data.execute!({ table: 'clinical_trials', phase: 'PHASE3', limit: 500 }, RUN_OPTIONS);
+
+    expect(second).toMatchObject({ ok: true });
   });
 });

@@ -134,6 +134,40 @@ describe('persistSession', () => {
     expect(read.filters).toContainEqual({ operator: 'eq', column: 'id', value: 'session-1' });
   });
 
+  it('appends this turn\'s run record, minus per-step usage, to the ones before it', async () => {
+    const run = {
+      traceId: 'trace-2',
+      cancerType: 'cutaneous-melanoma',
+      model: { name: 'm', provider: 'p', id: 'id' },
+      promptVersion: 'v',
+      fastPath: null,
+      steps: 2,
+      stepUsage: [{ input: 1, output: 1 }],
+      usage: { input: 10, output: 2 },
+      latencyMs: 5,
+      toolCalls: [],
+      skillsLoaded: [],
+      budget: { spentChars: 0, limitChars: 1, exhausted: false },
+      status: 'ok' as const,
+      startedAt: '2026-09-17T00:00:00.000Z',
+    };
+    fake = createFakeSupabase({ chat_sessions: priorRow({ turns: 1, runs: [{ traceId: 'trace-1' }] }) });
+    await persistSession({
+      userId: 'user-1',
+      sessionId: 'session-1',
+      traceId: 'trace-2',
+      cancerType: 'cutaneous-melanoma',
+      messages: MESSAGES,
+      usage: {},
+      run,
+    });
+
+    const { runs } = fake.upserts[0].values.token_usage as { runs: Array<Record<string, unknown>> };
+    expect(runs.map((r) => r.traceId)).toEqual(['trace-1', 'trace-2']);
+    expect(runs[1]).not.toHaveProperty('stepUsage');
+    expect(runs[1]).toMatchObject({ steps: 2, model: { name: 'm' } });
+  });
+
   it('titles the session from the first user message', async () => {
     await persistWith();
 

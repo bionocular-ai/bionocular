@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // The agent reads its SKILL.md files from disk at request time; the
+  // standalone output only carries what tracing finds, and a readFileSync on a
+  // joined path is not something it can see.
+  outputFileTracingIncludes: {
+    '/api/agent/chat': ['./src/lib/agent/skills/**/*.md'],
+  },
 };
 
 export default nextConfig;
