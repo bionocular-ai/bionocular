@@ -307,3 +307,74 @@ export function toResultTable(output: unknown): ResultTable | null {
     rows: rows.map((_, rowIndex) => kept.map((column) => cells.get(column)![rowIndex])),
   };
 }
+
+/**
+ * A column the reader can narrow the table by.
+ *
+ * Derived from the rendered cells rather than named: the agent chooses its own
+ * projection, so a fixed list of filterable columns would be wrong on the next
+ * question. A column qualifies when its values form a closed set the reader can
+ * recognise - few of them, short, and each shared by several rows. That rules
+ * out identifiers (one value per row), measurements (all distinct) and prose.
+ *
+ * Hidden columns count: `setting` is drawn as section headings and `sponsor_type`
+ * as a pill, and both are exactly what a landscape is narrowed by.
+ */
+export interface Facet {
+  /** Index into `columns`, so a hidden column filters as well as a drawn one. */
+  index: number;
+  label: string;
+  values: string[];
+}
+
+/** Below this, the whole table is read at a glance and a filter bar is furniture. */
+const FILTER_MIN_ROWS = 8;
+const MAX_FACET_VALUES = 6;
+/** Three chip rows is what fits above the table without becoming the page. */
+const MAX_FACETS = 3;
+/** Longer than this is a sentence, not a category. */
+const MAX_VALUE_LENGTH = 28;
+
+export function toFacets(table: ResultTable): Facet[] {
+  if (table.rows.length < FILTER_MIN_ROWS) return [];
+  return table.columns
+    .map((column, index) => ({
+      index,
+      label: column.label,
+      values: [...new Set(table.rows.map((row) => row[index]))].sort(),
+    }))
+    .filter(
+      ({ values }) =>
+        values.length > 1 &&
+        values.length <= MAX_FACET_VALUES &&
+        // A grouping, not a near-identifier: every value covers two rows on average.
+        values.length * 2 <= table.rows.length &&
+        values.every((value) => value.length <= MAX_VALUE_LENGTH)
+    )
+    .slice(0, MAX_FACETS);
+}
+
+/**
+ * The rows still standing: every chosen facet value matched, and `query` found
+ * somewhere in the row.
+ *
+ * `selected` is keyed by column index and holds one value per facet - chips are
+ * a choice, not a multi-select, so the counts a reader sees always add up to
+ * one column's worth. Search runs over the whole row rather than a named column
+ * because the reader is looking for a drug, a sponsor or an NCT number without
+ * caring which cell holds it.
+ */
+export function filterRows(
+  rows: string[][],
+  selected: Record<number, string>,
+  query: string
+): string[][] {
+  const needle = query.trim().toLowerCase();
+  const chosen = Object.entries(selected);
+  if (chosen.length === 0 && needle === '') return rows;
+  return rows.filter(
+    (row) =>
+      chosen.every(([index, value]) => row[Number(index)] === value) &&
+      (needle === '' || row.join(' ').toLowerCase().includes(needle))
+  );
+}
