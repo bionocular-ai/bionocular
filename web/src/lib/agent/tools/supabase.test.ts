@@ -269,6 +269,11 @@ describe('query_proprietary_data', () => {
       'overall_status',
       'phases',
       'lead_sponsor_name',
+      'lead_sponsor_class',
+      'enrollment_count',
+      'primary_completion_date',
+      'primary_purpose',
+      'is_basket',
       'interventions',
     ]);
   });
@@ -569,6 +574,16 @@ describe('clinical_trials projection', () => {
     // second label rather than a replacement.
     expect(projectionFor('clinical_trials', 'concise')).toContain('acronym');
     expect(projectionFor('clinical_trials', 'detailed')).toContain('acronym');
+  });
+
+  it('carries the columns the landscape derives its setting, sponsor split and follow-up flag from', () => {
+    // Session 809e7692 could not say which of 48 trials were industry-sponsored
+    // or which had finished enrolling: the rows never carried the columns.
+    const concise = projectionFor('clinical_trials', 'concise').split(', ');
+    for (const column of ['lead_sponsor_class', 'enrollment_count', 'primary_completion_date', 'primary_purpose', 'is_basket']) {
+      expect(concise).toContain(column);
+    }
+    expect(projectionFor('clinical_trials', 'detailed').split(', ')).toContain('primary_completion_date');
   });
 });
 

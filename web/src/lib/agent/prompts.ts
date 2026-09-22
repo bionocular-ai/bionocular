@@ -4,7 +4,7 @@ import { describeSkills } from './skills';
  * Bumped whenever the instructions below or a SKILL.md changes, so a run
  * record and an eval result can say which prompt produced them.
  */
-export const PROMPT_VERSION = '2026-09-17.1';
+export const PROMPT_VERSION = '2026-09-22.2';
 
 /**
  * Only what holds on every turn: who the assistant is, where its facts may
