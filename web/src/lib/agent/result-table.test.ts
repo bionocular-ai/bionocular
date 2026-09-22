@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { orderColumns, toResultTable } from './result-table';
+import { orderColumns, toResultTable, SET_ASIDE, toSections} from './result-table';
 
 describe('toResultTable', () => {
   it('lists every row the tool returned, never a sample', () => {
@@ -19,7 +19,7 @@ describe('toResultTable', () => {
       rows: [{ nct_id: 'NCT00006368', treatment_name: 'Pembrolizumab', modality: 'Monoclonal Antibody' }],
     });
 
-    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'treatment_name', 'modality']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'modality']);
   });
 
   it('covers a column that only later rows carry', () => {
@@ -60,7 +60,7 @@ describe('toResultTable', () => {
       ],
     });
 
-    expect(table?.rows[0][1]).toBe('Relatlimab (BIOLOGICAL), Nivolumab (BIOLOGICAL)');
+    expect(table?.rows[0][0]).toBe('Relatlimab (BIOLOGICAL), Nivolumab (BIOLOGICAL)');
   });
 
   it('joins a plain array cell', () => {
@@ -216,7 +216,7 @@ describe('orderColumns', () => {
     // led by id/source_type/abstract_id, with nct_id 5th and median_pfs 16th.
     expect(
       orderColumns(['id', 'source_type', 'abstract_id', 'nct_id', 'median_pfs', 'generic_name']),
-    ).toEqual(['nct_id', 'generic_name', 'median_pfs', 'id', 'source_type', 'abstract_id']);
+    ).toEqual(['generic_name', 'nct_id', 'median_pfs', 'id', 'source_type', 'abstract_id']);
   });
 
   it('keeps discovery order among columns it does not name, so an unknown table is untouched', () => {
@@ -234,5 +234,51 @@ describe('orderColumns', () => {
     });
 
     expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'orr', 'id', 'source_name']);
+  });
+});
+
+describe('toSections', () => {
+  const rows = [
+    ['NCT1', 'Advanced / metastatic', 'false'],
+    ['NCT2', 'Peri-operative', 'false'],
+    ['NCT3', 'Advanced / metastatic', 'true'],
+    ['NCT4', 'Chemoprevention', 'false'],
+  ];
+
+  it('groups by setting in reading order, dropping the empty groups', () => {
+    const sections = toSections(rows, 1);
+
+    expect(sections.map((s) => [s.label, s.rows.length])).toEqual([
+      ['Advanced / metastatic', 2],
+      ['Peri-operative', 1],
+      ['Chemoprevention', 1],
+    ]);
+  });
+
+  it('pulls baskets out of their setting and puts them last', () => {
+    // NCT3 has a line of therapy like any other trial, so it would otherwise
+    // sit among the options - which is what the strip just said it is not.
+    const sections = toSections(rows, 1, 2);
+
+    expect(sections.map((s) => s.label)).toEqual([
+      'Advanced / metastatic',
+      'Peri-operative',
+      'Chemoprevention',
+      SET_ASIDE,
+    ]);
+    expect(sections[0].rows.map((r) => r[0])).toEqual(['NCT1']);
+    expect(sections.at(-1)?.rows.map((r) => r[0])).toEqual(['NCT3']);
+  });
+
+  it('keeps a setting it does not know rather than dropping its rows', () => {
+    const sections = toSections(rows, 1);
+
+    expect(sections.at(-1)).toEqual({ label: 'Chemoprevention', rows: [rows[3]] });
+  });
+
+  it('renders flat when the rows carry no setting', () => {
+    const sections = toSections(rows, -1);
+
+    expect(sections).toEqual([{ label: null, rows }]);
   });
 });

@@ -43,8 +43,8 @@ describe('toTurnTable', () => {
 
     expect(table?.rows).toHaveLength(2);
     expect(table?.columns.map((c) => c.key)).toEqual([
-      'nct_id',
       'treatment_name',
+      'nct_id',
       'overall_status',
       'modality',
     ]);
@@ -55,7 +55,7 @@ describe('toTurnTable', () => {
     // and the join must not quietly become an inner one.
     const table = toTurnTable([trials, landscape]);
 
-    expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887']);
+    expect(table!.rows.map((_, i) => cell(table, i, 'nct_id'))).toEqual(['NCT03470922', 'NCT07530887']);
   });
 
   it('folds acronym and brief_title into the row rather than rendering either as a column', () => {
@@ -85,8 +85,8 @@ describe('toTurnTable', () => {
     // Sits where treatment_name would have, directly after the key - not at
     // the end, behind whatever other columns the turn happens to carry.
     expect(table?.columns.map((c) => c.key)).toEqual([
-      'nct_id',
       'interventions',
+      'nct_id',
       'overall_status',
     ]);
     expect(cell(table, 0, 'interventions')).toBe('Relatlimab (DRUG)');
@@ -104,14 +104,14 @@ describe('toTurnTable', () => {
     };
     const table = toTurnTable([trials, extra]);
 
-    expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887', 'NCT06112314']);
+    expect(table!.rows.map((_, i) => cell(table, i, 'nct_id'))).toEqual(['NCT03470922', 'NCT07530887', 'NCT06112314']);
   });
 
   it("renders a turn's only query, since there is nothing to join and it is the answer", () => {
     const table = toTurnTable([trials]);
 
     expect(table?.rows).toHaveLength(2);
-    expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887']);
+    expect(table!.rows.map((_, i) => cell(table, i, 'nct_id'))).toEqual(['NCT03470922', 'NCT07530887']);
   });
 
   it('folds acronym and brief_title on a single-query turn too, not only the joined path', () => {
@@ -159,7 +159,7 @@ describe('toTurnTable', () => {
     const table = toTurnTable([trials, { ok: false, reason: 'no_rows', table: 'trial_outcomes' }]);
 
     expect(table?.rows).toHaveLength(2);
-    expect(table?.rows.map((row) => row[0])).toEqual(['NCT03470922', 'NCT07530887']);
+    expect(table!.rows.map((_, i) => cell(table, i, 'nct_id'))).toEqual(['NCT03470922', 'NCT07530887']);
   });
 
   it('returns null for a turn where every query failed', () => {
@@ -228,7 +228,7 @@ describe('toTurnTable', () => {
 
     const table = toTurnTable([trials, middle, last]);
 
-    expect(table?.rows.map((row) => row[0])).toEqual([
+    expect(table!.rows.map((_, i) => cell(table, i, 'nct_id'))).toEqual([
       'NCT03470922',
       'NCT07530887',
       'NCT06112314',
@@ -247,7 +247,7 @@ describe('toTurnTable', () => {
     ]);
 
     expect(table?.rows).toHaveLength(53);
-    expect(new Set(table?.rows.map((row) => row[0])).size).toBe(53);
+    expect(new Set(table!.rows.map((_, i) => cell(table, i, 'nct_id'))).size).toBe(53);
   });
 
   it('orders the joined columns the same way a single query is ordered', () => {
@@ -266,8 +266,8 @@ describe('toTurnTable', () => {
     const table = toTurnTable([trials, outcomes]);
 
     expect(table?.columns.map((c) => c.key)).toEqual([
-      'nct_id',
       'interventions',
+      'nct_id',
       'overall_status',
       'orr',
       'id',
@@ -391,6 +391,100 @@ describe('derived columns', () => {
 
     const table = toTurnTable([outcomes], today);
 
-    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'arm_name', 'orr']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['arm_name', 'nct_id', 'orr']);
+  });
+});
+
+// A landscape turn: the registry rows carry what `derive` needs to place a
+// trial in a setting, name its sponsor class and spot a pan-tumour platform.
+const landscapeTrials = {
+  ok: true,
+  table: 'clinical_trials',
+  coverage: { returned: 4, matched: 4, complete: true },
+  rows: [
+    {
+      nct_id: 'NCT03470922',
+      overall_status: 'RECRUITING',
+      primary_purpose: 'TREATMENT',
+      lead_sponsor_class: 'INDUSTRY',
+      is_basket: false,
+      interventions: [{ name: 'Relatlimab', type: 'DRUG' }],
+    },
+    {
+      nct_id: 'NCT01274338',
+      overall_status: 'RECRUITING',
+      primary_purpose: 'TREATMENT',
+      lead_sponsor_class: 'NETWORK',
+      is_basket: false,
+      interventions: [{ name: 'Pembrolizumab', type: 'DRUG' }],
+    },
+    {
+      nct_id: 'NCT05078047',
+      overall_status: 'RECRUITING',
+      primary_purpose: 'TREATMENT',
+      lead_sponsor_class: 'OTHER',
+      is_basket: true,
+      interventions: [{ name: 'Platform arm', type: 'DRUG' }],
+    },
+    {
+      nct_id: 'NCT07530887',
+      overall_status: 'RECRUITING',
+      primary_purpose: 'OTHER',
+      lead_sponsor_class: 'INDUSTRY',
+      is_basket: false,
+      interventions: [{ name: 'No re-excision', type: 'PROCEDURE' }],
+    },
+  ],
+};
+
+const landscapeCurated = {
+  ok: true,
+  table: 'trial_landscape',
+  coverage: { returned: 2, matched: 2, complete: true, requested: 4, missing: ['NCT05078047', 'NCT07530887'] },
+  rows: [
+    { nct_id: 'NCT03470922', treatment_name: 'Relatlimab + Nivolumab', modality: 'Monoclonal Antibody', line_of_therapy: '1L' },
+    { nct_id: 'NCT01274338', treatment_name: 'Pembrolizumab', modality: 'Monoclonal Antibody', line_of_therapy: 'Adjuvant' },
+  ],
+};
+
+describe('toTurnTable summary', () => {
+  it('counts the trials, the curated ones, the set-aside baskets and the sponsor split', () => {
+    const table = toTurnTable([landscapeTrials, landscapeCurated]);
+
+    expect(table?.summary).toEqual({
+      trials: 4,
+      curated: 2,
+      setAside: 1,
+      industry: 2,
+      nonIndustry: 2,
+    });
+  });
+
+  it('counts set-aside trials the column rule would have deleted', () => {
+    // Every row a basket makes `is_basket` uniform, and a uniform column is
+    // dropped as distinguishing nothing. The count is taken before that, or a
+    // result that is entirely off-indication would report none set aside.
+    const allBaskets = {
+      ...landscapeTrials,
+      rows: landscapeTrials.rows.map((row) => ({ ...row, is_basket: true })),
+    };
+    const table = toTurnTable([allBaskets, landscapeCurated]);
+
+    expect(table?.columns.map((c) => c.key)).not.toContain('is_basket');
+    expect(table?.summary?.setAside).toBe(4);
+  });
+
+  it('summarises a single-query turn too, not only the joined path', () => {
+    const table = toTurnTable([landscapeTrials]);
+
+    expect(table?.summary).toMatchObject({ trials: 4, curated: 0, setAside: 1, industry: 2 });
+  });
+
+  it('leaves a turn that is not a landscape without a summary', () => {
+    // No line_of_therapy and no primary_purpose, so `derive` never places a
+    // setting and there are no sections for a strip to sit above.
+    const table = toTurnTable([trials, landscape]);
+
+    expect(table?.summary).toBeUndefined();
   });
 });

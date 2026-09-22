@@ -27,6 +27,7 @@ import {
   orderColumns,
   toResultTable,
   type ResultColumn,
+  type ResultSummary,
   type ResultTable,
 } from './result-table';
 
@@ -163,7 +164,11 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
   const today = now.toISOString().slice(0, 10);
   const successful = outputs.filter(isSuccessful);
   if (successful.length === 0) return null;
-  if (successful.length === 1) return toResultTable(stripFolded(successful[0], today));
+  if (successful.length === 1) {
+    const stripped = stripFolded(successful[0], today);
+    const table = toResultTable(stripped);
+    return table && withSummary(table, rowsOf(stripped));
+  }
 
   const queries = outputs.map(asJoinable).filter((rows): rows is Row[] => rows !== null);
   if (queries.length < 2) return null;
@@ -194,7 +199,7 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
   const discovered: string[] = [KEY];
   // Nothing curated joined it, so the registry list is the only treatment there
   // is. It stands as its own column where treatment_name would otherwise have
-  // sat - directly after the key - rather than trailing behind unrelated
+  // sat - first, ahead of the key - rather than trailing behind unrelated
   // columns like orr or median_pfs. `orderColumns` ranks `interventions` among
   // the treatment names, so that placement survives the sort below.
   if (!hasTreatmentName) discovered.push(FALLBACK.source);
@@ -235,5 +240,44 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
     .map(({ key, label }) => ({ key, label }));
   if (kept.length === 0) return null;
 
-  return { columns: kept, rows: cells.map((row) => row.filter((_, i) => keep[i])) };
+  return withSummary(
+    { columns: kept, rows: cells.map((row) => row.filter((_, i) => keep[i])) },
+    [...merged.values()],
+  );
+}
+
+function rowsOf(output: unknown): Row[] {
+  const rows = (output as { rows?: unknown })?.rows;
+  return Array.isArray(rows) ? (rows as Row[]) : [];
+}
+
+/**
+ * The strip's counts, from the rows rather than the rendered cells.
+ *
+ * Only a landscape turn gets one: `derive` writes `setting` exactly when the
+ * row carries a line of therapy or a primary purpose, which is also the
+ * condition for the table to have sections to put a strip above. An outcomes
+ * table gets no strip instead of a strip of zeroes.
+ */
+function summarise(rows: Row[]): ResultSummary | undefined {
+  if (!rows.some((row) => 'setting' in row)) return undefined;
+  let curated = 0;
+  let setAside = 0;
+  let industry = 0;
+  let nonIndustry = 0;
+  for (const row of rows) {
+    if (row[FALLBACK.target] != null) curated += 1;
+    if (row.is_basket === true) setAside += 1;
+    // Counted rather than subtracted from the total: a row whose query never
+    // projected `lead_sponsor_class` belongs to neither side, and inferring one
+    // from `trials - industry` would invent a non-industry trial.
+    if (row.sponsor_type === 'Industry') industry += 1;
+    else if (row.sponsor_type === 'Non-industry') nonIndustry += 1;
+  }
+  return { trials: rows.length, curated, setAside, industry, nonIndustry };
+}
+
+function withSummary(table: ResultTable, rows: Row[]): ResultTable {
+  const summary = summarise(rows);
+  return summary ? { ...table, summary } : table;
 }
