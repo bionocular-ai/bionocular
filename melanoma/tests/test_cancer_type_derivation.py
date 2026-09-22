@@ -167,7 +167,11 @@ def test_melanoma_of_unknown_primary_is_a_melanoma_not_a_basket():
     disease with its primary site unknown, unlike "carcinoma of unknown primary",
     which is the basket. Eight registry rows carried the flag for this reason."""
     result = derive_cancer_types(
-        ["Melanoma of Unknown Primary", "Recurrent Melanoma", "Stage IV Cutaneous Melanoma AJCC v6 and v7"]
+        [
+            "Melanoma of Unknown Primary",
+            "Recurrent Melanoma",
+            "Stage IV Cutaneous Melanoma AJCC v6 and v7",
+        ]
     )
     assert result.buckets == [CUTANEOUS]
     assert result.is_basket is False
