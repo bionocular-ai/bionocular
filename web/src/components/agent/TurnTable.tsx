@@ -17,6 +17,39 @@ const NCT_LINK_CLASSES = cn(
 );
 
 /**
+ * The two columns a reader scans rather than reads: is it open, and who is
+ * paying for it. Both are closed sets of a handful of values, which is what
+ * makes them worth shaping - a pill on a free-text column would only be a box
+ * around a sentence.
+ *
+ * Tone is an emphasis, never the message: every pill states its value in
+ * words, so the colour is redundant to a reader who cannot see it.
+ */
+const PILL_TONES: Record<string, string> = {
+  recruiting: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  'not yet recruiting': 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  'enrolling by invitation': 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  'active, not recruiting': 'bg-amber-50 text-amber-800 border-amber-200',
+  industry: 'bg-violet-50 text-violet-800 border-violet-200',
+};
+
+const PILL_COLUMNS = ['overall_status', 'sponsor_type'];
+
+function Pill({ value }: { value: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-block rounded-[4px] border px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap',
+        PILL_TONES[value.toLowerCase()] ??
+          'border-(--brand-border) bg-(--brand-bg) text-(--brand-text-muted)'
+      )}
+    >
+      {value}
+    </span>
+  );
+}
+
+/**
  * The counts above the table: scope first, then the sponsor split.
  *
  * Each part is dropped when it has nothing to say - no baskets set aside, no
@@ -101,15 +134,21 @@ export function TurnTable({
   // `sponsor_type` is `lead_sponsor_class` collapsed to the only distinction a
   // landscape draws, so the two rendered side by side say INDUSTRY twice.
   const sponsorClassIndex = indexOf('sponsor_type') === -1 ? -1 : indexOf('lead_sponsor_class');
+  // `follow_up_only` qualifies the status rather than standing beside it: it
+  // says an "active, not recruiting" trial is past its primary completion and
+  // has stopped being an option. Alone in a column it read "yes" or an em
+  // dash, a whole column of width for one word about five rows.
+  const statusIndex = indexOf('overall_status');
+  const followUpIndex = statusIndex === -1 ? -1 : indexOf('follow_up_only');
 
   const hidden = useMemo(
     () =>
       new Set(
-        [settingIndex, modalityIndex, sponsorClassIndex, basketIndex].filter(
+        [settingIndex, modalityIndex, sponsorClassIndex, basketIndex, followUpIndex].filter(
           (index) => index !== -1
         )
       ),
-    [settingIndex, modalityIndex, sponsorClassIndex, basketIndex]
+    [settingIndex, modalityIndex, sponsorClassIndex, basketIndex, followUpIndex]
   );
   const columns = table.columns.filter((_, index) => !hidden.has(index));
   const sections = useMemo(
@@ -146,7 +185,7 @@ export function TurnTable({
         onScroll={measure}
         className="overflow-x-auto rounded-[3px] border border-(--brand-border) bg-(--brand-surface)"
       >
-        <table className="w-full border-collapse text-[11px]">
+        <table className="w-full border-collapse text-[12px]">
           <thead>
             <tr>
               {columns.map((column) => (
@@ -154,7 +193,7 @@ export function TurnTable({
                   key={column.key}
                   className={cn(
                     'border-b border-(--brand-border) bg-(--brand-accent-light)',
-                    'px-2 py-1.5 text-left font-mono font-medium whitespace-nowrap',
+                    'px-3 py-2 text-left font-mono font-medium whitespace-nowrap',
                     'text-(--brand-primary)'
                   )}
                   scope="col"
@@ -175,7 +214,7 @@ export function TurnTable({
                     colSpan={columns.length}
                     className={cn(
                       'border-b border-(--brand-border) bg-(--brand-accent-light)/40',
-                      'px-2 py-1 text-left font-mono text-[10px] font-medium',
+                      'px-3 py-1.5 text-left font-mono text-[10px] font-medium',
                       'tracking-[0.05em] whitespace-nowrap text-(--brand-primary)'
                     )}
                   >
@@ -203,22 +242,35 @@ export function TurnTable({
                         // III; Stage IV") could be squeezed to 47px and wrap
                         // to seven lines, making the whole row that tall.
                         className={cn(
-                          'min-w-[11ch] max-w-[34ch] px-2 py-1 align-top',
+                          'min-w-[11ch] max-w-[34ch] px-3 py-2.5 align-top',
                           'text-(--brand-text-muted)',
                           // The lead column carries the longest values and is
                           // the one the question was about, so it gets the
                           // wider floor rather than wrapping a three-drug
                           // regimen over three lines.
-                          cellIndex === treatmentIndex && 'min-w-[24ch]'
+                          cellIndex === treatmentIndex &&
+                            'min-w-[30ch] max-w-[40ch] font-medium text-(--brand-text)'
                         )}
                       >
                         {table.columns[cellIndex].key === 'nct_id' && NCT_ID_PATTERN.test(cell) ? (
                           <Link href={trialRoute(cell, cancerType)} className={NCT_LINK_CLASSES}>
                             {cell}
                           </Link>
+                        ) : PILL_COLUMNS.includes(table.columns[cellIndex].key) &&
+                          cell !== ABSENT ? (
+                          <Pill value={cell} />
                         ) : (
                           cell
                         )}
+                        {/* Under the status it qualifies, on the rows that
+                            have it, rather than as a column of em dashes. */}
+                        {cellIndex === statusIndex &&
+                        followUpIndex !== -1 &&
+                        row[followUpIndex] !== ABSENT ? (
+                          <span className="mt-1 block font-mono text-[10px] text-(--brand-text-muted)">
+                            follow-up only
+                          </span>
+                        ) : null}
                         {/* An uncurated row has no modality, and the cell above
                             already ends in `· registry` to say why. A line
                             holding only an em dash adds height and no fact. */}

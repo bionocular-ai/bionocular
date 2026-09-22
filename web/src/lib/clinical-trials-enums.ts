@@ -21,10 +21,27 @@ export const STATUS_MAP: Record<string, string> = {
   'UNKNOWN':                 'Unknown',
 };
 
+/** ClinicalTrials.gov API v2 primary-purpose enum → human-readable label */
+export const PURPOSE_MAP: Record<string, string> = {
+  'TREATMENT':                'Treatment',
+  'PREVENTION':               'Prevention',
+  'DIAGNOSTIC':               'Diagnostic',
+  'SUPPORTIVE_CARE':          'Supportive care',
+  'SCREENING':                'Screening',
+  'HEALTH_SERVICES_RESEARCH': 'Health services research',
+  'BASIC_SCIENCE':            'Basic science',
+  'DEVICE_FEASIBILITY':       'Device feasibility',
+  'OTHER':                    'Other',
+};
+
 export function normalizePhase(raw: string): string {
   return PHASE_MAP[raw] ?? raw;
 }
 
 export function normalizeStatus(raw: string): string {
   return STATUS_MAP[raw] ?? raw;
+}
+
+export function normalizePurpose(raw: string): string {
+  return PURPOSE_MAP[raw] ?? raw;
 }

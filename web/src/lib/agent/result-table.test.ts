@@ -67,10 +67,37 @@ describe('toResultTable', () => {
     const table = toResultTable({
       ok: true,
       table: 'clinical_trials',
-      rows: [{ nct_id: 'NCT03470922', phases: ['PHASE2', 'PHASE3'] }],
+      rows: [{ nct_id: 'NCT03470922', biomarker: ['BRAF (V600)', 'NRAS'] }],
     });
 
-    expect(table?.rows[0][1]).toBe('PHASE2, PHASE3');
+    expect(table?.rows[0][1]).toBe('BRAF (V600), NRAS');
+  });
+
+  it('reads a registry enum as a label, per element of an array cell', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'clinical_trials',
+      rows: [
+        {
+          nct_id: 'NCT03470922',
+          overall_status: 'ACTIVE_NOT_RECRUITING',
+          phases: ['PHASE2', 'PHASE3'],
+        },
+      ],
+    });
+
+    expect(table?.rows[0][1]).toBe('Phase 2, Phase 3');
+    expect(table?.rows[0][2]).toBe('Active, not recruiting');
+  });
+
+  it('leaves a screaming-case value alone on a column that is not an enum', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'clinical_trials',
+      rows: [{ nct_id: 'NCT03470922', biomarker: 'NRAS' }],
+    });
+
+    expect(table?.rows[0][1]).toBe('NRAS');
   });
 
   it('renders a false boolean as false, not as an absence', () => {
