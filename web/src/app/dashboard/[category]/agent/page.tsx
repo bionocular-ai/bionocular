@@ -44,22 +44,15 @@ export default function AgentPage() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Same measure and gutters as the thread and composer below, so the
-            header, the messages and the input all share one left edge. */}
-        <div className="shrink-0 px-4 pt-6 pb-4 sm:px-8">
-          <PageHeader
-            className="mx-auto w-full max-w-[1080px]"
-            category={categoryName}
-            title="AI Agent"
-          />
-        </div>
-
         <div className="min-h-0 flex-1">
           <ChatPanel
             key={chat.id}
             cancerType={categorySlug}
             sessionId={chat.id}
             initialMessages={chat.messages}
+            // Inside the thread rather than above it, so it scrolls away with
+            // the conversation like every other dashboard page's header.
+            header={<PageHeader className="pt-6 pb-4" category={categoryName} title="AI Agent" />}
             // A first turn creates the row the drawer lists, and later turns
             // move it up the list, so both have to invalidate.
             onTurnFinished={() =>
