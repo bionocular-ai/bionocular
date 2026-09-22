@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
 import { Send, Square, RotateCcw, FlaskConical, Activity, Layers, Newspaper } from 'lucide-react';
@@ -28,6 +28,13 @@ export interface ChatPanelProps {
   initialMessages?: UIMessage[];
   /** Fires when a turn finishes, so a new chat appears in the history list. */
   onTurnFinished?: () => void;
+  /**
+   * The page's title block. It renders inside the thread's scroller rather
+   * than above it, so it scrolls away with the conversation the way every
+   * other dashboard page's header does - a title pinned over a thread holds
+   * its height on every turn to say the same two words.
+   */
+  header?: ReactNode;
 }
 
 export function ChatPanel({
@@ -35,6 +42,7 @@ export function ChatPanel({
   sessionId,
   initialMessages,
   onTurnFinished,
+  header,
 }: ChatPanelProps) {
   // `id` and `messages` seed the chat on mount only, so the page remounts this
   // component (keyed on sessionId) when another conversation is opened.
@@ -140,16 +148,25 @@ export function ChatPanel({
   const isEmpty = messages.length === 0;
 
   return (
-    <div className={cn('flex h-full flex-col bg-(--brand-bg)', isEmpty && 'justify-center')}>
+    <div className="flex h-full flex-col bg-(--brand-bg)">
+      {/* An empty chat has nothing to scroll, so the header sits at the top
+          on its own and the auto margins below centre the prompt and the
+          composer together in what is left - where they were before. */}
+      {isEmpty ? (
+        <div className="shrink-0 px-4 pt-6 sm:px-8">
+          <div className="mx-auto w-full max-w-[1080px]">{header}</div>
+        </div>
+      ) : null}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         className={cn(
-          'flex flex-col overflow-y-auto px-4 py-6 sm:px-8',
-          isEmpty ? 'shrink-0' : 'flex-1'
+          'flex flex-col overflow-y-auto px-4 pb-6 sm:px-8',
+          isEmpty ? 'mt-auto shrink-0' : 'flex-1'
         )}
       >
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6">
+          {isEmpty ? null : header}
           {isEmpty ? (
             <h2 className="text-center text-2xl font-medium text-balance text-(--brand-text)">
               What do you want to know?
@@ -209,9 +226,9 @@ export function ChatPanel({
 
       <form
         onSubmit={handleSubmit}
-        className="px-4 py-3 sm:px-8"
+        className={cn('px-4 py-3 sm:px-8', isEmpty && 'mb-auto')}
       >
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-[1080px]">
           {/* The box is the bordered control; the textarea inside it is bare,
               so the send button reads as part of the same field. */}
           <div

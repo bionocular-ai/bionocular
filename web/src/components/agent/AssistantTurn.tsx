@@ -137,7 +137,10 @@ export function AssistantTurn({ parts, cancerType, isStreaming, rating, onRate }
                 'border border-(--brand-border) bg-(--brand-bg)'
               )}
             />
-            <div className="text-[14.5px] leading-[1.66] text-(--brand-text)">
+            {/* The canvas is 1080px so the tables can breathe; running prose
+                at that width is 180 characters a line. The reading measure is
+                the paragraph's, not the page's. */}
+            <div className="max-w-[780px] text-[14.5px] leading-[1.66] text-(--brand-text)">
               <ReactMarkdown remarkPlugins={remarkPlugins} components={components}>
                 {part.text}
               </ReactMarkdown>
