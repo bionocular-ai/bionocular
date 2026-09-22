@@ -56,7 +56,9 @@ BASKET_MARKERS: Final[tuple[re.Pattern[str], ...]] = tuple(
         r"\bmalignant neoplasm\b",
         r"\bneoplasms by\b",
         r"\brare cancers?\b",
-        r"\bunknown primary\b",
+        # "Melanoma of unknown primary" names the disease with its primary
+        # site unknown; "carcinoma of unknown primary" is the basket.
+        r"(?<!melanoma of )\bunknown primary\b",
         r"\blife threatening\b",
         r"\bunspecified adult solid tumor\b",
     )

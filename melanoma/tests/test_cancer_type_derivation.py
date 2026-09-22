@@ -162,6 +162,17 @@ def test_bare_cancer_earns_no_bucket_and_is_flagged_as_a_basket():
     assert result.is_basket is True
 
 
+def test_melanoma_of_unknown_primary_is_a_melanoma_not_a_basket():
+    """Excerpt from NCT01274338 (E1609). "Melanoma of unknown primary" names the
+    disease with its primary site unknown, unlike "carcinoma of unknown primary",
+    which is the basket. Eight registry rows carried the flag for this reason."""
+    result = derive_cancer_types(
+        ["Melanoma of Unknown Primary", "Recurrent Melanoma", "Stage IV Cutaneous Melanoma AJCC v6 and v7"]
+    )
+    assert result.buckets == [CUTANEOUS]
+    assert result.is_basket is False
+
+
 def test_advanced_solid_tumor_earns_no_bucket():
     result = derive_cancer_types(["Advanced Solid Tumor"])
     assert result.buckets == []

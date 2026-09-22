@@ -292,3 +292,105 @@ describe('toTurnTable', () => {
     expect(table?.columns.map((c) => c.key)).not.toContain('is_nr');
   });
 });
+
+describe('derived columns', () => {
+  // The three facts the landscape artifact led with and the recorded answer
+  // could not state: which setting a trial belongs to, whether its sponsor is
+  // industry, and whether "active" still means enrolling. Each is a rule over
+  // columns the rows already carry, so the app derives them - the same way
+  // every time, with no model in the loop.
+  const today = new Date('2026-09-22');
+
+  function registry(rows: Record<string, unknown>[]) {
+    return { ok: true, table: 'clinical_trials', rows };
+  }
+
+  it('places a trial by setting: peri-operative beats advanced, advanced beats the procedural rule', () => {
+    const curated = {
+      ok: true,
+      table: 'trial_landscape',
+      rows: [
+        { nct_id: 'NCT1', line_of_therapy: '1L; Adjuvant', modality: 'Monoclonal Antibody' },
+        { nct_id: 'NCT2', line_of_therapy: 'R/R', modality: 'Radiotherapy' },
+        { nct_id: 'NCT3', line_of_therapy: null, modality: 'Surgery/Procedure' },
+        { nct_id: 'NCT4', line_of_therapy: null, modality: 'Monoclonal Antibody' },
+      ],
+    };
+    const trials = registry([
+      { nct_id: 'NCT1', primary_purpose: 'TREATMENT' },
+      { nct_id: 'NCT2', primary_purpose: 'TREATMENT' },
+      { nct_id: 'NCT3', primary_purpose: 'TREATMENT' },
+      { nct_id: 'NCT4', primary_purpose: 'TREATMENT' },
+    ]);
+
+    const table = toTurnTable([trials, curated], today);
+
+    expect([0, 1, 2, 3].map((i) => cell(table, i, 'setting'))).toEqual([
+      'Peri-operative',
+      'Advanced / metastatic',
+      'Procedural / supportive',
+      'Unclassified',
+    ]);
+  });
+
+  it('places an uncurated diagnostic trial by its registry purpose, since it has no modality to go on', () => {
+    const trials = registry([
+      { nct_id: 'NCT1', primary_purpose: 'DIAGNOSTIC' },
+      { nct_id: 'NCT2', primary_purpose: 'TREATMENT' },
+    ]);
+
+    const table = toTurnTable([trials], today);
+
+    expect(cell(table, 0, 'setting')).toBe('Procedural / supportive');
+    expect(cell(table, 1, 'setting')).toBe('Unclassified');
+  });
+
+  it('splits sponsors into industry and non-industry, which is the registry partition the product uses', () => {
+    const trials = registry([
+      { nct_id: 'NCT1', lead_sponsor_class: 'INDUSTRY' },
+      { nct_id: 'NCT2', lead_sponsor_class: 'NIH' },
+      { nct_id: 'NCT3', lead_sponsor_class: 'OTHER' },
+    ]);
+
+    const table = toTurnTable([trials], today);
+
+    expect([0, 1, 2].map((i) => cell(table, i, 'sponsor_type'))).toEqual(['Industry', 'Non-industry', 'Non-industry']);
+  });
+
+  it('flags an active-not-recruiting trial as follow-up only once its primary completion date has passed', () => {
+    const trials = registry([
+      { nct_id: 'NCT1', overall_status: 'ACTIVE_NOT_RECRUITING', primary_completion_date: '2021-06-21' },
+      { nct_id: 'NCT2', overall_status: 'ACTIVE_NOT_RECRUITING', primary_completion_date: '2027-03-31' },
+      { nct_id: 'NCT3', overall_status: 'RECRUITING', primary_completion_date: '2021-06-21' },
+      { nct_id: 'NCT4', overall_status: 'ACTIVE_NOT_RECRUITING', primary_completion_date: null },
+    ]);
+
+    const table = toTurnTable([trials], today);
+
+    expect([0, 1, 2, 3].map((i) => cell(table, i, 'follow_up_only'))).toEqual(['yes', '—', '—', '—']);
+  });
+
+  it('treats a month-precision completion date as the end of that month, not its first day', () => {
+    const trials = registry([
+      { nct_id: 'NCT1', overall_status: 'ACTIVE_NOT_RECRUITING', primary_completion_date: '2026-09' },
+      { nct_id: 'NCT2', overall_status: 'ACTIVE_NOT_RECRUITING', primary_completion_date: '2026-08' },
+    ]);
+
+    const table = toTurnTable([trials], today);
+
+    expect(cell(table, 0, 'follow_up_only')).toBe('—');
+    expect(cell(table, 1, 'follow_up_only')).toBe('yes');
+  });
+
+  it('derives nothing for rows that carry none of the inputs, so an outcomes table gains no empty columns', () => {
+    const outcomes = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', orr: 43 }],
+    };
+
+    const table = toTurnTable([outcomes], today);
+
+    expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'arm_name', 'orr']);
+  });
+});
