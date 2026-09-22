@@ -20,10 +20,30 @@ export interface ResultColumn {
   label: string;
 }
 
+/**
+ * The counts a landscape is read by, above the sections.
+ *
+ * Taken from the rows before the uniform-column rule runs: `is_basket` is
+ * exactly the column that rule deletes when every trial in a result is a
+ * pan-tumour platform, and a result that is entirely off-indication is the one
+ * that most needs to say so.
+ */
+export interface ResultSummary {
+  trials: number;
+  /** Trials with a curated `treatment_name`; the rest are registry-only. */
+  curated: number;
+  /** Pan-tumour platforms, set aside from the landscape rather than counted in. */
+  setAside: number;
+  industry: number;
+  nonIndustry: number;
+}
+
 export interface ResultTable {
   columns: ResultColumn[];
   /** One array of formatted cells per row, aligned to `columns`. */
   rows: string[][];
+  /** Present only for a landscape turn - one whose rows carry a `setting`. */
+  summary?: ResultSummary;
 }
 
 /** Absent values are shown, not skipped: an uncurated trial is a finding. */
@@ -56,17 +76,23 @@ export const MARKER_COLUMNS = ['is_nr', 'is_lt'];
  * `abstract_id` and `publication_id`, with `nct_id` 5th and `median_pfs` 16th -
  * every column a reader wants was past the right edge.
  *
+ * The treatment leads, not the identifier. The question is always about a drug
+ * or a regimen; `nct_id` is how a reader follows one up, which is the second
+ * thing they do, not the first. Whichever of the four treatment columns a
+ * table carries takes the first position, so a curated regimen, an arm and a
+ * raw registry list all land in the same place.
+ *
  * `phases`, `overall_status` and `lead_sponsor_class` are usually pruned before
  * they render: the uniform-column rule below removes them under exactly the
  * filtered queries this exists for (every row is PHASE1 when the question said
  * Phase 1). They are listed for the mixed-filter case, not as a bug.
  */
 const LEAD_COLUMNS = [
-  'nct_id',
+  'treatment_name',
   'generic_name',
   'arm_name',
-  'treatment_name',
   'interventions',
+  'nct_id',
   'setting',
   'phases',
   'overall_status',
@@ -139,6 +165,63 @@ export function humanizeColumn(key: string): string {
   if (known) return known;
   const words = key.replace(/_/g, ' ').trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/**
+ * How a landscape reads: one group per clinical setting, then the trials that
+ * are not a therapy for this indication at all.
+ *
+ * `SET_ASIDE` is last and never merged into a setting. A pan-tumour platform
+ * has a line of therapy like any other trial, so it would otherwise sit among
+ * the options a reader is weighing - which is the thing the summary strip has
+ * just said it is not.
+ */
+export const SETTING_ORDER = [
+  'Advanced / metastatic',
+  'Peri-operative',
+  'Procedural / supportive',
+  'Unclassified',
+] as const;
+
+export const SET_ASIDE = 'Set aside · pan-tumour';
+
+export interface Section {
+  /** Null when the rows carry no setting and the table renders flat. */
+  label: string | null;
+  rows: string[][];
+}
+
+/**
+ * Rows grouped for display: by `setting`, in `SETTING_ORDER`, with baskets
+ * pulled out last and empty groups dropped.
+ *
+ * A setting `SETTING_ORDER` does not list still renders, appended in the order
+ * it was met - an unrecognised value costs the reader its position, never its
+ * rows.
+ */
+export function toSections(
+  rows: string[][],
+  settingIndex: number,
+  basketIndex = -1,
+): Section[] {
+  if (settingIndex === -1) return [{ label: null, rows }];
+
+  const groups = new Map<string, string[][]>();
+  for (const label of SETTING_ORDER) groups.set(label, []);
+  const setAside: string[][] = [];
+  for (const row of rows) {
+    if (basketIndex !== -1 && row[basketIndex] === 'true') {
+      setAside.push(row);
+      continue;
+    }
+    const group = groups.get(row[settingIndex]);
+    if (group) group.push(row);
+    else groups.set(row[settingIndex], [row]);
+  }
+  if (setAside.length > 0) groups.set(SET_ASIDE, setAside);
+  return [...groups]
+    .filter(([, group]) => group.length > 0)
+    .map(([label, group]) => ({ label, rows: group }));
 }
 
 export function formatCell(value: unknown): string {
