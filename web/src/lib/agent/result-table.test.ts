@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { orderColumns, toResultTable, SET_ASIDE, toSections} from './result-table';
+import {
+  filterRows,
+  orderColumns,
+  toFacets,
+  toResultTable,
+  SET_ASIDE,
+  toSections,
+} from './result-table';
 
 describe('toResultTable', () => {
   it('lists every row the tool returned, never a sample', () => {
@@ -307,5 +314,71 @@ describe('toSections', () => {
     const sections = toSections(rows, -1);
 
     expect(sections).toEqual([{ label: null, rows }]);
+  });
+});
+
+describe('toFacets', () => {
+  // 12 trials: 3 settings, 2 sponsor types, a unique NCT and a unique count.
+  const table = {
+    columns: [
+      { key: 'nct_id', label: 'NCT' },
+      { key: 'setting', label: 'Setting' },
+      { key: 'sponsor_type', label: 'Sponsor type' },
+      { key: 'num_patients', label: 'Num patients' },
+    ],
+    rows: Array.from({ length: 12 }, (_, i) => [
+      `NCT0000${1000 + i}`,
+      ['Advanced / metastatic', 'Peri-operative', 'Procedural / supportive'][i % 3],
+      i % 2 === 0 ? 'Industry' : 'Non-industry',
+      String(100 + i),
+    ]),
+  };
+
+  it('offers the closed sets and not the identifiers', () => {
+    expect(toFacets(table).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor type']);
+  });
+
+  it('keeps a hidden column filterable by index', () => {
+    // `setting` is drawn as section headings, never as a column - the facet
+    // addresses it by position in `columns`, which is what filtering uses.
+    expect(toFacets(table)[0].index).toBe(1);
+    expect(toFacets(table)[0].values).toEqual([
+      'Advanced / metastatic',
+      'Peri-operative',
+      'Procedural / supportive',
+    ]);
+  });
+
+  it('leaves a table small enough to read whole alone', () => {
+    expect(toFacets({ ...table, rows: table.rows.slice(0, 6) })).toEqual([]);
+  });
+});
+
+describe('filterRows', () => {
+  const rows = [
+    ['NCT00006368', 'Pembrolizumab', 'Industry'],
+    ['NCT00084656', 'Nivolumab + relatlimab', 'Industry'],
+    ['NCT05727904', 'Lifileucel', 'Non-industry'],
+  ];
+
+  it('narrows to one facet value', () => {
+    expect(filterRows(rows, { 2: 'Non-industry' }, '')).toEqual([rows[2]]);
+  });
+
+  it('applies every chosen facet together', () => {
+    expect(filterRows(rows, { 2: 'Industry', 1: 'Lifileucel' }, '')).toEqual([]);
+  });
+
+  it('searches the whole row, whichever cell holds the match', () => {
+    expect(filterRows(rows, {}, 'relatlimab')).toEqual([rows[1]]);
+    expect(filterRows(rows, {}, 'nct05727904')).toEqual([rows[2]]);
+  });
+
+  it('combines a facet with a search', () => {
+    expect(filterRows(rows, { 2: 'Industry' }, 'lifileucel')).toEqual([]);
+  });
+
+  it('returns the rows untouched when nothing is set', () => {
+    expect(filterRows(rows, {}, '  ')).toBe(rows);
   });
 });

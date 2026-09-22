@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ArrowUpRight } from 'lucide-react';
-import { ABSENT, toSections } from '@/lib/agent/result-table';
-import type { ResultSummary, ResultTable } from '@/lib/agent/result-table';
+import { ABSENT, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
+import type { Facet, ResultSummary, ResultTable } from '@/lib/agent/result-table';
 import type { EfficacyLink } from '@/lib/agent/efficacy-link';
+import { FilterChips } from '@/components/dashboard/FilterChips';
 import { NCT_ID_PATTERN, trialRoute } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -85,6 +86,80 @@ function SummaryStrip({ summary }: { summary: ResultSummary }) {
 }
 
 /**
+ * Narrowing the rows already on screen - no second query, no new turn.
+ *
+ * A landscape answer is a set the reader works through, not a number: having
+ * asked for every active Phase 3 trial, the next thing they do is look at the
+ * industry ones, or the adjuvant ones, or the one drug they came for. Asking
+ * the agent again costs a round trip and re-derives a set it has already sent.
+ *
+ * The chips are a choice per column rather than a multi-select: the reader is
+ * narrowing to one group at a time, and one value per column keeps the count
+ * beside them unambiguous.
+ */
+function FilterBar({
+  facets,
+  selected,
+  onSelect,
+  query,
+  onQuery,
+  shown,
+  total,
+}: {
+  facets: Facet[];
+  selected: Record<number, string>;
+  onSelect: (index: number, value: string) => void;
+  query: string;
+  onQuery: (query: string) => void;
+  shown: number;
+  total: number;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 pb-2.5">
+      {facets.map((facet) => (
+        <FilterChips
+          key={facet.index}
+          size="sm"
+          label={facet.label}
+          options={[
+            { value: '', label: 'All' },
+            // An absent value is a group like any other - the trials with no
+            // curated regimen - but "—" on a chip reads as a broken label.
+            ...facet.values.map((value) => ({
+              value,
+              label: value === ABSENT ? 'None' : value,
+            })),
+          ]}
+          value={selected[facet.index] ?? ''}
+          onChange={(value) => onSelect(facet.index, value)}
+        />
+      ))}
+      <input
+        type="search"
+        value={query}
+        onChange={(event) => onQuery(event.target.value)}
+        placeholder="drug, sponsor, NCT id…"
+        aria-label="Search rows"
+        className={cn(
+          'h-8 min-w-[18ch] flex-1 rounded-full border border-(--brand-border)',
+          'bg-(--brand-surface) px-3.5 text-[12px] text-(--brand-text)',
+          'placeholder:text-(--brand-text-muted) focus-visible:border-(--brand-primary)',
+          'focus-visible:outline-none'
+        )}
+      />
+      <span
+        className={cn(
+          'shrink-0 font-mono text-[10px] tracking-[0.05em] whitespace-nowrap',
+          'text-(--brand-text-muted)'
+        )}
+      >
+        {shown} of {total}
+      </span>
+    </div>
+  );
+}
+
+/**
  * The turn's rows, drawn by the app rather than transcribed by the model.
  *
  * Open by default and unclamped: `ToolStep` keeps a per-query disclosure for
@@ -123,6 +198,8 @@ export function TurnTable({
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [clipped, setClipped] = useState(false);
+  const [selected, setSelected] = useState<Record<number, string>>({});
+  const [query, setQuery] = useState('');
 
   const indexOf = (key: string) => table.columns.findIndex((column) => column.key === key);
   const settingIndex = indexOf('setting');
@@ -151,10 +228,25 @@ export function TurnTable({
     [settingIndex, modalityIndex, sponsorClassIndex, basketIndex, followUpIndex]
   );
   const columns = table.columns.filter((_, index) => !hidden.has(index));
-  const sections = useMemo(
-    () => toSections(table.rows, settingIndex, basketIndex),
-    [table.rows, settingIndex, basketIndex]
+  const facets = useMemo(() => toFacets(table), [table]);
+  const rows = useMemo(
+    () => filterRows(table.rows, selected, query),
+    [table.rows, selected, query]
   );
+  const sections = useMemo(
+    () => toSections(rows, settingIndex, basketIndex),
+    [rows, settingIndex, basketIndex]
+  );
+
+  const select = useCallback((index: number, value: string) => {
+    setSelected((previous) => {
+      const next = { ...previous };
+      // No entry rather than an empty one, so "All" leaves nothing to match on.
+      if (value) next[index] = value;
+      else delete next[index];
+      return next;
+    });
+  }, []);
 
   const measure = useCallback(() => {
     const node = scroller.current;
@@ -168,7 +260,7 @@ export function TurnTable({
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [measure, table]);
+  }, [measure, rows]);
 
   return (
     <div className="relative mb-1.5">
@@ -180,6 +272,17 @@ export function TurnTable({
         )}
       />
       {table.summary ? <SummaryStrip summary={table.summary} /> : null}
+      {facets.length > 0 ? (
+        <FilterBar
+          facets={facets}
+          selected={selected}
+          onSelect={select}
+          query={query}
+          onQuery={setQuery}
+          shown={rows.length}
+          total={table.rows.length}
+        />
+      ) : null}
       <div
         ref={scroller}
         onScroll={measure}
@@ -291,6 +394,20 @@ export function TurnTable({
               ))}
             </tbody>
           ))}
+          {/* A header row over nothing reads as a failed query rather than as
+              a filter the reader set a moment ago. */}
+          {rows.length === 0 ? (
+            <tbody>
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-3 py-4 text-center text-(--brand-text-muted)"
+                >
+                  No rows match these filters.
+                </td>
+              </tr>
+            </tbody>
+          ) : null}
         </table>
       </div>
       {clipped ? (
