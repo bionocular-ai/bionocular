@@ -95,7 +95,56 @@ function isSuccessful(output: unknown): boolean {
  * path above: `acronym`/`brief_title` still arrive in the row the model
  * reads, they are just never a column here either.
  */
-function stripFolded(output: unknown): unknown {
+/**
+ * Three facts a landscape reader wants first, none of which any row states
+ * outright: which setting a trial belongs to, whether its sponsor is industry,
+ * and whether "active" still means enrolling. Each is a rule over columns the
+ * row already carries, so the app derives them here - deterministically, and
+ * the same way on the joined path and the single-query one. A row that
+ * carries none of a rule's inputs gets no column from it, so an outcomes
+ * table does not grow three empty columns.
+ *
+ * Setting precedence: a trial with a resectable cohort is designed around
+ * surgery, so peri-operative wins over advanced when both tokens appear
+ * ("1L; Adjuvant"). The line-of-therapy column still shows every token.
+ */
+const PROCEDURAL_MODALITIES = ['Radiotherapy', 'Surgery/Procedure', 'Imaging/Diagnostic Agent', 'Device'];
+
+function derive(row: Row, today: string): Row {
+  const next = { ...row };
+  const lot = typeof row.line_of_therapy === 'string' ? row.line_of_therapy : '';
+  const modality = typeof row.modality === 'string' ? row.modality : '';
+
+  // Modality alone does not open the rule: it only decides the procedural
+  // branch, and a row with a modality but no line or purpose would otherwise
+  // read "Unclassified" for want of columns the turn never asked for.
+  if ('line_of_therapy' in row || 'primary_purpose' in row) {
+    if (/Adjuvant|Neoadjuvant/.test(lot)) next.setting = 'Peri-operative';
+    else if (/\b(1L|2L|3L|R\/R)\b/.test(lot)) next.setting = 'Advanced / metastatic';
+    else if (
+      ('primary_purpose' in row && row.primary_purpose !== 'TREATMENT') ||
+      PROCEDURAL_MODALITIES.some((m) => modality.includes(m))
+    ) next.setting = 'Procedural / supportive';
+    else next.setting = 'Unclassified';
+  }
+
+  if (typeof row.lead_sponsor_class === 'string') {
+    next.sponsor_type = row.lead_sponsor_class === 'INDUSTRY' ? 'Industry' : 'Non-industry';
+  }
+
+  if ('overall_status' in row && 'primary_completion_date' in row) {
+    const date = typeof row.primary_completion_date === 'string' ? row.primary_completion_date : null;
+    // A month-precision date means "sometime that month"; compared as a string,
+    // '2026-09' sorts before '2026-09-22' and would read as already past.
+    const end = date && date.length === 7 ? `${date}-31` : date;
+    next.follow_up_only =
+      row.overall_status === 'ACTIVE_NOT_RECRUITING' && end !== null && end < today ? 'yes' : null;
+  }
+
+  return next;
+}
+
+function stripFolded(output: unknown, today: string): unknown {
   if (typeof output !== 'object' || output === null) return output;
   const { rows, ...rest } = output as { rows?: unknown };
   if (!Array.isArray(rows)) return output;
@@ -103,17 +152,18 @@ function stripFolded(output: unknown): unknown {
     ...rest,
     rows: rows.map((row) => {
       if (typeof row !== 'object' || row === null) return row;
-      const next = { ...(row as Row) };
+      const next = derive(row as Row, today);
       for (const field of FOLDED_TRIAL_FIELDS) delete next[field];
       return next;
     }),
   };
 }
 
-export function toTurnTable(outputs: unknown[]): ResultTable | null {
+export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultTable | null {
+  const today = now.toISOString().slice(0, 10);
   const successful = outputs.filter(isSuccessful);
   if (successful.length === 0) return null;
-  if (successful.length === 1) return toResultTable(stripFolded(successful[0]));
+  if (successful.length === 1) return toResultTable(stripFolded(successful[0], today));
 
   const queries = outputs.map(asJoinable).filter((rows): rows is Row[] => rows !== null);
   if (queries.length < 2) return null;
@@ -137,6 +187,7 @@ export function toTurnTable(outputs: unknown[]): ResultTable | null {
       merged.set(key, next);
     }
   }
+  for (const [key, row] of merged) merged.set(key, derive(row, today));
 
   const folded: string[] = [KEY, ...FOLDED_TRIAL_FIELDS, FALLBACK.source, ...MARKER_COLUMNS];
   const hasTreatmentName = queries.some((rows) => rows.some((row) => FALLBACK.target in row));
@@ -153,6 +204,13 @@ export function toTurnTable(outputs: unknown[]): ResultTable | null {
         if (folded.includes(column) || discovered.includes(column)) continue;
         discovered.push(column);
       }
+    }
+  }
+  // Derived columns exist only on the merged rows, so they are discovered last.
+  for (const row of merged.values()) {
+    for (const column of Object.keys(row)) {
+      if (folded.includes(column) || discovered.includes(column)) continue;
+      discovered.push(column);
     }
   }
   const columns = orderColumns(discovered);

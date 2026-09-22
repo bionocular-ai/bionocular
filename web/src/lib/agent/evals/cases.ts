@@ -223,6 +223,22 @@ export const GOLDEN_CASES: EvalCase[] = [
     expect: { filter: { table: 'trial_landscape' }, maxToolCalls: 4 },
   },
   {
+    // Pinned from session 809e7692 (2026-09-18): one call on trial_landscape
+    // returned 48 curated rows and reported them complete, while the registry
+    // held 55 for the same filters. The inventory comes from the registry;
+    // the curated table is asked afterwards, by nct_id.
+    id: 'landscape-registry-first',
+    category: 'agent-behavior',
+    cancerSlug: CM,
+    question: 'Show me all phase 3 active treatments or therapies in cutaneous melanoma.',
+    expect: {
+      filter: { table: 'clinical_trials', args: { phase: 'PHASE3', status: ['RECRUITING', 'ACTIVE_NOT_RECRUITING'] } },
+      forbidFilter: { table: 'trial_landscape', args: { phase: 'PHASE3' } },
+      countAwareness: true,
+      maxToolCalls: 4,
+    },
+  },
+  {
     id: 'no-unprompted-save',
     category: 'agent-behavior',
     cancerSlug: CM,

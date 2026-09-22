@@ -203,6 +203,7 @@ const TABLE_DEFINITIONS = {
       'nct_id, acronym, brief_title, overall_status, phases, enrollment_count, ' +
       'lead_sponsor_name, lead_sponsor_class, cancer_type, cancer_type_evidence, ' +
       'conditions, keywords, study_type, last_update_posted_date, is_basket, ' +
+      'primary_completion_date, primary_purpose, ' +
       // The registry's own intervention list - drug names and types, straight
       // from the sponsor. Without it "which treatments" had no answer in the
       // one table that can filter by phase and status, so the model reached for
@@ -221,8 +222,17 @@ const TABLE_DEFINITIONS = {
     //
     // `acronym` is sparse (populated on 23 of 53) but brief, so it stays beside
     // `nct_id` rather than adding rows.
+    //
+    // The five short scalars after `lead_sponsor_name` are what a landscape is
+    // read by - sponsor split, size, whether "active" still means enrolling,
+    // treatment versus procedure, pan-tumour platform - and none was in the
+    // rows of session 809e7692, so its answer could state none of them.
+    // Measured 2026-09-22 on the 55 Phase 3 active trials: +141 characters a
+    // row, about 2,150 tokens on the set.
     conciseProjection:
-      'nct_id, acronym, brief_title, overall_status, phases, lead_sponsor_name, interventions',
+      'nct_id, acronym, brief_title, overall_status, phases, lead_sponsor_name, ' +
+      'lead_sponsor_class, enrollment_count, primary_completion_date, primary_purpose, is_basket, ' +
+      'interventions',
     filters: {
       sponsor: { column: 'lead_sponsor_name', kind: 'scalar' },
       phase: { column: 'phases', kind: 'array' },
