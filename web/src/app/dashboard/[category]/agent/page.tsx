@@ -48,7 +48,7 @@ export default function AgentPage() {
             header, the messages and the input all share one left edge. */}
         <div className="shrink-0 px-4 pt-6 pb-4 sm:px-8">
           <PageHeader
-            className="mx-auto w-full max-w-3xl"
+            className="mx-auto w-full max-w-[1080px]"
             category={categoryName}
             title="AI Agent"
           />

@@ -149,7 +149,7 @@ export function ChatPanel({
           isEmpty ? 'shrink-0' : 'flex-1'
         )}
       >
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-[1080px] flex-col gap-6">
           {isEmpty ? (
             <h2 className="text-center text-2xl font-medium text-balance text-(--brand-text)">
               What do you want to know?
@@ -211,7 +211,7 @@ export function ChatPanel({
         onSubmit={handleSubmit}
         className="px-4 py-3 sm:px-8"
       >
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-[1080px]">
           {/* The box is the bordered control; the textarea inside it is bare,
               so the send button reads as part of the same field. */}
           <div
