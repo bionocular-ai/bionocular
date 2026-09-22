@@ -190,10 +190,19 @@ export function classify(c: EvalCase, observed: Observed): Failure[] {
   //    that does not match what the tool returned.
   const firstOk = calls.find((x) => x.tool === 'query_proprietary_data' && x.outcome === 'ok');
   if (e.countAwareness && firstOk) {
-    if (firstOk.complete === false && !PARTIAL.test(answer)) {
+    // "1,056" and "1056" are the same claim - the group separator is
+    // presentation, and every count over a thousand carries one.
+    const statesMatched =
+      firstOk.matched !== undefined &&
+      new RegExp(`\\b${firstOk.matched}\\b`).test(answer.replace(/(\d),(?=\d{3}\b)/g, '$1'));
+    // A truncated row set only misleads when the answer rests on the rows. An
+    // answer that states the matched count has not passed a subset off as the
+    // whole, and for a count question that number is the entire answer -
+    // `complete` is `rows === matched`, so a 1,056-row match can never be true.
+    if (firstOk.complete === false && !PARTIAL.test(answer) && !statesMatched) {
       failures.push({ kind: 'incomplete-evidence', detail: `result was partial (${firstOk.rows} of ${firstOk.matched}) and the answer does not say so` });
     }
-    if (firstOk.complete === true && firstOk.matched !== undefined && !new RegExp(`\\b${firstOk.matched}\\b`).test(answer)) {
+    if (firstOk.complete === true && firstOk.matched !== undefined && !statesMatched) {
       failures.push({ kind: 'incomplete-evidence', detail: `answer never states the matched count ${firstOk.matched}` });
     }
   }

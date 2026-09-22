@@ -57,6 +57,27 @@ describe('classify', () => {
     expect(failures).toEqual([{ kind: 'incomplete-evidence', detail: expect.stringMatching(/partial/) }]);
   });
 
+  it('accepts a truncated result whose answer states the matched count', () => {
+    // A count question: the rows were never the evidence, so "1,056 matched"
+    // is the whole answer and nothing about it is partial.
+    const failures = classify(
+      byId('funding-not-sponsor'),
+      observed({
+        calls: [okQuery({ table: 'clinical_trials', funding: 'industry' }, 1056, false)],
+        answer: 'There are **1,056** industry-sponsored trials.',
+      }),
+    );
+    expect(failures).toEqual([]);
+  });
+
+  it('reads a thousands separator in a stated count', () => {
+    const failures = classify(
+      byId('phase-filter'),
+      observed({ calls: [okQuery({ table: 'clinical_trials', phase: 'PHASE3' }, 1184)], answer: 'There are 1,184 Phase 3 trials.' }),
+    );
+    expect(failures).toEqual([]);
+  });
+
   it('names a stated count that disagrees with the tool as incomplete-evidence', () => {
     const failures = classify(
       byId('phase-filter'),
