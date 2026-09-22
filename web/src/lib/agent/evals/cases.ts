@@ -46,8 +46,9 @@ export interface EvalCase {
     /** Minimum distinct NCT numbers the answer must name. */
     minNctIds?: number;
     /**
-     * The answer states the matched count of the first successful query when
-     * the result was complete, or acknowledges a partial result when not.
+     * The answer states the matched count of the first successful query, or,
+     * when the result was truncated and the count goes unstated, acknowledges
+     * that it is partial.
      */
     countAwareness?: boolean;
     /** When the lookup found no outcome rows, the answer must say so. */
