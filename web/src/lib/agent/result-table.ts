@@ -14,6 +14,8 @@
  * change here.
  */
 
+import { normalizePhase, normalizePurpose, normalizeStatus } from '@/lib/clinical-trials-enums';
+
 export interface ResultColumn {
   key: string;
   /** What the header reads. The key is a database identifier, not a header. */
@@ -132,12 +134,27 @@ function marks(row: Record<string, unknown>, marker: string, column: string): bo
 }
 
 /**
+ * Columns whose values are ClinicalTrials.gov enums rather than prose.
+ *
+ * `humanizeColumn` has always titled the header while the cells under it read
+ * `ACTIVE_NOT_RECRUITING` and `PHASE3` - a registry identifier shown to a
+ * clinician. The labels are keyed by column rather than matched on the string,
+ * because a screaming-case value is not reliably an enum: `NRAS`, `TMB` and
+ * `BRAF` are gene symbols and stay exactly as they are.
+ */
+const ENUM_LABELS: Record<string, (raw: string) => string> = {
+  overall_status: normalizeStatus,
+  phases: normalizePhase,
+  primary_purpose: normalizePurpose,
+};
+
+/**
  * One cell, read with its row in hand - which `formatCell` cannot do, and which
  * the censoring markers require.
  */
 export function formatRowCell(row: Record<string, unknown>, column: string): string {
   if (marks(row, 'is_nr', column)) return NOT_REACHED;
-  const formatted = formatCell(row[column]);
+  const formatted = formatCell(row[column], ENUM_LABELS[column]);
   if (formatted !== ABSENT && marks(row, 'is_lt', column)) return `<${formatted}`;
   return formatted;
 }
@@ -224,17 +241,21 @@ export function toSections(
     .map(([label, group]) => ({ label, rows: group }));
 }
 
-export function formatCell(value: unknown): string {
+/**
+ * `label` maps one registry enum to its reading. It applies per element rather
+ * than to the joined string, so `["PHASE2","PHASE3"]` reads "Phase 2, Phase 3".
+ */
+export function formatCell(value: unknown, label?: (raw: string) => string): string {
   if (value === null || value === undefined || value === '') return ABSENT;
   if (Array.isArray(value)) {
     if (value.length === 0) return ABSENT;
-    return value.map(formatEntry).join(', ');
+    return value.map((entry) => formatEntry(entry, label)).join(', ');
   }
-  return formatEntry(value);
+  return formatEntry(value, label);
 }
 
 /** One element of a cell: an intervention object, or a plain scalar. */
-function formatEntry(value: unknown): string {
+function formatEntry(value: unknown, label?: (raw: string) => string): string {
   if (value !== null && typeof value === 'object') {
     const { name, type } = value as { name?: unknown; type?: unknown };
     if (typeof name === 'string') {
@@ -242,7 +263,7 @@ function formatEntry(value: unknown): string {
     }
     return JSON.stringify(value);
   }
-  return String(value);
+  return label && typeof value === 'string' ? label(value) : String(value);
 }
 
 export function toResultTable(output: unknown): ResultTable | null {
