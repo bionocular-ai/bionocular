@@ -84,7 +84,7 @@ export const MARKER_COLUMNS = ['is_nr', 'is_lt'];
  * table carries takes the first position, so a curated regimen, an arm and a
  * raw registry list all land in the same place.
  *
- * `phases`, `overall_status` and `lead_sponsor_class` are usually pruned before
+ * `phases` and `lead_sponsor_class` are usually pruned before
  * they render: the uniform-column rule below removes them under exactly the
  * filtered queries this exists for (every row is PHASE1 when the question said
  * Phase 1). They are listed for the mixed-filter case, not as a bug.
@@ -97,8 +97,8 @@ const LEAD_COLUMNS = [
   'nct_id',
   'setting',
   'phases',
-  'overall_status',
   'follow_up_only',
+  'lead_sponsor_name',
   'lead_sponsor_class',
   'sponsor_type',
   'num_patients',
@@ -113,6 +113,12 @@ const LEAD_COLUMNS = [
 ];
 
 /**
+ * Status closes the row: it is what a reader checks last, once the treatment and
+ * the numbers have made a trial worth pursuing.
+ */
+const TRAIL_COLUMNS = ['overall_status'];
+
+/**
  * Both render paths call this, so a lone query and a joined turn agree. Stable:
  * a column the lead list does not name keeps its position relative to the other
  * unnamed ones.
@@ -121,7 +127,14 @@ export function orderColumns(keys: readonly string[]): string[] {
   return keys
     .map((key, index) => {
       const lead = LEAD_COLUMNS.indexOf(key);
-      return { key, rank: lead === -1 ? LEAD_COLUMNS.length + index : lead };
+      const trail = TRAIL_COLUMNS.indexOf(key);
+      const rank =
+        trail !== -1
+          ? LEAD_COLUMNS.length + keys.length + trail
+          : lead === -1
+            ? LEAD_COLUMNS.length + index
+            : lead;
+      return { key, rank };
     })
     .sort((a, b) => a.rank - b.rank)
     .map(({ key }) => key);
@@ -175,6 +188,9 @@ const INITIALISMS: Record<string, string> = {
   // if a question ever puts one on screen.
   grade_3_plus_trae_pct: 'Grade 3+ TRAE %',
   serious_ae_pct: 'Serious AE %',
+  lead_sponsor_name: 'Sponsor',
+  overall_status: 'Status',
+  sponsor_type: 'Type',
 };
 
 export function humanizeColumn(key: string): string {
@@ -335,23 +351,44 @@ const MAX_FACETS = 3;
 /** Longer than this is a sentence, not a category. */
 const MAX_VALUE_LENGTH = 28;
 
+/**
+ * A chip row has no column beside it to lend context, so "Type" alone would not
+ * say whose type.
+ */
+const FACET_LABELS: Record<string, string> = { sponsor_type: 'Sponsor Type' };
+
 export function toFacets(table: ResultTable): Facet[] {
   if (table.rows.length < FILTER_MIN_ROWS) return [];
+  // `sponsor_type` is `lead_sponsor_class` collapsed to industry or not, so the
+  // raw registry class (INDUSTRY, OTHER, NIH...) would only be the same filter
+  // spelled worse, and would spend a facet slot doing it.
+  const hasSponsorType = table.columns.some((column) => column.key === 'sponsor_type');
+  // Both are already drawn - `follow_up_only` as a note under the status,
+  // `is_basket` as the "Set aside" section - and as filters they read "yes" or
+  // "None" and took the slot Status needed.
+  const notFacets = [
+    'follow_up_only',
+    'is_basket',
+    ...(hasSponsorType ? ['lead_sponsor_class'] : []),
+  ];
   return table.columns
     .map((column, index) => ({
+      key: column.key,
       index,
-      label: column.label,
+      label: FACET_LABELS[column.key] ?? column.label,
       values: [...new Set(table.rows.map((row) => row[index]))].sort(),
     }))
     .filter(
-      ({ values }) =>
+      ({ key, values }) =>
+        !notFacets.includes(key) &&
         values.length > 1 &&
         values.length <= MAX_FACET_VALUES &&
         // A grouping, not a near-identifier: every value covers two rows on average.
         values.length * 2 <= table.rows.length &&
         values.every((value) => value.length <= MAX_VALUE_LENGTH)
     )
-    .slice(0, MAX_FACETS);
+    .slice(0, MAX_FACETS)
+    .map(({ index, label, values }) => ({ index, label, values }));
 }
 
 /**

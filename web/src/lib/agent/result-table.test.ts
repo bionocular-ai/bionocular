@@ -323,19 +323,37 @@ describe('toFacets', () => {
     columns: [
       { key: 'nct_id', label: 'NCT' },
       { key: 'setting', label: 'Setting' },
-      { key: 'sponsor_type', label: 'Sponsor type' },
+      { key: 'lead_sponsor_class', label: 'Lead sponsor class' },
+      { key: 'sponsor_type', label: 'Type' },
       { key: 'num_patients', label: 'Num patients' },
     ],
     rows: Array.from({ length: 12 }, (_, i) => [
       `NCT0000${1000 + i}`,
       ['Advanced / metastatic', 'Peri-operative', 'Procedural / supportive'][i % 3],
-      i % 2 === 0 ? 'Industry' : 'Non-industry',
+      ['INDUSTRY', 'OTHER', 'NIH', 'OTHER'][i % 4],
+      i % 4 === 0 ? 'Industry' : 'Non-industry',
       String(100 + i),
     ]),
   };
 
   it('offers the closed sets and not the identifiers', () => {
-    expect(toFacets(table).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor type']);
+    expect(toFacets(table).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor Type']);
+  });
+
+  it('does not offer columns already drawn as a note or a section', () => {
+    const withDrawn = {
+      columns: [
+        ...table.columns,
+        { key: 'follow_up_only', label: 'Follow up only' },
+        { key: 'is_basket', label: 'Is basket' },
+      ],
+      rows: table.rows.map((row, i) => [...row, i % 3 === 0 ? 'yes' : '—', i % 4 === 0 ? 'Yes' : 'No']),
+    };
+    expect(toFacets(withDrawn).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor Type']);
+  });
+
+  it('filters sponsors as industry or not, never by raw registry class', () => {
+    expect(toFacets(table)[1].values).toEqual(['Industry', 'Non-industry']);
   });
 
   it('keeps a hidden column filterable by index', () => {

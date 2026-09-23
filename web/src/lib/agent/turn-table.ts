@@ -39,8 +39,19 @@ const KEY = 'nct_id';
  * identify a trial runs 116-272 characters - one column of those makes every
  * row in the table multiple lines tall. The model still receives both in the
  * row regardless, so a trial's name is not lost, only not tabled.
+ *
+ * The rest are read by `derive` or the model but not worth a column: purpose
+ * and primary completion already surface as `setting` and "follow-up only".
+ * Stripped after `derive` runs, so the facts built from them survive.
  */
-const FOLDED_TRIAL_FIELDS = ['acronym', 'brief_title'] as const;
+const FOLDED_TRIAL_FIELDS = [
+  'acronym',
+  'brief_title',
+  'enrollment_count',
+  'primary_purpose',
+  'stage',
+  'primary_completion_date',
+] as const;
 
 /**
  * `treatment_name` is one curated regimen per trial. `interventions` is every arm
@@ -244,6 +255,25 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
     { columns: kept, rows: cells.map((row) => row.filter((_, i) => keep[i])) },
     [...merged.values()],
   );
+}
+
+/**
+ * The question already said which phase, so a column of it only repeats that
+ * back - "Phase 2/Phase 3" beside "Phase 3" is a registry detail the reader did
+ * not ask to see. Read from the tool inputs because the rows cannot say what
+ * was filtered on. A turn that never passed `phase` keeps the column.
+ */
+export function withoutAskedPhase(table: ResultTable, inputs: unknown[]): ResultTable {
+  const asked = inputs.some(
+    (input) => typeof input === 'object' && input !== null && (input as Row).phase !== undefined,
+  );
+  const index = table.columns.findIndex((column) => column.key === 'phases');
+  if (!asked || index === -1) return table;
+  return {
+    ...table,
+    columns: table.columns.filter((_, i) => i !== index),
+    rows: table.rows.map((row) => row.filter((_, i) => i !== index)),
+  };
 }
 
 function rowsOf(output: unknown): Row[] {

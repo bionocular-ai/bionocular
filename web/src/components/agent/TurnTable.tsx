@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ArrowUpRight } from 'lucide-react';
+import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
+import { ArrowUpRight, Check, ChevronDown } from 'lucide-react';
 import { ABSENT, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
 import type { Facet, ResultSummary, ResultTable } from '@/lib/agent/result-table';
 import type { EfficacyLink } from '@/lib/agent/efficacy-link';
-import { FilterChips } from '@/components/dashboard/FilterChips';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { NCT_ID_PATTERN, trialRoute } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -93,47 +99,122 @@ function SummaryStrip({ summary }: { summary: ResultSummary }) {
  * industry ones, or the adjuvant ones, or the one drug they came for. Asking
  * the agent again costs a round trip and re-derives a set it has already sent.
  *
- * The chips are a choice per column rather than a multi-select: the reader is
- * narrowing to one group at a time, and one value per column keeps the count
- * beside them unambiguous.
+ * One menu per column rather than a row of chips: three chip rows and the
+ * search wrapped to two lines in the chat column, while a menu button stays
+ * one line and reads as a sentence ("Sponsor Type: Industry"). One value per
+ * column keeps the count beside each option unambiguous - it is how many rows
+ * that choice would leave, given every other filter already set.
  */
 function FilterBar({
   facets,
+  rows,
   selected,
   onSelect,
+  onClear,
   query,
   onQuery,
   shown,
-  total,
 }: {
   facets: Facet[];
+  rows: string[][];
   selected: Record<number, string>;
   onSelect: (index: number, value: string) => void;
+  onClear: () => void;
   query: string;
   onQuery: (query: string) => void;
   shown: number;
-  total: number;
 }) {
+  const optionCount = (facet: Facet, value: string) => {
+    const others = { ...selected };
+    delete others[facet.index];
+    return filterRows(rows, others, query).filter(
+      (row) => value === '' || row[facet.index] === value
+    ).length;
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-2 pb-2.5">
-      {facets.map((facet) => (
-        <FilterChips
-          key={facet.index}
-          size="sm"
-          label={facet.label}
-          options={[
-            { value: '', label: 'All' },
-            // An absent value is a group like any other - the trials with no
-            // curated regimen - but "—" on a chip reads as a broken label.
-            ...facet.values.map((value) => ({
-              value,
-              label: value === ABSENT ? 'None' : value,
-            })),
-          ]}
-          value={selected[facet.index] ?? ''}
-          onChange={(value) => onSelect(facet.index, value)}
-        />
-      ))}
+      {facets.map((facet) => {
+        const value = selected[facet.index] ?? '';
+        // An absent value is a group like any other - the trials with no
+        // curated regimen - but "—" in a menu reads as a broken label.
+        const label = (option: string) =>
+          option === '' ? 'All' : option === ABSENT ? 'None' : option;
+        return (
+          <DropdownMenu key={facet.index}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px]',
+                  'whitespace-nowrap transition-colors focus-visible:outline-none',
+                  'focus-visible:ring-2 focus-visible:ring-(--brand-primary)',
+                  'text-(--brand-text-muted)',
+                  value
+                    ? 'border-(--brand-primary)/60 bg-(--brand-accent-light)/60'
+                    : 'border-(--brand-border) bg-(--brand-surface) hover:border-(--brand-primary)'
+                )}
+              >
+                {facet.label}:
+                <span className="font-semibold text-(--brand-text)">{label(value)}</span>
+                <ChevronDown className="h-3 w-3" aria-hidden />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              className="min-w-[14rem] rounded-xl border-(--brand-border) p-1.5"
+            >
+              <DropdownMenuRadioGroup
+                value={value}
+                onValueChange={(next) => onSelect(facet.index, next)}
+              >
+                {/* "All" closes the list: the groups are what a reader came
+                    to pick from, and the total is the way back out. */}
+                {[...facet.values, ''].map((option) => (
+                  // The primitive rather than the shared `DropdownMenuRadioItem`,
+                  // which draws a dot only on the checked row. Here every row
+                  // shows its state - a check or an empty ring - so the choice
+                  // reads as a choice before anything is picked.
+                  <DropdownMenuPrimitive.RadioItem
+                    key={option}
+                    value={option}
+                    className={cn(
+                      'group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2',
+                      'text-[13px] text-(--brand-text) outline-none select-none',
+                      'focus:bg-(--brand-bg) data-[state=checked]:bg-(--brand-accent-light)/70',
+                      'data-[state=checked]:font-semibold'
+                    )}
+                  >
+                    <Check
+                      aria-hidden
+                      className="hidden h-4 w-4 shrink-0 text-emerald-600 group-data-[state=checked]:block"
+                    />
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'h-3.5 w-3.5 shrink-0 rounded-full border-[1.5px] border-(--brand-text-muted)/60',
+                        'm-px group-data-[state=checked]:hidden'
+                      )}
+                    />
+                    <span className="flex-1">{label(option)}</span>
+                    <span
+                      className={cn(
+                        'min-w-[2.25rem] rounded-full px-2 py-0.5 text-center text-[11px] font-medium',
+                        'text-(--brand-text)',
+                        option === '' || option === value
+                          ? 'bg-(--brand-accent)/30'
+                          : 'bg-(--brand-text-muted)/15'
+                      )}
+                    >
+                      {optionCount(facet, option)}
+                    </span>
+                  </DropdownMenuPrimitive.RadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      })}
       <input
         type="search"
         value={query}
@@ -147,13 +228,26 @@ function FilterBar({
           'focus-visible:outline-none'
         )}
       />
+      {Object.keys(selected).length > 0 ? (
+        <button
+          type="button"
+          onClick={onClear}
+          className={cn(
+            'font-mono text-[11px] font-medium text-(--brand-primary) underline',
+            'underline-offset-[3px] focus-visible:outline-none focus-visible:ring-2',
+            'focus-visible:ring-(--brand-primary)'
+          )}
+        >
+          Clear
+        </button>
+      ) : null}
       <span
         className={cn(
           'shrink-0 font-mono text-[10px] tracking-[0.05em] whitespace-nowrap',
           'text-(--brand-text-muted)'
         )}
       >
-        {shown} of {total}
+        {shown} of {rows.length}
       </span>
     </div>
   );
@@ -275,12 +369,13 @@ export function TurnTable({
       {facets.length > 0 ? (
         <FilterBar
           facets={facets}
+          rows={table.rows}
           selected={selected}
           onSelect={select}
+          onClear={() => setSelected({})}
           query={query}
           onQuery={setQuery}
           shown={rows.length}
-          total={table.rows.length}
         />
       ) : null}
       <div

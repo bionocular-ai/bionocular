@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toTurnTable } from './turn-table';
+import { toTurnTable, withoutAskedPhase } from './turn-table';
 
 const trials = {
   ok: true,
@@ -45,8 +45,8 @@ describe('toTurnTable', () => {
     expect(table?.columns.map((c) => c.key)).toEqual([
       'treatment_name',
       'nct_id',
-      'overall_status',
       'modality',
+      'overall_status',
     ]);
   });
 
@@ -268,10 +268,10 @@ describe('toTurnTable', () => {
     expect(table?.columns.map((c) => c.key)).toEqual([
       'interventions',
       'nct_id',
-      'overall_status',
       'orr',
       'id',
       'source_name',
+      'overall_status',
     ]);
   });
 
@@ -486,5 +486,28 @@ describe('toTurnTable summary', () => {
     const table = toTurnTable([trials, landscape]);
 
     expect(table?.summary).toBeUndefined();
+  });
+});
+
+describe('withoutAskedPhase', () => {
+  const table = {
+    columns: [
+      { key: 'nct_id', label: 'NCT' },
+      { key: 'phases', label: 'Phases' },
+    ],
+    rows: [
+      ['NCT1', 'Phase 3'],
+      ['NCT2', 'Phase 2/Phase 3'],
+    ],
+  };
+
+  it('drops the phase column when a query filtered on phase', () => {
+    const result = withoutAskedPhase(table, [{ table: 'clinical_trials', phase: 'PHASE3' }]);
+    expect(result.columns.map((c) => c.key)).toEqual(['nct_id']);
+    expect(result.rows).toEqual([['NCT1'], ['NCT2']]);
+  });
+
+  it('keeps it when no query did', () => {
+    expect(withoutAskedPhase(table, [{ table: 'clinical_trials' }, undefined])).toBe(table);
   });
 });
