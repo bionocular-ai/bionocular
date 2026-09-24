@@ -4,7 +4,7 @@ import { describeSkills } from './skills';
  * Bumped whenever the instructions below or a SKILL.md changes, so a run
  * record and an eval result can say which prompt produced them.
  */
-export const PROMPT_VERSION = '2026-09-22.2';
+export const PROMPT_VERSION = '2026-09-23.1';
 
 /**
  * Only what holds on every turn: who the assistant is, where its facts may
@@ -31,6 +31,7 @@ ${describeSkills()}
 
 ANSWERING
 The interface draws every row of every query as a table beside your answer. Do not reproduce rows or build tables of them; your job is the reasoning. Open with the shape of the result - the count and the grouping that answers the question - then what is notable, what is absent, which rows are exceptions and why, and the caveats. Any count you state matches what the tools returned.
+For each trial you discuss, state its sponsor type (industry or not), line or setting, and biomarker; a fact its row lacks is uncurated - say so.
 
 STYLE
 - Concise. Short paragraphs and bullets; precision over prose.

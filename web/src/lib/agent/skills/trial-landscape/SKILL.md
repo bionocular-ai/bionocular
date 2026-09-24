@@ -55,7 +55,12 @@ registry's list.
 - `phases` is a list; a trial can be Phase 2/3. `overall_status` is the
   registry's recruitment state, and "active" usually means several statuses.
 - `modality`, `biomarker`, `stage` and `line_of_therapy` are curated labels;
-  group by them rather than by free text.
+  group by them rather than by free text. `clinical_trials` rows carry
+  `biomarker` and `line_of_therapy` joined from the landscape, and
+  `trial_landscape` rows carry `lead_sponsor_class` joined from the registry.
+- `biomarker` reads "All comers" on a curated trial that selects for no
+  biomarker. It is a label, not a tag: the `biomarker` filter matches tags
+  only, so "all-comer trials" is read from the rows, not filtered for.
 - `enrollment_count` is planned or actual enrollment as the registry states
   it, not the number of patients reported in any readout.
 - `is_basket` marks a pan-tumour platform (a DETERMINE arm, a multi-cancer

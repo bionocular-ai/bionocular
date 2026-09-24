@@ -1,15 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { ArrowUpRight, Check, ChevronDown } from 'lucide-react';
-import { ABSENT, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
-import type { Facet, ResultSummary, ResultTable } from '@/lib/agent/result-table';
+import { ABSENT, capSections, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
+import type { Facet, ResultParameter, ResultSummary, ResultTable } from '@/lib/agent/result-table';
 import type { EfficacyLink } from '@/lib/agent/efficacy-link';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -22,6 +23,35 @@ const NCT_LINK_CLASSES = cn(
   'border-b border-(--brand-border) pb-px no-underline',
   'hover:border-(--brand-primary)'
 );
+
+/**
+ * A web-scraped readout's only reference is its page. The cell shows the site
+ * rather than a 120-character URL, and opens it in a new tab so the answer
+ * stays where it was.
+ */
+function SourceLink({ url }: { url: string }) {
+  let site = url;
+  try {
+    site = new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    // Not a parseable URL after all; the raw text is still the reference.
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={url}
+      className={cn(
+        'inline-flex items-center gap-0.5 text-[12px] font-medium text-(--brand-primary)',
+        'border-b border-(--brand-border) pb-px no-underline hover:border-(--brand-primary)'
+      )}
+    >
+      {site}
+      <ArrowUpRight className="h-3 w-3 shrink-0" aria-hidden />
+    </a>
+  );
+}
 
 /**
  * The two columns a reader scans rather than reads: is it open, and who is
@@ -91,6 +121,142 @@ function SummaryStrip({ summary }: { summary: ResultSummary }) {
   );
 }
 
+const MORE_CLASSES = cn(
+  'font-mono text-[10.5px] font-medium text-(--brand-primary) underline underline-offset-[3px]',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
+);
+
+/**
+ * Rows drawn before the reader asks for more. A turn's table is read under the
+ * prose that introduces it; a hundred rows push that prose off the top and the
+ * reader never scrolls back. The rest are one click away, in place.
+ */
+const PAGE_ROWS = 20;
+
+/**
+ * Endpoints on screen at once. Five fit beside the arm, its trial facts and its
+ * source without the table becoming a spreadsheet the reader has to scroll.
+ */
+const MAX_PARAMETERS = 5;
+
+/**
+ * Endpoints drawn before the reader picks. `parameters` is ranked by how many
+ * arms report each, so these are the three the most arms can be compared on -
+ * ORR, DCR and CR for the active Phase 1 set, PFS and OS where trials mature.
+ */
+const DEFAULT_PARAMETERS = 3;
+
+const FAMILY_LABELS: Record<ResultParameter['family'], string> = {
+  efficacy: 'Efficacy',
+  safety: 'Safety',
+};
+
+const TRIGGER_CLASSES = cn(
+  'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px]',
+  'whitespace-nowrap transition-colors focus-visible:outline-none',
+  'focus-visible:ring-2 focus-visible:ring-(--brand-primary)',
+  'text-(--brand-text-muted)'
+);
+
+const OPTION_CLASSES = cn(
+  'group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2',
+  'text-[13px] text-(--brand-text) outline-none select-none',
+  'focus:bg-(--brand-bg) data-[state=checked]:bg-(--brand-accent-light)/70',
+  'data-[state=checked]:font-semibold data-[disabled]:cursor-default data-[disabled]:opacity-45'
+);
+
+/**
+ * Which endpoints the table draws. A multi-select, unlike the filters: the
+ * reader is choosing columns to read side by side, not one group of rows.
+ * Capped at five and never empty - at the cap the rest are disabled rather than
+ * silently swapped, so the reader always knows why a tick did not take.
+ */
+function ParameterPicker({
+  parameters,
+  picked,
+  onToggle,
+}: {
+  parameters: ResultParameter[];
+  picked: string[];
+  onToggle: (key: string) => void;
+}) {
+  const labels = parameters.filter((p) => picked.includes(p.key)).map((p) => p.label);
+  const summary =
+    labels.length > 3
+      ? `${labels.slice(0, 3).join(', ')} +${labels.length - 3}`
+      : labels.join(', ');
+  const families = (['efficacy', 'safety'] as const).filter((family) =>
+    parameters.some((p) => p.family === family)
+  );
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            TRIGGER_CLASSES,
+            'border-(--brand-primary)/60 bg-(--brand-accent-light)/60'
+          )}
+        >
+          Parameters:
+          <span className="font-semibold text-(--brand-text)">{summary}</span>
+          <ChevronDown className="h-3 w-3" aria-hidden />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="start"
+        className="max-h-[22rem] min-w-[15rem] overflow-y-auto rounded-xl border-(--brand-border) p-1.5"
+      >
+        {families.map((family) => (
+          <div key={family}>
+            <DropdownMenuLabel className="px-2.5 pt-2 pb-1 font-mono text-[10px] font-medium tracking-[0.08em] text-(--brand-text-muted) uppercase">
+              {FAMILY_LABELS[family]} · up to {MAX_PARAMETERS}
+            </DropdownMenuLabel>
+            {parameters
+              .filter((p) => p.family === family)
+              .map((parameter) => {
+                const checked = picked.includes(parameter.key);
+                const disabled = checked ? picked.length === 1 : picked.length >= MAX_PARAMETERS;
+                return (
+                  <DropdownMenuPrimitive.CheckboxItem
+                    key={parameter.key}
+                    checked={checked}
+                    disabled={disabled}
+                    // The menu stays open: picking five is one visit, not five.
+                    onSelect={(event) => event.preventDefault()}
+                    onCheckedChange={() => onToggle(parameter.key)}
+                    className={OPTION_CLASSES}
+                  >
+                    <Check
+                      aria-hidden
+                      className="hidden h-4 w-4 shrink-0 text-emerald-600 group-data-[state=checked]:block"
+                    />
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'm-px h-3.5 w-3.5 shrink-0 rounded-[3px] border-[1.5px] border-(--brand-text-muted)/60',
+                        'group-data-[state=checked]:hidden'
+                      )}
+                    />
+                    <span className="flex-1">{parameter.label}</span>
+                    {/* How many arms report it: a column of dashes is not worth a slot. */}
+                    <span
+                      className="min-w-[2.25rem] rounded-full bg-(--brand-text-muted)/15 px-2 py-0.5 text-center text-[11px] font-medium"
+                      aria-label={`${parameter.arms} arms report it`}
+                    >
+                      {parameter.arms}
+                    </span>
+                  </DropdownMenuPrimitive.CheckboxItem>
+                );
+              })}
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /**
  * Narrowing the rows already on screen - no second query, no new turn.
  *
@@ -101,11 +267,12 @@ function SummaryStrip({ summary }: { summary: ResultSummary }) {
  *
  * One menu per column rather than a row of chips: three chip rows and the
  * search wrapped to two lines in the chat column, while a menu button stays
- * one line and reads as a sentence ("Sponsor Type: Industry"). One value per
+ * one line and reads as a sentence ("Sponsor: Industry"). One value per
  * column keeps the count beside each option unambiguous - it is how many rows
  * that choice would leave, given every other filter already set.
  */
 function FilterBar({
+  picker,
   facets,
   rows,
   selected,
@@ -115,6 +282,8 @@ function FilterBar({
   onQuery,
   shown,
 }: {
+  /** Drawn first: which columns come before which rows. */
+  picker?: ReactNode;
   facets: Facet[];
   rows: string[][];
   selected: Record<number, string>;
@@ -134,6 +303,7 @@ function FilterBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 pb-2.5">
+      {picker}
       {facets.map((facet) => {
         const value = selected[facet.index] ?? '';
         // An absent value is a group like any other - the trials with no
@@ -146,10 +316,7 @@ function FilterBar({
               <button
                 type="button"
                 className={cn(
-                  'inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[12px]',
-                  'whitespace-nowrap transition-colors focus-visible:outline-none',
-                  'focus-visible:ring-2 focus-visible:ring-(--brand-primary)',
-                  'text-(--brand-text-muted)',
+                  TRIGGER_CLASSES,
                   value
                     ? 'border-(--brand-primary)/60 bg-(--brand-accent-light)/60'
                     : 'border-(--brand-border) bg-(--brand-surface) hover:border-(--brand-primary)'
@@ -178,12 +345,7 @@ function FilterBar({
                   <DropdownMenuPrimitive.RadioItem
                     key={option}
                     value={option}
-                    className={cn(
-                      'group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2',
-                      'text-[13px] text-(--brand-text) outline-none select-none',
-                      'focus:bg-(--brand-bg) data-[state=checked]:bg-(--brand-accent-light)/70',
-                      'data-[state=checked]:font-semibold'
-                    )}
+                    className={OPTION_CLASSES}
                   >
                     <Check
                       aria-hidden
@@ -294,6 +456,10 @@ export function TurnTable({
   const [clipped, setClipped] = useState(false);
   const [selected, setSelected] = useState<Record<number, string>>({});
   const [query, setQuery] = useState('');
+  // Null until the reader picks, so a table that grows while the turn streams
+  // keeps offering its current most-reported endpoints.
+  const [picks, setPicks] = useState<string[] | null>(null);
+  const [limit, setLimit] = useState(PAGE_ROWS);
 
   const indexOf = (key: string) => table.columns.findIndex((column) => column.key === key);
   const settingIndex = indexOf('setting');
@@ -312,25 +478,76 @@ export function TurnTable({
   const statusIndex = indexOf('overall_status');
   const followUpIndex = statusIndex === -1 ? -1 : indexOf('follow_up_only');
 
+  const parameters = table.parameters;
+  const picked = useMemo(() => {
+    if (!parameters) return [];
+    const kept = (picks ?? []).filter((key) => parameters.some((p) => p.key === key));
+    return kept.length > 0 ? kept : parameters.slice(0, DEFAULT_PARAMETERS).map((p) => p.key);
+  }, [parameters, picks]);
+  const togglePick = useCallback(
+    (key: string) =>
+      setPicks(picked.includes(key) ? picked.filter((k) => k !== key) : [...picked, key]),
+    [picked]
+  );
+  // Indices of the endpoint columns on screen; the rest are hidden, not dropped,
+  // so a reader's pick needs no second pass over the rows.
+  const pickedIndices = useMemo(
+    () =>
+      picked
+        .map((key) => table.columns.findIndex((column) => column.key === key))
+        .filter((index) => index !== -1),
+    [picked, table.columns]
+  );
+
   const hidden = useMemo(
     () =>
       new Set(
-        [settingIndex, modalityIndex, sponsorClassIndex, basketIndex, followUpIndex].filter(
-          (index) => index !== -1
-        )
+        [
+          settingIndex,
+          modalityIndex,
+          sponsorClassIndex,
+          basketIndex,
+          followUpIndex,
+          ...(parameters ?? [])
+            .filter((p) => !picked.includes(p.key))
+            .map((p) => table.columns.findIndex((column) => column.key === p.key)),
+        ].filter((index) => index !== -1)
       ),
-    [settingIndex, modalityIndex, sponsorClassIndex, basketIndex, followUpIndex]
+    [
+      settingIndex,
+      modalityIndex,
+      sponsorClassIndex,
+      basketIndex,
+      followUpIndex,
+      parameters,
+      picked,
+      table.columns,
+    ]
   );
   const columns = table.columns.filter((_, index) => !hidden.has(index));
+  const numeric = useMemo(
+    () => new Set(['num_patients', ...(parameters ?? []).map((p) => p.key)]),
+    [parameters]
+  );
   const facets = useMemo(() => toFacets(table), [table]);
   const rows = useMemo(
     () => filterRows(table.rows, selected, query),
     [table.rows, selected, query]
   );
+  // An arm reporting none of the picked endpoints - a trial-in-progress readout,
+  // or one that reported the other family - answers nothing that was asked.
+  // It is left out and counted, so the numbers on screen still add up.
+  const [drawn, silent] = useMemo(() => {
+    if (!parameters) return [rows, 0];
+    const has = (row: string[]) => pickedIndices.some((index) => row[index] !== ABSENT);
+    const reporting = rows.filter(has);
+    return [reporting, rows.length - reporting.length];
+  }, [rows, parameters, pickedIndices]);
   const sections = useMemo(
-    () => toSections(rows, settingIndex, basketIndex),
-    [rows, settingIndex, basketIndex]
+    () => capSections(toSections(drawn, settingIndex, basketIndex), limit),
+    [drawn, settingIndex, basketIndex, limit]
   );
+  const shownCount = Math.min(limit, drawn.length);
 
   const select = useCallback((index: number, value: string) => {
     setSelected((previous) => {
@@ -354,7 +571,7 @@ export function TurnTable({
     const observer = new ResizeObserver(measure);
     observer.observe(node);
     return () => observer.disconnect();
-  }, [measure, rows]);
+  }, [measure, sections, columns.length]);
 
   return (
     <div className="relative mb-1.5">
@@ -366,8 +583,13 @@ export function TurnTable({
         )}
       />
       {table.summary ? <SummaryStrip summary={table.summary} /> : null}
-      {facets.length > 0 ? (
+      {facets.length > 0 || (parameters && parameters.length > 1) ? (
         <FilterBar
+          picker={
+            parameters && parameters.length > 1 ? (
+              <ParameterPicker parameters={parameters} picked={picked} onToggle={togglePick} />
+            ) : null
+          }
           facets={facets}
           rows={table.rows}
           selected={selected}
@@ -375,144 +597,204 @@ export function TurnTable({
           onClear={() => setSelected({})}
           query={query}
           onQuery={setQuery}
-          shown={rows.length}
+          shown={drawn.length}
         />
       ) : null}
-      <div
-        ref={scroller}
-        onScroll={measure}
-        className="overflow-x-auto rounded-[3px] border border-(--brand-border) bg-(--brand-surface)"
-      >
-        <table className="w-full border-collapse text-[12px]">
-          <thead>
-            <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  className={cn(
-                    'border-b border-(--brand-border) bg-(--brand-accent-light)',
-                    'px-3 py-2 text-left font-mono font-medium whitespace-nowrap',
-                    'text-(--brand-primary)'
-                  )}
-                  scope="col"
-                >
-                  {column.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          {sections.map((section) => (
-            // One tbody per section so the heading row belongs to the rows it
-            // introduces rather than floating among them.
-            <tbody key={section.label ?? 'all'}>
-              {section.label ? (
-                <tr>
+      {/* Its own positioned box, so the fade below spans the table and not the
+          filter bar above it, whose row count it used to cover. */}
+      <div className="relative">
+        <div
+          ref={scroller}
+          onScroll={measure}
+          className="overflow-x-auto rounded-[3px] border border-(--brand-border) bg-(--brand-surface)"
+        >
+          <table className="w-full border-collapse text-[12px]">
+            <thead>
+              <tr>
+                {columns.map((column) => (
                   <th
-                    scope="colgroup"
-                    colSpan={columns.length}
+                    key={column.key}
                     className={cn(
-                      'border-b border-(--brand-border) bg-(--brand-accent-light)/40',
-                      'px-3 py-1.5 text-left font-mono text-[10px] font-medium',
-                      'tracking-[0.05em] whitespace-nowrap text-(--brand-primary)'
+                      'border-b border-(--brand-border) bg-(--brand-accent-light)',
+                      'px-3 py-2 text-left font-mono font-medium whitespace-nowrap',
+                      'text-(--brand-primary)'
                     )}
+                    scope="col"
                   >
-                    {section.label}{' '}
-                    <span className="text-(--brand-text-muted)">({section.rows.length})</span>
+                    {column.label}
                   </th>
-                </tr>
-              ) : null}
-              {section.rows.map((row, rowIndex) => (
-                // Keyed by position, not by the first cell. That cell used to be
-                // a unique `id`; `orderColumns` now leads with the treatment
-                // and puts `nct_id` second, and
-                // `trial_outcomes` is one row per treatment arm - two arms of one
-                // trial share an nct_id by design, which React reads as duplicate
-                // keys and is free to drop rows over. Rows are positional and the
-                // whole table re-renders per turn, so the index is the identity.
-                <tr key={rowIndex} className="border-b border-(--brand-border)/50 last:border-b-0">
-                  {row.map((cell, cellIndex) =>
-                    hidden.has(cellIndex) ? null : (
-                      <td
-                        key={table.columns[cellIndex].key}
-                        // A floor as well as a ceiling. The table lays out
-                        // automatically and is already wider than its box, so
-                        // a column of short repeated values ("Stage II; Stage
-                        // III; Stage IV") could be squeezed to 47px and wrap
-                        // to seven lines, making the whole row that tall.
-                        className={cn(
-                          'min-w-[11ch] max-w-[34ch] px-3 py-2.5 align-top',
-                          'text-(--brand-text-muted)',
-                          // The lead column carries the longest values and is
-                          // the one the question was about, so it gets the
-                          // wider floor rather than wrapping a three-drug
-                          // regimen over three lines.
-                          cellIndex === treatmentIndex &&
-                            'min-w-[30ch] max-w-[40ch] font-medium text-(--brand-text)'
-                        )}
-                      >
-                        {table.columns[cellIndex].key === 'nct_id' && NCT_ID_PATTERN.test(cell) ? (
-                          <Link href={trialRoute(cell, cancerType)} className={NCT_LINK_CLASSES}>
-                            {cell}
-                          </Link>
-                        ) : PILL_COLUMNS.includes(table.columns[cellIndex].key) &&
-                          cell !== ABSENT ? (
-                          <Pill value={cell} />
-                        ) : (
-                          cell
-                        )}
-                        {/* Under the status it qualifies, on the rows that
+                ))}
+              </tr>
+            </thead>
+            {sections.map((section) => (
+              // One tbody per section so the heading row belongs to the rows it
+              // introduces rather than floating among them.
+              <tbody key={section.label ?? 'all'}>
+                {section.label ? (
+                  <tr>
+                    <th
+                      scope="colgroup"
+                      colSpan={columns.length}
+                      className={cn(
+                        'border-b border-(--brand-border) bg-(--brand-accent-light)/40',
+                        'px-3 py-1.5 text-left font-mono text-[10px] font-medium',
+                        'tracking-[0.05em] whitespace-nowrap text-(--brand-primary)'
+                      )}
+                    >
+                      {section.label}{' '}
+                      <span className="text-(--brand-text-muted)">({section.total})</span>
+                    </th>
+                  </tr>
+                ) : null}
+                {section.rows.map((row, rowIndex) => (
+                  // Keyed by position, not by the first cell. That cell used to be
+                  // a unique `id`; `orderColumns` now leads with the treatment
+                  // and puts `nct_id` second, and
+                  // `trial_outcomes` is one row per treatment arm - two arms of one
+                  // trial share an nct_id by design, which React reads as duplicate
+                  // keys and is free to drop rows over. Rows are positional and the
+                  // whole table re-renders per turn, so the index is the identity.
+                  <tr
+                    key={rowIndex}
+                    className="border-b border-(--brand-border)/50 last:border-b-0"
+                  >
+                    {row.map((cell, cellIndex) =>
+                      hidden.has(cellIndex) ? null : (
+                        <td
+                          key={table.columns[cellIndex].key}
+                          // A floor as well as a ceiling. The table lays out
+                          // automatically and is already wider than its box, so
+                          // a column of short repeated values ("Stage II; Stage
+                          // III; Stage IV") could be squeezed to 47px and wrap
+                          // to seven lines, making the whole row that tall.
+                          className={cn(
+                            'min-w-[11ch] max-w-[34ch] px-3 py-2.5 align-top',
+                            'text-(--brand-text-muted)',
+                            // The lead column carries the longest values and is
+                            // the one the question was about, so it gets the
+                            // wider floor rather than wrapping a three-drug
+                            // regimen over three lines.
+                            cellIndex === treatmentIndex &&
+                              'min-w-[30ch] max-w-[40ch] font-medium text-(--brand-text)',
+                            // An outcomes table spends its width on endpoints, and
+                            // an arm name wraps to two lines at 30ch as at 24ch.
+                            cellIndex === treatmentIndex && parameters && 'min-w-[24ch]',
+                            // A count or an endpoint is a few characters ("26.5",
+                            // "NR"); the 11ch floor made each of them as wide as a
+                            // label column and pushed Source and Status off-screen.
+                            numeric.has(table.columns[cellIndex].key) &&
+                              'min-w-[5ch] whitespace-nowrap'
+                          )}
+                        >
+                          {table.columns[cellIndex].key === 'nct_id' &&
+                          NCT_ID_PATTERN.test(cell) ? (
+                            <Link href={trialRoute(cell, cancerType)} className={NCT_LINK_CLASSES}>
+                              {cell}
+                            </Link>
+                          ) : table.columns[cellIndex].key === 'source' &&
+                            /^https?:\/\//.test(cell) ? (
+                            <SourceLink url={cell} />
+                          ) : PILL_COLUMNS.includes(table.columns[cellIndex].key) &&
+                            cell !== ABSENT ? (
+                            <Pill value={cell} />
+                          ) : (
+                            cell
+                          )}
+                          {/* Under the status it qualifies, on the rows that
                             have it, rather than as a column of em dashes. */}
-                        {cellIndex === statusIndex &&
-                        followUpIndex !== -1 &&
-                        row[followUpIndex] !== ABSENT ? (
-                          <span className="mt-1 block font-mono text-[10px] text-(--brand-text-muted)">
-                            follow-up only
-                          </span>
-                        ) : null}
-                        {/* An uncurated row has no modality, and the cell above
+                          {cellIndex === statusIndex &&
+                          followUpIndex !== -1 &&
+                          row[followUpIndex] !== ABSENT ? (
+                            <span className="mt-1 block font-mono text-[10px] text-(--brand-text-muted)">
+                              follow-up only
+                            </span>
+                          ) : null}
+                          {/* An uncurated row has no modality, and the cell above
                             already ends in `· registry` to say why. A line
                             holding only an em dash adds height and no fact. */}
-                        {cellIndex === treatmentIndex &&
-                        modalityIndex !== -1 &&
-                        row[modalityIndex] !== ABSENT ? (
-                          // Set apart by size, not by fading the colour: at
-                          // 70% opacity this measured 3.06:1 on the surface,
-                          // under the 4.5:1 floor for text this size.
-                          <span className="block text-[10px] text-(--brand-text-muted)">
-                            {row[modalityIndex]}
-                          </span>
-                        ) : null}
-                      </td>
-                    )
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          ))}
-          {/* A header row over nothing reads as a failed query rather than as
+                          {cellIndex === treatmentIndex &&
+                          modalityIndex !== -1 &&
+                          row[modalityIndex] !== ABSENT ? (
+                            // Set apart by size, not by fading the colour: at
+                            // 70% opacity this measured 3.06:1 on the surface,
+                            // under the 4.5:1 floor for text this size.
+                            <span className="block text-[10px] text-(--brand-text-muted)">
+                              {row[modalityIndex]}
+                            </span>
+                          ) : null}
+                        </td>
+                      )
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            ))}
+            {/* A header row over nothing reads as a failed query rather than as
               a filter the reader set a moment ago. */}
-          {rows.length === 0 ? (
-            <tbody>
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="px-3 py-4 text-center text-(--brand-text-muted)"
-                >
-                  No rows match these filters.
-                </td>
-              </tr>
-            </tbody>
-          ) : null}
-        </table>
+            {drawn.length === 0 ? (
+              <tbody>
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="px-3 py-4 text-center text-(--brand-text-muted)"
+                  >
+                    {rows.length === 0
+                      ? 'No rows match these filters.'
+                      : 'No arm reports the selected parameters.'}
+                  </td>
+                </tr>
+              </tbody>
+            ) : null}
+          </table>
+        </div>
+        {clipped ? (
+          <span
+            aria-hidden
+            className={cn(
+              'pointer-events-none absolute inset-y-px right-px w-10 rounded-r-[3px]',
+              'bg-gradient-to-l from-(--brand-surface) to-transparent'
+            )}
+          />
+        ) : null}
       </div>
-      {clipped ? (
-        <span
-          aria-hidden
+      {drawn.length > PAGE_ROWS || silent > 0 ? (
+        <div
           className={cn(
-            'pointer-events-none absolute inset-y-px right-px w-10 rounded-r-[3px]',
-            'bg-gradient-to-l from-(--brand-surface) to-transparent'
+            'flex flex-wrap items-center gap-x-3 gap-y-1 pt-2',
+            'font-mono text-[10.5px] tracking-[0.04em] text-(--brand-text-muted)'
           )}
-        />
+        >
+          {drawn.length > PAGE_ROWS ? (
+            <span>
+              {shownCount} of {drawn.length} {parameters ? 'arms' : 'rows'}
+            </span>
+          ) : null}
+          {shownCount < drawn.length ? (
+            <>
+              <button
+                type="button"
+                className={MORE_CLASSES}
+                onClick={() => setLimit(limit + PAGE_ROWS)}
+              >
+                Show {Math.min(PAGE_ROWS, drawn.length - shownCount)} more
+              </button>
+              <button type="button" className={MORE_CLASSES} onClick={() => setLimit(drawn.length)}>
+                Show all
+              </button>
+            </>
+          ) : null}
+          {limit > PAGE_ROWS && drawn.length > PAGE_ROWS ? (
+            <button type="button" className={MORE_CLASSES} onClick={() => setLimit(PAGE_ROWS)}>
+              Show fewer
+            </button>
+          ) : null}
+          {silent > 0 ? (
+            <span>
+              {silent} more {silent === 1 ? 'arm reports' : 'arms report'} none of the selected
+              parameters, not shown
+            </span>
+          ) : null}
+        </div>
       ) : null}
       {efficacyLink ? (
         <div className="flex items-baseline gap-2 pt-1.5">

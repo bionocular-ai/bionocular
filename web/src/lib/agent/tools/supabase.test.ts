@@ -275,6 +275,9 @@ describe('query_proprietary_data', () => {
       'primary_purpose',
       'is_basket',
       'interventions',
+      // The curated facts every answer states, joined rather than projected.
+      'trial_landscape(biomarker',
+      'line_of_therapy)',
     ]);
   });
 
@@ -657,7 +660,7 @@ describe('trial_outcomes projection', () => {
   ];
 
   const KNOWN_COLUMNS = new Set([...CSV_HEADER_COLUMNS, 'is_lt']);
-  const EXCLUDED_COLUMNS = ['all_attributes', 'created_at', 'cancer_type', 'source_url', 'confidence'];
+  const EXCLUDED_COLUMNS = ['all_attributes', 'created_at', 'cancer_type', 'confidence'];
 
   function columns(detail: 'concise' | 'detailed'): string[] {
     return projectionFor('trial_outcomes', detail)
@@ -687,6 +690,11 @@ describe('trial_outcomes projection', () => {
     for (const excluded of EXCLUDED_COLUMNS) {
       expect(detailed).not.toContain(excluded);
     }
+  });
+
+  it('selects source_url at both levels, the one reference a web-scraped readout has', () => {
+    expect(columns('concise')).toContain('source_url');
+    expect(columns('detailed')).toContain('source_url');
   });
 
   it('drops the other family when the question is about only one', () => {
@@ -764,8 +772,17 @@ describe('via joins', () => {
     expect(viaFilters('clinical_trials', ['phase', 'status'])).toEqual([]);
   });
 
-  it('embeds the join only when a via-filter is active', () => {
-    expect(embedFor('trial_outcomes', ['phase'])).toBe(',clinical_trials!inner(phases)');
+  it('makes the join inner only when a via-filter is active', () => {
+    expect(embedFor('trial_outcomes', ['phase'])).toBe(',clinical_trials!inner(phases,lead_sponsor_class,trial_landscape(biomarker,line_of_therapy))');
+  });
+
+  it("always embeds the trial's sponsor class, biomarker and line, which every answer states", () => {
+    // Left joins: the 44% of outcome rows with no nct_id keep their place and
+    // simply carry no facts.
+    expect(embedFor('trial_outcomes', [])).toBe(',clinical_trials(lead_sponsor_class,trial_landscape(biomarker,line_of_therapy))');
+    expect(embedFor('km_curves', [])).toBe(',clinical_trials(lead_sponsor_class,trial_landscape(biomarker,line_of_therapy))');
+    expect(embedFor('trial_landscape', [])).toBe(',clinical_trials(lead_sponsor_class)');
+    expect(embedFor('clinical_trials', [])).toBe(',trial_landscape(biomarker,line_of_therapy)');
   });
 
   it('embeds only the columns the active filters need, not a fixed list', () => {
@@ -773,10 +790,10 @@ describe('via joins', () => {
     // `result-table` turns it into a table column. A funding-scoped question
     // has no business growing a `phases` column it never asked about.
     expect(embedFor('trial_outcomes', ['funding'])).toBe(
-      ',clinical_trials!inner(lead_sponsor_class)',
+      ',clinical_trials!inner(lead_sponsor_class,trial_landscape(biomarker,line_of_therapy))',
     );
     expect(embedFor('trial_outcomes', ['phase', 'status', 'funding'])).toBe(
-      ',clinical_trials!inner(phases,overall_status,lead_sponsor_class)',
+      ',clinical_trials!inner(phases,overall_status,lead_sponsor_class,trial_landscape(biomarker,line_of_therapy))',
     );
   });
 
@@ -815,13 +832,13 @@ describe('via joins', () => {
     });
   });
 
-  it('never embeds when no via-filter is active - an `!inner` join would drop unlinked rows', () => {
-    expect(embedFor('trial_outcomes', [])).toBe('');
+  it('never makes the join inner without a via-filter - an `!inner` join would drop unlinked rows', () => {
+    expect(embedFor('trial_outcomes', [])).not.toContain('!inner');
   });
 
-  it('never embeds for a table with no via, even if asked', () => {
+  it('never embeds for a table with no trial facts to fetch, even if asked', () => {
     expect(embedFor('news_feed', ['phase'])).toBe('');
-    expect(embedFor('clinical_trials', ['phase'])).toBe('');
+    expect(embedFor('clinical_trials', ['phase'])).not.toContain('!inner');
   });
 
   it('applies a via array filter to the dotted clinical_trials path', () => {
@@ -927,6 +944,59 @@ describe('via joins through the real tool entry point', () => {
     const [row] = (result as { rows: Array<Record<string, unknown>> }).rows;
     expect(row).toMatchObject({ phases: ['PHASE1'], overall_status: 'RECRUITING' });
     expect(row).not.toHaveProperty('clinical_trials');
+  });
+
+  it('flattens the nested landscape facts, and reads an untagged curated trial as all comers', async () => {
+    // The extraction prompt tags a biomarker only when the trial requires one,
+    // so a curated row with no tag is an all-comer trial. A trial with no
+    // landscape row at all is uncurated, and says nothing.
+    const tools = toolsWith({
+      trial_outcomes: {
+        rows: [
+          {
+            id: 'o1',
+            nct_id: 'NCT01989585',
+            clinical_trials: {
+              lead_sponsor_class: 'NIH',
+              trial_landscape: { biomarker: 'BRAF (V600)', line_of_therapy: 'R/R' },
+            },
+          },
+          {
+            id: 'o2',
+            nct_id: 'NCT02817633',
+            clinical_trials: {
+              lead_sponsor_class: 'INDUSTRY',
+              trial_landscape: { biomarker: null, line_of_therapy: null },
+            },
+          },
+          { id: 'o3', nct_id: 'NCT04875728', clinical_trials: { lead_sponsor_class: 'OTHER', trial_landscape: null } },
+          { id: 'o4', nct_id: null, clinical_trials: null },
+        ],
+      },
+    });
+
+    const result = await tools.query_proprietary_data.execute!({ table: 'trial_outcomes', limit: 10 }, RUN_OPTIONS);
+
+    const rows = (result as { rows: Array<Record<string, unknown>> }).rows;
+    expect(rows[0]).toMatchObject({ lead_sponsor_class: 'NIH', biomarker: 'BRAF (V600)', line_of_therapy: 'R/R' });
+    expect(rows[1]).toMatchObject({ lead_sponsor_class: 'INDUSTRY', biomarker: 'All comers' });
+    expect(rows[2]).toMatchObject({ lead_sponsor_class: 'OTHER' });
+    expect(rows[2]).not.toHaveProperty('biomarker');
+    expect(rows[3]).toEqual({ id: 'o4' });
+    for (const row of rows) {
+      expect(row).not.toHaveProperty('clinical_trials');
+      expect(row).not.toHaveProperty('trial_landscape');
+    }
+  });
+
+  it('reads an untagged row of trial_landscape itself as all comers too', async () => {
+    const tools = toolsWith({
+      trial_landscape: { rows: [{ nct_id: 'NCT1', treatment_name: 'X', biomarker: null, clinical_trials: null }] },
+    });
+
+    const result = await tools.query_proprietary_data.execute!({ table: 'trial_landscape', limit: 10 }, RUN_OPTIONS);
+
+    expect((result as { rows: Array<Record<string, unknown>> }).rows[0]).toMatchObject({ biomarker: 'All comers' });
   });
 
   it('adds coverage.viaJoin with the unlinked count only when a via-filter fired', async () => {

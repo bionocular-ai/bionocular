@@ -53,8 +53,8 @@ export interface AgentTableSpec {
    * and `select=*` on it measured 4.5 MB / 3.5s against 1.04 MB / 1.9s for the
    * explicit list on the same result set. The invariant holds on wire cost
    * even though the wide `detailed` projection below approaches `*` in width -
-   * `all_attributes`, `created_at`, `source_url`, `confidence`, and the
-   * cancer-scope-pinned `cancer_type` stay excluded regardless.
+   * `all_attributes`, `created_at`, `confidence`, and the cancer-scope-pinned
+   * `cancer_type` stay excluded regardless.
    */
   readonly projection: string;
   /**
@@ -79,7 +79,20 @@ export interface AgentTableSpec {
     readonly table: 'clinical_trials';
     readonly filters: Partial<Record<FilterName, AgentColumn>>;
   };
+  /**
+   * Trial-level facts every answer states - sponsor class, biomarker, line of
+   * therapy - fetched from whichever table holds them rather than this one.
+   * `embed` is the relation they are read through. On a table with a `via`, it
+   * is the same `clinical_trials` relation, so its columns join the via-filter
+   * columns in one embed; see `embedFor`.
+   */
+  readonly facts?: { readonly embed: string; readonly columns: readonly string[] };
 }
+
+/** Where the curated biomarker and line of therapy live, embedded from `clinical_trials`. */
+const LANDSCAPE_FACTS = 'trial_landscape(biomarker,line_of_therapy)';
+/** Sponsor class from the registry, then the curated landscape through it. */
+const REGISTRY_FACTS = { embed: 'clinical_trials', columns: ['lead_sponsor_class', LANDSCAPE_FACTS] } as const;
 
 // The month timepoints both PFS and OS carry a `_rate_{n}m` column for.
 const RATE_MONTHS = [6, 9, 12, 18, 24, 36, 48] as const;
@@ -130,7 +143,10 @@ const grade3PlusColumns = (family: 'ae' | 'trae' | 'teae'): string[] =>
  * of adverse-event rates with no arm name is not an answer.
  */
 const TRIAL_OUTCOMES_IDENTITY = [
-  'id', 'source_type', 'source_name', 'abstract_id', 'publication_id', 'nct_id',
+  'id', 'source_type', 'source_name', 'abstract_id', 'publication_id',
+  // The only reference a web-scraped readout has - no abstract or publication
+  // ID - so without it the arm cites nothing. Null, and dropped, everywhere else.
+  'source_url', 'nct_id',
   'arm_id', 'arm_name', 'sponsors', 'line_of_treatment', 'generic_name',
   'brand_name', 'dosage', 'type_of_dosing', 'mechanism_of_action',
   'target_protein', 'type_of_therapy', 'sub_therapy', 'modality', 'median_age',
@@ -141,7 +157,7 @@ const TRIAL_OUTCOMES_IDENTITY = [
 ];
 
 /** Did it work: survival, response, and duration of response. */
-const TRIAL_OUTCOMES_EFFICACY = [
+export const TRIAL_OUTCOMES_EFFICACY = [
   // PFS / OS
   'median_pfs', 'pfs_followup_months', 'p_value_pfs', 'hr_pfs', 'ci_hr_pfs',
   ...rateColumns('pfs'),
@@ -157,7 +173,7 @@ const TRIAL_OUTCOMES_EFFICACY = [
 ];
 
 /** What it cost: the adverse-event families and the standalone toxicities. */
-const TRIAL_OUTCOMES_SAFETY = [
+export const TRIAL_OUTCOMES_SAFETY = [
   // safety aggregates
   ...AE_AGGREGATE_PCT, ...TRAE_AGGREGATE_PCT, ...TEAE_AGGREGATE_PCT,
   // per-toxicity grade 3+
@@ -171,11 +187,11 @@ const TRIAL_OUTCOMES_SAFETY = [
  * from families rather than typed out by hand so a new column from the loader
  * is one array entry, not a search-and-add across a 198-name string.
  *
- * Excludes exactly seven columns from the table's 205: `all_attributes` (the
+ * Excludes exactly six columns from the table's 205: `all_attributes` (the
  * LLM-extraction shadow copy - 3.5 MB of `"Not found"` on the target result
  * set), `created_at`, `cancer_type` (pinned to one value by
- * `applyCancerScope`, so it can tell the model nothing), `source_url`,
- * `confidence`, `validation_status`, and `validated_at`.
+ * `applyCancerScope`, so it can tell the model nothing), `confidence`,
+ * `validation_status`, and `validated_at`.
  *
  * `is_lt` postdates the CSV backup this list is checked against in
  * supabase.test.ts (added by migration 20260805000000_trial_outcomes_
@@ -244,6 +260,7 @@ const TABLE_DEFINITIONS = {
       // does, and the way the Efficacy Hub's FUNDING chip already labels it.
       funding: { column: 'lead_sponsor_class', kind: 'partition' },
     },
+    facts: { embed: 'trial_landscape', columns: ['biomarker', 'line_of_therapy'] },
   },
 
   trial_landscape: {
@@ -281,6 +298,7 @@ const TABLE_DEFINITIONS = {
         funding: { column: 'lead_sponsor_class', kind: 'partition' },
       },
     },
+    facts: { embed: 'clinical_trials', columns: ['lead_sponsor_class'] },
   },
 
   trial_outcomes: {
@@ -311,7 +329,7 @@ const TABLE_DEFINITIONS = {
     // not reached" - the opposite clinical claim. On the 189-row target result
     // set, 33 rows carry `is_nr` and `median_dor` is the marked column on 16.
     conciseProjection:
-      'id, source_type, source_name, abstract_id, publication_id, nct_id, arm_name, ' +
+      'id, source_type, source_name, abstract_id, publication_id, source_url, nct_id, arm_name, ' +
       'generic_name, line_of_treatment, num_patients, median_pfs, hr_pfs, median_os, ' +
       'hr_os, orr, dcr, median_dor, grade_3_plus_trae_pct, serious_ae_pct, is_nr, is_lt',
     filters: {
@@ -330,6 +348,7 @@ const TABLE_DEFINITIONS = {
         funding: { column: 'lead_sponsor_class', kind: 'partition' },
       },
     },
+    facts: REGISTRY_FACTS,
   },
 
   km_curves: {
@@ -357,6 +376,7 @@ const TABLE_DEFINITIONS = {
         funding: { column: 'lead_sponsor_class', kind: 'partition' },
       },
     },
+    facts: REGISTRY_FACTS,
   },
 
   news_feed: {
@@ -522,27 +542,29 @@ export function viaFilters(table: AgentTable, requested: readonly FilterName[]):
 }
 
 /**
- * The `!inner` embed to append to the select string, or '' when none applies.
+ * The embed to append to the select string, or '' when a table has none.
  *
- * Never unconditional: an `!inner` join drops every row with no match on the
- * joined side, and 44% of `trial_outcomes` rows have no `nct_id` at all. Only
- * an active via-filter justifies paying that cost.
+ * `!inner` only when a via-filter fired: an inner join drops every row with no
+ * match on the joined side, and 44% of `trial_outcomes` rows have no `nct_id`
+ * at all. The trial facts alone ride a left join, so those rows keep their
+ * place and simply carry no facts.
  */
 export function embedFor(table: AgentTable, activeVia: readonly FilterName[]): string {
-  const via = AGENT_TABLES[table].via;
-  if (!via || activeVia.length === 0) return '';
+  const { via, facts } = AGENT_TABLES[table];
   // Derived from the filters that actually fired, not a fixed column list: a
   // funding-only query has no business embedding `phases`, which
-  // `flattenViaEmbed` would lift onto every row and turn into a table column.
-  const columns = [
-    ...new Set(
-      activeVia
+  // `flattenEmbeds` would lift onto every row and turn into a table column.
+  const filterColumns = via
+    ? activeVia
         .map((name) => via.filters[name as ViaFilterName]?.column)
-        .filter((column): column is string => column !== undefined),
-    ),
-  ];
+        .filter((column): column is string => column !== undefined)
+    : [];
+  const relation = via?.table ?? facts?.embed;
+  if (!relation) return '';
+  const factColumns = facts?.embed === relation ? facts.columns : [];
+  const columns = [...new Set([...filterColumns, ...factColumns])];
   if (columns.length === 0) return '';
-  return `,${via.table}!inner(${columns.join(',')})`;
+  return `,${relation}${filterColumns.length > 0 ? '!inner' : ''}(${columns.join(',')})`;
 }
 
 /** Columns a caller may ask for by name, for error messages and descriptions. */

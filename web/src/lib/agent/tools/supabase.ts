@@ -83,20 +83,42 @@ function compactInterventions(rows: unknown[]): unknown[] {
 }
 
 /**
- * Lift a `via`-join embed onto the row itself.
+ * Lift embeds onto the row itself.
  *
- * PostgREST returns an active via-filter's embed as a nested
- * `{ clinical_trials: { phases, overall_status } }`, which `result-table.ts`
- * would otherwise render as `JSON.stringify` output instead of cells. Rows
- * from a query with no embed (the common case) pass through untouched.
+ * PostgREST returns an embed as a nested object - `{ clinical_trials: {
+ * phases, lead_sponsor_class, trial_landscape: { biomarker } } }` - which
+ * `result-table.ts` would otherwise render as `JSON.stringify` output instead
+ * of cells. Each level is lifted in turn, so a fact two joins away lands on the
+ * row like any other column.
+ *
+ * The extraction prompt tags a biomarker only when a trial requires one, so a
+ * curated landscape row with no tag is an all-comer trial and says so. A trial
+ * with no landscape row is uncurated, and gets no biomarker at all - "all
+ * comers" is a finding, not a default.
  */
-function flattenViaEmbed(rows: unknown[]): unknown[] {
-  return rows.map((row) => {
-    if (typeof row !== 'object' || row === null) return row;
-    const { clinical_trials, ...rest } = row as Record<string, unknown> & { clinical_trials?: unknown };
-    if (typeof clinical_trials !== 'object' || clinical_trials === null) return row;
-    return { ...rest, ...clinical_trials };
-  });
+const EMBEDS = ['clinical_trials', 'trial_landscape'] as const;
+export const ALL_COMERS = 'All comers';
+
+function flattenRow(row: Record<string, unknown>, curated: boolean): Record<string, unknown> {
+  let next: Record<string, unknown> = { ...row };
+  if (curated && 'biomarker' in next && next.biomarker == null) next.biomarker = ALL_COMERS;
+  for (const name of EMBEDS) {
+    if (!(name in next)) continue;
+    const { [name]: embedded, ...rest } = next;
+    next = rest;
+    if (typeof embedded === 'object' && embedded !== null && !Array.isArray(embedded)) {
+      next = { ...next, ...flattenRow(embedded as Record<string, unknown>, name === 'trial_landscape') };
+    }
+  }
+  return next;
+}
+
+function flattenEmbeds(rows: unknown[], table: AgentTable): unknown[] {
+  return rows.map((row) =>
+    typeof row === 'object' && row !== null
+      ? flattenRow(row as Record<string, unknown>, table === 'trial_landscape')
+      : row,
+  );
 }
 
 /**
@@ -442,7 +464,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         // Trimmed before the size budget runs, so the budget measures what the
         // model will actually be sent. The per-call cap and what is left of the
         // turn's budget both apply; whichever is tighter names the truncation.
-        const fetched = dropEmpty(compactInterventions(flattenViaEmbed(data ?? [])));
+        const fetched = dropEmpty(compactInterventions(flattenEmbeds(data ?? [], table)));
         const matched = count ?? fetched.length;
         const remaining = turn.remainingChars();
 

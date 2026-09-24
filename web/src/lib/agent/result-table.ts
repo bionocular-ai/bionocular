@@ -40,13 +40,34 @@ export interface ResultSummary {
   nonIndustry: number;
 }
 
+/** An endpoint the reader can put on screen, and how many arms report it. */
+export interface ResultParameter {
+  key: string;
+  label: string;
+  family: 'efficacy' | 'safety';
+  arms: number;
+}
+
 export interface ResultTable {
   columns: ResultColumn[];
   /** One array of formatted cells per row, aligned to `columns`. */
   rows: string[][];
   /** Present only for a landscape turn - one whose rows carry a `setting`. */
   summary?: ResultSummary;
+  /**
+   * Present only for an outcomes turn: the endpoint columns, most-reported
+   * first. Each is also in `columns`; which ones are drawn is the reader's pick.
+   */
+  parameters?: ResultParameter[];
 }
+
+/**
+ * What every answer states about a trial: who pays for it, which line it
+ * treats, and which biomarker it selects for. A column identical on every row
+ * is otherwise dropped as noise; these stay, so an all-industry result still
+ * says Industry rather than leaving the reader to wonder.
+ */
+export const ALWAYS_SHOWN = ['sponsor_type', 'line_of_therapy', 'line', 'biomarker'];
 
 /** Absent values are shown, not skipped: an uncurated trial is a finding. */
 export const ABSENT = '—';
@@ -191,12 +212,31 @@ const INITIALISMS: Record<string, string> = {
   lead_sponsor_name: 'Sponsor',
   overall_status: 'Status',
   sponsor_type: 'Type',
+  // The setting is the section heading above it; the column carries the line.
+  line_of_therapy: 'Line',
+};
+
+/**
+ * Endpoint abbreviations as a clinician writes them. Matched per word, so the
+ * hundred-odd endpoint columns read "OS rate 18m" and "Grade 3+ TRAE %" without
+ * each being listed.
+ */
+const ENDPOINT_WORDS: Record<string, string> = {
+  os: 'OS', pfs: 'PFS', efs: 'EFS', rfs: 'RFS', mfs: 'MFS', orr: 'ORR', dcr: 'DCR', cr: 'CR',
+  pcr: 'pCR', cmr: 'CMR', cbr: 'CBR', dor: 'DoR', ttr: 'TTR', ttp: 'TTP', ttnt: 'TTNT', ttf: 'TTF',
+  hr: 'HR', ci: 'CI', ae: 'AE', trae: 'TRAE', teae: 'TEAE', ir: 'IR', crs: 'CRS', irr: 'IRR',
+  wbc: 'WBC', alt: 'ALT', ast: 'AST', pct: '%',
 };
 
 export function humanizeColumn(key: string): string {
   const known = INITIALISMS[key];
   if (known) return known;
-  const words = key.replace(/_/g, ' ').trim();
+  const words = key
+    .replace(/^grade_3_plus_/, 'grade 3+_')
+    .split('_')
+    .map((word) => ENDPOINT_WORDS[word] ?? word)
+    .join(' ')
+    .trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
@@ -222,6 +262,8 @@ export interface Section {
   /** Null when the rows carry no setting and the table renders flat. */
   label: string | null;
   rows: string[][];
+  /** Rows the section holds before `capSections` cut it; the heading's count. */
+  total: number;
 }
 
 /**
@@ -237,7 +279,7 @@ export function toSections(
   settingIndex: number,
   basketIndex = -1,
 ): Section[] {
-  if (settingIndex === -1) return [{ label: null, rows }];
+  if (settingIndex === -1) return [{ label: null, rows, total: rows.length }];
 
   const groups = new Map<string, string[][]>();
   for (const label of SETTING_ORDER) groups.set(label, []);
@@ -254,7 +296,23 @@ export function toSections(
   if (setAside.length > 0) groups.set(SET_ASIDE, setAside);
   return [...groups]
     .filter(([, group]) => group.length > 0)
-    .map(([label, group]) => ({ label, rows: group }));
+    .map(([label, group]) => ({ label, rows: group, total: group.length }));
+}
+
+/**
+ * The first `limit` rows in reading order - section by section - so "show 20
+ * more" continues where the reader stopped instead of topping up every section
+ * at once. A section cut to nothing is dropped; its heading keeps its total.
+ */
+export function capSections(sections: Section[], limit: number): Section[] {
+  let left = limit;
+  const kept: Section[] = [];
+  for (const section of sections) {
+    if (left <= 0) break;
+    kept.push({ ...section, rows: section.rows.slice(0, left) });
+    left -= section.rows.length;
+  }
+  return kept;
 }
 
 /**
@@ -314,7 +372,9 @@ export function toResultTable(output: unknown): ResultTable | null {
   // Phase 3 sweep. Derived rather than named, so a new such column needs no edit.
   const kept =
     rows.length > 1
-      ? columns.filter((column) => new Set(cells.get(column)).size > 1)
+      ? columns.filter(
+          (column) => ALWAYS_SHOWN.includes(column) || new Set(cells.get(column)).size > 1,
+        )
       : columns;
   if (kept.length === 0) return null;
 
@@ -352,10 +412,10 @@ const MAX_FACETS = 3;
 const MAX_VALUE_LENGTH = 28;
 
 /**
- * A chip row has no column beside it to lend context, so "Type" alone would not
- * say whose type.
+ * A filter has no column beside it to lend context, so "Type" alone would not
+ * say whose type. "Sponsor: Industry" does, and is how a reader says it.
  */
-const FACET_LABELS: Record<string, string> = { sponsor_type: 'Sponsor Type' };
+const FACET_LABELS: Record<string, string> = { sponsor_type: 'Sponsor' };
 
 export function toFacets(table: ResultTable): Facet[] {
   if (table.rows.length < FILTER_MIN_ROWS) return [];
@@ -370,6 +430,9 @@ export function toFacets(table: ResultTable): Facet[] {
     'follow_up_only',
     'is_basket',
     ...(hasSponsorType ? ['lead_sponsor_class'] : []),
+    // Measurements, not groupings: CR reported as 15 or 20 on a few arms reads
+    // as a closed set of values, and is not one.
+    ...(table.parameters ?? []).map((parameter) => parameter.key),
   ];
   return table.columns
     .map((column, index) => ({
