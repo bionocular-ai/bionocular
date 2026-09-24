@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
+import { APICallError, RetryError } from 'ai';
 import { GOLDEN_CASES, type EvalCase } from './cases';
 
 // The classifier is pure, but the module also exports the runner, whose
 // imports reach the service client and its env check.
 vi.mock('@/lib/supabase/service', () => ({ createServiceClient: () => ({}) }));
-const { classify, summarise } = await import('./harness');
+const { classify, isRateLimited, summarise } = await import('./harness');
 type Observed = import('./harness').Observed;
 type CaseResult = import('./harness').CaseResult;
 
@@ -137,5 +138,19 @@ describe('summarise', () => {
     expect(s).toMatchObject({ cases: 2, passed: 1, medianLatencyMs: 300, totals: { toolCalls: 3, steps: 5, latencyMs: 400, inputTokens: 30, outputTokens: 10 } });
     expect(s.failuresByKind.grounding).toBe(1);
     expect(s.totals.costUsd).toBeCloseTo(0.03);
+  });
+});
+
+describe('isRateLimited', () => {
+  const apiError = (statusCode: number) =>
+    new APICallError({ message: 'x', url: 'u', requestBodyValues: {}, statusCode });
+  const retried = (last: unknown) =>
+    new RetryError({ message: 'x', reason: 'maxRetriesExceeded', errors: [last] });
+
+  it('waits out a 429 the SDK gave up on, and nothing else', () => {
+    expect(isRateLimited(retried(apiError(429)))).toBe(true);
+    expect(isRateLimited(apiError(429))).toBe(true);
+    expect(isRateLimited(retried(apiError(500)))).toBe(false);
+    expect(isRateLimited(new Error('boom'))).toBe(false);
   });
 });
