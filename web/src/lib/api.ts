@@ -82,17 +82,43 @@ export const trialsApi = {
     throw new Error(`Documents obsolete: ${id}`);
   },
 
+  /**
+   * One row per abstract arm reported for this NCT. Publication rows are left out:
+   * the abstract page looks rows up by abstract_id, so they could not be opened.
+   */
   getByNctId: async (nctId: string, skip = 0, limit = 100): Promise<TrialsResponse> => {
-    const trialDetail = await trialsApi.getTrialDetail(nctId);
-    if (!trialDetail || !trialDetail.protocolSection) return { trials: [], total: 0, skip, limit };
-    return { trials: [{
-         id: nctId,
-         nct_id: nctId,
-         title: trialDetail.protocolSection.identificationModule?.briefTitle || nctId,
-         phase: (trialDetail.protocolSection.designModule?.phases || []).join(', '),
-         sponsor: trialDetail.protocolSection.sponsorCollaboratorsModule?.leadSponsor?.name || 'Unknown',
-         status: trialDetail.protocolSection.statusModule?.overallStatus || 'Unknown',
-    }], total: 1, skip, limit };
+    const supabase = createClient();
+    const { data, count, error } = await supabase
+      .from('trial_outcomes')
+      .select(
+        'id, nct_id, abstract_id, arm_name, generic_name, cancer_type, clinical_trials(brief_title, phases, lead_sponsor_name, overall_status)',
+        { count: 'exact' }
+      )
+      .eq('nct_id', nctId)
+      .not('abstract_id', 'is', null)
+      .order('abstract_id')
+      .order('arm_id')
+      .range(skip, skip + limit - 1);
+    if (error) throw error;
+
+    const trials: Trial[] = (data || []).map(d => {
+      const ctEntry = Array.isArray(d.clinical_trials) ? d.clinical_trials[0] : d.clinical_trials;
+      return {
+        id: d.id,
+        nct_id: d.nct_id,
+        title: ctEntry?.brief_title || d.nct_id,
+        phase: Array.isArray(ctEntry?.phases) ? ctEntry.phases.join(', ') : (ctEntry?.phases || ''),
+        sponsor: ctEntry?.lead_sponsor_name || 'Unknown',
+        status: ctEntry?.overall_status || 'Unknown',
+        abstract_id: d.abstract_id,
+        type: 'abstract',
+        year: d.abstract_id.match(/_(\d{4})/)?.[1],
+        cancer_type: Array.isArray(d.cancer_type) ? d.cancer_type.join(', ') : undefined,
+        arm_name: d.arm_name || undefined,
+        generic_name: d.generic_name || undefined,
+      };
+    });
+    return { trials, total: count || 0, skip, limit };
   },
 
   getByAbstractId: async (abstractId: string, category?: string | null): Promise<AbstractData> => {
