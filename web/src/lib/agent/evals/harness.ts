@@ -9,10 +9,16 @@
  * an expected answer.
  */
 
-import { APICallError, RetryError } from 'ai';
 import { createAgent, mentionsNct } from '../agent';
 import { checkGroundedness, NCT_ID_SOURCE } from '../groundedness';
 import { estimateCostUsd, type AgentModelSpec } from '../model';
+import {
+  isRateLimited,
+  RateLimitBreakerOpenError,
+  type ModelCallRecord,
+  type RateLimitBreaker,
+  type RetryPolicy,
+} from '../model-calls';
 import { buildInstructions, PROMPT_VERSION } from '../prompts';
 import { buildAgentTools } from '../tools';
 import { getDbCancerType } from '@/lib/api';
@@ -46,6 +52,12 @@ export interface CaseResult {
   category: EvalCase['category'];
   model: string;
   promptVersion: string;
+  /**
+   * `rate_limited`: the provider refused the case before it could finish. It
+   * says nothing about the model, so it carries no failures and is kept out
+   * of the pass rate.
+   */
+  status: 'completed' | 'rate_limited';
   passed: boolean;
   failures: Failure[];
   metrics: {
@@ -59,6 +71,8 @@ export interface CaseResult {
   toolCalls: ToolCallSummary[];
   skillsLoaded: string[];
   answer: string;
+  /** Every model call the case made, admitted or refused. */
+  modelCalls: ModelCallRecord[];
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -241,47 +255,58 @@ export function classify(c: EvalCase, observed: Observed): Failure[] {
 }
 
 /**
- * Waits before re-running a case the provider rate-limited. The SDK's own
- * retries back off from 2s and give up within seconds; Vertex's shared pool
- * stays exhausted for minutes, which failed whole golden runs on quota
- * rather than on any assertion.
+ * A refused model call is retried where it failed, so the steps before it
+ * are kept. The waits are long because the evals run on Flex, which queues
+ * rather than refuses; a refusal there means the pool is hard-pressed.
  */
-const RATE_LIMIT_WAITS_MS = [30_000, 60_000, 120_000];
+export const EVAL_RETRY: RetryPolicy = { maxAttempts: 3, baseDelayMs: 10_000, maxDelayMs: 60_000 };
 
-export function isRateLimited(error: unknown): boolean {
-  const last = RetryError.isInstance(error) ? error.lastError : error;
-  return APICallError.isInstance(last) && last.statusCode === 429;
+export interface RunCaseOptions {
+  /** Shared across the run: once open, no further call is sent. */
+  breaker?: RateLimitBreaker;
+  userId?: string;
 }
 
-export async function runCase(c: EvalCase, model: AgentModelSpec, userId = '00000000-0000-0000-0000-000000000000'): Promise<CaseResult> {
+export async function runCase(
+  c: EvalCase,
+  model: AgentModelSpec,
+  { breaker, userId = '00000000-0000-0000-0000-000000000000' }: RunCaseOptions = {},
+): Promise<CaseResult> {
   const fastPath = mentionsNct(c.question) ? ('lookup_trial' as const) : null;
+  const modelCalls: ModelCallRecord[] = [];
+  const { tools, turn } = buildAgentTools({ userId, cancerSlug: c.cancerSlug, traceId: `eval-${c.id}` });
+  const agent = createAgent({
+    instructions: buildInstructions({ cancerType: getDbCancerType(c.cancerSlug) }),
+    tools,
+    model,
+    forceLookupFirst: fastPath === 'lookup_trial',
+    retry: EVAL_RETRY,
+    breaker,
+    onModelCall: (record) => modelCalls.push(record),
+  });
 
-  // Each attempt gets fresh tools, so a rate-limited attempt leaves no
-  // evidence or loaded skills behind in the one that is scored.
-  const attempt = async () => {
-    const { tools, turn } = buildAgentTools({ userId, cancerSlug: c.cancerSlug, traceId: `eval-${c.id}` });
-    const agent = createAgent({
-      instructions: buildInstructions({ cancerType: getDbCancerType(c.cancerSlug) }),
-      tools,
-      model,
-      forceLookupFirst: fastPath === 'lookup_trial',
-    });
-    const startedAt = Date.now();
-    const result = await agent.generate({ prompt: c.question });
-    return { result, turn, latencyMs: Date.now() - startedAt };
-  };
-
-  let run: Awaited<ReturnType<typeof attempt>> | undefined;
-  for (const waitMs of [...RATE_LIMIT_WAITS_MS, null]) {
-    try {
-      run = await attempt();
-      break;
-    } catch (error) {
-      if (waitMs === null || !isRateLimited(error)) throw error;
-      await new Promise((resolve) => setTimeout(resolve, waitMs));
-    }
+  const startedAt = Date.now();
+  let result: Awaited<ReturnType<typeof agent.generate>>;
+  try {
+    result = await agent.generate({ prompt: c.question });
+  } catch (error) {
+    if (!isRateLimited(error) && !(error instanceof RateLimitBreakerOpenError)) throw error;
+    return {
+      id: c.id,
+      category: c.category,
+      model: model.name,
+      promptVersion: PROMPT_VERSION,
+      status: 'rate_limited',
+      passed: false,
+      failures: [],
+      metrics: { steps: 0, toolCalls: turn.toolCalls.length, latencyMs: Date.now() - startedAt },
+      toolCalls: [],
+      skillsLoaded: [...turn.skillsLoaded],
+      answer: '',
+      modelCalls,
+    };
   }
-  const { result, turn, latencyMs } = run!;
+  const latencyMs = Date.now() - startedAt;
 
   const calls: ToolCallSummary[] = [];
   const outputs: unknown[] = [];
@@ -309,6 +334,7 @@ export async function runCase(c: EvalCase, model: AgentModelSpec, userId = '0000
     category: c.category,
     model: model.name,
     promptVersion: PROMPT_VERSION,
+    status: 'completed',
     passed: failures.length === 0,
     failures,
     metrics: {
@@ -322,17 +348,28 @@ export async function runCase(c: EvalCase, model: AgentModelSpec, userId = '0000
     toolCalls: calls,
     skillsLoaded: observed.skillsLoaded,
     answer: result.text,
+    modelCalls,
   };
 }
 
 export interface ModelSummary {
   model: string;
   promptVersion: string;
+  /** Cases that ran to an answer; pass rate and failures count only these. */
   cases: number;
   passed: number;
+  /** Cases the provider refused before they finished. */
+  rateLimited: number;
   failuresByKind: Record<FailureKind, number>;
   totals: { toolCalls: number; steps: number; latencyMs: number; inputTokens: number; outputTokens: number; costUsd: number };
   medianLatencyMs: number;
+  modelCalls: {
+    total: number;
+    retries: number;
+    rateLimited: number;
+    /** Calls per lane asked for -> lane Vertex reported, e.g. `flex -> ON_DEMAND_FLEX`. */
+    trafficTypes: Record<string, number>;
+  };
 }
 
 export function summarise(results: CaseResult[]): ModelSummary {
@@ -345,13 +382,21 @@ export function summarise(results: CaseResult[]): ModelSummary {
     grounding: 0,
     presentation: 0,
   };
-  for (const r of results) for (const f of r.failures) failuresByKind[f.kind] += 1;
-  const latencies = results.map((r) => r.metrics.latencyMs).sort((a, b) => a - b);
+  const completed = results.filter((r) => r.status === 'completed');
+  for (const r of completed) for (const f of r.failures) failuresByKind[f.kind] += 1;
+  const latencies = completed.map((r) => r.metrics.latencyMs).sort((a, b) => a - b);
+  const calls = results.flatMap((r) => r.modelCalls);
+  const trafficTypes: Record<string, number> = {};
+  for (const call of calls) {
+    const key = `${call.requestedTrafficType} -> ${call.actualTrafficType ?? call.status}`;
+    trafficTypes[key] = (trafficTypes[key] ?? 0) + 1;
+  }
   return {
     model: results[0]?.model ?? '',
     promptVersion: results[0]?.promptVersion ?? '',
-    cases: results.length,
-    passed: results.filter((r) => r.passed).length,
+    cases: completed.length,
+    passed: completed.filter((r) => r.passed).length,
+    rateLimited: results.length - completed.length,
     failuresByKind,
     totals: {
       toolCalls: results.reduce((n, r) => n + r.metrics.toolCalls, 0),
@@ -362,5 +407,11 @@ export function summarise(results: CaseResult[]): ModelSummary {
       costUsd: results.reduce((n, r) => n + (r.metrics.costUsd ?? 0), 0),
     },
     medianLatencyMs: latencies[Math.floor(latencies.length / 2)] ?? 0,
+    modelCalls: {
+      total: calls.length,
+      retries: calls.reduce((n, c) => n + c.retryCount, 0),
+      rateLimited: calls.filter((c) => c.status === 'rate_limited').length,
+      trafficTypes,
+    },
   };
 }

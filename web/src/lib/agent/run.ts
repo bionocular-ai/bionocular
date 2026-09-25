@@ -10,6 +10,7 @@
 
 import type { GroundednessResult } from './groundedness';
 import { estimateCostUsd, type AgentModelSpec } from './model';
+import type { ModelCallRecord } from './model-calls';
 import type { ToolCallRecord, TurnState } from './tools/turn';
 
 export interface AgentRunRecord {
@@ -29,6 +30,8 @@ export interface AgentRunRecord {
   latencyMs: number;
   firstTokenMs?: number;
   toolCalls: ToolCallRecord[];
+  /** Every model call: the lane asked for and the lane Vertex used, retries, refusals. */
+  modelCalls: ModelCallRecord[];
   skillsLoaded: string[];
   budget: { spentChars: number; limitChars: number; exhausted: boolean };
   grounding?: { cited: number; ungrounded: string[] };
@@ -61,6 +64,7 @@ export interface BuildRunRecordArgs {
   startedAt: number;
   firstTokenAt?: number;
   finishedAt: number;
+  modelCalls?: ModelCallRecord[];
   error?: unknown;
 }
 
@@ -79,6 +83,7 @@ export function buildRunRecord({
   startedAt,
   firstTokenAt,
   finishedAt,
+  modelCalls = [],
   error,
 }: BuildRunRecordArgs): AgentRunRecord {
   const spent = turn.spentChars();
@@ -103,6 +108,7 @@ export function buildRunRecord({
     latencyMs: finishedAt - startedAt,
     firstTokenMs: firstTokenAt === undefined ? undefined : firstTokenAt - startedAt,
     toolCalls: turn.toolCalls,
+    modelCalls,
     skillsLoaded: [...turn.skillsLoaded],
     budget: {
       spentChars: spent,
