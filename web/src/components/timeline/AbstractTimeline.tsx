@@ -23,7 +23,8 @@ interface TimelineItem {
   publicationName?: string;
 }
 
-const CONFERENCE_ORDER = ['ASCO', 'ESMO', 'SITC', 'Publication'];
+// Newest first within a year: SITC (Nov), ESMO (Sep), ASCO (May); publications carry no month.
+const CONFERENCE_ORDER = ['SITC', 'ESMO', 'ASCO', 'Publication'];
 
 export function AbstractTimeline({ nctId, currentAbstractId, className = '' }: AbstractTimelineProps) {
   const { data, isLoading } = useQuery({
@@ -72,7 +73,7 @@ export function AbstractTimeline({ nctId, currentAbstractId, className = '' }: A
         const yearB = parseInt(b.year) || 0;
         if (yearB !== yearA) return yearB - yearA;
         
-        // If same year, sort by conference (ASCO, ESMO, SITC, then publications)
+        // If same year, sort by conference, newest meeting first
         if (a.conference !== b.conference) {
           return CONFERENCE_ORDER.indexOf(a.conference) - CONFERENCE_ORDER.indexOf(b.conference);
         }
