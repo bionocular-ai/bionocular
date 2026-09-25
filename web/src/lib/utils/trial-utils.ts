@@ -708,8 +708,9 @@ export function organizeAttributesBySection(armResults: Record<string, ArmResult
 function extractShortForm(displayName: string): string {
   const lowerName = displayName.toLowerCase();
   
-  // First, try to extract from parentheses (e.g., "(ORR)", "(PFS)", "(HR)")
-  const parenMatch = displayName.match(/\(([A-Z0-9]+)\)/);
+  // First, try a trailing parenthesised acronym (e.g., "(ORR)", "(PFS)"). A qualifier after
+  // it ("Hazard ratio (HR) PFS", "... (DOR) rate") means the acronym alone is ambiguous.
+  const parenMatch = displayName.match(/\(([A-Z0-9]+)\)$/);
   if (parenMatch) {
     const acronym = parenMatch[1];
     // For time-based rates, add the time period
@@ -746,7 +747,7 @@ function extractShortForm(displayName: string): string {
   }
   
   // Handle Hazard ratio (HR) attributes
-  if (lowerName.includes('hazard ratio') || lowerName.includes('hr')) {
+  if (lowerName.includes('hazard ratio') || /\bhr\b/.test(lowerName)) {
     if (lowerName.includes('pfs')) return 'PFS HR';
     if (lowerName.includes('os')) return 'OS HR';
     if (lowerName.includes('efs')) return 'EFS HR';
@@ -839,6 +840,7 @@ function extractShortForm(displayName: string): string {
     ['complete metabolic response', 'cmr'],
     ['disease control rate', 'DCR'],
     ['clinical benefit rate', 'cbr'],
+    ['duration of response (dor) rate', 'DOR rate'],
     ['duration of response', 'DOR'],
     ['event-free survival', 'EFS'],
     ['recurrence-free survival', 'RFS'],
@@ -867,6 +869,8 @@ function extractShortForm(displayName: string): string {
     ['white blood cell', 'WBC'],
   ];
   
+  // Longest phrase first: 'complete response' must not claim 'pathological complete response'.
+  attributePatterns.sort(([a], [b]) => String(b).length - String(a).length);
   for (const [pattern, acronym] of attributePatterns) {
     if (typeof pattern === 'string' ? lowerName.includes(pattern) : pattern.test(displayName)) {
       return acronym;
