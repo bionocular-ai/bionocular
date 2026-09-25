@@ -49,7 +49,11 @@ _CONFIDENCE_EMPTY_VALUE = 0.3
 class FamilyExtractor:
     """Extract one attribute family across all arms in a single LLM call."""
 
-    def __init__(self, gemini: GeminiLLMService, concurrency: int = 4) -> None:
+    # One call at a time unless a caller asks for more. Four families at once
+    # spent the shared-pool admission budget in a burst and the next call ate
+    # the 429 (ASCO 2026, 2026-09-10); run_abstract_pipeline already pinned 1,
+    # the publication pipeline and eval_holdout inherited the 4.
+    def __init__(self, gemini: GeminiLLMService, concurrency: int = 1) -> None:
         self._gemini = gemini
         self._sem = asyncio.Semaphore(concurrency)
 

@@ -241,6 +241,32 @@ async def test_semaphore_caps_in_flight() -> None:
     assert state["max_in_flight"] == 2
 
 
+@pytest.mark.asyncio
+async def test_default_is_one_call_at_a_time() -> None:
+    """A 4-wide family burst tripped the shared-pool quota; 1 is the default."""
+    family = AttributeFamily.OS_FAMILY
+    arms = [_arm("arm_1", "Nivolumab")]
+    state = {"in_flight": 0, "max_in_flight": 0}
+
+    async def fake_call(
+        cache_id, doc_text, prompt, response_schema, temperature=0.1, max_tokens=4000
+    ):
+        state["in_flight"] += 1
+        state["max_in_flight"] = max(state["max_in_flight"], state["in_flight"])
+        await asyncio.sleep(0.01)
+        state["in_flight"] -= 1
+        return response_schema.model_validate({"arms": {}})
+
+    gemini = AsyncMock()
+    gemini.cached_or_inline_generate = fake_call
+
+    fe = FamilyExtractor(gemini=gemini)
+
+    await asyncio.gather(*(fe.extract(None, "doc", family, arms) for _ in range(4)))
+
+    assert state["max_in_flight"] == 1
+
+
 # ---------------------------------------------------------------------------
 # Retry behaviour: none here, it belongs to GeminiLLMService
 # ---------------------------------------------------------------------------

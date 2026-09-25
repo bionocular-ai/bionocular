@@ -7,6 +7,7 @@ import logging
 import os
 import random
 import re
+import sys
 from typing import Any, Optional, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -14,6 +15,7 @@ from pydantic import BaseModel, ValidationError
 from ..domain.extraction_interfaces import LLMService
 from ..domain.structured_llm_interfaces import StructuredLLMService
 from .cost_calculator import CostCalculator
+from .vertex_lock import hold_vertex_lock
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -333,6 +335,10 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         self._max_tokens = max_tokens
         self._cost_calculator = cost_calculator
         self._consecutive_quota_refusals = 0
+        # Every ADC construction is a bulk pipeline run; keep a second one, or
+        # the web golden evals, off the same project while this one works.
+        if project and not api_key:
+            hold_vertex_lock(project, os.path.basename(sys.argv[0]) or "melanoma")
         self._client = self._build_client()
 
         logger.info(
