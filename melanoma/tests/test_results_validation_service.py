@@ -452,6 +452,22 @@ class _StubJudge:
         return GroupVerdict(is_valid=True, validation_score=1.0)
 
 
+class _CountingJudge(_StubJudge):
+    """A clean judge that records the most calls it ever had in flight."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.in_flight = 0
+        self.max_in_flight = 0
+
+    async def generate_structured(self, prompt: str, **kwargs: object) -> GroupVerdict:
+        self.in_flight += 1
+        self.max_in_flight = max(self.max_in_flight, self.in_flight)
+        await asyncio.sleep(0.01)
+        self.in_flight -= 1
+        return await super().generate_structured(prompt, **kwargs)
+
+
 def _write_results(tmp_path: Path, doc_ids: list[str]) -> Path:
     path = tmp_path / "extraction_results_Publications_test.json"
     path.write_text(
@@ -499,6 +515,18 @@ def _run(
     )
     asyncio.run(service.run())
     return service
+
+
+def test_judge_calls_in_flight_never_exceed_the_concurrency_setting(
+    tmp_path: Path,
+) -> None:
+    """Three group judges per document used to run at once: 3x the setting."""
+    judge = _CountingJudge()
+
+    _run(tmp_path, ["pub_a", "pub_b", "pub_c", "pub_d"], judge)
+
+    assert judge.calls == 12
+    assert judge.max_in_flight == 2
 
 
 def test_a_clean_run_keeps_its_arms_and_writes_the_cleaned_cohort(
