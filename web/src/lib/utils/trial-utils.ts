@@ -36,6 +36,9 @@ const CANCER_ABBREVS = new Set([
   'ASCO', 'ESMO', 'AACR', 'WHO', 'ECOG', 'R/R', 'R/M', 'UC', 'UBC',
 ]);
 
+/** Conference and year from an abstract id such as ASCO_2025_9598 or SITC_2025_599. */
+const CONFERENCE_ID_RE = /^(ASCO|ESMO|SITC)_(\d{4})/;
+
 /**
  * Extract a trial acronym/name from the end of a brief title.
  * Titles often append the trial name in parentheses or brackets, e.g.:
@@ -432,8 +435,7 @@ export function extractAbstractDetails(abstractData: AbstractDataInput | null) {
   let conference = outcomeStr('conference');
   let year = outcomeStr('published_year') || outcomeStr('publication_year');
   if (abstractId) {
-    if (!conference && abstractId.startsWith('ASCO_')) conference = 'ASCO';
-    if (!conference && abstractId.startsWith('ESMO_')) conference = 'ESMO';
+    if (!conference) conference = abstractId.match(CONFERENCE_ID_RE)?.[1] ?? '';
     if (!year) {
       const match = abstractId.match(/_(\d{4})/);
       if (match) year = match[1];
@@ -970,16 +972,10 @@ export function extractKeyMetrics(abstractData: AbstractDataInput | null): {
   let conference = '';
   let year = '';
   
-  if (abstractId) {
-    if (abstractId.startsWith('ASCO_')) {
-      conference = 'ASCO';
-      const match = abstractId.match(/ASCO_(\d{4})/);
-      year = match ? match[1] : '';
-    } else if (abstractId.startsWith('ESMO_')) {
-      conference = 'ESMO';
-      const match = abstractId.match(/ESMO_(\d{4})/);
-      year = match ? match[1] : '';
-    }
+  const idMatch = abstractId.match(CONFERENCE_ID_RE);
+  if (idMatch) {
+    conference = idMatch[1];
+    year = idMatch[2];
   }
   
   // Extract publication year as fallback
@@ -1003,7 +999,7 @@ export function extractKeyMetrics(abstractData: AbstractDataInput | null): {
     conference = 'Publication';
   }
   
-  // Format date (typically ASCO is May 30-31, ESMO is in September/October)
+  // Format date (typically ASCO is May 30-31, ESMO is in September/October, SITC in November)
   // Try to extract actual date from attributes first
   let date = '';
   const studyDate = extractAttributeValue(attributes, 'STUDY_START_DATE') ||
@@ -1028,6 +1024,8 @@ export function extractKeyMetrics(abstractData: AbstractDataInput | null): {
       date = `May 30, ${year}`;
     } else if (conference === 'ESMO') {
       date = `Sep 15, ${year}`;
+    } else if (conference === 'SITC') {
+      date = `Nov 7, ${year}`;
     }
   }
   
