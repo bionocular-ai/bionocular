@@ -376,26 +376,30 @@ def get_attr_value(attrs, key, default=None, is_numeric=False):
     return val
 
 
-def upload_trial_outcomes():
+def upload_trial_outcomes(only=None):
+    """Upsert every deployed source file, or just the file names in `only`."""
     print("Uploading trial_outcomes (Deeply Flattened)...")
     files = [
         f
         for f in os.listdir(base_dir)
         if f.endswith(".json")
-        and any(x in f for x in ["ASCO", "ESMO", "Publications", "web_scrape"])
+        and any(x in f for x in ["ASCO", "ESMO", "SITC", "Publications", "web_scrape"])
+        and (not only or f in only)
     ]
 
-    # Sort order: ASCO -> ESMO -> Publication -> Webscrape
+    # Sort order: ASCO -> ESMO -> SITC -> Publication -> Webscrape
     def sort_key(f):
         if "ASCO" in f:
             return 1
         if "ESMO" in f:
             return 2
-        if "Publications" in f:
+        if "SITC" in f:
             return 3
-        if "web_scrape" in f:
+        if "Publications" in f:
             return 4
-        return 5
+        if "web_scrape" in f:
+            return 5
+        return 6
 
     files.sort(key=sort_key)
 
@@ -451,7 +455,7 @@ def upload_trial_outcomes():
                             clean_k = k.lower().replace("attributetype.", "")
                             if clean_k in ["nct_number", "nct_id", "nct"]:
                                 nct_id = v.get("value")
-                                if nct_id == "Not found":
+                                if nct_id in ("Not found", ""):
                                     nct_id = None
                                 if nct_id:
                                     break
@@ -581,15 +585,43 @@ def upload_trial_outcomes():
                             if isinstance(arm_pc, (int, float)) and arm_pc > 0:
                                 record["num_patients"] = int(arm_pc)
 
-                        # cancer_type: normalize from raw attr, store as TEXT[]
+                        # cancer_type: normalize from raw attr, store as TEXT[].
+                        # A mixed cohort is extracted as a comma-joined list.
                         raw_ct = record.get("cancer_type")
                         if isinstance(raw_ct, str):
-                            record["cancer_type"] = normalize_cancer_type(raw_ct)
+                            record["cancer_type"] = list(
+                                dict.fromkeys(
+                                    t
+                                    for part in raw_ct.split(",")
+                                    for t in normalize_cancer_type(part)
+                                )
+                            )
                         elif not isinstance(raw_ct, list):
                             record["cancer_type"] = []
 
                         record["is_nr"] = is_nr_list if is_nr_list else None
                         mapped_arms.append(record)
+
+                # nct_id is a foreign key to clinical_trials, which only holds the
+                # skin-cancer trials the sync pulls; a pan-tumor NCT stays in
+                # all_attributes only.
+                ncts = sorted({r["nct_id"] for r in mapped_arms if r["nct_id"]})
+                known = {
+                    row["nct_id"]
+                    for i in range(0, len(ncts), 100)
+                    for row in supabase.table("clinical_trials")
+                    .select("nct_id")
+                    .in_("nct_id", ncts[i : i + 100])
+                    .execute()
+                    .data
+                }
+                if set(ncts) - known:
+                    print(
+                        f"  nct_id unset, not in clinical_trials: {sorted(set(ncts) - known)}"
+                    )
+                for r in mapped_arms:
+                    if r["nct_id"] not in known:
+                        r["nct_id"] = None
 
                 if mapped_arms:
                     b_size = 50  # Smaller batch due to 100+ columns
@@ -641,6 +673,7 @@ def upload_news_feed():
 
 
 if __name__ == "__main__":
+    # Optional args: deployed file names to upload; none uploads every file.
     print("Starting trial_outcomes ONLY upload to Supabase...")
-    upload_trial_outcomes()
+    upload_trial_outcomes(sys.argv[1:])
     print("Migration complete!")
