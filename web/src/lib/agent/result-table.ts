@@ -40,13 +40,34 @@ export interface ResultSummary {
   nonIndustry: number;
 }
 
+/** An endpoint the reader can put on screen, and how many arms report it. */
+export interface ResultParameter {
+  key: string;
+  label: string;
+  family: 'efficacy' | 'safety';
+  arms: number;
+}
+
 export interface ResultTable {
   columns: ResultColumn[];
   /** One array of formatted cells per row, aligned to `columns`. */
   rows: string[][];
   /** Present only for a landscape turn - one whose rows carry a `setting`. */
   summary?: ResultSummary;
+  /**
+   * Present only for an outcomes turn: the endpoint columns, most-reported
+   * first. Each is also in `columns`; which ones are drawn is the reader's pick.
+   */
+  parameters?: ResultParameter[];
 }
+
+/**
+ * What every answer states about a trial: who pays for it, which line it
+ * treats, and which biomarker it selects for. A column identical on every row
+ * is otherwise dropped as noise; these stay, so an all-industry result still
+ * says Industry rather than leaving the reader to wonder.
+ */
+export const ALWAYS_SHOWN = ['sponsor_type', 'line_of_therapy', 'line', 'biomarker'];
 
 /** Absent values are shown, not skipped: an uncurated trial is a finding. */
 export const ABSENT = '—';
@@ -84,7 +105,7 @@ export const MARKER_COLUMNS = ['is_nr', 'is_lt'];
  * table carries takes the first position, so a curated regimen, an arm and a
  * raw registry list all land in the same place.
  *
- * `phases`, `overall_status` and `lead_sponsor_class` are usually pruned before
+ * `phases` and `lead_sponsor_class` are usually pruned before
  * they render: the uniform-column rule below removes them under exactly the
  * filtered queries this exists for (every row is PHASE1 when the question said
  * Phase 1). They are listed for the mixed-filter case, not as a bug.
@@ -97,8 +118,8 @@ const LEAD_COLUMNS = [
   'nct_id',
   'setting',
   'phases',
-  'overall_status',
   'follow_up_only',
+  'lead_sponsor_name',
   'lead_sponsor_class',
   'sponsor_type',
   'num_patients',
@@ -113,6 +134,12 @@ const LEAD_COLUMNS = [
 ];
 
 /**
+ * Status closes the row: it is what a reader checks last, once the treatment and
+ * the numbers have made a trial worth pursuing.
+ */
+const TRAIL_COLUMNS = ['overall_status'];
+
+/**
  * Both render paths call this, so a lone query and a joined turn agree. Stable:
  * a column the lead list does not name keeps its position relative to the other
  * unnamed ones.
@@ -121,7 +148,14 @@ export function orderColumns(keys: readonly string[]): string[] {
   return keys
     .map((key, index) => {
       const lead = LEAD_COLUMNS.indexOf(key);
-      return { key, rank: lead === -1 ? LEAD_COLUMNS.length + index : lead };
+      const trail = TRAIL_COLUMNS.indexOf(key);
+      const rank =
+        trail !== -1
+          ? LEAD_COLUMNS.length + keys.length + trail
+          : lead === -1
+            ? LEAD_COLUMNS.length + index
+            : lead;
+      return { key, rank };
     })
     .sort((a, b) => a.rank - b.rank)
     .map(({ key }) => key);
@@ -175,12 +209,34 @@ const INITIALISMS: Record<string, string> = {
   // if a question ever puts one on screen.
   grade_3_plus_trae_pct: 'Grade 3+ TRAE %',
   serious_ae_pct: 'Serious AE %',
+  lead_sponsor_name: 'Sponsor',
+  overall_status: 'Status',
+  sponsor_type: 'Type',
+  // The setting is the section heading above it; the column carries the line.
+  line_of_therapy: 'Line',
+};
+
+/**
+ * Endpoint abbreviations as a clinician writes them. Matched per word, so the
+ * hundred-odd endpoint columns read "OS rate 18m" and "Grade 3+ TRAE %" without
+ * each being listed.
+ */
+const ENDPOINT_WORDS: Record<string, string> = {
+  os: 'OS', pfs: 'PFS', efs: 'EFS', rfs: 'RFS', mfs: 'MFS', orr: 'ORR', dcr: 'DCR', cr: 'CR',
+  pcr: 'pCR', cmr: 'CMR', cbr: 'CBR', dor: 'DoR', ttr: 'TTR', ttp: 'TTP', ttnt: 'TTNT', ttf: 'TTF',
+  hr: 'HR', ci: 'CI', ae: 'AE', trae: 'TRAE', teae: 'TEAE', ir: 'IR', crs: 'CRS', irr: 'IRR',
+  wbc: 'WBC', alt: 'ALT', ast: 'AST', pct: '%',
 };
 
 export function humanizeColumn(key: string): string {
   const known = INITIALISMS[key];
   if (known) return known;
-  const words = key.replace(/_/g, ' ').trim();
+  const words = key
+    .replace(/^grade_3_plus_/, 'grade 3+_')
+    .split('_')
+    .map((word) => ENDPOINT_WORDS[word] ?? word)
+    .join(' ')
+    .trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
@@ -206,6 +262,8 @@ export interface Section {
   /** Null when the rows carry no setting and the table renders flat. */
   label: string | null;
   rows: string[][];
+  /** Rows the section holds before `capSections` cut it; the heading's count. */
+  total: number;
 }
 
 /**
@@ -221,7 +279,7 @@ export function toSections(
   settingIndex: number,
   basketIndex = -1,
 ): Section[] {
-  if (settingIndex === -1) return [{ label: null, rows }];
+  if (settingIndex === -1) return [{ label: null, rows, total: rows.length }];
 
   const groups = new Map<string, string[][]>();
   for (const label of SETTING_ORDER) groups.set(label, []);
@@ -238,7 +296,23 @@ export function toSections(
   if (setAside.length > 0) groups.set(SET_ASIDE, setAside);
   return [...groups]
     .filter(([, group]) => group.length > 0)
-    .map(([label, group]) => ({ label, rows: group }));
+    .map(([label, group]) => ({ label, rows: group, total: group.length }));
+}
+
+/**
+ * The first `limit` rows in reading order - section by section - so "show 20
+ * more" continues where the reader stopped instead of topping up every section
+ * at once. A section cut to nothing is dropped; its heading keeps its total.
+ */
+export function capSections(sections: Section[], limit: number): Section[] {
+  let left = limit;
+  const kept: Section[] = [];
+  for (const section of sections) {
+    if (left <= 0) break;
+    kept.push({ ...section, rows: section.rows.slice(0, left) });
+    left -= section.rows.length;
+  }
+  return kept;
 }
 
 /**
@@ -298,7 +372,9 @@ export function toResultTable(output: unknown): ResultTable | null {
   // Phase 3 sweep. Derived rather than named, so a new such column needs no edit.
   const kept =
     rows.length > 1
-      ? columns.filter((column) => new Set(cells.get(column)).size > 1)
+      ? columns.filter(
+          (column) => ALWAYS_SHOWN.includes(column) || new Set(cells.get(column)).size > 1,
+        )
       : columns;
   if (kept.length === 0) return null;
 
@@ -335,23 +411,47 @@ const MAX_FACETS = 3;
 /** Longer than this is a sentence, not a category. */
 const MAX_VALUE_LENGTH = 28;
 
+/**
+ * A filter has no column beside it to lend context, so "Type" alone would not
+ * say whose type. "Sponsor: Industry" does, and is how a reader says it.
+ */
+const FACET_LABELS: Record<string, string> = { sponsor_type: 'Sponsor' };
+
 export function toFacets(table: ResultTable): Facet[] {
   if (table.rows.length < FILTER_MIN_ROWS) return [];
+  // `sponsor_type` is `lead_sponsor_class` collapsed to industry or not, so the
+  // raw registry class (INDUSTRY, OTHER, NIH...) would only be the same filter
+  // spelled worse, and would spend a facet slot doing it.
+  const hasSponsorType = table.columns.some((column) => column.key === 'sponsor_type');
+  // Both are already drawn - `follow_up_only` as a note under the status,
+  // `is_basket` as the "Set aside" section - and as filters they read "yes" or
+  // "None" and took the slot Status needed.
+  const notFacets = [
+    'follow_up_only',
+    'is_basket',
+    ...(hasSponsorType ? ['lead_sponsor_class'] : []),
+    // Measurements, not groupings: CR reported as 15 or 20 on a few arms reads
+    // as a closed set of values, and is not one.
+    ...(table.parameters ?? []).map((parameter) => parameter.key),
+  ];
   return table.columns
     .map((column, index) => ({
+      key: column.key,
       index,
-      label: column.label,
+      label: FACET_LABELS[column.key] ?? column.label,
       values: [...new Set(table.rows.map((row) => row[index]))].sort(),
     }))
     .filter(
-      ({ values }) =>
+      ({ key, values }) =>
+        !notFacets.includes(key) &&
         values.length > 1 &&
         values.length <= MAX_FACET_VALUES &&
         // A grouping, not a near-identifier: every value covers two rows on average.
         values.length * 2 <= table.rows.length &&
         values.every((value) => value.length <= MAX_VALUE_LENGTH)
     )
-    .slice(0, MAX_FACETS);
+    .slice(0, MAX_FACETS)
+    .map(({ index, label, values }) => ({ index, label, values }));
 }
 
 /**

@@ -7,7 +7,7 @@ import { Check, Copy, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FeedbackRating } from '@/lib/api';
 import { remarkNctLinks } from '@/lib/agent/remark-nct-links';
-import { toTurnTable } from '@/lib/agent/turn-table';
+import { toTurnTable, withoutAskedPhase } from '@/lib/agent/turn-table';
 import { efficacyLinkFor } from '@/lib/agent/efficacy-link';
 import { createMarkdownComponents } from './markdown-components';
 import { ToolStep, type ToolState } from './ToolStep';
@@ -88,10 +88,10 @@ export function AssistantTurn({ parts, cancerType, isStreaming, rating, onRate }
   const toolParts = useMemo(() => parts.filter(isToolPart), [parts]);
   const ungrounded = parts.filter(isGroundingPart).flatMap((part) => part.data.ungrounded);
 
-  const turnTable = useMemo(
-    () => toTurnTable(toolParts.map((part) => part.output)),
-    [toolParts]
-  );
+  const turnTable = useMemo(() => {
+    const table = toTurnTable(toolParts.map((part) => part.output));
+    return table && withoutAskedPhase(table, toolParts.map((part) => part.input));
+  }, [toolParts]);
 
   // Built from the tool inputs rather than the rows: the filters are what the
   // hub needs, and a capped result cannot say what was asked for.

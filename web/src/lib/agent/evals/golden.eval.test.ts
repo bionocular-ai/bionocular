@@ -44,7 +44,7 @@ describe.skipIf(!READY)('golden evals', () => {
           const result = await runCase(c, resolveModel(name));
           results.push(result);
           expect(result.failures, result.answer.slice(0, 400)).toEqual([]);
-        }, 180_000);
+        }, 600_000);
       }
     });
   }

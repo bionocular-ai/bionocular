@@ -209,6 +209,26 @@ export const GOLDEN_CASES: EvalCase[] = [
     },
   },
   {
+    // Session b38c68c7: "active" sent the model to clinical_trials and
+    // trial_landscape, which spent the budget and truncated the outcomes.
+    id: 'active-phase1-efficacy-one-call',
+    category: 'agent-behavior',
+    cancerSlug: CM,
+    question:
+      'show me all published efficacy parameters (ORR, PFS and others) in cutaneous melanoma for active treatments. strict rule: only treatments which are in phase 1 trial.',
+    expect: {
+      skills: ['trial-outcomes'],
+      filter: {
+        table: 'trial_outcomes',
+        args: { phase: 'PHASE1', status: ['RECRUITING', 'ACTIVE_NOT_RECRUITING'], endpoints: 'efficacy' },
+      },
+      forbidFilter: { table: 'clinical_trials' },
+      answer: /industry/i,
+      countAwareness: true,
+      maxToolCalls: 4,
+    },
+  },
+  {
     id: 'what-exists',
     category: 'agent-behavior',
     cancerSlug: CM,

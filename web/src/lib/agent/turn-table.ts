@@ -20,6 +20,7 @@
 
 import {
   ABSENT,
+  ALWAYS_SHOWN,
   MARKER_COLUMNS,
   formatCell,
   formatRowCell,
@@ -27,9 +28,11 @@ import {
   orderColumns,
   toResultTable,
   type ResultColumn,
+  type ResultParameter,
   type ResultSummary,
   type ResultTable,
 } from './result-table';
+import { TRIAL_OUTCOMES_EFFICACY, TRIAL_OUTCOMES_SAFETY } from './tools/schema';
 
 const KEY = 'nct_id';
 
@@ -39,8 +42,19 @@ const KEY = 'nct_id';
  * identify a trial runs 116-272 characters - one column of those makes every
  * row in the table multiple lines tall. The model still receives both in the
  * row regardless, so a trial's name is not lost, only not tabled.
+ *
+ * The rest are read by `derive` or the model but not worth a column: purpose
+ * and primary completion already surface as `setting` and "follow-up only".
+ * Stripped after `derive` runs, so the facts built from them survive.
  */
-const FOLDED_TRIAL_FIELDS = ['acronym', 'brief_title'] as const;
+const FOLDED_TRIAL_FIELDS = [
+  'acronym',
+  'brief_title',
+  'enrollment_count',
+  'primary_purpose',
+  'stage',
+  'primary_completion_date',
+] as const;
 
 /**
  * `treatment_name` is one curated regimen per trial. `interventions` is every arm
@@ -111,17 +125,24 @@ function isSuccessful(output: unknown): boolean {
  */
 const PROCEDURAL_MODALITIES = ['Radiotherapy', 'Surgery/Procedure', 'Imaging/Diagnostic Agent', 'Device'];
 
+/** The setting a line of therapy puts a trial or arm in, when it names one. */
+function lineSetting(line: unknown): string | null {
+  const lot = typeof line === 'string' ? line : '';
+  if (/Adjuvant|Neoadjuvant/.test(lot)) return 'Peri-operative';
+  if (/\b(1L|2L|3L|R\/R)\b/.test(lot)) return 'Advanced / metastatic';
+  return null;
+}
+
 function derive(row: Row, today: string): Row {
   const next = { ...row };
-  const lot = typeof row.line_of_therapy === 'string' ? row.line_of_therapy : '';
   const modality = typeof row.modality === 'string' ? row.modality : '';
 
   // Modality alone does not open the rule: it only decides the procedural
   // branch, and a row with a modality but no line or purpose would otherwise
   // read "Unclassified" for want of columns the turn never asked for.
   if ('line_of_therapy' in row || 'primary_purpose' in row) {
-    if (/Adjuvant|Neoadjuvant/.test(lot)) next.setting = 'Peri-operative';
-    else if (/\b(1L|2L|3L|R\/R)\b/.test(lot)) next.setting = 'Advanced / metastatic';
+    const setting = lineSetting(row.line_of_therapy);
+    if (setting) next.setting = setting;
     else if (
       ('primary_purpose' in row && row.primary_purpose !== 'TREATMENT') ||
       PROCEDURAL_MODALITIES.some((m) => modality.includes(m))
@@ -129,9 +150,8 @@ function derive(row: Row, today: string): Row {
     else next.setting = 'Unclassified';
   }
 
-  if (typeof row.lead_sponsor_class === 'string') {
-    next.sponsor_type = row.lead_sponsor_class === 'INDUSTRY' ? 'Industry' : 'Non-industry';
-  }
+  const sponsor = sponsorType(row.lead_sponsor_class);
+  if (sponsor) next.sponsor_type = sponsor;
 
   if ('overall_status' in row && 'primary_completion_date' in row) {
     const date = typeof row.primary_completion_date === 'string' ? row.primary_completion_date : null;
@@ -143,6 +163,111 @@ function derive(row: Row, today: string): Row {
   }
 
   return next;
+}
+
+function sponsorType(sponsorClass: unknown): string | null {
+  if (typeof sponsorClass !== 'string') return null;
+  return sponsorClass === 'INDUSTRY' ? 'Industry' : 'Non-industry';
+}
+
+/**
+ * One row per treatment arm, so a trial's key repeats by design. The arms are
+ * the answer: a turn that queried one of these draws it, and the registry or
+ * landscape queries beside it were the model looking around, not the answer.
+ * Joining them instead once drew a 616-trial landscape under a Phase 1
+ * efficacy question (session b38c68c7).
+ */
+const PER_ARM_TABLES = ['trial_outcomes', 'km_curves'];
+
+function isPerArm(output: unknown): boolean {
+  const table = (output as { table?: unknown }).table;
+  return typeof table === 'string' && PER_ARM_TABLES.includes(table);
+}
+
+const ENDPOINT_FAMILY = new Map<string, ResultParameter['family']>([
+  ...TRIAL_OUTCOMES_EFFICACY.map((key) => [key, 'efficacy'] as const),
+  ...TRIAL_OUTCOMES_SAFETY.map((key) => [key, 'safety'] as const),
+]);
+
+/** A p-value, CI or follow-up qualifies an endpoint; alone it is not one. */
+const isQualifier = (key: string) => /^(p_value|ci)_|_followup_months$/.test(key);
+
+/**
+ * Who the arm is, then the facts every answer states about its trial.
+ * `setting` is drawn as the section headings, not as a column.
+ */
+const OUTCOME_CONTEXT = [
+  'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'line', 'biomarker',
+];
+const OUTCOME_FACTS = ['setting', 'sponsor_type', 'line', 'biomarker'];
+const OUTCOME_TRAIL = ['source', 'overall_status'];
+const OUTCOME_LABELS: Record<string, string> = {
+  treatment_name: 'Treatment',
+  num_patients: 'N',
+  sponsor_type: 'Sponsor',
+};
+
+/**
+ * The key must be in the row: `is_nr` names every censored column the arm has,
+ * including the other family's, which a safety query never projected. Without
+ * this a not-reached median PFS offered itself as a safety parameter.
+ */
+function reports(row: Row, key: string): boolean {
+  if (!(key in row)) return false;
+  const notReached = row.is_nr;
+  return row[key] != null || (Array.isArray(notReached) && notReached.includes(key));
+}
+
+/**
+ * An outcomes result as the reader scans it: the arm, its trial and the three
+ * trial facts, the endpoints, then where the numbers came from. Loader
+ * bookkeeping (`id`, `arm_id`, `source_type`...) never becomes a column.
+ *
+ * Every endpoint any arm reports is a column, ranked by how many arms report
+ * it; `TurnTable` draws the reader's pick of them. The arm's own line of
+ * treatment wins over the trial's line of therapy - it is the more specific.
+ */
+function toOutcomesTable(output: unknown): ResultTable | null {
+  const rows: Row[] = rowsOf(output)
+    .filter((row): row is Row => typeof row === 'object' && row !== null)
+    .map((row) => {
+      const line = row.line_of_treatment ?? row.line_of_therapy ?? null;
+      return {
+        ...row,
+        treatment_name: row.arm_name ?? row.generic_name ?? null,
+        // `source_name` is a loader batch label, never a reference; a web-scraped
+        // readout's page is.
+        source: row.abstract_id ?? row.publication_id ?? row.source_url ?? null,
+        line,
+        // Grouped like a landscape. The arm's line decides, so a trial with an
+        // adjuvant arm and a metastatic arm puts each in its own section.
+        setting: lineSetting(line) ?? 'Unclassified',
+        sponsor_type: sponsorType(row.lead_sponsor_class),
+      };
+    });
+  if (rows.length === 0) return null;
+
+  const endpoints = orderColumns([...ENDPOINT_FAMILY.keys()].filter((key) => !isQualifier(key)))
+    .map((key) => ({ key, arms: rows.filter((row) => reports(row, key)).length }))
+    .filter(({ arms }) => arms > 0)
+    // Stable, so arms tied on a count keep the clinical order `orderColumns` gave them.
+    .sort((a, b) => b.arms - a.arms);
+  const parameters: ResultParameter[] = endpoints.map(({ key, arms }) => ({
+    key,
+    label: humanizeColumn(key),
+    family: ENDPOINT_FAMILY.get(key)!,
+    arms,
+  }));
+
+  const columns = [...OUTCOME_CONTEXT, ...parameters.map((p) => p.key), ...OUTCOME_TRAIL].filter(
+    (key) => OUTCOME_FACTS.includes(key) || rows.some((row) => reports(row, key)),
+  );
+
+  return {
+    columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? humanizeColumn(key) })),
+    rows: rows.map((row) => columns.map((column) => formatRowCell(row, column))),
+    parameters,
+  };
 }
 
 function stripFolded(output: unknown, today: string): unknown {
@@ -164,12 +289,16 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
   const today = now.toISOString().slice(0, 10);
   const successful = outputs.filter(isSuccessful);
   if (successful.length === 0) return null;
-  if (successful.length === 1) {
-    const stripped = stripFolded(successful[0], today);
+
+  const perArm = successful.filter(isPerArm);
+  const answer = perArm[perArm.length - 1];
+  if (answer && (answer as { table?: unknown }).table === 'trial_outcomes') return toOutcomesTable(answer);
+  if (answer || successful.length === 1) {
+    const only = answer ?? successful[0];
+    const stripped = stripFolded(only, today);
     const table = toResultTable(stripped);
     return table && withSummary(table, rowsOf(stripped));
   }
-
   const queries = outputs.map(asJoinable).filter((rows): rows is Row[] => rows !== null);
   if (queries.length < 2) return null;
 
@@ -231,7 +360,9 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
   // nothing. `nct_id` is unique, so it always survives.
   const keep =
     cells.length > 1
-      ? columns.map((_, i) => new Set(cells.map((row) => row[i])).size > 1)
+      ? columns.map(
+          (column, i) => ALWAYS_SHOWN.includes(column) || new Set(cells.map((row) => row[i])).size > 1,
+        )
       : columns.map(() => true);
 
   const kept: ResultColumn[] = columns
@@ -244,6 +375,25 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
     { columns: kept, rows: cells.map((row) => row.filter((_, i) => keep[i])) },
     [...merged.values()],
   );
+}
+
+/**
+ * The question already said which phase, so a column of it only repeats that
+ * back - "Phase 2/Phase 3" beside "Phase 3" is a registry detail the reader did
+ * not ask to see. Read from the tool inputs because the rows cannot say what
+ * was filtered on. A turn that never passed `phase` keeps the column.
+ */
+export function withoutAskedPhase(table: ResultTable, inputs: unknown[]): ResultTable {
+  const asked = inputs.some(
+    (input) => typeof input === 'object' && input !== null && (input as Row).phase !== undefined,
+  );
+  const index = table.columns.findIndex((column) => column.key === 'phases');
+  if (!asked || index === -1) return table;
+  return {
+    ...table,
+    columns: table.columns.filter((_, i) => i !== index),
+    rows: table.rows.map((row) => row.filter((_, i) => i !== index)),
+  };
 }
 
 function rowsOf(output: unknown): Row[] {

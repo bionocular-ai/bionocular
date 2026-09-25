@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toTurnTable } from './turn-table';
+import { toTurnTable, withoutAskedPhase } from './turn-table';
 
 const trials = {
   ok: true,
@@ -45,8 +45,8 @@ describe('toTurnTable', () => {
     expect(table?.columns.map((c) => c.key)).toEqual([
       'treatment_name',
       'nct_id',
-      'overall_status',
       'modality',
+      'overall_status',
     ]);
   });
 
@@ -141,7 +141,7 @@ describe('toTurnTable', () => {
     const table = toTurnTable([outcomes]);
 
     expect(table?.rows).toHaveLength(2);
-    expect(table?.columns.map((c) => c.key)).toEqual(['arm_name', 'orr']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'line', 'biomarker', 'orr']);
   });
 
   it('renders a lone query with no nct_id column at all', () => {
@@ -172,10 +172,10 @@ describe('toTurnTable', () => {
     expect(toTurnTable([trials, news])).toBeNull();
   });
 
-  it('treats a result with duplicate nct_ids as non-joinable, since folding it would keep only the last arm', () => {
+  it('draws the outcomes result rather than folding its arms into the registry join', () => {
     // trial_outcomes is one row per treatment arm, so two arms of the same
     // trial share an nct_id. Folding that into the spine would silently drop
-    // every arm but the last, so the whole turn falls back to per-query tables.
+    // every arm but the last; the arms are the answer, so they are the table.
     const outcomes = {
       ok: true,
       table: 'trial_outcomes',
@@ -185,7 +185,10 @@ describe('toTurnTable', () => {
       ],
     };
 
-    expect(toTurnTable([trials, outcomes])).toBeNull();
+    const table = toTurnTable([trials, outcomes]);
+
+    expect(table?.rows).toHaveLength(2);
+    expect(cell(table, 1, 'treatment_name')).toBe('Nivolumab');
   });
 
   it("keeps an earlier query's real value when a later query carries an explicit null for the same column", () => {
@@ -250,32 +253,7 @@ describe('toTurnTable', () => {
     expect(new Set(table!.rows.map((_, i) => cell(table, i, 'nct_id'))).size).toBe(53);
   });
 
-  it('orders the joined columns the same way a single query is ordered', () => {
-    // One ordering helper, called from both paths. Fixing the order only where
-    // the report happened to look leaves the sibling caller rendering 98
-    // columns led by machine keys.
-    const outcomes = {
-      ok: true,
-      table: 'trial_outcomes',
-      rows: [
-        { nct_id: 'NCT03470922', id: 'o1', source_name: 'ASCO', orr: 43 },
-        { nct_id: 'NCT07530887', id: 'o2', source_name: 'ESMO', orr: 12 },
-      ],
-    };
-
-    const table = toTurnTable([trials, outcomes]);
-
-    expect(table?.columns.map((c) => c.key)).toEqual([
-      'interventions',
-      'nct_id',
-      'overall_status',
-      'orr',
-      'id',
-      'source_name',
-    ]);
-  });
-
-  it('renders a censored measurement on the joined path too, not only on a lone query', () => {
+  it('renders a censored measurement when the registry was queried beside the outcomes', () => {
     const outcomes = {
       ok: true,
       table: 'trial_outcomes',
@@ -382,7 +360,7 @@ describe('derived columns', () => {
     expect(cell(table, 1, 'follow_up_only')).toBe('yes');
   });
 
-  it('derives nothing for rows that carry none of the inputs, so an outcomes table gains no empty columns', () => {
+  it('gives an outcomes table its setting and the three trial facts every answer states', () => {
     const outcomes = {
       ok: true,
       table: 'trial_outcomes',
@@ -391,7 +369,181 @@ describe('derived columns', () => {
 
     const table = toTurnTable([outcomes], today);
 
-    expect(table?.columns.map((c) => c.key)).toEqual(['arm_name', 'nct_id', 'orr']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'line', 'biomarker', 'orr']);
+  });
+});
+
+// Session b38c68c7: "efficacy in active Phase 1 trials". The model queried
+// outcomes, then the landscape and the registry, then outcomes again with the
+// status filter. Every table drawn along the way must be an outcomes table.
+const phase1Outcomes = {
+  ok: true,
+  table: 'trial_outcomes',
+  rows: [
+    {
+      id: 1, arm_id: 'a1', source_type: 'abstract', abstract_id: 'ASCO_2023_9511', nct_id: 'NCT01989585',
+      arm_name: 'Dabrafenib + Trametinib', num_patients: 25, orr: 80, cr: 15,
+      os_followup_months: 25.9, p_value_os: 0.07, phases: ['PHASE1', 'PHASE2'],
+      overall_status: 'ACTIVE_NOT_RECRUITING', lead_sponsor_class: 'NIH',
+      biomarker: 'BRAF (V600)', line_of_therapy: '1L; 2L; 3L; R/R', line_of_treatment: '2L',
+    },
+    {
+      id: 2, arm_id: 'a2', source_type: 'abstract', abstract_id: 'ASCO_2023_9511', nct_id: 'NCT01989585',
+      arm_name: 'Dabrafenib + Trametinib + Navitoclax', num_patients: 25, orr: 84, cr: 20,
+      phases: ['PHASE1', 'PHASE2'], overall_status: 'ACTIVE_NOT_RECRUITING', lead_sponsor_class: 'NIH',
+      biomarker: 'BRAF (V600)', line_of_therapy: '1L; 2L; 3L; R/R',
+    },
+    {
+      id: 3, arm_id: 'b1', source_type: 'publication', publication_id: 'J Clin Oncol 2024', nct_id: 'NCT05086692',
+      generic_name: 'MDNA11', arm_name: 'MDNA11', num_patients: 8, orr: 38, dcr: 75, median_pfs: null, is_nr: ['median_pfs'],
+      phases: ['PHASE1'], overall_status: 'RECRUITING', lead_sponsor_class: 'INDUSTRY', biomarker: 'All comers',
+    },
+    {
+      id: 4, arm_id: 'c1', source_type: 'abstract', abstract_id: 'ESMO_2025_1641P', nct_id: 'NCT03454035',
+      arm_name: 'Ulixertinib + Palbociclib', num_patients: 9, phases: ['PHASE1'], overall_status: 'RECRUITING',
+    },
+  ],
+};
+
+const activeOutcomes = { ...phase1Outcomes, rows: phase1Outcomes.rows.slice(1) };
+
+describe('outcomes turns', () => {
+  const today = new Date('2026-09-22');
+
+  it('keeps drawing outcomes when the model also queries the landscape and the registry', () => {
+    const outputs = [phase1Outcomes, landscapeCurated, landscapeTrials, activeOutcomes];
+
+    for (let n = 1; n <= outputs.length; n++) {
+      const table = toTurnTable(outputs.slice(0, n), today);
+      expect(table?.columns.map((c) => c.key)).toContain('orr');
+      expect(table?.summary).toBeUndefined();
+    }
+  });
+
+  it('draws the last outcomes query, since a re-query is the model narrowing its answer', () => {
+    const table = toTurnTable([phase1Outcomes, landscapeTrials, activeOutcomes], today);
+
+    expect(table?.rows).toHaveLength(3);
+  });
+
+  it('draws outcomes even when each trial has one arm and the keys would join', () => {
+    const oneArmEach = { ...phase1Outcomes, rows: [phase1Outcomes.rows[0], phase1Outcomes.rows[2]] };
+
+    const table = toTurnTable([landscapeTrials, oneArmEach], today);
+
+    expect(table?.rows).toHaveLength(2);
+    expect(table?.summary).toBeUndefined();
+  });
+
+  it('shows the arm, its trial, its size and its source, and none of the loader bookkeeping', () => {
+    const table = toTurnTable([phase1Outcomes], today);
+    const keys = table!.columns.map((c) => c.key);
+
+    expect(keys.slice(0, 8)).toEqual([
+      'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'line', 'biomarker',
+    ]);
+    expect(keys).toEqual(expect.arrayContaining(['source', 'overall_status', 'orr', 'cr', 'dcr', 'median_pfs']));
+    for (const gone of ['id', 'arm_id', 'arm_name', 'generic_name', 'abstract_id', 'publication_id', 'source_type', 'p_value_os', 'os_followup_months']) {
+      expect(keys).not.toContain(gone);
+    }
+    expect(cell(table, 0, 'source')).toBe('ASCO_2023_9511');
+    expect(cell(table, 2, 'source')).toBe('J Clin Oncol 2024');
+    expect(cell(table, 2, 'median_pfs')).toBe('NR');
+  });
+
+  it('offers every reported endpoint as a parameter, most-reported first, with its family', () => {
+    const table = toTurnTable([phase1Outcomes], today);
+
+    expect(table?.parameters).toEqual([
+      { key: 'orr', label: 'ORR', family: 'efficacy', arms: 3 },
+      { key: 'cr', label: 'CR', family: 'efficacy', arms: 2 },
+      { key: 'dcr', label: 'DCR', family: 'efficacy', arms: 1 },
+      { key: 'median_pfs', label: 'Median PFS', family: 'efficacy', arms: 1 },
+    ]);
+  });
+
+  it('tags safety endpoints as safety', () => {
+    const safety = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT1', arm_name: 'A', grade_3_plus_trae_pct: 12 },
+        { nct_id: 'NCT1', arm_name: 'B', grade_3_plus_trae_pct: 20, serious_ae_pct: 4 },
+      ],
+    };
+
+    expect(toTurnTable([safety], today)?.parameters?.map((p) => [p.key, p.family])).toEqual([
+      ['grade_3_plus_trae_pct', 'safety'],
+      ['serious_ae_pct', 'safety'],
+    ]);
+  });
+
+  it("states each arm's sponsor type, line and biomarker, the arm's own line first", () => {
+    const table = toTurnTable([phase1Outcomes], today);
+
+    expect(cell(table, 0, 'sponsor_type')).toBe('Non-industry');
+    expect(cell(table, 0, 'line')).toBe('2L');
+    expect(cell(table, 1, 'line')).toBe('1L; 2L; 3L; R/R');
+    expect(cell(table, 2, 'sponsor_type')).toBe('Industry');
+    expect(cell(table, 2, 'biomarker')).toBe('All comers');
+    expect(cell(table, 3, 'biomarker')).toBe('—');
+  });
+
+  it('places each arm in a setting from its line, so the table groups the way a landscape does', () => {
+    const table = toTurnTable([phase1Outcomes], today);
+
+    expect(cell(table, 0, 'setting')).toBe('Advanced / metastatic');
+    expect(cell(table, 3, 'setting')).toBe('Unclassified');
+  });
+
+  it('puts an adjuvant or neoadjuvant arm in peri-operative, whatever else its trial treats', () => {
+    const periOp = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', orr: 40, line_of_treatment: 'Neoadjuvant; R/R' }],
+    };
+
+    expect(cell(toTurnTable([periOp], today), 0, 'setting')).toBe('Peri-operative');
+  });
+
+  it('keeps the three trial facts even when every arm shares them', () => {
+    // A column identical on every row is usually noise; these three are what
+    // every answer states, so an all-industry result still says Industry.
+    const oneTrial = { ...phase1Outcomes, rows: phase1Outcomes.rows.slice(0, 2) };
+
+    const keys = toTurnTable([oneTrial], today)!.columns.map((c) => c.key);
+
+    expect(keys).toEqual(expect.arrayContaining(['sponsor_type', 'line', 'biomarker']));
+  });
+
+  it("cites a web-scraped readout by its page, since it has no abstract or publication ID", () => {
+    const scraped = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        {
+          nct_id: 'NCT05086692', arm_name: 'MDNA11', orr: 38, source_type: 'webscrape', source_name: 'web_scrape',
+          source_url: 'https://ir.medicenna.com/news-releases/mdna11',
+        },
+      ],
+    };
+
+    expect(cell(toTurnTable([scraped], today), 0, 'source')).toBe('https://ir.medicenna.com/news-releases/mdna11');
+  });
+
+  it("never offers the other family's censored endpoint on a safety table", () => {
+    // `is_nr` names median_pfs, but a safety query never projected it.
+    const safety = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', trae_pct: 40, is_nr: ['median_pfs'] }],
+    };
+
+    expect(toTurnTable([safety], today)?.parameters?.map((p) => p.key)).toEqual(['trae_pct']);
+  });
+
+  it('leaves a landscape table without parameters', () => {
+    expect(toTurnTable([landscapeTrials, landscapeCurated], today)?.parameters).toBeUndefined();
   });
 });
 
@@ -486,5 +638,28 @@ describe('toTurnTable summary', () => {
     const table = toTurnTable([trials, landscape]);
 
     expect(table?.summary).toBeUndefined();
+  });
+});
+
+describe('withoutAskedPhase', () => {
+  const table = {
+    columns: [
+      { key: 'nct_id', label: 'NCT' },
+      { key: 'phases', label: 'Phases' },
+    ],
+    rows: [
+      ['NCT1', 'Phase 3'],
+      ['NCT2', 'Phase 2/Phase 3'],
+    ],
+  };
+
+  it('drops the phase column when a query filtered on phase', () => {
+    const result = withoutAskedPhase(table, [{ table: 'clinical_trials', phase: 'PHASE3' }]);
+    expect(result.columns.map((c) => c.key)).toEqual(['nct_id']);
+    expect(result.rows).toEqual([['NCT1'], ['NCT2']]);
+  });
+
+  it('keeps it when no query did', () => {
+    expect(withoutAskedPhase(table, [{ table: 'clinical_trials' }, undefined])).toBe(table);
   });
 });

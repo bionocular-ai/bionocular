@@ -12,7 +12,9 @@ One row is one treatment arm as reported by one source: a conference abstract
 trial can appear several times - once per arm, and again per source when both
 an abstract and a paper reported it. `arm_name`, `generic_name`,
 `line_of_treatment`, `num_patients` and `source_name` say which arm and which
-readout you are looking at; always carry them into the answer.
+readout you are looking at; always carry them into the answer. `lead_sponsor_class`,
+`biomarker` and `line_of_therapy` are the trial's, joined in; `line_of_treatment`
+is the arm's own and wins when both are present.
 
 ## Retrieval
 
@@ -20,6 +22,13 @@ readout you are looking at; always carry them into the answer.
   the registry join, so a phase-scoped outcomes question is one call with
   `table: 'trial_outcomes'` and `phase` set - not a sweep of `clinical_trials`
   followed by an `nctIds` handoff, which the key cap cannot hold.
+- "Active", "ongoing" and "recruiting" are `status` on this same call - active
+  is RECRUITING, ACTIVE_NOT_RECRUITING, NOT_YET_RECRUITING and
+  ENROLLING_BY_INVITATION. An outcomes question never needs `clinical_trials`
+  or `trial_landscape`: every row already carries its trial's sponsor class,
+  biomarker and line of therapy. Querying them spends the turn's budget and
+  truncates the outcomes you came for.
+- A re-query keeps the `endpoints` and `detail` of the call it refines.
 - `drug` is a substring on `generic_name`; `sponsor` on `sponsors`.
 - Ask for `detail: 'detailed'` when the question names endpoints beyond the
   browse set (the concise set carries PFS, OS, ORR, DCR, DoR, grade 3+ TRAE

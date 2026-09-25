@@ -9,6 +9,7 @@
  * an expected answer.
  */
 
+import { APICallError, RetryError } from 'ai';
 import { createAgent, mentionsNct } from '../agent';
 import { checkGroundedness, NCT_ID_SOURCE } from '../groundedness';
 import { estimateCostUsd, type AgentModelSpec } from '../model';
@@ -239,19 +240,48 @@ export function classify(c: EvalCase, observed: Observed): Failure[] {
   return failures;
 }
 
-export async function runCase(c: EvalCase, model: AgentModelSpec, userId = '00000000-0000-0000-0000-000000000000'): Promise<CaseResult> {
-  const { tools, turn } = buildAgentTools({ userId, cancerSlug: c.cancerSlug, traceId: `eval-${c.id}` });
-  const fastPath = mentionsNct(c.question) ? ('lookup_trial' as const) : null;
-  const agent = createAgent({
-    instructions: buildInstructions({ cancerType: getDbCancerType(c.cancerSlug) }),
-    tools,
-    model,
-    forceLookupFirst: fastPath === 'lookup_trial',
-  });
+/**
+ * Waits before re-running a case the provider rate-limited. The SDK's own
+ * retries back off from 2s and give up within seconds; Vertex's shared pool
+ * stays exhausted for minutes, which failed whole golden runs on quota
+ * rather than on any assertion.
+ */
+const RATE_LIMIT_WAITS_MS = [30_000, 60_000, 120_000];
 
-  const startedAt = Date.now();
-  const result = await agent.generate({ prompt: c.question });
-  const latencyMs = Date.now() - startedAt;
+export function isRateLimited(error: unknown): boolean {
+  const last = RetryError.isInstance(error) ? error.lastError : error;
+  return APICallError.isInstance(last) && last.statusCode === 429;
+}
+
+export async function runCase(c: EvalCase, model: AgentModelSpec, userId = '00000000-0000-0000-0000-000000000000'): Promise<CaseResult> {
+  const fastPath = mentionsNct(c.question) ? ('lookup_trial' as const) : null;
+
+  // Each attempt gets fresh tools, so a rate-limited attempt leaves no
+  // evidence or loaded skills behind in the one that is scored.
+  const attempt = async () => {
+    const { tools, turn } = buildAgentTools({ userId, cancerSlug: c.cancerSlug, traceId: `eval-${c.id}` });
+    const agent = createAgent({
+      instructions: buildInstructions({ cancerType: getDbCancerType(c.cancerSlug) }),
+      tools,
+      model,
+      forceLookupFirst: fastPath === 'lookup_trial',
+    });
+    const startedAt = Date.now();
+    const result = await agent.generate({ prompt: c.question });
+    return { result, turn, latencyMs: Date.now() - startedAt };
+  };
+
+  let run: Awaited<ReturnType<typeof attempt>> | undefined;
+  for (const waitMs of [...RATE_LIMIT_WAITS_MS, null]) {
+    try {
+      run = await attempt();
+      break;
+    } catch (error) {
+      if (waitMs === null || !isRateLimited(error)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+    }
+  }
+  const { result, turn, latencyMs } = run!;
 
   const calls: ToolCallSummary[] = [];
   const outputs: unknown[] = [];

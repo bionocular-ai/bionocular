@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  capSections,
   filterRows,
+  humanizeColumn,
   orderColumns,
   toFacets,
   toResultTable,
@@ -165,7 +167,7 @@ describe('toResultTable', () => {
     });
 
     // Lead order puts orr ahead of the columns the lead list does not name.
-    expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'ORR', 'Line of therapy']);
+    expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'ORR', 'Line']);
   });
 
   it('labels the safety endpoints as families and grades, not as words', () => {
@@ -307,13 +309,13 @@ describe('toSections', () => {
   it('keeps a setting it does not know rather than dropping its rows', () => {
     const sections = toSections(rows, 1);
 
-    expect(sections.at(-1)).toEqual({ label: 'Chemoprevention', rows: [rows[3]] });
+    expect(sections.at(-1)).toEqual({ label: 'Chemoprevention', rows: [rows[3]], total: 1 });
   });
 
   it('renders flat when the rows carry no setting', () => {
     const sections = toSections(rows, -1);
 
-    expect(sections).toEqual([{ label: null, rows }]);
+    expect(sections).toEqual([{ label: null, rows, total: rows.length }]);
   });
 });
 
@@ -323,19 +325,47 @@ describe('toFacets', () => {
     columns: [
       { key: 'nct_id', label: 'NCT' },
       { key: 'setting', label: 'Setting' },
-      { key: 'sponsor_type', label: 'Sponsor type' },
+      { key: 'lead_sponsor_class', label: 'Lead sponsor class' },
+      { key: 'sponsor_type', label: 'Type' },
       { key: 'num_patients', label: 'Num patients' },
     ],
     rows: Array.from({ length: 12 }, (_, i) => [
       `NCT0000${1000 + i}`,
       ['Advanced / metastatic', 'Peri-operative', 'Procedural / supportive'][i % 3],
-      i % 2 === 0 ? 'Industry' : 'Non-industry',
+      ['INDUSTRY', 'OTHER', 'NIH', 'OTHER'][i % 4],
+      i % 4 === 0 ? 'Industry' : 'Non-industry',
       String(100 + i),
     ]),
   };
 
   it('offers the closed sets and not the identifiers', () => {
-    expect(toFacets(table).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor type']);
+    expect(toFacets(table).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor']);
+  });
+
+  it('never offers an endpoint, even one with only a few distinct values', () => {
+    const withCr = {
+      columns: [...table.columns, { key: 'cr', label: 'CR' }],
+      rows: table.rows.map((row, i) => [...row, ['15', '20', '—'][i % 3]]),
+      parameters: [{ key: 'cr', label: 'CR', family: 'efficacy' as const, arms: 8 }],
+    };
+
+    expect(toFacets(withCr).map((facet) => facet.label)).not.toContain('CR');
+  });
+
+  it('does not offer columns already drawn as a note or a section', () => {
+    const withDrawn = {
+      columns: [
+        ...table.columns,
+        { key: 'follow_up_only', label: 'Follow up only' },
+        { key: 'is_basket', label: 'Is basket' },
+      ],
+      rows: table.rows.map((row, i) => [...row, i % 3 === 0 ? 'yes' : '—', i % 4 === 0 ? 'Yes' : 'No']),
+    };
+    expect(toFacets(withDrawn).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor']);
+  });
+
+  it('filters sponsors as industry or not, never by raw registry class', () => {
+    expect(toFacets(table)[1].values).toEqual(['Industry', 'Non-industry']);
   });
 
   it('keeps a hidden column filterable by index', () => {
@@ -380,5 +410,50 @@ describe('filterRows', () => {
 
   it('returns the rows untouched when nothing is set', () => {
     expect(filterRows(rows, {}, '  ')).toBe(rows);
+  });
+});
+
+describe('capSections', () => {
+  const sections = [
+    { label: 'A', rows: [['1'], ['2'], ['3']], total: 3 },
+    { label: 'B', rows: [['4'], ['5']], total: 2 },
+  ];
+
+  it('cuts in reading order and keeps each heading its full count', () => {
+    expect(capSections(sections, 4)).toEqual([
+      { label: 'A', rows: [['1'], ['2'], ['3']], total: 3 },
+      { label: 'B', rows: [['4']], total: 2 },
+    ]);
+  });
+
+  it('drops a section cut to nothing', () => {
+    expect(capSections(sections, 2).map((s) => s.label)).toEqual(['A']);
+  });
+});
+
+describe('humanizeColumn', () => {
+  it('writes endpoints the way a clinician does', () => {
+    expect(humanizeColumn('os_rate_18m')).toBe('OS rate 18m');
+    expect(humanizeColumn('grade_3_plus_trae_pct')).toBe('Grade 3+ TRAE %');
+    expect(humanizeColumn('trae_discontinuation_pct')).toBe('TRAE discontinuation %');
+    expect(humanizeColumn('cr')).toBe('CR');
+    expect(humanizeColumn('line_of_therapy')).toBe('Line');
+    expect(humanizeColumn('line')).toBe('Line');
+  });
+});
+
+describe('ALWAYS_SHOWN', () => {
+  it('keeps sponsor type, line and biomarker even when every row shares them', () => {
+    const table = toResultTable({
+      ok: true,
+      rows: [
+        { nct_id: 'NCT1', sponsor_type: 'Industry', biomarker: 'All comers', line_of_therapy: 'R/R' },
+        { nct_id: 'NCT2', sponsor_type: 'Industry', biomarker: 'All comers', line_of_therapy: 'R/R' },
+      ],
+    });
+
+    expect(table?.columns.map((c) => c.key)).toEqual(
+      expect.arrayContaining(['sponsor_type', 'biomarker', 'line_of_therapy']),
+    );
   });
 });
