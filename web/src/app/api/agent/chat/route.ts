@@ -11,6 +11,7 @@ import { persistSession } from '@/lib/agent/persist-session';
 import { resolveModel } from '@/lib/agent/model';
 import { buildAgentTools } from '@/lib/agent/tools';
 import { createAgent, lastUserText, mentionsNct } from '@/lib/agent/agent';
+import type { ModelCallRecord } from '@/lib/agent/model-calls';
 import { buildInstructions, PROMPT_VERSION } from '@/lib/agent/prompts';
 import { pruneHistory } from '@/lib/agent/context';
 import { checkGroundedness } from '@/lib/agent/groundedness';
@@ -79,12 +80,14 @@ export async function POST(req: Request) {
   });
 
   const fastPath = mentionsNct(lastUserText(messages)) ? ('lookup_trial' as const) : null;
+  const modelCalls: ModelCallRecord[] = [];
 
   const agent = createAgent({
     instructions: buildInstructions({ cancerType: dbCancerType }),
     tools,
     model,
     forceLookupFirst: fastPath === 'lookup_trial',
+    onModelCall: (record) => modelCalls.push(record),
     telemetry: {
       isEnabled: true,
       functionId: 'agent.chat',
@@ -162,6 +165,7 @@ export async function POST(req: Request) {
         startedAt,
         firstTokenAt,
         finishedAt: Date.now(),
+        modelCalls,
       });
       logRun(runRecord);
     },
@@ -181,6 +185,7 @@ export async function POST(req: Request) {
         startedAt,
         firstTokenAt,
         finishedAt: Date.now(),
+        modelCalls,
         error,
       });
       logRun(runRecord);

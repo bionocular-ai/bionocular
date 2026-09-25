@@ -18,7 +18,8 @@ export interface PersistArgs {
 
 /**
  * Keep every turn's run record, oldest first. `stepUsage` is dropped because
- * `steps` already holds it; the rest is a few hundred bytes a turn.
+ * `steps` already holds it; the rest is a few hundred bytes a turn, plus
+ * about 200 per model call.
  */
 function accumulateRuns(prior: unknown, run: AgentRunRecord | undefined): unknown[] {
   const earlier =

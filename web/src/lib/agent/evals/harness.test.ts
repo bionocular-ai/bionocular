@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { APICallError, RetryError } from 'ai';
 import { GOLDEN_CASES, type EvalCase } from './cases';
 
 // The classifier is pure, but the module also exports the runner, whose
 // imports reach the service client and its env check.
 vi.mock('@/lib/supabase/service', () => ({ createServiceClient: () => ({}) }));
-const { classify, isRateLimited, summarise } = await import('./harness');
+const { classify, summarise } = await import('./harness');
 type Observed = import('./harness').Observed;
 type CaseResult = import('./harness').CaseResult;
+type ModelCallRecord = import('../model-calls').ModelCallRecord;
 
 const byId = (id: string): EvalCase => GOLDEN_CASES.find((c) => c.id === id)!;
 
@@ -129,28 +129,48 @@ describe('classify', () => {
 });
 
 describe('summarise', () => {
+  const call = (over: Partial<ModelCallRecord> = {}): ModelCallRecord => ({
+    model: 'm',
+    requestedTrafficType: 'flex',
+    actualTrafficType: 'ON_DEMAND_FLEX',
+    status: 'ok',
+    retryCount: 0,
+    latencyMs: 1,
+    timestamp: '2026-09-25T00:00:00.000Z',
+    ...over,
+  });
+  const result = (over: Partial<CaseResult>): CaseResult => ({
+    id: 'x', category: 'retrieval', model: 'm', promptVersion: 'v', status: 'completed', passed: true, failures: [],
+    metrics: { steps: 0, toolCalls: 0, latencyMs: 0 }, toolCalls: [], skillsLoaded: [], answer: '', modelCalls: [], ...over,
+  });
+
   it('counts passes and failures by kind and totals the metrics', () => {
     const results: CaseResult[] = [
-      { id: 'a', category: 'retrieval', model: 'm', promptVersion: 'v', passed: true, failures: [], metrics: { steps: 2, toolCalls: 1, latencyMs: 100, inputTokens: 10, outputTokens: 5, costUsd: 0.01 }, toolCalls: [], skillsLoaded: [], answer: '' },
-      { id: 'b', category: 'grounding', model: 'm', promptVersion: 'v', passed: false, failures: [{ kind: 'grounding', detail: 'x' }], metrics: { steps: 3, toolCalls: 2, latencyMs: 300, inputTokens: 20, outputTokens: 5, costUsd: 0.02 }, toolCalls: [], skillsLoaded: [], answer: '' },
+      result({ id: 'a', metrics: { steps: 2, toolCalls: 1, latencyMs: 100, inputTokens: 10, outputTokens: 5, costUsd: 0.01 } }),
+      result({ id: 'b', category: 'grounding', passed: false, failures: [{ kind: 'grounding', detail: 'x' }], metrics: { steps: 3, toolCalls: 2, latencyMs: 300, inputTokens: 20, outputTokens: 5, costUsd: 0.02 } }),
     ];
     const s = summarise(results);
-    expect(s).toMatchObject({ cases: 2, passed: 1, medianLatencyMs: 300, totals: { toolCalls: 3, steps: 5, latencyMs: 400, inputTokens: 30, outputTokens: 10 } });
+    expect(s).toMatchObject({ cases: 2, passed: 1, rateLimited: 0, medianLatencyMs: 300, totals: { toolCalls: 3, steps: 5, latencyMs: 400, inputTokens: 30, outputTokens: 10 } });
     expect(s.failuresByKind.grounding).toBe(1);
     expect(s.totals.costUsd).toBeCloseTo(0.03);
   });
-});
 
-describe('isRateLimited', () => {
-  const apiError = (statusCode: number) =>
-    new APICallError({ message: 'x', url: 'u', requestBodyValues: {}, statusCode });
-  const retried = (last: unknown) =>
-    new RetryError({ message: 'x', reason: 'maxRetriesExceeded', errors: [last] });
-
-  it('waits out a 429 the SDK gave up on, and nothing else', () => {
-    expect(isRateLimited(retried(apiError(429)))).toBe(true);
-    expect(isRateLimited(apiError(429))).toBe(true);
-    expect(isRateLimited(retried(apiError(500)))).toBe(false);
-    expect(isRateLimited(new Error('boom'))).toBe(false);
+  it('keeps rate-limited cases out of the pass rate and counts calls by lane asked and lane served', () => {
+    const s = summarise([
+      result({ id: 'a', modelCalls: [call(), call({ retryCount: 1 })] }),
+      result({
+        id: 'b',
+        status: 'rate_limited',
+        passed: false,
+        modelCalls: [call({ actualTrafficType: null, status: 'rate_limited', retryCount: 2 })],
+      }),
+    ]);
+    expect(s).toMatchObject({ cases: 1, passed: 1, rateLimited: 1 });
+    expect(s.modelCalls).toEqual({
+      total: 3,
+      retries: 3,
+      rateLimited: 1,
+      trafficTypes: { 'flex -> ON_DEMAND_FLEX': 2, 'flex -> rate_limited': 1 },
+    });
   });
 });

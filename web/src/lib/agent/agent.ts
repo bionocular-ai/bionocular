@@ -7,8 +7,9 @@
  * several models.
  */
 
-import { stepCountIs, ToolLoopAgent, type TelemetrySettings, type UIMessage } from 'ai';
+import { stepCountIs, ToolLoopAgent, wrapLanguageModel, type TelemetrySettings, type UIMessage } from 'ai';
 import { NCT_ID_SOURCE } from './groundedness';
+import { INTERACTIVE_RETRY, modelCallMiddleware, type ModelCallRecord, type RateLimitBreaker, type RetryPolicy } from './model-calls';
 import { resolveModel, type AgentModelSpec } from './model';
 import type { AgentTools } from './tools';
 
@@ -40,6 +41,12 @@ export interface CreateAgentOptions {
    */
   forceLookupFirst?: boolean;
   telemetry?: TelemetrySettings;
+  /** Retries per model call on a refusal or other retryable error; the only retry layer (see `model-calls.ts`). */
+  retry?: RetryPolicy;
+  /** Shared across a run to stop sending once the pool keeps refusing. */
+  breaker?: RateLimitBreaker;
+  /** Called once per model call - admitted, refused or failed. */
+  onModelCall?: (record: ModelCallRecord) => void;
 }
 
 export function createAgent({
@@ -48,9 +55,23 @@ export function createAgent({
   model = resolveModel(),
   forceLookupFirst = false,
   telemetry,
+  retry = INTERACTIVE_RETRY,
+  breaker,
+  onModelCall,
 }: CreateAgentOptions) {
   return new ToolLoopAgent({
-    model: model.create(),
+    model: wrapLanguageModel({
+      model: model.create(),
+      middleware: modelCallMiddleware({
+        model: model.name,
+        requestedTrafficType: model.trafficType ?? 'n/a',
+        retry,
+        breaker,
+        onCall: onModelCall,
+      }),
+    }),
+    // The middleware above retries; a second layer here would multiply it.
+    maxRetries: 0,
     instructions,
     tools,
     maxOutputTokens: MAX_OUTPUT_TOKENS,

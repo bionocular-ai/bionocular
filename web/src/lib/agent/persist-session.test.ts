@@ -146,6 +146,7 @@ describe('persistSession', () => {
       usage: { input: 10, output: 2 },
       latencyMs: 5,
       toolCalls: [],
+      modelCalls: [],
       skillsLoaded: [],
       budget: { spentChars: 0, limitChars: 1, exhausted: false },
       status: 'ok' as const,

@@ -12,7 +12,10 @@
 
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { createVertex } from '@ai-sdk/google-vertex';
-import type { LanguageModel, ToolLoopAgentSettings } from 'ai';
+import type { ToolLoopAgentSettings, wrapLanguageModel } from 'ai';
+
+/** A provider's model object, as `wrapLanguageModel` takes it. */
+export type ProviderModel = Parameters<typeof wrapLanguageModel>[0]['model'];
 
 export interface AgentModelSpec {
   /** Short name used in run records, eval reports and `AGENT_MODEL`. */
@@ -23,7 +26,13 @@ export interface AgentModelSpec {
   pricing: { inputPer1M: number; outputPer1M: number };
   /** Sent with every call; the one place model-specific behaviour is set. */
   providerOptions?: ToolLoopAgentSettings['providerOptions'];
-  create(): LanguageModel;
+  /**
+   * The Vertex shared-pool lane this spec asks for; absent for a provider
+   * without lanes. Asked, not granted - each model-call record carries the
+   * lane Vertex reports it used.
+   */
+  trafficType?: 'standard' | 'flex' | 'priority';
+  create(): ProviderModel;
 }
 
 /**
@@ -51,10 +60,11 @@ const anthropic = createAnthropic({
  * `GOOGLE_VERTEX_CREDENTIALS_JSON` where there is no gcloud login (Render).
  * `GOOGLE_VERTEX_PROJECT` names the project; the location is `global`.
  */
-function vertex() {
+function vertex(headers?: Record<string, string>) {
   const credentials = process.env.GOOGLE_VERTEX_CREDENTIALS_JSON;
   return createVertex({
     location: process.env.GOOGLE_VERTEX_LOCATION ?? 'global',
+    headers,
     ...(credentials ? { googleAuthOptions: { credentials: JSON.parse(credentials) } } : {}),
   });
 }
@@ -72,6 +82,7 @@ export const MODELS: Record<string, AgentModelSpec> = {
     providerOptions: {
       google: { thinkingConfig: { thinkingLevel: 'low', includeThoughts: false } },
     },
+    trafficType: 'standard',
     create: () => vertex()('gemini-3.8-flash'),
   },
   'haiku-4.5': {
@@ -82,6 +93,36 @@ export const MODELS: Record<string, AgentModelSpec> = {
     create: () => anthropic('claude-haiku-4-5-20251001'),
   },
 };
+
+/**
+ * How long Vertex may hold a Flex request in its queue before answering 504.
+ * Its default is about ten minutes, but Node's fetch gives up waiting for
+ * response headers at five, and a client-side timeout cannot be told apart
+ * from a network fault. Under five, the refusal comes back as a 504 the
+ * retry layer recognises.
+ */
+const FLEX_SERVER_TIMEOUT_S = 240;
+
+/**
+ * The same model on Vertex's Flex lane: half the price, queued rather than
+ * refused when the shared pool is contended, and slower - seconds to minutes
+ * per call. For latency-tolerant work only (the evals), never the chat route.
+ * `requestType: 'shared'` keeps it off Provisioned Throughput, which this
+ * project does not have. A provider without lanes comes back unchanged.
+ */
+export function onFlexLane(spec: AgentModelSpec): AgentModelSpec {
+  if (spec.provider !== 'google-vertex') return spec;
+  return {
+    ...spec,
+    pricing: { inputPer1M: spec.pricing.inputPer1M / 2, outputPer1M: spec.pricing.outputPer1M / 2 },
+    trafficType: 'flex',
+    providerOptions: {
+      ...spec.providerOptions,
+      google: { ...spec.providerOptions?.google, requestType: 'shared', sharedRequestType: 'flex' },
+    },
+    create: () => vertex({ 'X-Server-Timeout': String(FLEX_SERVER_TIMEOUT_S) })(spec.id),
+  };
+}
 
 export const DEFAULT_MODEL_NAME = 'gemini-3.8-flash';
 
