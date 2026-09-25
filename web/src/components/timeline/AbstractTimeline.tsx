@@ -23,6 +23,8 @@ interface TimelineItem {
   publicationName?: string;
 }
 
+const CONFERENCE_ORDER = ['ASCO', 'ESMO', 'SITC', 'Publication'];
+
 export function AbstractTimeline({ nctId, currentAbstractId, className = '' }: AbstractTimelineProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['trials', 'nct', nctId],
@@ -36,18 +38,18 @@ export function AbstractTimeline({ nctId, currentAbstractId, className = '' }: A
     queryFn: async () => {
       if (!data?.trials) return [];
       
-      // Fetch all abstract data in parallel
-      const abstractPromises = data.trials
-        .filter(trial => trial.abstract_id)
-        .map(async (trial) => {
+      // Fetch all abstract data in parallel; rows are per arm, items are per abstract
+      const abstractIds = Array.from(new Set(data.trials.map(trial => trial.abstract_id).filter((id): id is string => !!id)));
+      const abstractPromises = abstractIds
+        .map(async (abstractId) => {
           try {
-            const fullData = await trialsApi.getByAbstractId(trial.abstract_id!);
+            const fullData = await trialsApi.getByAbstractId(abstractId);
             const metrics = extractKeyMetrics(fullData);
-            
+
             // Include items that have a year (conference is optional, will be "Publication" for publications)
             if (metrics.year) {
               return {
-                abstractId: trial.abstract_id!,
+                abstractId,
                 conference: metrics.conference || 'Publication',
                 year: metrics.year,
                 date: metrics.date || (metrics.conference ? `${metrics.conference} ${metrics.year}` : metrics.year),
@@ -56,7 +58,7 @@ export function AbstractTimeline({ nctId, currentAbstractId, className = '' }: A
               } as Omit<TimelineItem, 'isCurrent'>;
             }
           } catch (error) {
-            console.error(`Error fetching metrics for ${trial.abstract_id}:`, error);
+            console.error(`Error fetching metrics for ${abstractId}:`, error);
           }
           return null;
         });
@@ -70,9 +72,9 @@ export function AbstractTimeline({ nctId, currentAbstractId, className = '' }: A
         const yearB = parseInt(b.year) || 0;
         if (yearB !== yearA) return yearB - yearA;
         
-        // If same year, sort by conference (ASCO before ESMO)
+        // If same year, sort by conference (ASCO, ESMO, SITC, then publications)
         if (a.conference !== b.conference) {
-          return a.conference === 'ASCO' ? -1 : 1;
+          return CONFERENCE_ORDER.indexOf(a.conference) - CONFERENCE_ORDER.indexOf(b.conference);
         }
         
         return 0;

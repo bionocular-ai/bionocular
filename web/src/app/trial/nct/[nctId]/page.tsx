@@ -104,10 +104,12 @@ export default function NCTTrialsPage() {
                   ? 'Abstracts and publications'
                   : trials.length > 0
                     ? (() => {
-                        const abstracts = trials.filter(t => !t.type || t.type === 'abstract').length;
-                        const publications = trials.filter(t => t.type === 'publication').length;
+                        // Rows are per arm; count each abstract or publication once
+                        const abstracts = new Set(trials.filter(t => !t.type || t.type === 'abstract').map(t => t.abstract_id || t.id)).size;
+                        const publications = new Set(trials.filter(t => t.type === 'publication').map(t => t.publication_name || t.id)).size;
+                        const items = abstracts + publications;
                         if (abstracts > 0 && publications > 0) {
-                          return `${trials.length} item${trials.length !== 1 ? 's' : ''} found (${abstracts} abstract${abstracts !== 1 ? 's' : ''}, ${publications} publication${publications !== 1 ? 's' : ''})`;
+                          return `${items} item${items !== 1 ? 's' : ''} found (${abstracts} abstract${abstracts !== 1 ? 's' : ''}, ${publications} publication${publications !== 1 ? 's' : ''})`;
                         } else if (abstracts > 0) {
                           return `${abstracts} abstract${abstracts !== 1 ? 's' : ''} found`;
                         } else if (publications > 0) {
