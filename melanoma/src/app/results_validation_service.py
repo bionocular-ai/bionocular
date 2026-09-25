@@ -414,8 +414,9 @@ class ResultsValidationWriter:
         """Write cost_report.json incrementally, so a mid-run kill keeps the spend.
 
         On a resumed run the previous report's calls are folded in, so the file
-        reports what the cohort cost rather than what the last pass cost. A fresh
-        run (``--no-resume``) re-validates everything, so it starts from zero.
+        reports what the cohort cost rather than what the last pass cost. A full
+        fresh run (``--no-resume`` with no slice) re-validates everything, so it
+        starts from zero.
         """
         path = self._output_dir / ResultsValidation.COST_REPORT_FILE
         cost_calculator.save_detailed_report(str(path))
@@ -478,15 +479,20 @@ class ResultsValidationService:
             checkpoint=ValidationCheckpointManager(
                 config.output_dir / ResultsValidation.CHECKPOINT_FILE
             ),
+            # Only a full --no-resume run replaces every verdict; a --doc-id or
+            # --sample slice keeps the rest of the cohort, so it keeps its spend.
             writer=ResultsValidationWriter(
-                config.output_dir, carry_forward_cost=config.resume
+                config.output_dir,
+                carry_forward_cost=config.resume
+                or bool(config.doc_allowlist)
+                or config.sample is not None,
             ),
             cost_calculator=cost_calculator,
         )
 
     # -- candidate selection ------------------------------------------------
 
-    def _documents(self) -> list[dict]:
+    def _all_documents(self) -> list[dict]:
         """Every extracted document across the configured results files."""
         container, id_key = _RESULTS_LAYOUT[self._config.doc_type]
         documents: list[dict] = []
@@ -494,7 +500,11 @@ class ResultsValidationService:
             payload = json.loads(path.read_text(encoding="utf-8"))
             for record in payload.get(container, []):
                 documents.append({**record, "doc_id": record[id_key]})
+        return documents
 
+    def _documents(self) -> list[dict]:
+        """The documents this run judges, after --doc-id and --sample."""
+        documents = self._all_documents()
         if self._config.doc_allowlist:
             wanted = set(self._config.doc_allowlist)
             documents = [d for d in documents if d["doc_id"] in wanted]
@@ -715,7 +725,9 @@ class ResultsValidationService:
 
         await asyncio.gather(*(_worker(record) for record in pending))
 
-        self._write_derived_outputs(documents)
+        # The whole cohort, not this run's slice: validation.json holds every
+        # verdict, so a --doc-id retry must not rebuild the side files from one doc.
+        self._write_derived_outputs(self._all_documents())
         self._record_cost(summary)
         self._writer.write_validation(results, summary)
         self._writer.write_cost_report(self._cost_calculator)

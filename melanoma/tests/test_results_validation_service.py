@@ -498,7 +498,11 @@ def _write_results(tmp_path: Path, doc_ids: list[str]) -> Path:
 
 
 def _run(
-    tmp_path: Path, doc_ids: list[str], judge: _StubJudge
+    tmp_path: Path,
+    doc_ids: list[str],
+    judge: _StubJudge,
+    doc_allowlist: list[str] | None = None,
+    resume: bool = True,
 ) -> ResultsValidationService:
     config = ResultsValidationConfig(
         results_paths=[_write_results(tmp_path, doc_ids)],
@@ -506,6 +510,8 @@ def _run(
         output_dir=tmp_path / "validation",
         model="stub",
         concurrency=2,
+        doc_allowlist=doc_allowlist,
+        resume=resume,
     )
     service = ResultsValidationService.from_config(
         config,
@@ -571,6 +577,19 @@ def test_a_successful_document_is_checkpointed_and_skipped_on_resume(
 
     assert first_pass_calls == len(AttributeGroup)
     assert judge.calls == first_pass_calls
+
+
+def test_a_doc_id_rerun_keeps_the_rest_of_the_cohort_in_the_side_files(
+    tmp_path: Path,
+) -> None:
+    """Retrying one errored doc with --doc-id used to rebuild the cleaned cohort
+    and review files from that doc alone, wiping every other verdict."""
+    _run(tmp_path, ["pub_a", "pub_b"], _StubJudge())
+
+    _run(tmp_path, ["pub_a", "pub_b"], _StubJudge(), doc_allowlist=["pub_b"])
+
+    cleaned = json.loads((tmp_path / "validation" / "results.cleaned.json").read_text())
+    assert [p["pub_id"] for p in cleaned["publications"]] == ["pub_a", "pub_b"]
 
 
 def test_the_recall_report_groups_missed_values_by_field(tmp_path: Path) -> None:
@@ -639,6 +658,22 @@ def test_repeated_writes_within_one_run_do_not_double_count(tmp_path: Path) -> N
     total = _cost_totals(tmp_path)
     assert total["total_requests"] == 4
     assert total["total_prompt_tokens"] == 1030
+
+
+def test_re_judging_one_doc_keeps_the_rest_of_the_cohort_spend(
+    tmp_path: Path,
+) -> None:
+    """--no-resume --doc-id re-judges one doc; the other docs' verdicts stay in
+    validation.json, so their spend must stay in cost_report.json too."""
+    seed = CostCalculator()
+    seed.record_api_call(
+        prompt_tokens=1000, completion_tokens=100, model="stub", operation="a"
+    )
+    ResultsValidationWriter(tmp_path / "validation").write_cost_report(seed)
+
+    _run(tmp_path, ["pub_a", "pub_b"], _StubJudge(), ["pub_b"], resume=False)
+
+    assert _cost_totals(tmp_path)["total_requests"] == 1
 
 
 def test_a_fresh_run_does_not_inherit_a_previous_cost_report(tmp_path: Path) -> None:

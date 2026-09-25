@@ -60,7 +60,11 @@ from src.infrastructure.gemini_service import GeminiLLMService  # noqa: E402
 _DEFAULT_MODEL = "gemini-3.1-pro-preview"
 _DEFAULT_SOURCE_ROOT = _MELANOMA_ROOT / "data" / "postprocessed"
 _PUBLICATIONS_SUBDIR = "Publications"
-_ABSTRACT_SUBDIRS = {"ASCO": "ASCO_Abstracts", "ESMO": "ESMO_Abstracts"}
+_ABSTRACT_SUBDIRS = {
+    "ASCO": "ASCO_Abstracts",
+    "ESMO": "ESMO_Abstracts",
+    "SITC": "SITC_Abstracts",
+}
 
 
 def _build_parser() -> argparse.ArgumentParser:
