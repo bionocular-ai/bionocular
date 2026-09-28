@@ -23,7 +23,7 @@ export function DashboardNavLink({ className }: DashboardNavLinkProps) {
       href={`/dashboard/${category}`}
       aria-label="Go to dashboard"
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium',
+        'inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-sm font-medium sm:px-4',
         'bg-(--brand-primary) border-transparent text-white',
         'transition-all duration-200 ease-out',
         'hover:bg-(--brand-primary-hover) hover:shadow-md',
@@ -34,7 +34,7 @@ export function DashboardNavLink({ className }: DashboardNavLinkProps) {
       )}
     >
       <Activity className="h-4 w-4 shrink-0" aria-hidden />
-      <span>Dashboard</span>
+      <span className="hidden sm:inline">Dashboard</span>
     </Link>
   );
 }

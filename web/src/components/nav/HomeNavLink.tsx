@@ -15,7 +15,7 @@ export function HomeNavLink({ className }: HomeNavLinkProps) {
       href={ROUTES.DASHBOARD}
       aria-label="Go to home"
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium',
+        'inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-sm font-medium sm:px-4',
         'border-(--brand-primary) bg-transparent text-(--brand-primary)',
         'transition-all duration-200 ease-out',
         'hover:bg-(--brand-accent-light)',
@@ -26,7 +26,8 @@ export function HomeNavLink({ className }: HomeNavLinkProps) {
       )}
     >
       <Home className="h-4 w-4 shrink-0" aria-hidden />
-      <span>Home</span>
+      {/* Icon-only on a phone, where both labels and the avatar overflow the bar. */}
+      <span className="hidden sm:inline">Home</span>
     </Link>
   );
 }
