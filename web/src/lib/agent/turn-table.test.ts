@@ -616,6 +616,30 @@ describe('outcomes turns', () => {
     expect(table?.columns.map((c) => c.key)).not.toContain('grade_3_plus_teae_pct');
   });
 
+  it('shows the expert verdict beside the source, only once some arm was reviewed', () => {
+    const reviewed = {
+      ...phase1Outcomes,
+      rows: phase1Outcomes.rows.map((row, i) => (i < 2 ? { ...row, expert_review: 'good' } : row)),
+    };
+
+    const table = toTurnTable([reviewed], today);
+    const keys = table!.columns.map((c) => c.key);
+
+    expect(keys.slice(-3)).toEqual(['expert_review', 'source', 'overall_status']);
+    expect(table!.columns.find((c) => c.key === 'expert_review')?.label).toBe('Expert review');
+    expect([0, 1, 2].map((i) => cell(table, i, 'expert_review'))).toEqual(['Good', 'Good', '—']);
+    expect(toTurnTable([phase1Outcomes], today)!.columns.map((c) => c.key)).not.toContain('expert_review');
+  });
+
+  it('carries the expert verdict into the by-class table', () => {
+    const reviewed = { ...q3, rows: q3.rows.map((row) => ({ ...row, expert_review: 'issues' })) };
+
+    const byClass = toTurnTable([reviewed], today)?.byClass?.table;
+
+    expect(byClass?.columns.map((c) => c.key)).toContain('expert_review');
+    expect(byClass?.rows[0]).toContain('Issues found');
+  });
+
   it('leaves a landscape table without parameters', () => {
     expect(toTurnTable([landscapeTrials, landscapeCurated], today)?.parameters).toBeUndefined();
   });

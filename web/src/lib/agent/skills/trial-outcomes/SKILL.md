@@ -59,6 +59,10 @@ is the arm's own and wins when both are present.
   Landmark rates (`pfs_rate_12m`, `os_rate_24m`, ...) are the rate at that
   month; report the month.
 - `num_patients` is the arm's size and the strength of the evidence. Say it.
+- `expert_review` is a pharmacology expert's check of the row against its
+  source: `good` (it matches) or `issues` (errors found). Absent means never
+  reviewed, not wrong. When the answer rests on specific rows, say which were
+  expert-reviewed; quote an `issues` row only with that warning.
 - Two arms of the same trial can be compared. Arms from different trials can be
   set side by side but not compared as if randomised - say so.
 - `line_of_treatment` changes what a number means; first-line and later-line

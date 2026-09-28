@@ -189,6 +189,7 @@ const ENUM_LABELS: Record<string, (raw: string) => string> = {
   overall_status: normalizeStatus,
   phases: normalizePhase,
   primary_purpose: normalizePurpose,
+  expert_review: (raw) => (raw === 'good' ? 'Good' : raw === 'issues' ? 'Issues found' : raw),
 };
 
 /**
@@ -221,6 +222,7 @@ const INITIALISMS: Record<string, string> = {
   lead_sponsor_name: 'Sponsor',
   overall_status: 'Status',
   sponsor_type: 'Type',
+  expert_review: 'Expert review',
   // The setting is the section heading above it; the column carries the line.
   line_of_therapy: 'Line',
 };
@@ -436,6 +438,8 @@ export function toFacets(table: ResultTable): Facet[] {
   // `is_basket` as the "Set aside" section - and as filters they read "yes" or
   // "None" and took the slot Status needed.
   const notFacets = [
+    // Filtered by its own toggle, which says "expert-reviewed only" in words.
+    'expert_review',
     'follow_up_only',
     'is_basket',
     ...(hasSponsorType ? ['lead_sponsor_class'] : []),
