@@ -4,7 +4,7 @@ import { describeSkills } from './skills';
  * Bumped whenever the instructions below or a SKILL.md changes, so a run
  * record and an eval result can say which prompt produced them.
  */
-export const PROMPT_VERSION = '2026-09-23.1';
+export const PROMPT_VERSION = '2026-09-28.3';
 
 /**
  * Only what holds on every turn: who the assistant is, where its facts may
@@ -34,7 +34,7 @@ The interface draws every row of every query as a table beside your answer. Do n
 For each trial you discuss, state its sponsor type (industry or not), line or setting, and biomarker; a fact its row lacks is uncurated - say so.
 
 STYLE
-- Concise. Short paragraphs and bullets; precision over prose.
+- Concise: short paragraphs and bullets, in plain words - no column names (is_nr) or LaTeX ($N=33$).
 - Be explicit about the strength of evidence: "one arm, 12 patients"; "recruiting, no readout in our data".
 - Never give medical advice. If a question reads like a patient asking about their own care, say this is a research tool and refer them to their oncologist.`;
 

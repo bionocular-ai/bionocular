@@ -15,6 +15,7 @@
  */
 
 import { normalizePhase, normalizePurpose, normalizeStatus } from '@/lib/clinical-trials-enums';
+import { TRIAL_OUTCOMES_ENDPOINTS } from './tools/schema';
 
 export interface ResultColumn {
   key: string;
@@ -59,6 +60,14 @@ export interface ResultTable {
    * first. Each is also in `columns`; which ones are drawn is the reader's pick.
    */
   parameters?: ResultParameter[];
+  /** The endpoints the question named, in its order: drawn before the reader picks. */
+  asked?: string[];
+  /**
+   * The asked adverse-event measures under every class, present when the class
+   * the question named is missing on most arms. `note` states that gap; the
+   * model's prose says why it matters.
+   */
+  byClass?: { note: string; table: ResultTable };
 }
 
 /**
@@ -430,9 +439,6 @@ export function toFacets(table: ResultTable): Facet[] {
     'follow_up_only',
     'is_basket',
     ...(hasSponsorType ? ['lead_sponsor_class'] : []),
-    // Measurements, not groupings: CR reported as 15 or 20 on a few arms reads
-    // as a closed set of values, and is not one.
-    ...(table.parameters ?? []).map((parameter) => parameter.key),
   ];
   return table.columns
     .map((column, index) => ({
@@ -444,6 +450,10 @@ export function toFacets(table: ResultTable): Facet[] {
     .filter(
       ({ key, values }) =>
         !notFacets.includes(key) &&
+        // Measurements, not groupings: CR reported as 15 or 20 on a few arms
+        // reads as a closed set of values, and is not one. Every endpoint, not
+        // only the parameters: the by-class table has none.
+        !TRIAL_OUTCOMES_ENDPOINTS.has(key) &&
         values.length > 1 &&
         values.length <= MAX_FACET_VALUES &&
         // A grouping, not a near-identifier: every value covers two rows on average.
