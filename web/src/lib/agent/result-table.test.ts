@@ -358,8 +358,15 @@ describe('toFacets', () => {
         ...table.columns,
         { key: 'follow_up_only', label: 'Follow up only' },
         { key: 'is_basket', label: 'Is basket' },
+        // Filtered by the "Expert-reviewed only" toggle instead.
+        { key: 'expert_review', label: 'Expert review' },
       ],
-      rows: table.rows.map((row, i) => [...row, i % 3 === 0 ? 'yes' : '—', i % 4 === 0 ? 'Yes' : 'No']),
+      rows: table.rows.map((row, i) => [
+        ...row,
+        i % 3 === 0 ? 'yes' : '—',
+        i % 4 === 0 ? 'Yes' : 'No',
+        i % 2 === 0 ? 'Good' : '—',
+      ]),
     };
     expect(toFacets(withDrawn).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor']);
   });

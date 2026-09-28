@@ -714,7 +714,8 @@ describe('trial_outcomes projection', () => {
     'grade_3_plus_trae_irr', 'grade_3_plus_trae_vomiting', 'modality',
   ];
 
-  const KNOWN_COLUMNS = new Set([...CSV_HEADER_COLUMNS, 'is_lt']);
+  // `expert_review` likewise, from 20260928000000_trial_outcomes_expert_review.sql.
+  const KNOWN_COLUMNS = new Set([...CSV_HEADER_COLUMNS, 'is_lt', 'expert_review']);
   const EXCLUDED_COLUMNS = ['all_attributes', 'created_at', 'cancer_type', 'confidence'];
 
   function columns(detail: 'concise' | 'detailed'): string[] {

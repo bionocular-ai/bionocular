@@ -200,11 +200,12 @@ const OUTCOME_CONTEXT = [
   'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'line', 'biomarker',
 ];
 const OUTCOME_FACTS = ['setting', 'sponsor_type', 'line', 'biomarker'];
-const OUTCOME_TRAIL = ['source', 'overall_status'];
+const OUTCOME_TRAIL = ['expert_review', 'source', 'overall_status'];
 const OUTCOME_LABELS: Record<string, string> = {
   treatment_name: 'Treatment',
   num_patients: 'N',
   sponsor_type: 'Sponsor',
+  expert_review: 'Expert review',
 };
 
 /**
@@ -317,7 +318,12 @@ function toClassTable(rows: Row[], asked: string[]): ResultTable['byClass'] {
   const said = gaps.join('; ');
   const note = `${said.charAt(0).toUpperCase()}${said.slice(1)}. Below, the same measures under each class the sources reported.`;
 
-  const columns = [...CLASS_CONTEXT, ...siblings, 'source'];
+  const columns = [
+    ...CLASS_CONTEXT,
+    ...siblings,
+    ...(classRows.some((row) => row.expert_review != null) ? ['expert_review'] : []),
+    'source',
+  ];
   return {
     note,
     table: {

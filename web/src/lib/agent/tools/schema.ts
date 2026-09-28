@@ -154,6 +154,9 @@ const TRIAL_OUTCOMES_IDENTITY = [
   // Column names that hold a censored measurement, not the measurement itself
   // - see the `is_nr`/`is_lt` note on `conciseProjection` below.
   'is_nr', 'is_lt',
+  // A pharmacology expert's verdict on the row against its source ('good' or
+  // 'issues'), null when never reviewed. Provenance, not an endpoint.
+  'expert_review',
 ];
 
 /** Did it work: survival, response, and duration of response. */
@@ -363,7 +366,7 @@ const TABLE_DEFINITIONS = {
     conciseProjection:
       'id, source_type, source_name, abstract_id, publication_id, source_url, nct_id, arm_name, ' +
       'generic_name, line_of_treatment, num_patients, median_pfs, hr_pfs, median_os, ' +
-      'hr_os, orr, dcr, median_dor, grade_3_plus_trae_pct, serious_ae_pct, is_nr, is_lt',
+      'hr_os, orr, dcr, median_dor, grade_3_plus_trae_pct, serious_ae_pct, is_nr, is_lt, expert_review',
     filters: {
       sponsor: { column: 'sponsors', kind: 'scalar' },
       drug: { column: 'generic_name', kind: 'scalar' },

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
-import { ArrowUpRight, Check, ChevronDown } from 'lucide-react';
+import { ArrowUpRight, Check, ChevronDown, ShieldCheck } from 'lucide-react';
 import { ABSENT, capSections, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
 import type { Facet, ResultParameter, ResultSummary, ResultTable } from '@/lib/agent/result-table';
 import type { EfficacyLink } from '@/lib/agent/efficacy-link';
@@ -69,9 +69,11 @@ const PILL_TONES: Record<string, string> = {
   'enrolling by invitation': 'bg-emerald-50 text-emerald-800 border-emerald-200',
   'active, not recruiting': 'bg-amber-50 text-amber-800 border-amber-200',
   industry: 'bg-violet-50 text-violet-800 border-violet-200',
+  good: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  'issues found': 'bg-red-50 text-red-800 border-red-200',
 };
 
-const PILL_COLUMNS = ['overall_status', 'sponsor_type'];
+const PILL_COLUMNS = ['overall_status', 'sponsor_type', 'expert_review'];
 
 function Pill({ value }: { value: string }) {
   return (
@@ -261,6 +263,30 @@ function ParameterPicker({
 }
 
 /**
+ * Only the rows a pharmacology expert checked against the source. A toggle
+ * rather than a facet: the question a reader has is "which of these can I
+ * trust as checked", a yes or no, and the button says it in words.
+ */
+function ReviewedToggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onToggle}
+      className={cn(
+        TRIGGER_CLASSES,
+        on
+          ? 'border-emerald-600/60 bg-emerald-50 text-emerald-900'
+          : 'border-(--brand-border) bg-(--brand-surface) hover:border-(--brand-primary)'
+      )}
+    >
+      <ShieldCheck className={cn('h-3.5 w-3.5', on ? 'text-emerald-700' : '')} aria-hidden />
+      Expert-reviewed only
+    </button>
+  );
+}
+
+/**
  * Narrowing the rows already on screen - no second query, no new turn.
  *
  * A landscape answer is a set the reader works through, not a number: having
@@ -276,6 +302,7 @@ function ParameterPicker({
  */
 function FilterBar({
   picker,
+  toggle,
   facets,
   rows,
   selected,
@@ -287,6 +314,8 @@ function FilterBar({
 }: {
   /** Drawn first: which columns come before which rows. */
   picker?: ReactNode;
+  /** Drawn after the facets: narrows to rows an expert has checked. */
+  toggle?: ReactNode;
   facets: Facet[];
   rows: string[][];
   selected: Record<number, string>;
@@ -380,6 +409,7 @@ function FilterBar({
           </DropdownMenu>
         );
       })}
+      {toggle}
       <input
         type="search"
         value={query}
@@ -466,6 +496,7 @@ export function TurnTable({
   // keeps offering its current most-reported endpoints.
   const [picks, setPicks] = useState<string[] | null>(null);
   const [limit, setLimit] = useState(PAGE_ROWS);
+  const [reviewedOnly, setReviewedOnly] = useState(false);
 
   const indexOf = (key: string) => table.columns.findIndex((column) => column.key === key);
   const settingIndex = indexOf('setting');
@@ -483,6 +514,8 @@ export function TurnTable({
   // dash, a whole column of width for one word about five rows.
   const statusIndex = indexOf('overall_status');
   const followUpIndex = statusIndex === -1 ? -1 : indexOf('follow_up_only');
+  // The column exists only when some row was reviewed, so neither does the toggle.
+  const reviewIndex = indexOf('expert_review');
 
   const parameters = table.parameters;
   const picked = useMemo(() => {
@@ -545,10 +578,16 @@ export function TurnTable({
     [table.columns]
   );
   const facets = useMemo(() => toFacets(table), [table]);
-  const rows = useMemo(
-    () => filterRows(table.rows, selected, query),
-    [table.rows, selected, query]
+  // Applied under the facets, so their counts say what each choice leaves
+  // among the reviewed rows.
+  const base = useMemo(
+    () =>
+      reviewedOnly && reviewIndex !== -1
+        ? table.rows.filter((row) => row[reviewIndex] !== ABSENT)
+        : table.rows,
+    [table.rows, reviewedOnly, reviewIndex]
   );
+  const rows = useMemo(() => filterRows(base, selected, query), [base, selected, query]);
   // An arm reporting none of the picked endpoints - a trial-in-progress readout,
   // or one that reported the other family - answers nothing that was asked.
   // It is left out and counted, so the numbers on screen still add up.
@@ -600,15 +639,20 @@ export function TurnTable({
         />
       ) : null}
       {table.summary ? <SummaryStrip summary={table.summary} /> : null}
-      {facets.length > 0 || (parameters && parameters.length > 1) ? (
+      {facets.length > 0 || (parameters && parameters.length > 1) || reviewIndex !== -1 ? (
         <FilterBar
           picker={
             parameters && parameters.length > 1 ? (
               <ParameterPicker parameters={parameters} picked={picked} onToggle={togglePick} />
             ) : null
           }
+          toggle={
+            reviewIndex !== -1 ? (
+              <ReviewedToggle on={reviewedOnly} onToggle={() => setReviewedOnly(!reviewedOnly)} />
+            ) : null
+          }
           facets={facets}
-          rows={table.rows}
+          rows={base}
           selected={selected}
           onSelect={select}
           onClear={() => setSelected({})}
