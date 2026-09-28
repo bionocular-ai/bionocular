@@ -542,6 +542,80 @@ describe('outcomes turns', () => {
     expect(toTurnTable([safety], today)?.parameters?.map((p) => p.key)).toEqual(['trae_pct']);
   });
 
+  // The Q3 baseline: median PFS vs grade 3+ TEAE vs discontinuation due to
+  // AEs. No source labels a rate TEAE, so the asked table is empty on safety
+  // and the answer lives under AE and TRAE.
+  const q3 = {
+    ok: true,
+    table: 'trial_outcomes',
+    askedColumns: ['median_pfs', 'grade_3_plus_teae_pct', 'ae_leading_to_discontinuation_pct'],
+    rows: [
+      {
+        nct_id: 'NCT05732805', arm_name: 'Nurulimab + prolgolimab', num_patients: 135, abstract_id: 'ASCO_2026_9544',
+        median_pfs: 15.4, grade_3_plus_trae_pct: 17.8, ae_leading_to_discontinuation_pct: 11.1, orr: 40, dcr: 60,
+      },
+      {
+        nct_id: 'NCT03470922', arm_name: 'Nivolumab + relatlimab', num_patients: 355, publication_id: 'NEJM 2022',
+        median_pfs: 10.1, grade_3_plus_ae_pct: 40.3, grade_3_plus_trae_pct: 18.9, trae_discontinuation_pct: 14.6,
+        orr: 43, dcr: 60,
+      },
+      {
+        nct_id: 'NCT02224781', arm_name: 'Nivolumab + ipilimumab first', num_patients: 135,
+        abstract_id: 'ASCO_2025_9506', median_pfs: 26.7, orr: 46,
+      },
+    ],
+  };
+
+  it('ranks the asked endpoints first and keeps one no arm reports', () => {
+    const table = toTurnTable([q3], today);
+
+    expect(table?.asked).toEqual(q3.askedColumns);
+    expect(table?.parameters?.slice(0, 3)).toEqual([
+      { key: 'median_pfs', label: 'Median PFS', family: 'efficacy', arms: 3 },
+      { key: 'grade_3_plus_teae_pct', label: 'Grade 3+ TEAE %', family: 'safety', arms: 0 },
+      { key: 'ae_leading_to_discontinuation_pct', label: 'AE leading to discontinuation %', family: 'safety', arms: 1 },
+    ]);
+    expect(cell(table, 1, 'grade_3_plus_teae_pct')).toBe('—');
+  });
+
+  it('draws the asked safety measures under every class when the named class is missing on most arms', () => {
+    const byClass = toTurnTable([q3], today)?.byClass;
+
+    expect(byClass?.note).toBe(
+      'No arm reports Grade 3+ TEAE; most arms do not report AE leading to discontinuation. ' +
+        'Below, the same measures under each class the sources reported.',
+    );
+    expect(byClass?.table.columns.map((c) => c.label)).toEqual([
+      'Treatment', 'NCT', 'Setting', 'N',
+      'Grade 3+ AE %', 'Grade 3+ TEAE %', 'Grade 3+ TRAE %', 'AE disc. %', 'TEAE disc. %', 'TRAE disc. %',
+      'Source',
+    ]);
+    // The PFS-only arm has no value in any class, so it is only in the asked table.
+    expect(byClass?.table.rows).toEqual([
+      ['Nurulimab + prolgolimab', 'NCT05732805', 'Unclassified', '135', '—', '—', '17.8', '11.1', '—', '—', 'ASCO_2026_9544'],
+      ['Nivolumab + relatlimab', 'NCT03470922', 'Unclassified', '355', '40.3', '—', '18.9', '—', '—', '14.6', 'NEJM 2022'],
+    ]);
+  });
+
+  it('draws no class table when most arms report the named class', () => {
+    const reported = {
+      ...q3,
+      askedColumns: ['median_pfs', 'grade_3_plus_trae_pct'],
+    };
+
+    expect(toTurnTable([reported], today)?.byClass).toBeUndefined();
+  });
+
+  it('draws no class table when the question named no endpoints', () => {
+    const unasked = { ...q3, askedColumns: undefined };
+
+    const table = toTurnTable([unasked], today);
+
+    expect(table?.asked).toBeUndefined();
+    expect(table?.byClass).toBeUndefined();
+    expect(table?.columns.map((c) => c.key)).not.toContain('grade_3_plus_teae_pct');
+  });
+
   it('leaves a landscape table without parameters', () => {
     expect(toTurnTable([landscapeTrials, landscapeCurated], today)?.parameters).toBeUndefined();
   });

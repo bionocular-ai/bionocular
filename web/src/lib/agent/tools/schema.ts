@@ -182,6 +182,38 @@ export const TRIAL_OUTCOMES_SAFETY = [
   'crs_pct', 'wbc_decreased_pct', 'irr_pct',
 ];
 
+/** Every endpoint a question can name, for validating the `columns` tool input. */
+export const TRIAL_OUTCOMES_ENDPOINTS: ReadonlySet<string> = new Set([
+  ...TRIAL_OUTCOMES_EFFICACY,
+  ...TRIAL_OUTCOMES_SAFETY,
+]);
+
+const AE_CLASSES = ['ae', 'teae', 'trae'];
+/** The one measure whose any-cause spelling breaks the family pattern. */
+const DISCONTINUATION = ['ae_leading_to_discontinuation_pct', 'teae_discontinuation_pct', 'trae_discontinuation_pct'];
+const SAFETY_ENDPOINTS: ReadonlySet<string> = new Set(TRIAL_OUTCOMES_SAFETY);
+
+/**
+ * The same measure under each adverse-event class the table carries, in the
+ * order AE (any cause), TEAE, TRAE - or none when the measure has no class.
+ * Sources label a rate with one class, so a question naming TEAE is often
+ * answered only under AE or TRAE; these are the columns that answer it.
+ *
+ * Swaps the first class word, so `grade_3_plus_trae_pct` finds
+ * `grade_3_plus_ae_pct`; a swap naming no real column is dropped, and a
+ * measure only one class carries (`serious_ir_ae_pct`) has no siblings.
+ */
+export function classSiblings(key: string): string[] {
+  if (DISCONTINUATION.includes(key)) return DISCONTINUATION;
+  const words = key.split('_');
+  const at = words.findIndex((word) => AE_CLASSES.includes(word));
+  if (at === -1) return [];
+  const siblings = AE_CLASSES.map((cls) => words.map((word, i) => (i === at ? cls : word)).join('_')).filter(
+    (candidate) => SAFETY_ENDPOINTS.has(candidate),
+  );
+  return siblings.length > 1 ? siblings : [];
+}
+
 /**
  * Every extracted efficacy and safety endpoint `trial_outcomes` carries, built
  * from families rather than typed out by hand so a new column from the loader
@@ -584,21 +616,26 @@ const OTHER_FAMILY: Record<Exclude<EndpointFamily, 'both'>, Set<string>> = {
  * grade 3+ rates" comes back - and renders - as adverse-event columns rather
  * than as those buried among every survival and response endpoint. Only
  * `trial_outcomes` carries either family, so it is a no-op on the other four.
+ *
+ * `asked` - the endpoints the question named - is always selected, with its
+ * class siblings, whatever `detail` and `endpoints` say: the table draws those
+ * columns, and falls back to the siblings when the named class is empty.
  */
 export function projectionFor(
   table: AgentTable,
   detail: 'concise' | 'detailed',
   endpoints: EndpointFamily = 'both',
+  asked: readonly string[] = [],
 ): string {
   const spec = AGENT_TABLES[table];
   const selected = detail === 'concise' ? (spec.conciseProjection ?? spec.projection) : spec.projection;
-  if (endpoints === 'both') return selected;
-  const dropped = OTHER_FAMILY[endpoints];
-  return selected
+  const dropped = endpoints === 'both' ? new Set<string>() : OTHER_FAMILY[endpoints];
+  const columns = selected
     .split(',')
     .map((column) => column.trim())
-    .filter((column) => !dropped.has(column))
-    .join(', ');
+    .filter((column) => !dropped.has(column));
+  const extra = table === 'trial_outcomes' ? asked.flatMap((key) => [key, ...classSiblings(key)]) : [];
+  return [...new Set([...columns, ...extra])].join(', ');
 }
 
 export function projectionColumns(table: AgentTable): string[] {

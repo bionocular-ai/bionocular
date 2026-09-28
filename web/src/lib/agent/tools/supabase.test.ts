@@ -4,6 +4,7 @@ import {
   AGENT_TABLES,
   AGENT_TABLE_NAMES,
   applyNamedFilter,
+  classSiblings,
   describeTables,
   embedFor,
   projectionColumns,
@@ -568,6 +569,60 @@ describe('query_proprietary_data', () => {
     expect(result).toMatchObject({ ok: false, reason: 'unknown_column' });
   });
 
+  it('selects the asked columns and their classes at concise detail, and echoes them on the result', async () => {
+    const tools = toolsWith({ trial_outcomes: { rows: [{ nct_id: 'NCT1', median_pfs: 10.1 }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', columns: ['median_pfs', 'grade_3_plus_teae_pct'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    // The registry embed follows with no space, so split on the comma alone.
+    const selected = fake.queries[0].projection.split(/,\s*/);
+    for (const column of ['grade_3_plus_ae_pct', 'grade_3_plus_teae_pct', 'grade_3_plus_trae_pct']) {
+      expect(selected).toContain(column);
+    }
+    expect(result).toMatchObject({ ok: true, askedColumns: ['median_pfs', 'grade_3_plus_teae_pct'] });
+  });
+
+  it('refuses an asked column trial_outcomes does not have, before querying', async () => {
+    const tools = toolsWith({ trial_outcomes: { rows: [{ nct_id: 'NCT1' }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', columns: ['grade_3_teae'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: 'unknown_column', unknownColumns: ['grade_3_teae'] });
+    expect(fake.queries).toHaveLength(0);
+  });
+});
+
+describe('classSiblings', () => {
+  it('finds the same measure under AE, TEAE and TRAE, in that order', () => {
+    expect(classSiblings('grade_3_plus_teae_pct')).toEqual([
+      'grade_3_plus_ae_pct',
+      'grade_3_plus_teae_pct',
+      'grade_3_plus_trae_pct',
+    ]);
+    expect(classSiblings('grade_3_plus_trae_colitis')).toEqual([
+      'grade_3_plus_ae_colitis',
+      'grade_3_plus_teae_colitis',
+      'grade_3_plus_trae_colitis',
+    ]);
+  });
+
+  it('pairs the any-cause discontinuation column despite its different spelling', () => {
+    const siblings = ['ae_leading_to_discontinuation_pct', 'teae_discontinuation_pct', 'trae_discontinuation_pct'];
+
+    for (const key of siblings) expect(classSiblings(key)).toEqual(siblings);
+  });
+
+  it('keeps only the classes that have the column, and gives a classless or one-class measure none', () => {
+    expect(classSiblings('trae_ir_ae_pct')).toEqual(['teae_ir_ae_pct', 'trae_ir_ae_pct']);
+    expect(classSiblings('serious_ir_ae_pct')).toEqual([]);
+    expect(classSiblings('median_pfs')).toEqual([]);
+  });
 });
 
 describe('clinical_trials projection', () => {

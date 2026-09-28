@@ -211,20 +211,47 @@ export const GOLDEN_CASES: EvalCase[] = [
   {
     // Session b38c68c7: "active" sent the model to clinical_trials and
     // trial_landscape, which spent the budget and truncated the outcomes.
+    // Worded exactly as the demo asks it.
     id: 'active-phase1-efficacy-one-call',
     category: 'agent-behavior',
     cancerSlug: CM,
     question:
-      'show me all published efficacy parameters (ORR, PFS and others) in cutaneous melanoma for active treatments. strict rule: only treatments which are in phase 1 trial.',
+      'show me all published efficacy parameters (ORR, DCR and CR) in cutaneous melanoma for active treatments. strict rule: only treatments which are in phase 1 trial.',
     expect: {
       skills: ['trial-outcomes'],
       filter: {
         table: 'trial_outcomes',
-        args: { phase: 'PHASE1', status: ['RECRUITING', 'ACTIVE_NOT_RECRUITING'], endpoints: 'efficacy' },
+        args: {
+          phase: 'PHASE1',
+          status: ['RECRUITING', 'ACTIVE_NOT_RECRUITING'],
+          endpoints: 'efficacy',
+          columns: ['orr', 'dcr', 'cr'],
+        },
       },
       forbidFilter: { table: 'clinical_trials' },
       answer: /industry/i,
       countAwareness: true,
+      maxToolCalls: 4,
+    },
+  },
+  {
+    // The Q3 baseline: no arm reports a TEAE-labelled rate, and run 1
+    // answered in TRAE without saying so and dropped the PFS-only DREAMseq.
+    id: 'active-phase3-pfs-vs-teae',
+    category: 'clinical-reasoning',
+    cancerSlug: CM,
+    question:
+      'provide phase 3 active clinical treatments showing median PFS vs grade3+ Treatment emergent adverse events vs treatment discontinuation due to AEs in metastatic /cutaneous melanoma.',
+    expect: {
+      skills: ['trial-outcomes'],
+      filter: {
+        table: 'trial_outcomes',
+        args: { phase: 'PHASE3', columns: ['median_pfs', 'grade_3_plus_teae_pct'] },
+      },
+      forbidFilter: { table: 'clinical_trials' },
+      // States the TEAE gap, and keeps the trial that reports PFS only.
+      answer:
+        /^(?=[\s\S]*(NCT02224781|DREAMseq))(?=[\s\S]*(\b(no|none|not)\b[^.\n]*\b(TEAEs?|treatment[- ]emergent)\b|\b(TEAEs?|treatment[- ]emergent)\b[^.\n]*\b(no|none|not)\b))/i,
       maxToolCalls: 4,
     },
   },

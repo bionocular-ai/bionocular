@@ -28,7 +28,16 @@ is the arm's own and wins when both are present.
   or `trial_landscape`: every row already carries its trial's sponsor class,
   biomarker and line of therapy. Querying them spends the turn's budget and
   truncates the outcomes you came for.
-- A re-query keeps the `endpoints` and `detail` of the call it refines.
+- A re-query keeps the `endpoints`, `detail` and `columns` of the call it refines.
+- When the question names endpoints, pass them as `columns`, in the order it
+  names them (up to five): "ORR and grade 3+ treatment-related AEs" is
+  `['orr', 'grade_3_plus_trae_pct']`. The interface draws exactly those.
+  Efficacy columns use the short clinical names: `orr`, `dcr`, `cr`, `pcr`,
+  `median_pfs`, `median_os`, `median_dor`, `hr_pfs`, `pfs_rate_12m`.
+  Adverse-event columns carry their class in the name: `ae` (any cause),
+  `teae` (treatment-emergent) or `trae` (treatment-related), as in
+  `grade_3_plus_teae_pct`, `serious_trae_pct` and `teae_discontinuation_pct`.
+  Discontinuation for any cause is `ae_leading_to_discontinuation_pct`.
 - `drug` is a substring on `generic_name`; `sponsor` on `sponsors`.
 - Ask for `detail: 'detailed'` when the question names endpoints beyond the
   browse set (the concise set carries PFS, OS, ORR, DCR, DoR, grade 3+ TRAE
@@ -55,10 +64,27 @@ is the arm's own and wins when both are present.
 - `line_of_treatment` changes what a number means; first-line and later-line
   arms are not the same population.
 
+## Adverse-event classes
+
+- AE, TEAE and TRAE are separate columns, each holding what the source
+  labelled that way. A value belongs to its column's class only: never call an
+  AE or TRAE value a TEAE, or the reverse.
+- When the class the question names is empty on most arms, say so first, in
+  words ("no arm reports grade 3+ TEAE", not the column name). Then answer from the other classes and
+  name the class on every value. AE counts any cause, as TEAE does; TRAE counts
+  only events attributed to the drug, so it runs lower and is a narrower
+  stand-in. The interface draws the three classes side by side beneath the
+  asked table.
+- Discontinuation carries the same classes. Name the class of each
+  discontinuation rate, and do not merge a TRAE rate with an AE rate.
+
 ## Answer shape
 
 Open with the shape: how many arms, from how many trials, grouped by the
 thing the question asked about (treatment, line, phase). Then what is notable,
-what is absent, and which rows are exceptions and why. Cite `nct_id` where a
+what is absent, and which rows are exceptions and why. An arm that reports
+some of the asked endpoints and not others is part of the answer: give what it
+has and say what it lacks - it is not a trial without a readout. Name the
+trials in scope whose rows carry none of the asked endpoints. Cite `nct_id` where a
 row has one, otherwise `abstract_id` or `publication_id`. The interface draws
 every row of the result as a table beside your answer; do not reproduce rows.

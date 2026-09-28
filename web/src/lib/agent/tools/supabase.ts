@@ -21,6 +21,7 @@ import {
   supportedFilters,
   viaFilters,
   FUNDING_VALUES,
+  TRIAL_OUTCOMES_ENDPOINTS,
   type AgentColumn,
   type AgentTable,
   type FilterName,
@@ -48,6 +49,8 @@ const DEFAULT_ROWS = 25;
  * handing this cap a trial set of that size.
  */
 const MAX_TRIAL_KEYS = 100;
+/** Matches the five endpoints the answer table draws at once. */
+const MAX_ASKED_COLUMNS = 5;
 /**
  * ~48k tokens of JSON, measured. The Phase 1 cutaneous melanoma
  * `trial_outcomes` sweep this branch was built for - 189 rows through the
@@ -315,6 +318,17 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
             'Which half of trial_outcomes the question is about; the other half is left out. ' +
               'Defaults to `both`. No effect on the other tables.',
           ),
+        columns: z
+          .array(z.string())
+          .min(1)
+          .max(MAX_ASKED_COLUMNS)
+          .optional()
+          .describe(
+            'trial_outcomes only: the endpoint columns the question names, in the order it names ' +
+              'them (e.g. `median_pfs`, `grade_3_plus_teae_pct`). The interface draws these first, ' +
+              'and draws the same adverse-event measures under AE, TEAE and TRAE when the named ' +
+              'class is missing on most arms. Always selected, whatever `detail` says.',
+          ),
         limit: z
           .number()
           .int()
@@ -325,8 +339,23 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
       }),
       execute: async (args) =>
         runTool('query_proprietary_data', { traceId, turn }, args, async () => {
-        const { table, nctIds, sponsor, phase, status, drug, funding, biomarker, detail, endpoints, limit } = args;
+        const { table, nctIds, sponsor, phase, status, drug, funding, biomarker, detail, endpoints, columns, limit } =
+          args;
         const spec = AGENT_TABLES[table];
+
+        // Checked here rather than as a schema enum: the enum is ~250 names,
+        // re-sent with the tool definition on every step of every turn.
+        const unknownColumns = (columns ?? []).filter((key) => !TRIAL_OUTCOMES_ENDPOINTS.has(key));
+        if (unknownColumns.length > 0) {
+          return {
+            ok: false as const,
+            reason: 'unknown_column' as const,
+            table,
+            unknownColumns,
+            availableColumns: [...TRIAL_OUTCOMES_ENDPOINTS],
+            hint: 'Pass endpoint columns exactly as trial_outcomes names them.',
+          };
+        }
 
         // Cancer scope is applied to every query, so on its own it narrows
         // nothing the caller chose. Without a second predicate a raised limit is
@@ -373,7 +402,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           .map(([name]) => name);
         const activeVia = viaFilters(table, requested);
         const select =
-          projectionFor(table, detail ?? 'concise', endpoints ?? 'both') + embedFor(table, activeVia);
+          projectionFor(table, detail ?? 'concise', endpoints ?? 'both', columns) + embedFor(table, activeVia);
 
         let query = supabase.from(table).select(select, { count: 'exact' }).limit(limit);
 
@@ -554,7 +583,15 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           };
         }
 
-        const result = { ok: true as const, table, coverage, rows };
+        // Echoed so the table drawn from this result knows which columns were
+        // asked for without pairing outputs back to their inputs.
+        const result = {
+          ok: true as const,
+          table,
+          coverage,
+          ...(columns && table === 'trial_outcomes' ? { askedColumns: columns } : {}),
+          rows,
+        };
         turn.spend(JSON.stringify(result).length);
         turn.recordEvidence(rows);
         return result;

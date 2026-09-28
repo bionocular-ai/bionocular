@@ -32,7 +32,7 @@ import {
   type ResultSummary,
   type ResultTable,
 } from './result-table';
-import { TRIAL_OUTCOMES_EFFICACY, TRIAL_OUTCOMES_SAFETY } from './tools/schema';
+import { TRIAL_OUTCOMES_EFFICACY, TRIAL_OUTCOMES_SAFETY, classSiblings } from './tools/schema';
 
 const KEY = 'nct_id';
 
@@ -224,8 +224,11 @@ function reports(row: Row, key: string): boolean {
  * bookkeeping (`id`, `arm_id`, `source_type`...) never becomes a column.
  *
  * Every endpoint any arm reports is a column, ranked by how many arms report
- * it; `TurnTable` draws the reader's pick of them. The arm's own line of
- * treatment wins over the trial's line of therapy - it is the more specific.
+ * it; `TurnTable` draws the reader's pick of them. An endpoint the question
+ * named ranks first and stays a column even when no arm reports it - an empty
+ * "Grade 3+ TEAE %" is the answer to a TEAE question, not noise. The arm's own
+ * line of treatment wins over the trial's line of therapy - it is the more
+ * specific.
  */
 function toOutcomesTable(output: unknown): ResultTable | null {
   const rows: Row[] = rowsOf(output)
@@ -247,11 +250,13 @@ function toOutcomesTable(output: unknown): ResultTable | null {
     });
   if (rows.length === 0) return null;
 
+  const asked = askedOf(output);
+  const askedRank = (key: string) => (asked.includes(key) ? asked.indexOf(key) : asked.length);
   const endpoints = orderColumns([...ENDPOINT_FAMILY.keys()].filter((key) => !isQualifier(key)))
     .map((key) => ({ key, arms: rows.filter((row) => reports(row, key)).length }))
-    .filter(({ arms }) => arms > 0)
+    .filter(({ key, arms }) => arms > 0 || asked.includes(key))
     // Stable, so arms tied on a count keep the clinical order `orderColumns` gave them.
-    .sort((a, b) => b.arms - a.arms);
+    .sort((a, b) => askedRank(a.key) - askedRank(b.key) || b.arms - a.arms);
   const parameters: ResultParameter[] = endpoints.map(({ key, arms }) => ({
     key,
     label: humanizeColumn(key),
@@ -260,13 +265,69 @@ function toOutcomesTable(output: unknown): ResultTable | null {
   }));
 
   const columns = [...OUTCOME_CONTEXT, ...parameters.map((p) => p.key), ...OUTCOME_TRAIL].filter(
-    (key) => OUTCOME_FACTS.includes(key) || rows.some((row) => reports(row, key)),
+    (key) => OUTCOME_FACTS.includes(key) || asked.includes(key) || rows.some((row) => reports(row, key)),
   );
 
+  const byClass = toClassTable(rows, asked);
   return {
     columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? humanizeColumn(key) })),
     rows: rows.map((row) => columns.map((column) => formatRowCell(row, column))),
     parameters,
+    ...(asked.length > 0 ? { asked } : {}),
+    ...(byClass ? { byClass } : {}),
+  };
+}
+
+/** The endpoints the query was told the question names, echoed on its result. */
+function askedOf(output: unknown): string[] {
+  const asked = (output as { askedColumns?: unknown }).askedColumns;
+  return Array.isArray(asked)
+    ? asked.filter((key): key is string => typeof key === 'string' && ENDPOINT_FAMILY.has(key))
+    : [];
+}
+
+/** `setting` is drawn as section headings, the same grouping as the asked table. */
+const CLASS_CONTEXT = ['treatment_name', 'nct_id', 'setting', 'num_patients'];
+
+/**
+ * The asked adverse-event measures under AE, TEAE and TRAE side by side, when
+ * the class the question named is missing on most arms that say anything
+ * about it. Sources label a rate with one class, and most label TRAE only, so
+ * a TEAE question answered from the TEAE columns alone is a table of dashes.
+ * Every class keeps its own column - including an all-empty one, which shows
+ * the class was checked - so no value is ever read as a class it is not.
+ */
+function toClassTable(rows: Row[], asked: string[]): ResultTable['byClass'] {
+  const measures = asked.filter((key) => classSiblings(key).length > 0);
+  const siblings = [...new Set(measures.flatMap(classSiblings))];
+  const relevant = rows.filter((row) => [...asked, ...siblings].some((key) => reports(row, key)));
+  const missing = measures.filter(
+    (key) => relevant.filter((row) => !reports(row, key)).length * 2 > relevant.length,
+  );
+  const classRows = rows.filter((row) => siblings.some((key) => reports(row, key)));
+  if (missing.length === 0 || classRows.length === 0) return undefined;
+
+  const measure = (key: string) => humanizeColumn(key).replace(/ %$/, '');
+  const none = missing.filter((key) => relevant.every((row) => !reports(row, key)));
+  const most = missing.filter((key) => !none.includes(key));
+  const gaps = [
+    none.length > 0 ? `No arm reports ${none.map(measure).join(' or ')}` : null,
+    most.length > 0 ? `most arms do not report ${most.map(measure).join(' or ')}` : null,
+  ].filter((gap): gap is string => gap !== null);
+  const said = gaps.join('; ');
+  const note = `${said.charAt(0).toUpperCase()}${said.slice(1)}. Below, the same measures under each class the sources reported.`;
+
+  const columns = [...CLASS_CONTEXT, ...siblings, 'source'];
+  return {
+    note,
+    table: {
+      columns: columns.map((key) => ({
+        key,
+        // Six measure headers in one row; "discontinuation" is most of each.
+        label: OUTCOME_LABELS[key] ?? humanizeColumn(key).replace(/ (leading to )?discontinuation/, ' disc.'),
+      })),
+      rows: classRows.map((row) => columns.map((column) => formatRowCell(row, column))),
+    },
   };
 }
 

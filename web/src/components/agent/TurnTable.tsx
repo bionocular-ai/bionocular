@@ -14,6 +14,7 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { TRIAL_OUTCOMES_ENDPOINTS } from '@/lib/agent/tools/schema';
 import { NCT_ID_PATTERN, trialRoute } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -196,11 +197,13 @@ function ParameterPicker({
           type="button"
           className={cn(
             TRIGGER_CLASSES,
-            'border-(--brand-primary)/60 bg-(--brand-accent-light)/60'
+            // Asked endpoints have long names; the label truncates rather than
+            // pushing the page wider than a phone.
+            'max-w-full border-(--brand-primary)/60 bg-(--brand-accent-light)/60'
           )}
         >
           Parameters:
-          <span className="font-semibold text-(--brand-text)">{summary}</span>
+          <span className="truncate font-semibold text-(--brand-text)">{summary}</span>
           <ChevronDown className="h-3 w-3" aria-hidden />
         </button>
       </DropdownMenuTrigger>
@@ -446,11 +449,14 @@ export function TurnTable({
   table,
   cancerType,
   efficacyLink,
+  marker = true,
 }: {
   table: ResultTable;
   cancerType: string;
   /** Present only when this turn's filters are ones the hub can reproduce. */
   efficacyLink?: EfficacyLink | null;
+  /** The turn's timeline dot; a table drawn inside another one has none. */
+  marker?: boolean;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [clipped, setClipped] = useState(false);
@@ -481,9 +487,13 @@ export function TurnTable({
   const parameters = table.parameters;
   const picked = useMemo(() => {
     if (!parameters) return [];
-    const kept = (picks ?? []).filter((key) => parameters.some((p) => p.key === key));
-    return kept.length > 0 ? kept : parameters.slice(0, DEFAULT_PARAMETERS).map((p) => p.key);
-  }, [parameters, picks]);
+    const known = (keys: string[]) => keys.filter((key) => parameters.some((p) => p.key === key));
+    const kept = known(picks ?? []);
+    if (kept.length > 0) return kept;
+    // What the question named, before what the most arms happen to report.
+    const asked = known(table.asked ?? []);
+    return asked.length > 0 ? asked : parameters.slice(0, DEFAULT_PARAMETERS).map((p) => p.key);
+  }, [parameters, picks, table.asked]);
   const togglePick = useCallback(
     (key: string) =>
       setPicks(picked.includes(key) ? picked.filter((k) => k !== key) : [...picked, key]),
@@ -525,9 +535,14 @@ export function TurnTable({
     ]
   );
   const columns = table.columns.filter((_, index) => !hidden.has(index));
+  // Every endpoint rather than the parameters: the by-class table has none.
   const numeric = useMemo(
-    () => new Set(['num_patients', ...(parameters ?? []).map((p) => p.key)]),
-    [parameters]
+    () =>
+      new Set([
+        'num_patients',
+        ...table.columns.map((column) => column.key).filter((key) => TRIAL_OUTCOMES_ENDPOINTS.has(key)),
+      ]),
+    [table.columns]
   );
   const facets = useMemo(() => toFacets(table), [table]);
   const rows = useMemo(
@@ -575,13 +590,15 @@ export function TurnTable({
 
   return (
     <div className="relative mb-1.5">
-      <span
-        aria-hidden
-        className={cn(
-          'absolute top-[9px] -left-[25px] h-[7px] w-[7px] rounded-full',
-          'border border-(--brand-border) bg-(--brand-bg)'
-        )}
-      />
+      {marker ? (
+        <span
+          aria-hidden
+          className={cn(
+            'absolute top-[9px] -left-[25px] h-[7px] w-[7px] rounded-full',
+            'border border-(--brand-border) bg-(--brand-bg)'
+          )}
+        />
+      ) : null}
       {table.summary ? <SummaryStrip summary={table.summary} /> : null}
       {facets.length > 0 || (parameters && parameters.length > 1) ? (
         <FilterBar
@@ -794,6 +811,19 @@ export function TurnTable({
               parameters, not shown
             </span>
           ) : null}
+        </div>
+      ) : null}
+      {/* Between the tables, because it is what connects them: the class the
+          question named is missing, and the next table is what there is. */}
+      {table.byClass ? (
+        <div className="pt-4">
+          <p
+            role="note"
+            className="mb-2 border-l-2 border-amber-600 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"
+          >
+            {table.byClass.note}
+          </p>
+          <TurnTable table={table.byClass.table} cancerType={cancerType} marker={false} />
         </div>
       ) : null}
       {efficacyLink ? (
