@@ -1,9 +1,9 @@
 /**
- * The five relations the agent may read, and how to query each one.
+ * The six relations the agent may read, and how to query each one.
  *
  * This map is measured against the live database, not inferred from the app
  * code, because the tables disagree with each other: `cancer_type` is `text[]`
- * on four of them but a plain `text` scalar on `km_curves`, and `news_feed` has
+ * on four of them but a plain `text` scalar on `km_curves` and `approved_therapies`, and `news_feed` has
  * no `nct_id` at all - it carries `nct_ids` `text[]`. PostgREST throws
  * `malformed array literal` when `.eq()` hits a `text[]` column, so the
  * operator has to be derived from the column's kind here rather than guessed at
@@ -389,7 +389,7 @@ const TABLE_DEFINITIONS = {
   km_curves: {
     summary:
       'digitised Kaplan-Meier survival curves reconstructed from published figures',
-    // The one scalar cancer_type in the set. Do not "fix" this to an array.
+    // Scalar, like approved_therapies. Do not "fix" this to an array.
     cancerType: { column: 'cancer_type', kind: 'scalar' },
     trialKey: { column: 'nct_id', kind: 'scalar' },
     order: [
@@ -430,6 +430,27 @@ const TABLE_DEFINITIONS = {
     // refused.
     filters: { drug: { column: 'title', kind: 'scalar' } },
   },
+
+  approved_therapies: {
+    summary: 'NCCN-listed therapies and their US regulatory status for this cancer type',
+    // Scalar like km_curves: one cancer type per row, matched exactly, so
+    // "Cutaneous Melanoma" never pulls in the brain-metastasis rows.
+    cancerType: { column: 'cancer_type', kind: 'scalar' },
+    // Reference data about regimens, not trials.
+    trialKey: null,
+    // NCCN's own order (neoadjuvant, adjuvant, first line, ...); unique per
+    // cancer type, so the order is total.
+    order: [{ column: 'sheet_row', ascending: true }],
+    projection:
+      'treatment_name, setting, biomarker, us_status, nccn_tier, nccn_category, dose, source, sheet_row',
+    filters: {
+      drug: { column: 'treatment_name', kind: 'scalar' },
+      biomarker: { column: 'biomarker', kind: 'scalar' },
+    },
+    caveat:
+      'An NCCN snapshot (see `source`), US only. "Approved" is an approval for this cancer ' +
+      'type; "On-label" means the label wording does not exclude it, which is not an approval.',
+  },
 } as const satisfies Record<string, AgentTableSpec>;
 
 export type AgentTable = keyof typeof TABLE_DEFINITIONS;
@@ -442,6 +463,9 @@ export type AgentTable = keyof typeof TABLE_DEFINITIONS;
 export const AGENT_TABLES: Record<AgentTable, AgentTableSpec> = TABLE_DEFINITIONS;
 
 export const AGENT_TABLE_NAMES = Object.keys(AGENT_TABLES) as [AgentTable, ...AgentTable[]];
+
+/** The tables a trial can be looked up in: every one with a trial key. */
+export const TRIAL_KEYED_TABLES = AGENT_TABLE_NAMES.filter((name) => AGENT_TABLES[name].trialKey !== null);
 
 /**
  * Minimal shape of a PostgREST query builder. Structural so the helpers below
@@ -471,7 +495,7 @@ export function applyOrder<Q extends FilterableQuery<Q>>(query: Q, table: AgentT
 
 /**
  * Restrict a query to one cancer type. Always applied - `cancer_type` is
- * non-null in all five tables, so this predicate can never silently drop rows
+ * non-null in every table, so this predicate can never silently drop rows
  * that should have been in scope.
  */
 export function applyCancerScope<Q extends FilterableQuery<Q>>(
@@ -501,7 +525,10 @@ export function applyTrialKeys<Q extends FilterableQuery<Q>>(
   nctIds: readonly string[],
 ): Q {
   const key = AGENT_TABLES[table].trialKey;
-  if (!key) return query;
+  // Returning the query unchanged would drop the filter and answer "which rows
+  // match this trial" with every row. Callers refuse nctIds on these tables
+  // first; reaching here is a bug.
+  if (!key) throw new Error(`${table} has no trial key; nctIds cannot filter it`);
   if (key.kind === 'array') return query.overlaps(key.column, nctIds);
   return nctIds.length === 1 ? query.eq(key.column, nctIds[0]) : query.in(key.column, nctIds);
 }

@@ -6,6 +6,7 @@ import { NCT_ID_PATTERN } from '@/lib/constants';
 import {
   AGENT_TABLES,
   AGENT_TABLE_NAMES,
+  TRIAL_KEYED_TABLES,
   applyCancerScope,
   applyOrder,
   applyTrialKeys,
@@ -32,9 +33,9 @@ interface TableHit {
  * vanishing first. Table order breaks ties, so the result is deterministic.
  */
 export function fitLookupToBudget(
-  tables: Record<AgentTable, TableHit | null>,
+  tables: Partial<Record<AgentTable, TableHit | null>>,
   limitChars: number,
-): { tables: Record<AgentTable, TableHit | null>; truncated: AgentTable[] } {
+): { tables: Partial<Record<AgentTable, TableHit | null>>; truncated: AgentTable[] } {
   const out = { ...tables };
   const truncated = new Set<AgentTable>();
   while (JSON.stringify(out).length > limitChars) {
@@ -97,7 +98,7 @@ export function buildLookupTool({ cancerSlug, traceId, turn }: AgentToolContext)
         const supabase = createServiceClient();
 
         const results = await Promise.all(
-          AGENT_TABLE_NAMES.map(async (table): Promise<[AgentTable, TableHit | null]> => {
+          TRIAL_KEYED_TABLES.map(async (table): Promise<[AgentTable, TableHit | null]> => {
             const spec = AGENT_TABLES[table];
             let query = supabase
               .from(table)
@@ -125,9 +126,9 @@ export function buildLookupTool({ cancerSlug, traceId, turn }: AgentToolContext)
           }),
         );
 
-        const fetched = Object.fromEntries(results) as Record<AgentTable, TableHit | null>;
-        const presentIn = AGENT_TABLE_NAMES.filter((t) => (fetched[t]?.matched ?? 0) > 0);
-        const absentFrom = AGENT_TABLE_NAMES.filter((t) => fetched[t]?.matched === 0);
+        const fetched = Object.fromEntries(results) as Partial<Record<AgentTable, TableHit | null>>;
+        const presentIn = TRIAL_KEYED_TABLES.filter((t) => (fetched[t]?.matched ?? 0) > 0);
+        const absentFrom = TRIAL_KEYED_TABLES.filter((t) => fetched[t]?.matched === 0);
 
         if (presentIn.length === 0) {
           // Distinguish "we have never heard of this trial" from "we have it, but

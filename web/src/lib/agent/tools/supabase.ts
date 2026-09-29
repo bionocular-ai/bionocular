@@ -343,6 +343,17 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           args;
         const spec = AGENT_TABLES[table];
 
+        if (nctIds && !spec.trialKey) {
+          return {
+            ok: false as const,
+            reason: 'unsupported_filter' as const,
+            table,
+            filter: 'nctIds',
+            supportedFilters: supportedFilters(table),
+            hint: `\`${table}\` is not keyed by trial, so it cannot be filtered by NCT number. Query it without \`nctIds\`.`,
+          };
+        }
+
         // Checked here rather than as a schema enum: the enum is ~250 names,
         // re-sent with the tool definition on every step of every turn.
         const unknownColumns = (columns ?? []).filter((key) => !TRIAL_OUTCOMES_ENDPOINTS.has(key));

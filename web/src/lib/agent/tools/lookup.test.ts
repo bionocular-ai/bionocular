@@ -44,6 +44,19 @@ describe('lookup_trial', () => {
     expect(NCT_ID_PATTERN.test('NCT00006368')).toBe(true);
   });
 
+  it('never looks a trial up in a table that is not keyed by trial', async () => {
+    const tools = toolsWith({
+      clinical_trials: { rows: [{ nct_id: 'NCT00006368', brief_title: 'A trial' }] },
+      approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }] },
+    });
+
+    const result = await tools.lookup_trial.execute!({ nctId: 'NCT00006368' }, RUN_OPTIONS);
+
+    expect(fake.queries.some((q) => q.table === 'approved_therapies')).toBe(false);
+    const { coverage } = result as { coverage: { presentIn: string[]; absentFrom: string[] } };
+    expect([...coverage.presentIn, ...coverage.absentFrom]).not.toContain('approved_therapies');
+  });
+
   it('separates the tables that hold a trial from those that do not', async () => {
     const tools = toolsWith({
       clinical_trials: { rows: [{ nct_id: 'NCT00006368', brief_title: 'A trial' }] },

@@ -4,6 +4,7 @@ import {
   AGENT_TABLES,
   AGENT_TABLE_NAMES,
   applyNamedFilter,
+  applyTrialKeys,
   classSiblings,
   describeTables,
   embedFor,
@@ -57,6 +58,52 @@ describe('query_proprietary_data', () => {
   beforeEach(() => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('scopes approved_therapies by exact cancer type, so cutaneous never pulls in brain-metastasis rows', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'approved_therapies', limit: 10 }, RUN_OPTIONS);
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'eq',
+      column: 'cancer_type',
+      value: 'Cutaneous Melanoma',
+    });
+  });
+
+  it('refuses nctIds on a table with no trial key, before any query', async () => {
+    // applyTrialKeys used to return the query unchanged here, so the filter
+    // vanished and every approval row came back as if it matched the trial.
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab' }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', nctIds: ['NCT00006368'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'unsupported_filter',
+      table: 'approved_therapies',
+      filter: 'nctIds',
+    });
+    expect(fake.queries).toHaveLength(0);
+  });
+
+  it('matches drug on approved_therapies against the regimen name', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab' }] } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', drug: 'nivolumab', limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'ilike',
+      column: 'treatment_name',
+      value: '%nivolumab%',
+    });
   });
 
   it('scopes array cancer_type columns with contains, never eq', async () => {
@@ -1242,6 +1289,7 @@ describe('deterministic ordering', () => {
     expect(lastTerm('trial_outcomes')).toBe('id');
     expect(lastTerm('km_curves')).toBe('id');
     expect(lastTerm('news_feed')).toBe('url');
+    expect(lastTerm('approved_therapies')).toBe('sheet_row');
   });
 
   it('puts the newest registry update first on clinical_trials', async () => {
@@ -1408,5 +1456,12 @@ describe('duplicate call guard', () => {
     const second = await tools.query_proprietary_data.execute!({ table: 'clinical_trials', phase: 'PHASE3', limit: 500 }, RUN_OPTIONS);
 
     expect(second).toMatchObject({ ok: true });
+  });
+});
+
+describe('applyTrialKeys', () => {
+  it('throws rather than silently dropping nctIds on a table with no trial key', () => {
+    const query = createFakeSupabase().from('approved_therapies').select('treatment_name');
+    expect(() => applyTrialKeys(query, 'approved_therapies', ['NCT00006368'])).toThrow(/no trial key/);
   });
 });
