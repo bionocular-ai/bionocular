@@ -11,6 +11,29 @@ import {
 } from './result-table';
 
 describe('toResultTable', () => {
+  it('draws approvals as regimen, setting, status, never the sheet row', () => {
+    const table = toResultTable({
+      ok: true,
+      rows: [
+        { treatment_name: 'Nivolumab', setting: 'Adjuvant', us_status: 'Off label', nccn_tier: 'Preferred', dose: '480 mg q4w', source: 'NCCN v3.2026', sheet_row: 9 },
+        { treatment_name: 'Ipilimumab + Nivolumab', setting: '1L+ Advanced', us_status: 'On-label (generic)', nccn_tier: 'Preferred', dose: 'Nivo 1 mg/kg + ipi 3 mg/kg', source: 'NCCN v3.2026', sheet_row: 17 },
+      ],
+    });
+
+    // source and nccn_tier are identical on both rows, so the uniform-column rule drops them.
+    expect(table!.columns).toEqual([
+      { key: 'treatment_name', label: 'Treatment name' },
+      { key: 'setting', label: 'Setting' },
+      { key: 'us_status', label: 'US status' },
+      { key: 'dose', label: 'Dose' },
+    ]);
+  });
+
+  it('labels NCCN columns as NCCN, not Nccn', () => {
+    expect(humanizeColumn('nccn_tier')).toBe('NCCN tier');
+    expect(humanizeColumn('nccn_category')).toBe('NCCN category');
+  });
+
   it('lists every row the tool returned, never a sample', () => {
     // The whole point. A sweep of 53 trials was written up as 45 because the
     // model transcribed rows into prose and merged the ones sharing a drug.

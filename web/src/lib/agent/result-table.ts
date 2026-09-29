@@ -100,6 +100,12 @@ export const NOT_REACHED = 'NR';
 export const MARKER_COLUMNS = ['is_nr', 'is_lt'];
 
 /**
+ * Columns selected only so a query's ORDER BY names a column it selects (the
+ * ordering test requires it). A sheet row number tells a reader nothing.
+ */
+export const ORDER_ONLY_COLUMNS = ['sheet_row'];
+
+/**
  * Columns worth seeing first, in this order; everything else keeps the order it
  * was discovered in, behind them.
  *
@@ -126,6 +132,7 @@ const LEAD_COLUMNS = [
   'interventions',
   'nct_id',
   'setting',
+  'us_status',
   'phases',
   'follow_up_only',
   'lead_sponsor_name',
@@ -223,6 +230,9 @@ const INITIALISMS: Record<string, string> = {
   overall_status: 'Status',
   sponsor_type: 'Type',
   expert_review: 'Expert review',
+  us_status: 'US status',
+  nccn_tier: 'NCCN tier',
+  nccn_category: 'NCCN category',
   // The setting is the section heading above it; the column carries the line.
   line_of_therapy: 'Line',
 };
@@ -363,7 +373,9 @@ export function toResultTable(output: unknown): ResultTable | null {
     if (typeof row !== 'object' || row === null) continue;
     for (const key of Object.keys(row)) if (!discovered.includes(key)) discovered.push(key);
   }
-  const columns = orderColumns(discovered.filter((key) => !MARKER_COLUMNS.includes(key)));
+  const columns = orderColumns(
+    discovered.filter((key) => !MARKER_COLUMNS.includes(key) && !ORDER_ONLY_COLUMNS.includes(key)),
+  );
   if (columns.length === 0) return null;
 
   const cells = new Map<string, string[]>();

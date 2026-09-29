@@ -4,6 +4,7 @@ import {
   AGENT_TABLES,
   AGENT_TABLE_NAMES,
   applyNamedFilter,
+  applyTrialKeys,
   classSiblings,
   describeTables,
   embedFor,
@@ -12,7 +13,7 @@ import {
   viaFilters,
   type AgentTable,
 } from './schema';
-import { createTurnState } from './turn';
+import { collectIdentifiers, createTurnState } from './turn';
 
 let fake: FakeSupabase;
 
@@ -57,6 +58,95 @@ describe('query_proprietary_data', () => {
   beforeEach(() => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('scopes approved_therapies by exact cancer type, so cutaneous never pulls in brain-metastasis rows', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'approved_therapies', limit: 10 }, RUN_OPTIONS);
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'eq',
+      column: 'cancer_type',
+      value: 'Cutaneous Melanoma',
+    });
+  });
+
+  // MAX_ROWS in supabase.ts; not exported.
+  const MAX_ROWS = 500;
+
+  it('reads a wholeRead table in full at the default limit', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }], count: 1 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', limit: 25 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    expect(fake.queries[0].limit).toBe(MAX_ROWS);
+  });
+
+  it('does not refuse a raised limit on a wholeRead table', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }], count: 1 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    expect(fake.queries).toHaveLength(1);
+  });
+
+  it('still applies named filters on a wholeRead table', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }], count: 1 } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', drug: 'nivolumab', limit: 5 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'ilike',
+      column: 'treatment_name',
+      value: '%nivolumab%',
+    });
+    expect(fake.queries[0].limit).toBe(MAX_ROWS);
+  });
+
+  it('refuses nctIds on a table with no trial key, before any query', async () => {
+    // applyTrialKeys used to return the query unchanged here, so the filter
+    // vanished and every approval row came back as if it matched the trial.
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab' }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', nctIds: ['NCT00006368'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({
+      ok: false,
+      reason: 'unsupported_filter',
+      table: 'approved_therapies',
+      filter: 'nctIds',
+    });
+    expect(fake.queries).toHaveLength(0);
+  });
+
+  it('matches drug on approved_therapies against the regimen name', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab' }] } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', drug: 'nivolumab', limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'ilike',
+      column: 'treatment_name',
+      value: '%nivolumab%',
+    });
   });
 
   it('scopes array cancer_type columns with contains, never eq', async () => {
@@ -1242,6 +1332,7 @@ describe('deterministic ordering', () => {
     expect(lastTerm('trial_outcomes')).toBe('id');
     expect(lastTerm('km_curves')).toBe('id');
     expect(lastTerm('news_feed')).toBe('url');
+    expect(lastTerm('approved_therapies')).toBe('sheet_row');
   });
 
   it('puts the newest registry update first on clinical_trials', async () => {
@@ -1372,6 +1463,14 @@ describe('store_finding', () => {
     expect(fake.upserts).toHaveLength(0);
   });
 
+  it('counts an approval row\'s NCCN source as a citable identifier, as the skill tells the model to cite it', () => {
+    // store_finding refuses any citation not in this set; approval rows carry
+    // no NCT number, so their `source` is the only thing they can be cited by.
+    const found = collectIdentifiers([{ treatment_name: 'Nivolumab', us_status: 'Off label', source: 'NCCN v3.2026' }]);
+    expect(found.has('NCCN v3.2026')).toBe(true);
+    expect(found.has('Off label')).toBe(false);
+  });
+
   it('only offers finding types the data tools can produce', () => {
     expect(FINDING_TYPES).not.toContain('literature');
     expect(FINDING_TYPES).not.toContain('compound');
@@ -1408,5 +1507,12 @@ describe('duplicate call guard', () => {
     const second = await tools.query_proprietary_data.execute!({ table: 'clinical_trials', phase: 'PHASE3', limit: 500 }, RUN_OPTIONS);
 
     expect(second).toMatchObject({ ok: true });
+  });
+});
+
+describe('applyTrialKeys', () => {
+  it('throws rather than silently dropping nctIds on a table with no trial key', () => {
+    const query = createFakeSupabase().from('approved_therapies').select('treatment_name');
+    expect(() => applyTrialKeys(query, 'approved_therapies', ['NCT00006368'])).toThrow(/no trial key/);
   });
 });

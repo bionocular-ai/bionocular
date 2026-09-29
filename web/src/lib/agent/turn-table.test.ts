@@ -166,10 +166,27 @@ describe('toTurnTable', () => {
     expect(toTurnTable([{ ok: false, reason: 'no_rows', table: 'trial_outcomes' }])).toBeNull();
   });
 
-  it('ignores a result with no trial key, which cannot be joined', () => {
+  it('draws the last result when a result with no trial key leaves nothing to join', () => {
     const news = { ok: true, table: 'news_feed', rows: [{ url: 'https://example.test', title: 'x' }] };
 
-    expect(toTurnTable([trials, news])).toBeNull();
+    expect(toTurnTable([trials, news])?.columns.map((c) => c.key)).toEqual(['url', 'title']);
+  });
+
+  it('never leaves an approvals turn tableless: beside the landscape, or re-read by drug', () => {
+    // The standard-of-care skill reads approvals together with the landscape,
+    // and a drug question re-reads approvals filtered. Neither joins on nct_id.
+    const approvals = {
+      ok: true,
+      table: 'approved_therapies',
+      rows: [
+        { treatment_name: 'Nivolumab', setting: 'Adjuvant', us_status: 'Off label', sheet_row: 9 },
+        { treatment_name: 'Ipilimumab + Nivolumab', setting: '1L+ Advanced', us_status: 'On-label (generic)', sheet_row: 17 },
+      ],
+    };
+    const nivolumabOnly = { ...approvals, rows: [approvals.rows[0]] };
+
+    expect(toTurnTable([landscape, approvals])?.columns.map((c) => c.key)).toEqual(['treatment_name', 'setting', 'us_status']);
+    expect(toTurnTable([approvals, nivolumabOnly])?.rows).toHaveLength(1);
   });
 
   it('draws the outcomes result rather than folding its arms into the registry join', () => {
@@ -736,6 +753,22 @@ describe('toTurnTable summary', () => {
     const table = toTurnTable([trials, landscape]);
 
     expect(table?.summary).toBeUndefined();
+  });
+
+  it('gives approval rows no landscape strip: they are regimens, not trials', () => {
+    const approvals = {
+      ok: true,
+      table: 'approved_therapies',
+      rows: [
+        { treatment_name: 'Nivolumab', setting: 'Adjuvant', us_status: 'Off label', sheet_row: 9 },
+        { treatment_name: 'Ipilimumab + Nivolumab', setting: '1L+ Advanced', us_status: 'On-label (generic)', sheet_row: 17 },
+      ],
+    };
+
+    const table = toTurnTable([approvals]);
+
+    expect(table?.summary).toBeUndefined();
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'setting', 'us_status']);
   });
 });
 

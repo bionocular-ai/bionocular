@@ -11,6 +11,19 @@ type ModelCallRecord = import('../model-calls').ModelCallRecord;
 
 const byId = (id: string): EvalCase => GOLDEN_CASES.find((c) => c.id === id)!;
 
+describe('approved-rp1 answerNot', () => {
+  const answerNot = byId('approved-rp1').expect.answerNot!;
+
+  it('fails an answer that calls RP1 investigational or unapproved', () => {
+    expect(answerNot.test('RP1 is an investigational oncolytic therapy.')).toBe(true);
+    expect(answerNot.test('RP1 plus nivolumab is not yet FDA approved.')).toBe(true);
+  });
+
+  it('passes an accurate answer that scopes the approval', () => {
+    expect(answerNot.test('RP1 plus nivolumab is approved after anti-PD-1 therapy; first-line use is not approved.')).toBe(false);
+  });
+});
+
 function observed(over: Partial<Observed> = {}): Observed {
   return { calls: [], outputs: [], skillsLoaded: [], answer: 'An answer.', ungrounded: [], fastPath: null, ...over };
 }

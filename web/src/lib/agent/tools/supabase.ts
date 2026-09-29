@@ -343,6 +343,17 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           args;
         const spec = AGENT_TABLES[table];
 
+        if (nctIds && !spec.trialKey) {
+          return {
+            ok: false as const,
+            reason: 'unsupported_filter' as const,
+            table,
+            filter: 'nctIds',
+            supportedFilters: supportedFilters(table),
+            hint: `\`${table}\` is not keyed by trial, so it cannot be filtered by NCT number. Query it without \`nctIds\`.`,
+          };
+        }
+
         // Checked here rather than as a schema enum: the enum is ~250 names,
         // re-sent with the tool definition on every step of every turn.
         const unknownColumns = (columns ?? []).filter((key) => !TRIAL_OUTCOMES_ENDPOINTS.has(key));
@@ -357,13 +368,17 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           };
         }
 
+        // A small reference table is always read whole (see `wholeRead`), so
+        // neither the row window nor the sweep guard below applies to it.
+        const rowLimit = spec.wholeRead ? MAX_ROWS : limit;
+
         // Cancer scope is applied to every query, so on its own it narrows
         // nothing the caller chose. Without a second predicate a raised limit is
         // a table read: 500 unfiltered `trial_landscape` rows measured 48k
         // tokens and carried 3 that mattered. The default window still allows an
         // unfiltered browse, which is how "what exists here" gets answered.
         const narrowed = [nctIds, sponsor, phase, status, drug, funding, biomarker].some((f) => f !== undefined);
-        if (!narrowed && limit > DEFAULT_ROWS) {
+        if (!narrowed && limit > DEFAULT_ROWS && !spec.wholeRead) {
           const filters = supportedFilters(table);
           return {
             ok: false as const,
@@ -404,7 +419,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         const select =
           projectionFor(table, detail ?? 'concise', endpoints ?? 'both', columns) + embedFor(table, activeVia);
 
-        let query = supabase.from(table).select(select, { count: 'exact' }).limit(limit);
+        let query = supabase.from(table).select(select, { count: 'exact' }).limit(rowLimit);
 
         query = applyOrder(query, table);
         query = applyCancerScope(query, table, dbCancerType);
@@ -541,7 +556,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
                     ? `Only ${rows.length} of ${matched} rows fit in what remains of this turn's result budget. Answer from what you have and say the result is partial; a narrower query may fit.`
                     : truncatedBy === 'size'
                       ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.`
-                      : `You asked for ${limit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
+                      : `You asked for ${rowLimit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
               }),
           ...(nctIds ? { trialKeyColumn: spec.trialKey?.column } : {}),
           // Only once the result is whole: under truncation "absent from the
