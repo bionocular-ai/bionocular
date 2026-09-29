@@ -23,12 +23,18 @@ ALTER TABLE approved_therapies ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "approved_therapies_read" ON approved_therapies FOR SELECT USING (true);
 
 -- The loader's only write path: one transaction, so a failed insert rolls the
--- delete back and the previous version stays in place. `WHERE true` keeps
+-- delete back and the previous version stays in place. An empty payload is
+-- refused rather than allowed to empty the table. `WHERE true` keeps
 -- pg-safeupdate, which Supabase enables for API requests, from rejecting a
 -- DELETE with no WHERE clause.
 CREATE FUNCTION replace_approved_therapies(payload jsonb) RETURNS void
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql
+SET search_path = public, pg_temp
+AS $$
 BEGIN
+  IF coalesce(jsonb_array_length(payload), 0) = 0 THEN
+    RAISE EXCEPTION 'replace_approved_therapies: empty payload';
+  END IF;
   DELETE FROM approved_therapies WHERE true;
   INSERT INTO approved_therapies
     SELECT * FROM jsonb_populate_recordset(null::approved_therapies, payload);
