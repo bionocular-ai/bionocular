@@ -144,3 +144,12 @@ def test_refuses_a_cancer_type_with_no_rows() -> None:
 def test_refuses_a_regimen_row_with_no_name() -> None:
     with pytest.raises(LoadError, match="row 4: has a setting but no regimen name"):
         build_rows(_sheet(EVERYWHERE, _regimen("", default="Approved")), SOURCE)
+
+
+def test_refuses_a_row_with_statuses_but_no_setting() -> None:
+    # A blank setting marks a section header; a row that still carries statuses
+    # is a regimen whose setting was cleared, and would silently vanish.
+    no_setting = _regimen("Nivolumab + relatlimab", default="On-label (generic)")
+    no_setting[2] = None
+    with pytest.raises(LoadError, match="row 4: has US statuses but no setting"):
+        build_rows(_sheet(EVERYWHERE, no_setting), SOURCE)

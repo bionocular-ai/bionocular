@@ -103,7 +103,12 @@ def build_rows(ws: Worksheet, source: str) -> list[dict[str, Any]]:
             name: _clean(ws.cell(row=r, column=c).value) for name, c in _FIELDS.items()
         }
         if fields["setting"] is None:
-            continue  # a section header ("ADJUVANT SYSTEMIC THERAPY ...") or a blank row
+            # A section header ("ADJUVANT SYSTEMIC THERAPY ...") or a blank row.
+            # A row that still has statuses is a regimen whose setting was
+            # cleared, and skipping it would drop it silently.
+            if any(_clean(ws.cell(row=r, column=col).value) for col in columns):
+                raise LoadError(f"row {r}: has US statuses but no setting")
+            continue
         if fields["treatment_name"] is None:
             raise LoadError(f"row {r}: has a setting but no regimen name")
         for col, cancer_type in columns.items():
