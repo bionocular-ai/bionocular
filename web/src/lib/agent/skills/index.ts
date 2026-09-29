@@ -14,7 +14,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-export const SKILL_NAMES = ['trial-outcomes', 'trial-landscape', 'coverage-and-citation'] as const;
+export const SKILL_NAMES = ['trial-outcomes', 'trial-landscape', 'coverage-and-citation', 'standard-of-care'] as const;
 export type SkillName = (typeof SKILL_NAMES)[number];
 
 export interface Skill {

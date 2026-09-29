@@ -25,6 +25,13 @@ describe('skills', () => {
     }
   });
 
+  it('standard-of-care defines every status in the spreadsheet legend', () => {
+    const { body } = loadSkill('standard-of-care');
+    for (const status of ['Approved', 'On-label (generic)', 'On-label (cutaneous)', 'On-label if BRAF V600+', 'Off label']) {
+      expect(body, status).toContain(status);
+    }
+  });
+
   it('lists every skill for the system prompt, one line each', () => {
     const lines = describeSkills().split('\n');
     expect(lines).toHaveLength(SKILL_NAMES.length);
