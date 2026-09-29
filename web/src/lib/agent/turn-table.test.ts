@@ -737,6 +737,22 @@ describe('toTurnTable summary', () => {
 
     expect(table?.summary).toBeUndefined();
   });
+
+  it('gives approval rows no landscape strip: they are regimens, not trials', () => {
+    const approvals = {
+      ok: true,
+      table: 'approved_therapies',
+      rows: [
+        { treatment_name: 'Nivolumab', setting: 'Adjuvant', us_status: 'Off label', sheet_row: 9 },
+        { treatment_name: 'Ipilimumab + Nivolumab', setting: '1L+ Advanced', us_status: 'On-label (generic)', sheet_row: 17 },
+      ],
+    };
+
+    const table = toTurnTable([approvals]);
+
+    expect(table?.summary).toBeUndefined();
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'setting', 'us_status']);
+  });
 });
 
 describe('withoutAskedPhase', () => {

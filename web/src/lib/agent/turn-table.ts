@@ -471,13 +471,15 @@ function rowsOf(output: unknown): Row[] {
 /**
  * The strip's counts, from the rows rather than the rendered cells.
  *
- * Only a landscape turn gets one: `derive` writes `setting` exactly when the
- * row carries a line of therapy or a primary purpose, which is also the
- * condition for the table to have sections to put a strip above. An outcomes
- * table gets no strip instead of a strip of zeroes.
+ * Only a landscape turn gets one: trial rows (they carry an nct_id) with a
+ * `setting`. `derive` writes `setting` exactly when the row carries a line of
+ * therapy or a primary purpose, which is also the condition for the table to
+ * have sections to put a strip above. An outcomes table gets no strip instead
+ * of a strip of zeroes, and approval rows - regimens with a `setting` but no
+ * nct_id - get none rather than reading as "35 trials".
  */
 function summarise(rows: Row[]): ResultSummary | undefined {
-  if (!rows.some((row) => 'setting' in row)) return undefined;
+  if (!rows.some((row) => 'setting' in row && typeof row[KEY] === 'string')) return undefined;
   let curated = 0;
   let setAside = 0;
   let industry = 0;
