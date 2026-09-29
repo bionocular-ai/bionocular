@@ -30,6 +30,10 @@ describe('skills', () => {
     for (const status of ['Approved', 'On-label (generic)', 'On-label (cutaneous)', 'On-label if BRAF V600+', 'Off label']) {
       expect(body, status).toContain(status);
     }
+    // Two rows in every melanoma scope are subcutaneous formulations, not
+    // regimens, and the dose text of some carries formulation approval dates.
+    expect(body).toContain('May be substituted');
+    expect(body).toMatch(/`dose`/);
   });
 
   it('lists every skill for the system prompt, one line each', () => {

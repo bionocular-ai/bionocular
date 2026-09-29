@@ -360,14 +360,17 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
   const perArm = successful.filter(isPerArm);
   const answer = perArm[perArm.length - 1];
   if (answer && (answer as { table?: unknown }).table === 'trial_outcomes') return toOutcomesTable(answer);
-  if (answer || successful.length === 1) {
-    const only = answer ?? successful[0];
-    const stripped = stripFolded(only, today);
+  const drawOne = (output: unknown): ResultTable | null => {
+    const stripped = stripFolded(output, today);
     const table = toResultTable(stripped);
     return table && withSummary(table, rowsOf(stripped));
-  }
+  };
+  if (answer || successful.length === 1) return drawOne(answer ?? successful[0]);
   const queries = outputs.map(asJoinable).filter((rows): rows is Row[] => rows !== null);
-  if (queries.length < 2) return null;
+  // Nothing to join: draw the last result, the model's latest narrowing, rather
+  // than no table. Approvals have no nct_id, so a turn that read them beside the
+  // landscape, or re-read them by drug, used to show the reader nothing.
+  if (queries.length < 2) return drawOne(successful[successful.length - 1]);
 
   // Row order comes from the first query: it is the one that answered the
   // question, and the later ones were scoped to the keys it returned. A key only

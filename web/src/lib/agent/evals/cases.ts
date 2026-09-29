@@ -389,7 +389,8 @@ export const GOLDEN_CASES: EvalCase[] = [
     expect: {
       filter: { table: 'approved_therapies' },
       answer: /\bapproved\b/i,
-      answerNot: /investigational|not (yet )?(FDA[- ])?approved/i,
+      // Scoped to a clause about RP1, so "first-line use is not approved" passes.
+      answerNot: /investigational|\b(RP1|vusolimogene)\b[^.;]*\bis not (yet )?(FDA[- ])?approved\b/i,
       maxToolCalls: 3,
     },
   },

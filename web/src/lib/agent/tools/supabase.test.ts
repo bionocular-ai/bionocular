@@ -13,7 +13,7 @@ import {
   viaFilters,
   type AgentTable,
 } from './schema';
-import { createTurnState } from './turn';
+import { collectIdentifiers, createTurnState } from './turn';
 
 let fake: FakeSupabase;
 
@@ -1461,6 +1461,14 @@ describe('store_finding', () => {
 
     expect(result).toMatchObject({ ok: false, reason: 'uncited_evidence', uncited: ['NCT99999999'] });
     expect(fake.upserts).toHaveLength(0);
+  });
+
+  it('counts an approval row\'s NCCN source as a citable identifier, as the skill tells the model to cite it', () => {
+    // store_finding refuses any citation not in this set; approval rows carry
+    // no NCT number, so their `source` is the only thing they can be cited by.
+    const found = collectIdentifiers([{ treatment_name: 'Nivolumab', us_status: 'Off label', source: 'NCCN v3.2026' }]);
+    expect(found.has('NCCN v3.2026')).toBe(true);
+    expect(found.has('Off label')).toBe(false);
   });
 
   it('only offers finding types the data tools can produce', () => {

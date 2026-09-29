@@ -19,7 +19,10 @@ answering from this cancer type's rows.
 
 ## Statuses
 
-`us_status` is the spreadsheet's wording, stored as-is:
+`us_status` is the spreadsheet's wording, stored as-is. Only `Approved` is an
+approval for this cancer type; every On-label wording is not, so name the
+wording rather than calling it approved. Approval dates or regions inside
+`dose` describe a formulation, never this cancer type.
 
 - `Approved`: an FDA approval for this cancer type and setting.
 - `On-label (generic)`: the label says "unresectable or metastatic melanoma"
@@ -37,7 +40,9 @@ answering from this cancer type's rows.
 
 - `nccn_tier`: Preferred, Other Recommended, or Useful in certain
   circumstances (chosen by tumour biology, prior therapy or clinical
-  features).
+  features). `May be substituted` marks a subcutaneous formulation that can
+  replace the IV form in any regimen containing it: not a separate regimen,
+  so leave it out of regimen counts and name it on its own.
 - `nccn_category`: Cat 1 is high-level evidence with uniform consensus;
   Cat 2A is lower-level evidence with uniform consensus; Cat 2B is
   lower-level evidence where the panel did not agree unanimously.
