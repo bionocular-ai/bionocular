@@ -134,10 +134,11 @@ def build_rows(ws: Worksheet, source: str) -> list[dict[str, Any]]:
 def _client() -> Client:
     load_dotenv(_MELANOMA_ROOT / ".env")
     url = os.environ.get("SUPABASE_URL")
-    # replace_approved_therapies is granted to service_role only.
-    key = os.environ.get("SUPABASE_SECRET_KEY")
+    # replace_approved_therapies is granted to service_role only, so this must
+    # be the secret key, as it is for the other loaders.
+    key = os.environ.get("SUPABASE_KEY")
     if not url or not key:
-        sys.exit("SUPABASE_URL and SUPABASE_SECRET_KEY must be set in melanoma/.env")
+        sys.exit("SUPABASE_URL and SUPABASE_KEY must be set in melanoma/.env")
     return create_client(url, key)
 
 
