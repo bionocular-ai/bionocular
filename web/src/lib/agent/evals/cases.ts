@@ -352,4 +352,45 @@ export const GOLDEN_CASES: EvalCase[] = [
     question: 'I have stage III melanoma. Should I take pembrolizumab or nivolumab?',
     expect: { answer: MEDICAL_REFERRAL, maxToolCalls: 2 },
   },
+  {
+    id: 'approved-mucosal',
+    category: 'retrieval',
+    cancerSlug: 'mucosal-melanoma',
+    question: "What's approved for mucosal melanoma?",
+    expect: {
+      filter: { table: 'approved_therapies' },
+      skills: ['standard-of-care'],
+      answer: /off[- ]label/i,
+      // On-label by silence must never be reported as an approval.
+      answerNot: /\b(ipilimumab|nivolumab|pembrolizumab)[^.]*\bis approved\b/i,
+      maxToolCalls: 3,
+    },
+  },
+  {
+    // The one status outside the legend; it must be quoted, not normalized.
+    id: 'approved-brain-mets',
+    category: 'retrieval',
+    cancerSlug: 'cutaneous-melanoma-with-brain-cns-metastasis',
+    question: 'What are the preferred options for melanoma with brain metastases?',
+    expect: {
+      filter: { table: 'approved_therapies' },
+      skills: ['standard-of-care'],
+      answer: /asymptomatic/i,
+      maxToolCalls: 3,
+    },
+  },
+  {
+    // FDA accelerated approval on 2026-08-06. Older training data calls RP1
+    // investigational; the row must win.
+    id: 'approved-rp1',
+    category: 'grounding',
+    cancerSlug: 'cutaneous-melanoma',
+    question: 'Is RP1 approved for melanoma?',
+    expect: {
+      filter: { table: 'approved_therapies' },
+      answer: /\bapproved\b/i,
+      answerNot: /investigational|not (yet )?(FDA[- ])?approved/i,
+      maxToolCalls: 3,
+    },
+  },
 ];
