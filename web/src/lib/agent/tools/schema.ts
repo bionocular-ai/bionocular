@@ -456,7 +456,7 @@ const TABLE_DEFINITIONS = {
     },
     wholeRead: true,
     caveat:
-      'An NCCN snapshot (see `source`), US only. "Approved" is an approval for this cancer ' +
+      'An NCCN snapshot (version in the source column), US only. "Approved" is an approval for this cancer ' +
       'type; "On-label" means the label wording does not exclude it, which is not an approval.',
   },
 } as const satisfies Record<string, AgentTableSpec>;
