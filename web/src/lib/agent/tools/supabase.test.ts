@@ -72,6 +72,49 @@ describe('query_proprietary_data', () => {
     });
   });
 
+  // MAX_ROWS in supabase.ts; not exported.
+  const MAX_ROWS = 500;
+
+  it('reads a wholeRead table in full at the default limit', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }], count: 1 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', limit: 25 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    expect(fake.queries[0].limit).toBe(MAX_ROWS);
+  });
+
+  it('does not refuse a raised limit on a wholeRead table', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }], count: 1 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', limit: 500 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    expect(fake.queries).toHaveLength(1);
+  });
+
+  it('still applies named filters on a wholeRead table', async () => {
+    const tools = toolsWith({ approved_therapies: { rows: [{ treatment_name: 'Nivolumab', sheet_row: 4 }], count: 1 } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'approved_therapies', drug: 'nivolumab', limit: 5 },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'ilike',
+      column: 'treatment_name',
+      value: '%nivolumab%',
+    });
+    expect(fake.queries[0].limit).toBe(MAX_ROWS);
+  });
+
   it('refuses nctIds on a table with no trial key, before any query', async () => {
     // applyTrialKeys used to return the query unchanged here, so the filter
     // vanished and every approval row came back as if it matched the trial.

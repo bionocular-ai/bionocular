@@ -71,6 +71,13 @@ export interface AgentTableSpec {
   /** Surfaced with every result for this table so the model can qualify it. */
   readonly caveat?: string;
   /**
+   * A small reference table: every read returns the whole cancer-type scope.
+   * The row window and the unfiltered-sweep guard exist to stop a table scan;
+   * here the scan is the answer (at most 35 rows, about 9.4k chars, measured).
+   * Named filters still apply.
+   */
+  readonly wholeRead?: true;
+  /**
    * Filters this table does not hold, resolved through a foreign key. PostgREST
    * evaluates them server-side via an embedded `!inner` join, so a phase-scoped
    * outcomes query is one request rather than a 1,134-key handoff no cap admits.
@@ -447,6 +454,7 @@ const TABLE_DEFINITIONS = {
       drug: { column: 'treatment_name', kind: 'scalar' },
       biomarker: { column: 'biomarker', kind: 'scalar' },
     },
+    wholeRead: true,
     caveat:
       'An NCCN snapshot (see `source`), US only. "Approved" is an approval for this cancer ' +
       'type; "On-label" means the label wording does not exclude it, which is not an approval.',
