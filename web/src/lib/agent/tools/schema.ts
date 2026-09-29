@@ -439,7 +439,7 @@ const TABLE_DEFINITIONS = {
   },
 
   approved_therapies: {
-    summary: 'NCCN-listed therapies and their US regulatory status for this cancer type',
+    summary: 'NCCN-listed therapies and whether each is FDA-approved for this cancer type',
     // Scalar like km_curves: one cancer type per row, matched exactly, so
     // "Cutaneous Melanoma" never pulls in the brain-metastasis rows.
     cancerType: { column: 'cancer_type', kind: 'scalar' },

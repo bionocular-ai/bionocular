@@ -1,6 +1,6 @@
 ---
 name: standard-of-care
-description: How to read `approved_therapies` (NCCN-listed therapies and their US regulatory status for this cancer type) - what Approved, On-label and Off label mean, and how to use it as the standard-of-care baseline. Load for approval, standard of care, label, unmet need or comparator questions.
+description: How to read `approved_therapies` (NCCN-listed therapies and whether each is FDA-approved for this cancer type) - what Approved, On-label and Off label mean. Load for FDA approval, label or standard-of-care questions.
 ---
 
 # Standard of care
