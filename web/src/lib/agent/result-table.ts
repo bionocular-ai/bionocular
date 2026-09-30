@@ -476,7 +476,8 @@ export function toFacets(table: ResultTable): Facet[] {
         !notFacets.includes(key) &&
         // Measurements, not groupings: CR reported as 15 or 20 on a few arms
         // reads as a closed set of values, and is not one. Every endpoint, not
-        // only the parameters: the by-class table has none.
+        // only the parameters: companion columns are endpoints that are not
+        // parameters.
         !TRIAL_OUTCOMES_ENDPOINTS.has(key) &&
         values.length > 1 &&
         values.length <= MAX_FACET_VALUES &&

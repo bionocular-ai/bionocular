@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { ArrowUpRight, Check, ChevronDown, ShieldCheck } from 'lucide-react';
@@ -248,7 +248,7 @@ function ParameterPicker({
                     {/* How many arms report it: a column of dashes is not worth a slot. */}
                     <span
                       className="min-w-[2.25rem] rounded-full bg-(--brand-text-muted)/15 px-2 py-0.5 text-center text-[11px] font-medium"
-                      aria-label={`${parameter.arms} arms report it`}
+                      aria-label={`${parameter.arms} treatments report it`}
                     >
                       {parameter.arms}
                     </span>
@@ -497,6 +497,23 @@ export function TurnTable({
   const [picks, setPicks] = useState<string[] | null>(null);
   const [limit, setLimit] = useState(PAGE_ROWS);
   const [reviewedOnly, setReviewedOnly] = useState(false);
+  // Each treatment's earlier readouts, looked up by the row itself: filtering
+  // and sectioning keep the row arrays, so the lookup survives both.
+  const earlierOf = useMemo(
+    () => new Map(table.rows.map((row, index) => [row, table.readouts?.[index] ?? []])),
+    [table.rows, table.readouts]
+  );
+  const [expanded, setExpanded] = useState<Set<string[]>>(() => new Set());
+  const toggleExpanded = useCallback(
+    (row: string[]) =>
+      setExpanded((previous) => {
+        const next = new Set(previous);
+        if (next.has(row)) next.delete(row);
+        else next.add(row);
+        return next;
+      }),
+    []
+  );
 
   const indexOf = (key: string) => table.columns.findIndex((column) => column.key === key);
   const settingIndex = indexOf('setting');
@@ -553,7 +570,8 @@ export function TurnTable({
           followUpIndex,
           ...(parameters ?? [])
             .filter((p) => !picked.includes(p.key))
-            .map((p) => table.columns.findIndex((column) => column.key === p.key)),
+            .flatMap((p) => [p.key, ...(p.companions ?? [])])
+            .map((key) => table.columns.findIndex((column) => column.key === key)),
         ].filter((index) => index !== -1)
       ),
     [
@@ -568,7 +586,8 @@ export function TurnTable({
     ]
   );
   const columns = table.columns.filter((_, index) => !hidden.has(index));
-  // Every endpoint rather than the parameters: the by-class table has none.
+  // Every endpoint rather than the parameters: companion columns - follow-up,
+  // p-value - are endpoints that are not parameters.
   const numeric = useMemo(
     () =>
       new Set([
@@ -576,6 +595,59 @@ export function TurnTable({
         ...table.columns.map((column) => column.key).filter((key) => TRIAL_OUTCOMES_ENDPOINTS.has(key)),
       ]),
     [table.columns]
+  );
+
+  const cellClasses = (cellIndex: number) =>
+    cn(
+      // A floor as well as a ceiling. The table lays out automatically and is
+      // already wider than its box, so a column of short repeated values
+      // ("Stage II; Stage III; Stage IV") could be squeezed to 47px and wrap
+      // to seven lines, making the whole row that tall.
+      'min-w-[11ch] max-w-[34ch] px-3 py-2.5 align-top',
+      'text-(--brand-text-muted)',
+      // The lead column carries the longest values and is the one the
+      // question was about, so it gets the wider floor rather than wrapping a
+      // three-drug regimen over three lines.
+      cellIndex === treatmentIndex && 'min-w-[30ch] max-w-[40ch] font-medium text-(--brand-text)',
+      // An outcomes table spends its width on endpoints, and an arm name
+      // wraps to two lines at 30ch as at 24ch.
+      cellIndex === treatmentIndex && parameters && 'min-w-[24ch]',
+      // A count or an endpoint is a few characters ("26.5", "NR"); the 11ch
+      // floor made each of them as wide as a label column and pushed Source
+      // and Status off-screen.
+      numeric.has(table.columns[cellIndex].key) && 'min-w-[5ch] whitespace-nowrap'
+    );
+
+  const cellContent = (row: string[], cell: string, cellIndex: number) => (
+    <>
+      {table.columns[cellIndex].key === 'nct_id' && NCT_ID_PATTERN.test(cell) ? (
+        <Link href={trialRoute(cell, cancerType)} className={NCT_LINK_CLASSES}>
+          {cell}
+        </Link>
+      ) : table.columns[cellIndex].key === 'source' && /^https?:\/\//.test(cell) ? (
+        <SourceLink url={cell} />
+      ) : PILL_COLUMNS.includes(table.columns[cellIndex].key) && cell !== ABSENT ? (
+        <Pill value={cell} />
+      ) : (
+        cell
+      )}
+      {/* Under the status it qualifies, on the rows that have it, rather than
+        as a column of em dashes. */}
+      {cellIndex === statusIndex && followUpIndex !== -1 && row[followUpIndex] !== ABSENT ? (
+        <span className="mt-1 block font-mono text-[10px] text-(--brand-text-muted)">
+          follow-up only
+        </span>
+      ) : null}
+      {/* An uncurated row has no modality, and the cell above already ends in
+        "· registry" to say why. A line holding only an em dash adds height
+        and no fact. */}
+      {cellIndex === treatmentIndex && modalityIndex !== -1 && row[modalityIndex] !== ABSENT ? (
+        // Set apart by size, not by fading the colour: at 70% opacity this
+        // measured 3.06:1 on the surface, under the 4.5:1 floor for text
+        // this size.
+        <span className="block text-[10px] text-(--brand-text-muted)">{row[modalityIndex]}</span>
+      ) : null}
+    </>
   );
   const facets = useMemo(() => toFacets(table), [table]);
   // Applied under the facets, so their counts say what each choice leaves
@@ -588,8 +660,8 @@ export function TurnTable({
     [table.rows, reviewedOnly, reviewIndex]
   );
   const rows = useMemo(() => filterRows(base, selected, query), [base, selected, query]);
-  // An arm reporting none of the picked endpoints - a trial-in-progress readout,
-  // or one that reported the other family - answers nothing that was asked.
+  // A treatment reporting none of the picked endpoints - a trial-in-progress
+  // readout, or one that reported the other family - answers nothing that was asked.
   // It is left out and counted, so the numbers on screen still add up.
   const [drawn, silent] = useMemo(() => {
     if (!parameters) return [rows, 0];
@@ -639,6 +711,16 @@ export function TurnTable({
         />
       ) : null}
       {table.summary ? <SummaryStrip summary={table.summary} /> : null}
+      {/* Above the table, because it says what the columns stand for: the class
+          the question named was missing, and the header names the one shown. */}
+      {table.caveat ? (
+        <p
+          role="note"
+          className="mb-2 border-l-2 border-amber-600 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"
+        >
+          {table.caveat}
+        </p>
+      ) : null}
       {facets.length > 0 || (parameters && parameters.length > 1) || reviewIndex !== -1 ? (
         <FilterBar
           picker={
@@ -707,7 +789,7 @@ export function TurnTable({
                     </th>
                   </tr>
                 ) : null}
-                {section.rows.map((row, rowIndex) => (
+                {section.rows.map((row, rowIndex) => {
                   // Keyed by position, not by the first cell. That cell used to be
                   // a unique `id`; `orderColumns` now leads with the treatment
                   // and puts `nct_id` second, and
@@ -715,79 +797,58 @@ export function TurnTable({
                   // trial share an nct_id by design, which React reads as duplicate
                   // keys and is free to drop rows over. Rows are positional and the
                   // whole table re-renders per turn, so the index is the identity.
-                  <tr
-                    key={rowIndex}
-                    className="border-b border-(--brand-border)/50 last:border-b-0"
-                  >
-                    {row.map((cell, cellIndex) =>
-                      hidden.has(cellIndex) ? null : (
-                        <td
-                          key={table.columns[cellIndex].key}
-                          // A floor as well as a ceiling. The table lays out
-                          // automatically and is already wider than its box, so
-                          // a column of short repeated values ("Stage II; Stage
-                          // III; Stage IV") could be squeezed to 47px and wrap
-                          // to seven lines, making the whole row that tall.
-                          className={cn(
-                            'min-w-[11ch] max-w-[34ch] px-3 py-2.5 align-top',
-                            'text-(--brand-text-muted)',
-                            // The lead column carries the longest values and is
-                            // the one the question was about, so it gets the
-                            // wider floor rather than wrapping a three-drug
-                            // regimen over three lines.
-                            cellIndex === treatmentIndex &&
-                              'min-w-[30ch] max-w-[40ch] font-medium text-(--brand-text)',
-                            // An outcomes table spends its width on endpoints, and
-                            // an arm name wraps to two lines at 30ch as at 24ch.
-                            cellIndex === treatmentIndex && parameters && 'min-w-[24ch]',
-                            // A count or an endpoint is a few characters ("26.5",
-                            // "NR"); the 11ch floor made each of them as wide as a
-                            // label column and pushed Source and Status off-screen.
-                            numeric.has(table.columns[cellIndex].key) &&
-                              'min-w-[5ch] whitespace-nowrap'
-                          )}
-                        >
-                          {table.columns[cellIndex].key === 'nct_id' &&
-                          NCT_ID_PATTERN.test(cell) ? (
-                            <Link href={trialRoute(cell, cancerType)} className={NCT_LINK_CLASSES}>
-                              {cell}
-                            </Link>
-                          ) : table.columns[cellIndex].key === 'source' &&
-                            /^https?:\/\//.test(cell) ? (
-                            <SourceLink url={cell} />
-                          ) : PILL_COLUMNS.includes(table.columns[cellIndex].key) &&
-                            cell !== ABSENT ? (
-                            <Pill value={cell} />
-                          ) : (
-                            cell
-                          )}
-                          {/* Under the status it qualifies, on the rows that
-                            have it, rather than as a column of em dashes. */}
-                          {cellIndex === statusIndex &&
-                          followUpIndex !== -1 &&
-                          row[followUpIndex] !== ABSENT ? (
-                            <span className="mt-1 block font-mono text-[10px] text-(--brand-text-muted)">
-                              follow-up only
-                            </span>
-                          ) : null}
-                          {/* An uncurated row has no modality, and the cell above
-                            already ends in `· registry` to say why. A line
-                            holding only an em dash adds height and no fact. */}
-                          {cellIndex === treatmentIndex &&
-                          modalityIndex !== -1 &&
-                          row[modalityIndex] !== ABSENT ? (
-                            // Set apart by size, not by fading the colour: at
-                            // 70% opacity this measured 3.06:1 on the surface,
-                            // under the 4.5:1 floor for text this size.
-                            <span className="block text-[10px] text-(--brand-text-muted)">
-                              {row[modalityIndex]}
-                            </span>
-                          ) : null}
-                        </td>
-                      )
-                    )}
-                  </tr>
-                ))}
+                  const earlier = earlierOf.get(row) ?? [];
+                  const open = expanded.has(row);
+                  return (
+                    <Fragment key={rowIndex}>
+                      <tr className="border-b border-(--brand-border)/50 last:border-b-0">
+                        {row.map((cell, cellIndex) =>
+                          hidden.has(cellIndex) ? null : (
+                            <td key={table.columns[cellIndex].key} className={cellClasses(cellIndex)}>
+                              {cellContent(row, cell, cellIndex)}
+                              {cellIndex === treatmentIndex && earlier.length > 0 ? (
+                                <button
+                                  type="button"
+                                  aria-expanded={open}
+                                  onClick={() => toggleExpanded(row)}
+                                  className={cn(MORE_CLASSES, 'mt-1 block')}
+                                >
+                                  {open ? '▾' : '▸'} {earlier.length} earlier{' '}
+                                  {earlier.length === 1 ? 'readout' : 'readouts'}
+                                </button>
+                              ) : null}
+                            </td>
+                          )
+                        )}
+                      </tr>
+                      {/* Muted and indented under the treatment they belong to, in
+                          the same columns, so a reader compares data cuts down a column. */}
+                      {open
+                        ? earlier.map((readout, readoutIndex) => (
+                            <tr
+                              key={readoutIndex}
+                              className="border-b border-(--brand-border)/50 bg-(--brand-bg)"
+                            >
+                              {readout.map((cell, cellIndex) =>
+                                hidden.has(cellIndex) ? null : (
+                                  <td
+                                    key={table.columns[cellIndex].key}
+                                    className={cn(
+                                      cellClasses(cellIndex),
+                                      'py-1.5 text-[11px] font-normal text-(--brand-text-muted)',
+                                      cellIndex === treatmentIndex && 'pl-6'
+                                    )}
+                                  >
+                                    {cellContent(readout, cell, cellIndex)}
+                                  </td>
+                                )
+                              )}
+                            </tr>
+                          ))
+                        : null}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             ))}
             {/* A header row over nothing reads as a failed query rather than as
@@ -801,7 +862,7 @@ export function TurnTable({
                   >
                     {rows.length === 0
                       ? 'No rows match these filters.'
-                      : 'No arm reports the selected parameters.'}
+                      : 'No treatment reports the selected parameters.'}
                   </td>
                 </tr>
               </tbody>
@@ -827,7 +888,7 @@ export function TurnTable({
         >
           {drawn.length > PAGE_ROWS ? (
             <span>
-              {shownCount} of {drawn.length} {parameters ? 'arms' : 'rows'}
+              {shownCount} of {drawn.length} {parameters ? 'treatments' : 'rows'}
             </span>
           ) : null}
           {shownCount < drawn.length ? (
@@ -851,7 +912,7 @@ export function TurnTable({
           ) : null}
           {silent > 0 ? (
             <span>
-              {silent} more {silent === 1 ? 'arm reports' : 'arms report'} none of the selected
+              {silent} more {silent === 1 ? 'treatment reports' : 'treatments report'} none of the selected
               parameters, not shown
             </span>
           ) : null}
