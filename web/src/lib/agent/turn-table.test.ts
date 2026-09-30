@@ -791,6 +791,17 @@ describe('one row per treatment', () => {
     expect(parameters.find((p) => p.key === 'grade_3_plus_ae_pct')?.arms).toBe(2);
     expect(parameters.find((p) => p.key === 'orr')).toMatchObject({ arms: 0 });
   });
+
+  it('puts the PFS follow-up and p-value right after median PFS, and hides them with it', () => {
+    const table = toTurnTable([readouts], today);
+    const keys = table!.columns.map((c) => c.key);
+    const at = keys.indexOf('median_pfs');
+
+    expect(keys.slice(at, at + 3)).toEqual(['median_pfs', 'pfs_followup_months', 'p_value_pfs']);
+    expect(table!.columns.slice(at + 1, at + 3).map((c) => c.label)).toEqual(['PFS follow-up (mo)', 'PFS p-value']);
+    expect(table!.parameters!.find((p) => p.key === 'median_pfs')?.companions).toEqual(['pfs_followup_months', 'p_value_pfs']);
+    expect(keys).not.toContain('os_followup_months');
+  });
 });
 
 // A landscape turn: the registry rows carry what `derive` needs to place a

@@ -33,7 +33,7 @@ import {
   type ResultTable,
 } from './result-table';
 import { readoutDate, readoutOf, regimenKey } from './regimen';
-import { TRIAL_OUTCOMES_EFFICACY, TRIAL_OUTCOMES_SAFETY, classSiblings } from './tools/schema';
+import { TRIAL_OUTCOMES_EFFICACY, TRIAL_OUTCOMES_SAFETY, classSiblings, companions } from './tools/schema';
 
 const KEY = 'nct_id';
 
@@ -209,6 +209,14 @@ const OUTCOME_LABELS: Record<string, string> = {
   expert_review: 'Expert review',
 };
 
+/** "PFS follow-up (mo)" and "PFS p-value", where word-splitting reads "PFS followup months". */
+function companionLabel(key: string): string | undefined {
+  const followUp = /^(\w+)_followup_months$/.exec(key);
+  if (followUp) return `${followUp[1].toUpperCase()} follow-up (mo)`;
+  const pValue = /^p_value_(\w+)$/.exec(key);
+  return pValue ? `${pValue[1].toUpperCase()} p-value` : undefined;
+}
+
 /**
  * The key must be in the row: `is_nr` names every censored column the arm has,
  * including the other family's, which a safety query never projected. Without
@@ -327,18 +335,28 @@ function toOutcomesTable(output: unknown): ResultTable | null {
     .filter(({ key, anywhere }) => anywhere || asked.includes(key))
     // Stable, so arms tied on a count keep the clinical order `orderColumns` gave them.
     .sort((a, b) => askedRank(a.key) - askedRank(b.key) || b.arms - a.arms);
-  const parameters: ResultParameter[] = endpoints.map(({ key, arms }) => ({
-    key,
-    label: humanizeColumn(key),
-    family: ENDPOINT_FAMILY.get(key)!,
-    arms,
-  }));
+  const parameters: ResultParameter[] = endpoints.map(({ key, arms }) => {
+    // Asked medians always bring theirs, as asked columns do; otherwise only a
+    // qualifier some readout carries is worth a column.
+    const qualifiers = companions(key).filter(
+      (column) => asked.includes(key) || everyRow.some((row) => reports(row, column)),
+    );
+    return {
+      key,
+      label: humanizeColumn(key),
+      family: ENDPOINT_FAMILY.get(key)!,
+      arms,
+      ...(qualifiers.length > 0 ? { companions: qualifiers } : {}),
+    };
+  });
 
-  const columns = [...OUTCOME_CONTEXT, ...parameters.map((p) => p.key), ...OUTCOME_TRAIL].filter(
+  const endpointColumns = parameters.flatMap((p) => [p.key, ...(p.companions ?? [])]);
+  const columns = [...OUTCOME_CONTEXT, ...endpointColumns, ...OUTCOME_TRAIL].filter(
     (key) =>
       OUTCOME_FACTS.includes(key) ||
       asked.includes(key) ||
       shown.includes(key) ||
+      parameters.some((p) => p.companions?.includes(key)) ||
       everyRow.some((row) => reports(row, key)),
   );
   const cells = (row: Row) => columns.map((column) => formatRowCell(row, column));
@@ -346,7 +364,7 @@ function toOutcomesTable(output: unknown): ResultTable | null {
 
   const caveat = caveatOf(asked, shown, mains);
   return {
-    columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? humanizeColumn(key) })),
+    columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? companionLabel(key) ?? humanizeColumn(key) })),
     rows: mains.map(cells),
     parameters,
     ...(asked.length > 0 ? { asked: shown } : {}),

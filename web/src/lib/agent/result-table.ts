@@ -47,6 +47,8 @@ export interface ResultParameter {
   label: string;
   family: 'efficacy' | 'safety';
   arms: number;
+  /** Columns drawn beside this endpoint and hidden with it: its follow-up and p-value. */
+  companions?: string[];
 }
 
 export interface ResultTable {
