@@ -195,12 +195,12 @@ const isQualifier = (key: string) => /^(p_value|ci)_|_followup_months$/.test(key
 
 /**
  * Who the arm is, then the facts every answer states about its trial.
- * `setting` is drawn as the section headings, not as a column.
+ * `setting` - the line of therapy - is drawn as the section headings, not as a column.
  */
 const OUTCOME_CONTEXT = [
-  'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'line', 'biomarker',
+  'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'biomarker',
 ];
-const OUTCOME_FACTS = ['setting', 'sponsor_type', 'line', 'biomarker'];
+const OUTCOME_FACTS = ['setting', 'sponsor_type', 'biomarker'];
 const OUTCOME_TRAIL = ['expert_review', 'source', 'overall_status'];
 const OUTCOME_LABELS: Record<string, string> = {
   treatment_name: 'Treatment',
@@ -234,6 +234,29 @@ interface Treatment {
   earlier: Row[];
 }
 
+/** Lines in the order a reader scans them; a label ranks by its earliest token. */
+const LINE_ORDER = ['1L', '2L', '3L', 'R/R', 'Neoadjuvant', 'Adjuvant'];
+const NO_LINE = 'Line not reported';
+
+/**
+ * The section a treatment sits in: its trial's line of therapy, else the arm's
+ * own line without its gloss ("1L (First Line)"). The trial's comes first so a
+ * trial's randomised arms stay in one section - NADINA's arms are labelled
+ * Neoadjuvant and Adjuvant, and the trial is "Adjuvant; Neoadjuvant".
+ */
+function lineLabel(members: Row[]): string {
+  const first = (column: string) =>
+    members.map((row) => row[column]).find((line): line is string => typeof line === 'string' && line.trim() !== '');
+  const line = first('line_of_therapy') ?? first('line_of_treatment');
+  return line ? line.replace(/\s*\([^)]*\)/g, '').trim() : NO_LINE;
+}
+
+function lineRank(label: string): number {
+  if (label === NO_LINE) return LINE_ORDER.length + 1;
+  const ranks = label.split(/;\s*/).map((token) => LINE_ORDER.indexOf(token)).filter((rank) => rank !== -1);
+  return ranks.length > 0 ? Math.min(...ranks) : LINE_ORDER.length;
+}
+
 /**
  * Readouts of one arm, folded into the treatment they report. A group is one
  * nct_id and one drug set (`regimenKey`); a row with no nct_id or no arm name
@@ -244,6 +267,7 @@ interface Treatment {
  * dropped. The newest remaining one is the main row; within one readout, the
  * largest arm stands for it, so a subgroup cut never does. A treatment left
  * with nothing keeps one empty row, which the table counts as reporting none.
+ * Each treatment is sectioned by `lineLabel` and the list comes back in line order.
  */
 function toTreatments(rows: Row[], telling: string[]): Treatment[] {
   const said = (row: Row) => telling.filter((key) => reports(row, key)).length;
@@ -265,45 +289,41 @@ function toTreatments(rows: Row[], telling: string[]): Treatment[] {
     groups.set(key, [...(groups.get(key) ?? []), row]);
   });
 
-  return [...groups.values()].map((members) => {
+  const treatments = [...groups.values()].map((members) => {
     const reporting = members.filter((row) => said(row) > 0).sort(newestFirst);
     const [main, ...earlier] = reporting.length > 0 ? reporting : [members[0]];
     // Abbreviations are the short spellings: "Nivolumab + Relatlimab", not "NIVO + RELA".
     const longest = members.map(nameOf).reduce((best, name) => (name.length > best.length ? name : best), '');
-    return { main: { ...main, treatment_name: longest || null }, earlier };
+    return { main: { ...main, treatment_name: longest || null, setting: lineLabel(members) }, earlier };
   });
+  // `toSections` keeps labels in the order it meets them, so the order is set here.
+  const label = ({ main }: Treatment) => String(main.setting);
+  return treatments.sort((a, b) => lineRank(label(a)) - lineRank(label(b)) || label(a).localeCompare(label(b)));
 }
 
 /**
- * An outcomes result as the reader scans it: the arm, its trial and the three
+ * An outcomes result as the reader scans it: the arm, its trial and the two
  * trial facts, the endpoints, then where the numbers came from. Loader
  * bookkeeping (`id`, `arm_id`, `source_type`...) never becomes a column.
  *
  * Every endpoint any arm reports is a column, ranked by how many arms report
  * it; `TurnTable` draws the reader's pick of them. An endpoint the question
  * named ranks first and stays a column even when no arm reports it - an empty
- * "Grade 3+ TEAE %" is the answer to a TEAE question, not noise. The arm's own
- * line of treatment wins over the trial's line of therapy - it is the more
- * specific.
+ * "Grade 3+ TEAE %" is the answer to a TEAE question, not noise. Each
+ * treatment is sectioned by its trial's line of therapy, or its arm's own
+ * line when the trial names none - see `lineLabel`.
  */
 function toOutcomesTable(output: unknown): ResultTable | null {
   const rows: Row[] = rowsOf(output)
     .filter((row): row is Row => typeof row === 'object' && row !== null)
-    .map((row) => {
-      const line = row.line_of_treatment ?? row.line_of_therapy ?? null;
-      return {
-        ...row,
-        treatment_name: row.arm_name ?? row.generic_name ?? null,
-        // `source_name` is a loader batch label, never a reference; a web-scraped
-        // readout's page is.
-        source: row.abstract_id ?? row.publication_id ?? row.source_url ?? null,
-        line,
-        // Grouped like a landscape. The arm's line decides, so a trial with an
-        // adjuvant arm and a metastatic arm puts each in its own section.
-        setting: lineSetting(line) ?? 'Unclassified',
-        sponsor_type: sponsorType(row.lead_sponsor_class),
-      };
-    });
+    .map((row) => ({
+      ...row,
+      treatment_name: row.arm_name ?? row.generic_name ?? null,
+      // `source_name` is a loader batch label, never a reference; a web-scraped
+      // readout's page is.
+      source: row.abstract_id ?? row.publication_id ?? row.source_url ?? null,
+      sponsor_type: sponsorType(row.lead_sponsor_class),
+    }));
   if (rows.length === 0) return null;
 
   const asked = askedOf(output);

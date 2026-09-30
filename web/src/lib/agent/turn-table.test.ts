@@ -141,7 +141,7 @@ describe('toTurnTable', () => {
     const table = toTurnTable([outcomes]);
 
     expect(table?.rows).toHaveLength(2);
-    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'line', 'biomarker', 'orr']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'biomarker', 'orr']);
   });
 
   it('renders a lone query with no nct_id column at all', () => {
@@ -377,7 +377,7 @@ describe('derived columns', () => {
     expect(cell(table, 1, 'follow_up_only')).toBe('yes');
   });
 
-  it('gives an outcomes table its setting and the three trial facts every answer states', () => {
+  it('gives an outcomes table its line section and the two trial facts every answer states', () => {
     const outcomes = {
       ok: true,
       table: 'trial_outcomes',
@@ -386,7 +386,7 @@ describe('derived columns', () => {
 
     const table = toTurnTable([outcomes], today);
 
-    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'line', 'biomarker', 'orr']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'biomarker', 'orr']);
   });
 });
 
@@ -514,8 +514,8 @@ describe('outcomes turns', () => {
     const table = toTurnTable([phase1Outcomes], today);
     const keys = table!.columns.map((c) => c.key);
 
-    expect(keys.slice(0, 8)).toEqual([
-      'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'line', 'biomarker',
+    expect(keys.slice(0, 7)).toEqual([
+      'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'biomarker',
     ]);
     expect(keys).toEqual(expect.arrayContaining(['source', 'overall_status', 'orr', 'cr', 'dcr', 'median_pfs']));
     for (const gone of ['id', 'arm_id', 'arm_name', 'generic_name', 'abstract_id', 'publication_id', 'source_type', 'p_value_os', 'os_followup_months']) {
@@ -553,42 +553,31 @@ describe('outcomes turns', () => {
     ]);
   });
 
-  it("states each arm's sponsor type, line and biomarker, the arm's own line first", () => {
+  it("states each arm's sponsor type and biomarker, and sections it by its trial's line", () => {
     const table = toTurnTable([phase1Outcomes], today);
 
     expect(cell(table, 0, 'sponsor_type')).toBe('Non-industry');
-    expect(cell(table, 0, 'line')).toBe('2L');
-    expect(cell(table, 1, 'line')).toBe('1L; 2L; 3L; R/R');
+    // The trial's line beats the arm's own '2L', so the trial's arms share a section.
+    expect(cell(table, 0, 'setting')).toBe('1L; 2L; 3L; R/R');
     expect(cell(table, 2, 'sponsor_type')).toBe('Industry');
     expect(cell(table, 2, 'biomarker')).toBe('All comers');
     expect(cell(table, 3, 'biomarker')).toBe('—');
   });
 
-  it('places each arm in a setting from its line, so the table groups the way a landscape does', () => {
+  it('puts an arm with no line under "Line not reported", last', () => {
     const table = toTurnTable([phase1Outcomes], today);
 
-    expect(cell(table, 0, 'setting')).toBe('Advanced / metastatic');
-    expect(cell(table, 3, 'setting')).toBe('Unclassified');
+    expect(cell(table, 3, 'setting')).toBe('Line not reported');
   });
 
-  it('puts an adjuvant or neoadjuvant arm in peri-operative, whatever else its trial treats', () => {
-    const periOp = {
-      ok: true,
-      table: 'trial_outcomes',
-      rows: [{ nct_id: 'NCT1', arm_name: 'A', orr: 40, line_of_treatment: 'Neoadjuvant; R/R' }],
-    };
-
-    expect(cell(toTurnTable([periOp], today), 0, 'setting')).toBe('Peri-operative');
-  });
-
-  it('keeps the three trial facts even when every arm shares them', () => {
-    // A column identical on every row is usually noise; these three are what
-    // every answer states, so an all-industry result still says Industry.
+  it('keeps the trial facts even when every arm shares them', () => {
+    // A column identical on every row is usually noise; these are what every
+    // answer states, so an all-industry result still says Industry.
     const oneTrial = { ...phase1Outcomes, rows: phase1Outcomes.rows.slice(0, 2) };
 
     const keys = toTurnTable([oneTrial], today)!.columns.map((c) => c.key);
 
-    expect(keys).toEqual(expect.arrayContaining(['sponsor_type', 'line', 'biomarker']));
+    expect(keys).toEqual(expect.arrayContaining(['sponsor_type', 'biomarker', 'setting']));
   });
 
   it("cites a web-scraped readout by its page, since it has no abstract or publication ID", () => {
@@ -801,6 +790,28 @@ describe('one row per treatment', () => {
     expect(table!.columns.slice(at + 1, at + 3).map((c) => c.label)).toEqual(['PFS follow-up (mo)', 'PFS p-value']);
     expect(table!.parameters!.find((p) => p.key === 'median_pfs')?.companions).toEqual(['pfs_followup_months', 'p_value_pfs']);
     expect(keys).not.toContain('os_followup_months');
+  });
+
+  it("sections treatments by their trial's line, so a trial's randomised arms stay together", () => {
+    const table = toTurnTable([readouts], today);
+
+    expect(table!.rows.map((_, i) => cell(table, i, 'setting'))).toEqual([
+      '1L', '1L', '2L',
+      'Adjuvant; Neoadjuvant', 'Adjuvant; Neoadjuvant',
+      'Adjuvant', 'Adjuvant',
+      'Line not reported',
+    ]);
+    expect(table!.columns.map((c) => c.key)).not.toContain('line');
+  });
+
+  it("falls back to the arm's line without its gloss when the trial has none", () => {
+    const armOnly = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', orr: 40, line_of_treatment: '1L (First Line)' }],
+    };
+
+    expect(cell(toTurnTable([armOnly], today), 0, 'setting')).toBe('1L');
   });
 });
 
