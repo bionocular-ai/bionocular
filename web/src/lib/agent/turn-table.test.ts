@@ -641,53 +641,57 @@ describe('outcomes turns', () => {
     ],
   };
 
-  it('ranks the asked endpoints first and keeps one no arm reports', () => {
+  it('shows the class most treatments report in place of an empty asked one, first, and keeps the asked column', () => {
     const table = toTurnTable([q3], today);
 
-    expect(table?.asked).toEqual(q3.askedColumns);
-    expect(table?.parameters?.slice(0, 3)).toEqual([
+    expect(table?.asked).toEqual(['median_pfs', 'grade_3_plus_trae_pct', 'ae_leading_to_discontinuation_pct']);
+    // Picked field by field: Task 4 adds `companions` to median PFS.
+    const ranked = table?.parameters?.slice(0, 4).map(({ key, label, family, arms }) => ({ key, label, family, arms }));
+    expect(ranked).toEqual([
       { key: 'median_pfs', label: 'Median PFS', family: 'efficacy', arms: 3 },
-      { key: 'grade_3_plus_teae_pct', label: 'Grade 3+ TEAE %', family: 'safety', arms: 0 },
+      { key: 'grade_3_plus_trae_pct', label: 'Grade 3+ TRAE %', family: 'safety', arms: 2 },
       { key: 'ae_leading_to_discontinuation_pct', label: 'AE leading to discontinuation %', family: 'safety', arms: 1 },
+      { key: 'grade_3_plus_teae_pct', label: 'Grade 3+ TEAE %', family: 'safety', arms: 0 },
     ]);
     expect(cell(table, 1, 'grade_3_plus_teae_pct')).toBe('—');
   });
 
-  it('draws the asked safety measures under every class when the named class is missing on most arms', () => {
-    const byClass = toTurnTable([q3], today)?.byClass;
-
-    expect(byClass?.note).toBe(
-      'No arm reports Grade 3+ TEAE; most arms do not report AE leading to discontinuation. ' +
-        'Below, the same measures under each class the sources reported.',
+  it('says above the table which class stands in, and which treatments report only another', () => {
+    expect(toTurnTable([q3], today)?.caveat).toBe(
+      'No treatment reports Grade 3+ TEAE; showing Grade 3+ TRAE (2 treatments), the class most treatments report. ' +
+        'AE leading to discontinuation: 1 treatment; 1 more reports TRAE discontinuation only.',
     );
-    expect(byClass?.table.columns.map((c) => c.label)).toEqual([
-      'Treatment', 'NCT', 'Setting', 'N',
-      'Grade 3+ AE %', 'Grade 3+ TEAE %', 'Grade 3+ TRAE %', 'AE disc. %', 'TEAE disc. %', 'TRAE disc. %',
-      'Source',
-    ]);
-    // The PFS-only arm has no value in any class, so it is only in the asked table.
-    expect(byClass?.table.rows).toEqual([
-      ['Nurulimab + prolgolimab', 'NCT05732805', 'Unclassified', '135', '—', '—', '17.8', '11.1', '—', '—', 'ASCO_2026_9544'],
-      ['Nivolumab + relatlimab', 'NCT03470922', 'Unclassified', '355', '40.3', '—', '18.9', '—', '—', '14.6', 'NEJM 2022'],
-    ]);
   });
 
-  it('draws no class table when most arms report the named class', () => {
-    const reported = {
-      ...q3,
-      askedColumns: ['median_pfs', 'grade_3_plus_trae_pct'],
+  it('keeps the asked class on a tie, and otherwise breaks a tie by the class precedence', () => {
+    const tied = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT1', arm_name: 'A', grade_3_plus_ae_pct: 30, trae_discontinuation_pct: 5 },
+        { nct_id: 'NCT2', arm_name: 'B', grade_3_plus_trae_pct: 20, ae_leading_to_discontinuation_pct: 8 },
+      ],
     };
 
-    expect(toTurnTable([reported], today)?.byClass).toBeUndefined();
+    // TEAE is empty: grade 3+ goes to AE (TEAE > AE > TRAE), discontinuation to AE (AE > TEAE > TRAE).
+    expect(toTurnTable([{ ...tied, askedColumns: ['grade_3_plus_teae_pct', 'teae_discontinuation_pct'] }], today)?.asked)
+      .toEqual(['grade_3_plus_ae_pct', 'ae_leading_to_discontinuation_pct']);
+    // TRAE ties AE and was asked, so it stays.
+    expect(toTurnTable([{ ...tied, askedColumns: ['grade_3_plus_trae_pct', 'trae_discontinuation_pct'] }], today)?.asked)
+      .toEqual(['grade_3_plus_trae_pct', 'trae_discontinuation_pct']);
   });
 
-  it('draws no class table when the question named no endpoints', () => {
-    const unasked = { ...q3, askedColumns: undefined };
+  it('draws no caveat when the asked class is shown and no treatment reports only another', () => {
+    const reported = { ...q3, askedColumns: ['median_pfs', 'grade_3_plus_trae_pct'] };
 
-    const table = toTurnTable([unasked], today);
+    expect(toTurnTable([reported], today)?.caveat).toBeUndefined();
+  });
+
+  it('draws no caveat, and no unreported class column, when the question named no endpoints', () => {
+    const table = toTurnTable([{ ...q3, askedColumns: undefined }], today);
 
     expect(table?.asked).toBeUndefined();
-    expect(table?.byClass).toBeUndefined();
+    expect(table?.caveat).toBeUndefined();
     expect(table?.columns.map((c) => c.key)).not.toContain('grade_3_plus_teae_pct');
   });
 
@@ -704,15 +708,6 @@ describe('outcomes turns', () => {
     expect(table!.columns.find((c) => c.key === 'expert_review')?.label).toBe('Expert review');
     expect([0, 1, 2].map((i) => cell(table, i, 'expert_review'))).toEqual(['Good', 'Good', '—']);
     expect(toTurnTable([phase1Outcomes], today)!.columns.map((c) => c.key)).not.toContain('expert_review');
-  });
-
-  it('carries the expert verdict into the by-class table', () => {
-    const reviewed = { ...q3, rows: q3.rows.map((row) => ({ ...row, expert_review: 'issues' })) };
-
-    const byClass = toTurnTable([reviewed], today)?.byClass?.table;
-
-    expect(byClass?.columns.map((c) => c.key)).toContain('expert_review');
-    expect(byClass?.rows[0]).toContain('Issues found');
   });
 
   it('leaves a landscape table without parameters', () => {

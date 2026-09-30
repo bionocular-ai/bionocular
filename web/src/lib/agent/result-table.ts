@@ -69,11 +69,11 @@ export interface ResultTable {
    */
   readouts?: string[][][];
   /**
-   * The asked adverse-event measures under every class, present when the class
-   * the question named is missing on most arms. `note` states that gap; the
-   * model's prose says why it matters.
+   * Present when an asked adverse-event class had to stand in for another, or
+   * some treatments report the measure only under a class not shown. Drawn
+   * above the table.
    */
-  byClass?: { note: string; table: ResultTable };
+  caveat?: string;
 }
 
 /**

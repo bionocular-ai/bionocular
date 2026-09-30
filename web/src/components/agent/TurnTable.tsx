@@ -857,19 +857,6 @@ export function TurnTable({
           ) : null}
         </div>
       ) : null}
-      {/* Between the tables, because it is what connects them: the class the
-          question named is missing, and the next table is what there is. */}
-      {table.byClass ? (
-        <div className="pt-4">
-          <p
-            role="note"
-            className="mb-2 border-l-2 border-amber-600 bg-amber-50 px-3 py-2 text-[12.5px] text-amber-900"
-          >
-            {table.byClass.note}
-          </p>
-          <TurnTable table={table.byClass.table} cancerType={cancerType} marker={false} />
-        </div>
-      ) : null}
       {efficacyLink ? (
         <div className="flex items-baseline gap-2 pt-1.5">
           <Link

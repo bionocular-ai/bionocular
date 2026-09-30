@@ -308,7 +308,14 @@ function toOutcomesTable(output: unknown): ResultTable | null {
   const mains = treatments.map(({ main }) => main);
   const everyRow = treatments.flatMap(({ main, earlier }) => [main, ...earlier]);
 
-  const askedRank = (key: string) => (asked.includes(key) ? asked.indexOf(key) : asked.length);
+  // Counted on the main rows: a class only an earlier readout reports does not
+  // fill the column the reader sees first.
+  const shown = asked.map((key) => standIn(key, mains));
+
+  // The shown columns first, in the question's order; then an asked class that
+  // lost its column, still offered and still a column; then the rest.
+  const askedRank = (key: string) =>
+    shown.includes(key) ? shown.indexOf(key) : asked.includes(key) ? shown.length : shown.length + 1;
   const endpoints = orderColumns([...ENDPOINT_FAMILY.keys()].filter((key) => !isQualifier(key)))
     .map((key) => ({
       key,
@@ -328,19 +335,23 @@ function toOutcomesTable(output: unknown): ResultTable | null {
   }));
 
   const columns = [...OUTCOME_CONTEXT, ...parameters.map((p) => p.key), ...OUTCOME_TRAIL].filter(
-    (key) => OUTCOME_FACTS.includes(key) || asked.includes(key) || everyRow.some((row) => reports(row, key)),
+    (key) =>
+      OUTCOME_FACTS.includes(key) ||
+      asked.includes(key) ||
+      shown.includes(key) ||
+      everyRow.some((row) => reports(row, key)),
   );
   const cells = (row: Row) => columns.map((column) => formatRowCell(row, column));
   const readouts = treatments.map(({ earlier }) => earlier.map(cells));
 
-  const byClass = toClassTable(mains, asked);
+  const caveat = caveatOf(asked, shown, mains);
   return {
     columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? humanizeColumn(key) })),
     rows: mains.map(cells),
     parameters,
-    ...(asked.length > 0 ? { asked } : {}),
+    ...(asked.length > 0 ? { asked: shown } : {}),
+    ...(caveat ? { caveat } : {}),
     ...(readouts.some((earlier) => earlier.length > 0) ? { readouts } : {}),
-    ...(byClass ? { byClass } : {}),
   };
 }
 
@@ -352,54 +363,67 @@ function askedOf(output: unknown): string[] {
     : [];
 }
 
-/** `setting` is drawn as section headings, the same grouping as the asked table. */
-const CLASS_CONTEXT = ['treatment_name', 'nct_id', 'setting', 'num_patients'];
+const CLASS_WORDS = ['ae', 'teae', 'trae'];
+const classOf = (key: string) => key.split('_').find((word) => CLASS_WORDS.includes(word)) ?? '';
 
 /**
- * The asked adverse-event measures under AE, TEAE and TRAE side by side, when
- * the class the question named is missing on most arms that say anything
- * about it. Sources label a rate with one class, and most label TRAE only, so
- * a TEAE question answered from the TEAE columns alone is a table of dashes.
- * Every class keeps its own column - including an all-empty one, which shows
- * the class was checked - so no value is ever read as a class it is not.
+ * The column that answers an asked adverse-event measure: whichever of its AE,
+ * TEAE and TRAE columns the most treatments report. Sources label a rate with
+ * one class, and most label TRAE only, so a TEAE question answered from the
+ * TEAE column alone is a column of dashes. A tie goes to the asked class, then
+ * to the class precedence settled on 2026-09-27: grade 3+ TEAE > AE > TRAE,
+ * discontinuation AE > TEAE > TRAE. The header always names the class shown,
+ * so no value is ever read as a class it is not.
  */
-function toClassTable(rows: Row[], asked: string[]): ResultTable['byClass'] {
-  const measures = asked.filter((key) => classSiblings(key).length > 0);
-  const siblings = [...new Set(measures.flatMap(classSiblings))];
-  const relevant = rows.filter((row) => [...asked, ...siblings].some((key) => reports(row, key)));
-  const missing = measures.filter(
-    (key) => relevant.filter((row) => !reports(row, key)).length * 2 > relevant.length,
-  );
-  const classRows = rows.filter((row) => siblings.some((key) => reports(row, key)));
-  if (missing.length === 0 || classRows.length === 0) return undefined;
+function standIn(key: string, rows: Row[]): string {
+  const siblings = classSiblings(key);
+  if (siblings.length === 0) return key;
+  const precedence = /discontinuation/.test(key) ? ['ae', 'teae', 'trae'] : ['teae', 'ae', 'trae'];
+  const count = (column: string) => rows.filter((row) => reports(row, column)).length;
+  return [...siblings].sort(
+    (a, b) =>
+      count(b) - count(a) ||
+      Number(b === key) - Number(a === key) ||
+      precedence.indexOf(classOf(a)) - precedence.indexOf(classOf(b)),
+  )[0];
+}
 
-  const measure = (key: string) => humanizeColumn(key).replace(/ %$/, '');
-  const none = missing.filter((key) => relevant.every((row) => !reports(row, key)));
-  const most = missing.filter((key) => !none.includes(key));
-  const gaps = [
-    none.length > 0 ? `No arm reports ${none.map(measure).join(' or ')}` : null,
-    most.length > 0 ? `most arms do not report ${most.map(measure).join(' or ')}` : null,
-  ].filter((gap): gap is string => gap !== null);
-  const said = gaps.join('; ');
-  const note = `${said.charAt(0).toUpperCase()}${said.slice(1)}. Below, the same measures under each class the sources reported.`;
-
-  const columns = [
-    ...CLASS_CONTEXT,
-    ...siblings,
-    ...(classRows.some((row) => row.expert_review != null) ? ['expert_review'] : []),
-    'source',
-  ];
-  return {
-    note,
-    table: {
-      columns: columns.map((key) => ({
-        key,
-        // Six measure headers in one row; "discontinuation" is most of each.
-        label: OUTCOME_LABELS[key] ?? humanizeColumn(key).replace(/ (leading to )?discontinuation/, ' disc.'),
-      })),
-      rows: classRows.map((row) => columns.map((column) => formatRowCell(row, column))),
-    },
-  };
+/**
+ * The line above the table: which class stands in for an asked one, and how
+ * many treatments report a measure only under a class not on screen. The
+ * clinical reading - TRAE counts only drug-attributed events, so it runs lower -
+ * is the model's to write in prose.
+ */
+function caveatOf(asked: string[], shown: string[], rows: Row[]): string | undefined {
+  const count = (column: string) => rows.filter((row) => reports(row, column)).length;
+  const treatments = (n: number) => `${n} ${n === 1 ? 'treatment' : 'treatments'}`;
+  const measure = (column: string) => humanizeColumn(column).replace(/ %$/, '');
+  const sentences = asked.flatMap((key, i) => {
+    const shownKey = shown[i];
+    const said: string[] = [];
+    if (shownKey !== key) {
+      const n = count(key);
+      const lead = n === 0 ? 'No treatment reports' : `Only ${treatments(n)} ${n === 1 ? 'reports' : 'report'}`;
+      said.push(
+        `${lead} ${measure(key)}; showing ${measure(shownKey)} (${treatments(count(shownKey))}), the class most treatments report.`,
+      );
+    }
+    const elsewhere = classSiblings(key)
+      .filter((other) => other !== shownKey)
+      .map((other) => ({
+        other,
+        n: rows.filter((row) => !reports(row, shownKey) && reports(row, other)).length,
+      }))
+      .filter(({ n }) => n > 0);
+    if (elsewhere.length > 0) {
+      const more = elsewhere
+        .map(({ other, n }) => `${n} more ${n === 1 ? 'reports' : 'report'} ${measure(other)} only`)
+        .join(', ');
+      said.push(`${measure(shownKey)}: ${treatments(count(shownKey))}; ${more}.`);
+    }
+    return said;
+  });
+  return sentences.length > 0 ? sentences.join(' ') : undefined;
 }
 
 function stripFolded(output: unknown, today: string): unknown {
