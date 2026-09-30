@@ -53,4 +53,10 @@ describe('readoutDate', () => {
     expect(readoutDate({ publication_id: 'J Clin Oncol 36:383-390.' })).toEqual([0, 0]);
     expect(readoutDate({ source_url: 'https://example.com/r' })).toEqual([0, 0]);
   });
+
+  it('does not read a page number after the volume as a year', () => {
+    // "38:2020-2031" is volume 38, pages 2020-2031 - the year only ever
+    // appears before the first ":".
+    expect(readoutDate({ publication_id: 'J Clin Oncol 38:2020-2031.' })).toEqual([0, 0]);
+  });
 });

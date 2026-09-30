@@ -72,6 +72,9 @@ const MEETING_MONTH: Record<string, number> = { ASCO: 6, ESMO: 10, SITC: 11 };
 export function readoutDate(row: Row): [number, number] {
   const meeting = typeof row.abstract_id === 'string' ? /^([A-Z]+)_(\d{4})_/.exec(row.abstract_id) : null;
   if (meeting) return [Number(meeting[2]), MEETING_MONTH[meeting[1]] ?? 0];
-  const year = typeof row.publication_id === 'string' ? /\b(?:19|20)\d\d\b/.exec(row.publication_id) : null;
+  // The year only ever appears before the volume:page separator - after it is
+  // pages, which can read as a year of their own ("J Clin Oncol 38:2020-2031.").
+  const head = typeof row.publication_id === 'string' ? row.publication_id.split(':')[0] : null;
+  const year = head ? /\b(?:19|20)\d\d\b/.exec(head) : null;
   return [year ? Number(year[0]) : 0, 0];
 }
