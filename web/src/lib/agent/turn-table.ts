@@ -32,6 +32,7 @@ import {
   type ResultSummary,
   type ResultTable,
 } from './result-table';
+import { readoutDate, readoutOf, regimenKey } from './regimen';
 import { TRIAL_OUTCOMES_EFFICACY, TRIAL_OUTCOMES_SAFETY, classSiblings } from './tools/schema';
 
 const KEY = 'nct_id';
@@ -219,6 +220,52 @@ function reports(row: Row, key: string): boolean {
   return row[key] != null || (Array.isArray(notReached) && notReached.includes(key));
 }
 
+/** One treatment of one trial: its newest readout, and the readouts before it. */
+interface Treatment {
+  main: Row;
+  earlier: Row[];
+}
+
+/**
+ * Readouts of one arm, folded into the treatment they report. A group is one
+ * nct_id and one drug set (`regimenKey`); a row with no nct_id or no arm name
+ * is its own group, since nothing says which treatment it is.
+ *
+ * A readout that reports none of `telling` - a trial-in-progress abstract, a
+ * poster about another endpoint - is not a readout of this answer and is
+ * dropped. The newest remaining one is the main row; within one readout, the
+ * largest arm stands for it, so a subgroup cut never does. A treatment left
+ * with nothing keeps one empty row, which the table counts as reporting none.
+ */
+function toTreatments(rows: Row[], telling: string[]): Treatment[] {
+  const said = (row: Row) => telling.filter((key) => reports(row, key)).length;
+  const size = (row: Row) => (typeof row.num_patients === 'number' ? row.num_patients : 0);
+  const nameOf = (row: Row) => String(row.arm_name ?? row.generic_name ?? '').trim();
+  const newestFirst = (a: Row, b: Row) => {
+    const [yearA, monthA] = readoutDate(a);
+    const [yearB, monthB] = readoutDate(b);
+    if (yearA !== yearB) return yearB - yearA;
+    if (monthA !== monthB) return monthB - monthA;
+    if (readoutOf(a) === readoutOf(b)) return size(b) - size(a);
+    return said(b) - said(a);
+  };
+
+  const groups = new Map<string, Row[]>();
+  rows.forEach((row, index) => {
+    const name = nameOf(row);
+    const key = typeof row.nct_id === 'string' && name !== '' ? `${row.nct_id} ${regimenKey(name)}` : `row ${index}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  });
+
+  return [...groups.values()].map((members) => {
+    const reporting = members.filter((row) => said(row) > 0).sort(newestFirst);
+    const [main, ...earlier] = reporting.length > 0 ? reporting : [members[0]];
+    // Abbreviations are the short spellings: "Nivolumab + Relatlimab", not "NIVO + RELA".
+    const longest = members.map(nameOf).reduce((best, name) => (name.length > best.length ? name : best), '');
+    return { main: { ...main, treatment_name: longest || null }, earlier };
+  });
+}
+
 /**
  * An outcomes result as the reader scans it: the arm, its trial and the three
  * trial facts, the endpoints, then where the numbers came from. Loader
@@ -252,10 +299,25 @@ function toOutcomesTable(output: unknown): ResultTable | null {
   if (rows.length === 0) return null;
 
   const asked = askedOf(output);
+  // What decides whether a readout says anything: the asked endpoints and
+  // their classes, or every endpoint when the question named none.
+  const telling = asked.length > 0
+    ? [...new Set(asked.flatMap((key) => [key, ...classSiblings(key)]))]
+    : [...ENDPOINT_FAMILY.keys()].filter((key) => !isQualifier(key));
+  const treatments = toTreatments(rows, telling);
+  const mains = treatments.map(({ main }) => main);
+  const everyRow = treatments.flatMap(({ main, earlier }) => [main, ...earlier]);
+
   const askedRank = (key: string) => (asked.includes(key) ? asked.indexOf(key) : asked.length);
   const endpoints = orderColumns([...ENDPOINT_FAMILY.keys()].filter((key) => !isQualifier(key)))
-    .map((key) => ({ key, arms: rows.filter((row) => reports(row, key)).length }))
-    .filter(({ key, arms }) => arms > 0 || asked.includes(key))
+    .map((key) => ({
+      key,
+      arms: mains.filter((row) => reports(row, key)).length,
+      anywhere: everyRow.some((row) => reports(row, key)),
+    }))
+    // Offered when any readout reports it: RELATIVITY-047's any-cause 40.3 sits in
+    // an earlier readout, and the reader can pick it to see it there.
+    .filter(({ key, anywhere }) => anywhere || asked.includes(key))
     // Stable, so arms tied on a count keep the clinical order `orderColumns` gave them.
     .sort((a, b) => askedRank(a.key) - askedRank(b.key) || b.arms - a.arms);
   const parameters: ResultParameter[] = endpoints.map(({ key, arms }) => ({
@@ -266,15 +328,18 @@ function toOutcomesTable(output: unknown): ResultTable | null {
   }));
 
   const columns = [...OUTCOME_CONTEXT, ...parameters.map((p) => p.key), ...OUTCOME_TRAIL].filter(
-    (key) => OUTCOME_FACTS.includes(key) || asked.includes(key) || rows.some((row) => reports(row, key)),
+    (key) => OUTCOME_FACTS.includes(key) || asked.includes(key) || everyRow.some((row) => reports(row, key)),
   );
+  const cells = (row: Row) => columns.map((column) => formatRowCell(row, column));
+  const readouts = treatments.map(({ earlier }) => earlier.map(cells));
 
-  const byClass = toClassTable(rows, asked);
+  const byClass = toClassTable(mains, asked);
   return {
     columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? humanizeColumn(key) })),
-    rows: rows.map((row) => columns.map((column) => formatRowCell(row, column))),
+    rows: mains.map(cells),
     parameters,
     ...(asked.length > 0 ? { asked } : {}),
+    ...(readouts.some((earlier) => earlier.length > 0) ? { readouts } : {}),
     ...(byClass ? { byClass } : {}),
   };
 }
@@ -459,10 +524,12 @@ export function withoutAskedPhase(table: ResultTable, inputs: unknown[]): Result
   );
   const index = table.columns.findIndex((column) => column.key === 'phases');
   if (!asked || index === -1) return table;
+  const drop = (row: string[]) => row.filter((_, i) => i !== index);
   return {
     ...table,
     columns: table.columns.filter((_, i) => i !== index),
-    rows: table.rows.map((row) => row.filter((_, i) => i !== index)),
+    rows: table.rows.map(drop),
+    ...(table.readouts ? { readouts: table.readouts.map((earlier) => earlier.map(drop)) } : {}),
   };
 }
 

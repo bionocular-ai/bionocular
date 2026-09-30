@@ -41,7 +41,7 @@ export interface ResultSummary {
   nonIndustry: number;
 }
 
-/** An endpoint the reader can put on screen, and how many arms report it. */
+/** An endpoint the reader can put on screen, and how many treatments report it. */
 export interface ResultParameter {
   key: string;
   label: string;
@@ -62,6 +62,12 @@ export interface ResultTable {
   parameters?: ResultParameter[];
   /** The endpoints the question named, in its order: drawn before the reader picks. */
   asked?: string[];
+  /**
+   * Present only for an outcomes turn with a treatment reported more than
+   * once: aligned with `rows`, each treatment's earlier readouts as cells in
+   * `columns` order, newest first.
+   */
+  readouts?: string[][][];
   /**
    * The asked adverse-event measures under every class, present when the class
    * the question named is missing on most arms. `note` states that gap; the

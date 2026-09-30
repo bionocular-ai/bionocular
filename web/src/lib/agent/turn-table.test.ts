@@ -424,6 +424,64 @@ const phase1Outcomes = {
 
 const activeOutcomes = { ...phase1Outcomes, rows: phase1Outcomes.rows.slice(1) };
 
+// RELATIVITY-047, KEYNOTE-716 and NADINA as production carries them on
+// 2026-09-30, plus two abstracts with no nct_id.
+const readouts = {
+  ok: true,
+  table: 'trial_outcomes',
+  askedColumns: ['median_pfs', 'grade_3_plus_teae_pct', 'ae_leading_to_discontinuation_pct'],
+  rows: [
+    {
+      nct_id: 'NCT03470922', arm_name: 'Relatlimab + Nivolumab', num_patients: 355, abstract_id: 'ASCO_2021_9503',
+      median_pfs: 10.1, pfs_followup_months: 13.2, p_value_pfs: 0.0055, grade_3_plus_trae_pct: 18.9, orr: 43,
+      line_of_therapy: '1L',
+    },
+    {
+      nct_id: 'NCT03470922', arm_name: 'Relatlimab-Nivolumab', num_patients: 355,
+      publication_id: 'N Engl J Med 2022;386:24-34.', median_pfs: 10.1, p_value_pfs: 0.006, grade_3_plus_ae_pct: 40.3,
+      grade_3_plus_trae_pct: 18.9, trae_discontinuation_pct: 14.6, line_of_therapy: '1L', line_of_treatment: '1L (First Line)',
+    },
+    {
+      nct_id: 'NCT03470922', arm_name: 'NIVO + RELA', num_patients: 355, abstract_id: 'ASCO_2026_9532',
+      median_pfs: 10.2, grade_3_plus_trae_pct: 23, trae_discontinuation_pct: 17, line_of_therapy: '1L',
+    },
+    // A subgroup cut of the same readout: the full population stands for it.
+    {
+      nct_id: 'NCT03470922', arm_name: 'Nivolumab + Relatlimab', num_patients: 66, abstract_id: 'ASCO_2026_9532',
+      median_pfs: 12, line_of_therapy: '1L',
+    },
+    // Newer than NEJM 2022, but reports nothing asked: never the main row.
+    {
+      nct_id: 'NCT03470922', arm_name: 'Nivolumab + Relatlimab', num_patients: 355, abstract_id: 'ESMO_2025_1619P',
+      line_of_therapy: '1L',
+    },
+    {
+      nct_id: 'NCT03470922', arm_name: 'NIVO', num_patients: 359, abstract_id: 'ASCO_2026_9532',
+      median_pfs: 4.6, grade_3_plus_trae_pct: 12, trae_discontinuation_pct: 10, line_of_therapy: '1L',
+    },
+    {
+      nct_id: 'NCT03553836', arm_name: 'Placebo', num_patients: 489, abstract_id: 'ESMO_2025_1611P',
+      grade_3_plus_trae_pct: 5.1, line_of_therapy: 'Adjuvant',
+    },
+    {
+      nct_id: 'NCT03553836', arm_name: 'Pembrolizumab', num_patients: 487, abstract_id: 'ESMO_2025_1611P',
+      grade_3_plus_trae_pct: 17.4, line_of_therapy: 'Adjuvant',
+    },
+    {
+      nct_id: 'NCT04949113', arm_name: 'Neoadjuvant ipilimumab plus nivolumab', num_patients: 212,
+      publication_id: 'N Engl J Med 2024;391:1696-708.', grade_3_plus_ae_pct: 47.2, grade_3_plus_trae_pct: 38.7,
+      ae_leading_to_discontinuation_pct: 9, line_of_therapy: 'Adjuvant; Neoadjuvant', line_of_treatment: 'Neoadjuvant',
+    },
+    {
+      nct_id: 'NCT04949113', arm_name: 'Adjuvant nivolumab', num_patients: 211,
+      publication_id: 'N Engl J Med 2024;391:1696-708.', grade_3_plus_ae_pct: 34.1, grade_3_plus_trae_pct: 24,
+      ae_leading_to_discontinuation_pct: 14.4, line_of_therapy: 'Adjuvant; Neoadjuvant', line_of_treatment: 'Adjuvant',
+    },
+    { abstract_id: 'ASCO_2024_9999', arm_name: 'Nivolumab', num_patients: 40, median_pfs: 5, line_of_treatment: '2L' },
+    { abstract_id: 'ASCO_2025_9998', arm_name: 'Nivolumab', num_patients: 41, median_pfs: 6 },
+  ],
+};
+
 describe('outcomes turns', () => {
   const today = new Date('2026-09-22');
 
@@ -662,6 +720,84 @@ describe('outcomes turns', () => {
   });
 });
 
+describe('one row per treatment', () => {
+  const today = new Date('2026-09-30');
+  const column = (table: ReturnType<typeof toTurnTable>, key: string) =>
+    table!.columns.findIndex((c) => c.key === key);
+
+  it('draws each treatment once, from its newest readout, under its longest name', () => {
+    const table = toTurnTable([readouts], today);
+
+    expect(table?.rows).toHaveLength(8);
+    expect(cell(table, 0, 'treatment_name')).toBe('Relatlimab + Nivolumab');
+    expect(cell(table, 0, 'source')).toBe('ASCO_2026_9532');
+    expect(cell(table, 0, 'num_patients')).toBe('355');
+    expect(cell(table, 0, 'median_pfs')).toBe('10.2');
+  });
+
+  it('folds the earlier readouts beneath it, newest first, and drops the ones that report nothing asked', () => {
+    const table = toTurnTable([readouts], today);
+    const source = column(table, 'source');
+
+    // The N 66 subgroup of the main readout, then NEJM 2022, then ASCO 2021.
+    // ESMO_2025_1619P reports nothing asked, so it is not a readout of this answer.
+    expect(table?.readouts?.[0].map((row) => row[source])).toEqual([
+      'ASCO_2026_9532',
+      'N Engl J Med 2022;386:24-34.',
+      'ASCO_2021_9503',
+    ]);
+    expect(table?.readouts?.[1]).toEqual([]);
+  });
+
+  it('keeps a placebo arm apart from the drug it is compared with', () => {
+    const table = toTurnTable([readouts], today);
+    const names = table!.rows.map((_, i) => cell(table, i, 'treatment_name'));
+
+    expect(names).toEqual(expect.arrayContaining(['Placebo', 'Pembrolizumab']));
+  });
+
+  it('never merges rows that carry no nct_id, or no arm name', () => {
+    const nameless = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT1', abstract_id: 'ASCO_2024_1', orr: 30 },
+        { nct_id: 'NCT1', abstract_id: 'ASCO_2025_2', orr: 40 },
+      ],
+    };
+
+    expect(toTurnTable([nameless], today)?.rows).toHaveLength(2);
+    const table = toTurnTable([readouts], today);
+    expect(table!.rows.filter((_, i) => cell(table, i, 'nct_id') === '—')).toHaveLength(2);
+  });
+
+  it('keeps a treatment whose readouts report nothing asked, as one empty row the table counts', () => {
+    const tps = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['median_pfs'],
+      rows: [
+        { nct_id: 'NCT05155254', arm_name: 'IO102-IO103 + Pembrolizumab', abstract_id: 'ASCO_2022_TPS9589' },
+        { nct_id: 'NCT05155254', arm_name: 'IO102-IO103 + Pembrolizumab', abstract_id: 'ASCO_2022_9589' },
+      ],
+    };
+
+    const table = toTurnTable([tps], today);
+
+    expect(table?.rows).toHaveLength(1);
+    expect(cell(table, 0, 'median_pfs')).toBe('—');
+    expect(table?.readouts).toBeUndefined();
+  });
+
+  it('counts treatments, not readouts, and still offers an endpoint only an earlier readout reports', () => {
+    const parameters = toTurnTable([readouts], today)!.parameters!;
+
+    // NADINA's two arms; RELATIVITY-047's 40.3 is in NEJM 2022, an earlier readout.
+    expect(parameters.find((p) => p.key === 'grade_3_plus_ae_pct')?.arms).toBe(2);
+    expect(parameters.find((p) => p.key === 'orr')).toMatchObject({ arms: 0 });
+  });
+});
+
 // A landscape turn: the registry rows carry what `derive` needs to place a
 // trial in a setting, name its sponsor class and spot a pan-tumour platform.
 const landscapeTrials = {
@@ -792,5 +928,18 @@ describe('withoutAskedPhase', () => {
 
   it('keeps it when no query did', () => {
     expect(withoutAskedPhase(table, [{ table: 'clinical_trials' }, undefined])).toBe(table);
+  });
+
+  it('drops the phase column from the folded readouts too, so no sub-row shifts left', () => {
+    const table = {
+      columns: [{ key: 'treatment_name', label: 'Treatment' }, { key: 'phases', label: 'Phases' }, { key: 'orr', label: 'ORR' }],
+      rows: [['A', 'Phase 3', '40']],
+      readouts: [[['A', 'Phase 3', '38']]],
+    };
+
+    const next = withoutAskedPhase(table, [{ phase: 'PHASE3' }]);
+
+    expect(next.rows).toEqual([['A', '40']]);
+    expect(next.readouts).toEqual([[['A', '38']]]);
   });
 });
