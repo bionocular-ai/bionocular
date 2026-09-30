@@ -533,6 +533,16 @@ export function TurnTable({
   const followUpIndex = statusIndex === -1 ? -1 : indexOf('follow_up_only');
   // The column exists only when some row was reviewed, so neither does the toggle.
   const reviewIndex = indexOf('expert_review');
+  // What tells a folded readout apart from its treatment's other readouts,
+  // since every one of them repeats the arm name.
+  const sourceIndex = indexOf('source');
+  // A trial fact a readout shares with its treatment row is not new
+  // information; only what differs between readouts earns a cell.
+  const suppressIndices = new Set(
+    ['nct_id', 'sponsor_type', 'biomarker', 'phases', 'overall_status']
+      .map((key) => indexOf(key))
+      .filter((index) => index !== -1)
+  );
 
   const parameters = table.parameters;
   const picked = useMemo(() => {
@@ -618,37 +628,49 @@ export function TurnTable({
       numeric.has(table.columns[cellIndex].key) && 'min-w-[5ch] whitespace-nowrap'
     );
 
-  const cellContent = (row: string[], cell: string, cellIndex: number) => (
-    <>
-      {table.columns[cellIndex].key === 'nct_id' && NCT_ID_PATTERN.test(cell) ? (
-        <Link href={trialRoute(cell, cancerType)} className={NCT_LINK_CLASSES}>
-          {cell}
-        </Link>
-      ) : table.columns[cellIndex].key === 'source' && /^https?:\/\//.test(cell) ? (
-        <SourceLink url={cell} />
-      ) : PILL_COLUMNS.includes(table.columns[cellIndex].key) && cell !== ABSENT ? (
-        <Pill value={cell} />
-      ) : (
-        cell
-      )}
-      {/* Under the status it qualifies, on the rows that have it, rather than
-        as a column of em dashes. */}
-      {cellIndex === statusIndex && followUpIndex !== -1 && row[followUpIndex] !== ABSENT ? (
-        <span className="mt-1 block font-mono text-[10px] text-(--brand-text-muted)">
-          follow-up only
-        </span>
-      ) : null}
-      {/* An uncurated row has no modality, and the cell above already ends in
-        "· registry" to say why. A line holding only an em dash adds height
-        and no fact. */}
-      {cellIndex === treatmentIndex && modalityIndex !== -1 && row[modalityIndex] !== ABSENT ? (
-        // Set apart by size, not by fading the colour: at 70% opacity this
-        // measured 3.06:1 on the surface, under the 4.5:1 floor for text
-        // this size.
-        <span className="block text-[10px] text-(--brand-text-muted)">{row[modalityIndex]}</span>
-      ) : null}
-    </>
-  );
+  // `mainRow` is passed only for a folded readout's own row: it is what its
+  // treatment cell names the readout by, and what a suppressed cell compares
+  // against.
+  const cellContent = (row: string[], cell: string, cellIndex: number, mainRow?: string[]) => {
+    const key = table.columns[cellIndex].key;
+    const value =
+      mainRow && cellIndex === treatmentIndex && sourceIndex !== -1
+        ? row[sourceIndex]
+        : mainRow && suppressIndices.has(cellIndex) && cell === mainRow[cellIndex]
+          ? ''
+          : cell;
+    return (
+      <>
+        {value === '' ? null : key === 'nct_id' && NCT_ID_PATTERN.test(value) ? (
+          <Link href={trialRoute(value, cancerType)} className={NCT_LINK_CLASSES}>
+            {value}
+          </Link>
+        ) : key === 'source' && /^https?:\/\//.test(value) ? (
+          <SourceLink url={value} />
+        ) : PILL_COLUMNS.includes(key) && value !== ABSENT ? (
+          <Pill value={value} />
+        ) : (
+          value
+        )}
+        {/* Under the status it qualifies, on the rows that have it, rather than
+          as a column of em dashes. */}
+        {cellIndex === statusIndex && followUpIndex !== -1 && row[followUpIndex] !== ABSENT ? (
+          <span className="mt-1 block font-mono text-[10px] text-(--brand-text-muted)">
+            follow-up only
+          </span>
+        ) : null}
+        {/* An uncurated row has no modality, and the cell above already ends in
+          "· registry" to say why. A line holding only an em dash adds height
+          and no fact. */}
+        {cellIndex === treatmentIndex && modalityIndex !== -1 && row[modalityIndex] !== ABSENT ? (
+          // Set apart by size, not by fading the colour: at 70% opacity this
+          // measured 3.06:1 on the surface, under the 4.5:1 floor for text
+          // this size.
+          <span className="block text-[10px] text-(--brand-text-muted)">{row[modalityIndex]}</span>
+        ) : null}
+      </>
+    );
+  };
   const facets = useMemo(() => toFacets(table), [table]);
   // Applied under the facets, so their counts say what each choice leaves
   // among the reviewed rows.
@@ -839,7 +861,7 @@ export function TurnTable({
                                       cellIndex === treatmentIndex && 'pl-6'
                                     )}
                                   >
-                                    {cellContent(readout, cell, cellIndex)}
+                                    {cellContent(readout, cell, cellIndex, row)}
                                   </td>
                                 )
                               )}
