@@ -141,7 +141,7 @@ describe('toTurnTable', () => {
     const table = toTurnTable([outcomes]);
 
     expect(table?.rows).toHaveLength(2);
-    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'line', 'biomarker', 'orr']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'biomarker', 'orr']);
   });
 
   it('renders a lone query with no nct_id column at all', () => {
@@ -377,7 +377,7 @@ describe('derived columns', () => {
     expect(cell(table, 1, 'follow_up_only')).toBe('yes');
   });
 
-  it('gives an outcomes table its setting and the three trial facts every answer states', () => {
+  it('gives an outcomes table its line section and the two trial facts every answer states', () => {
     const outcomes = {
       ok: true,
       table: 'trial_outcomes',
@@ -386,7 +386,7 @@ describe('derived columns', () => {
 
     const table = toTurnTable([outcomes], today);
 
-    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'line', 'biomarker', 'orr']);
+    expect(table?.columns.map((c) => c.key)).toEqual(['treatment_name', 'nct_id', 'setting', 'sponsor_type', 'biomarker', 'orr']);
   });
 });
 
@@ -424,6 +424,59 @@ const phase1Outcomes = {
 
 const activeOutcomes = { ...phase1Outcomes, rows: phase1Outcomes.rows.slice(1) };
 
+// RELATIVITY-047, KEYNOTE-716 and NADINA as production carries them on
+// 2026-09-30, plus two abstracts with no nct_id.
+const readouts = {
+  ok: true,
+  table: 'trial_outcomes',
+  askedColumns: ['median_pfs', 'grade_3_plus_teae_pct', 'ae_leading_to_discontinuation_pct'],
+  rows: [
+    {
+      nct_id: 'NCT03470922', arm_name: 'Relatlimab + Nivolumab', num_patients: 355, abstract_id: 'ASCO_2021_9503',
+      median_pfs: 10.1, pfs_followup_months: 13.2, p_value_pfs: 0.0055, grade_3_plus_trae_pct: 18.9, orr: 43,
+      line_of_therapy: '1L',
+    },
+    {
+      nct_id: 'NCT03470922', arm_name: 'Relatlimab-Nivolumab', num_patients: 355,
+      publication_id: 'N Engl J Med 2022;386:24-34.', median_pfs: 10.1, p_value_pfs: 0.006, grade_3_plus_ae_pct: 40.3,
+      grade_3_plus_trae_pct: 18.9, trae_discontinuation_pct: 14.6, line_of_therapy: '1L', line_of_treatment: '1L (First Line)',
+    },
+    {
+      nct_id: 'NCT03470922', arm_name: 'NIVO + RELA', num_patients: 355, abstract_id: 'ASCO_2026_9532',
+      median_pfs: 10.2, grade_3_plus_trae_pct: 23, trae_discontinuation_pct: 17, line_of_therapy: '1L',
+    },
+    // Newer than NEJM 2022, but reports nothing asked: never the main row.
+    {
+      nct_id: 'NCT03470922', arm_name: 'Nivolumab + Relatlimab', num_patients: 355, abstract_id: 'ESMO_2025_1619P',
+      line_of_therapy: '1L',
+    },
+    {
+      nct_id: 'NCT03470922', arm_name: 'NIVO', num_patients: 359, abstract_id: 'ASCO_2026_9532',
+      median_pfs: 4.6, grade_3_plus_trae_pct: 12, trae_discontinuation_pct: 10, line_of_therapy: '1L',
+    },
+    {
+      nct_id: 'NCT03553836', arm_name: 'Placebo', num_patients: 489, abstract_id: 'ESMO_2025_1611P',
+      grade_3_plus_trae_pct: 5.1, line_of_therapy: 'Adjuvant',
+    },
+    {
+      nct_id: 'NCT03553836', arm_name: 'Pembrolizumab', num_patients: 487, abstract_id: 'ESMO_2025_1611P',
+      grade_3_plus_trae_pct: 17.4, line_of_therapy: 'Adjuvant',
+    },
+    {
+      nct_id: 'NCT04949113', arm_name: 'Neoadjuvant ipilimumab plus nivolumab', num_patients: 212,
+      publication_id: 'N Engl J Med 2024;391:1696-708.', grade_3_plus_ae_pct: 47.2, grade_3_plus_trae_pct: 38.7,
+      ae_leading_to_discontinuation_pct: 9, line_of_therapy: 'Adjuvant; Neoadjuvant', line_of_treatment: 'Neoadjuvant',
+    },
+    {
+      nct_id: 'NCT04949113', arm_name: 'Adjuvant nivolumab', num_patients: 211,
+      publication_id: 'N Engl J Med 2024;391:1696-708.', grade_3_plus_ae_pct: 34.1, grade_3_plus_trae_pct: 24,
+      ae_leading_to_discontinuation_pct: 14.4, line_of_therapy: 'Adjuvant; Neoadjuvant', line_of_treatment: 'Adjuvant',
+    },
+    { abstract_id: 'ASCO_2024_9999', arm_name: 'Nivolumab', num_patients: 40, median_pfs: 5, line_of_treatment: '2L' },
+    { abstract_id: 'ASCO_2025_9998', arm_name: 'Nivolumab', num_patients: 41, median_pfs: 6 },
+  ],
+};
+
 describe('outcomes turns', () => {
   const today = new Date('2026-09-22');
 
@@ -456,8 +509,8 @@ describe('outcomes turns', () => {
     const table = toTurnTable([phase1Outcomes], today);
     const keys = table!.columns.map((c) => c.key);
 
-    expect(keys.slice(0, 8)).toEqual([
-      'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'line', 'biomarker',
+    expect(keys.slice(0, 7)).toEqual([
+      'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'biomarker',
     ]);
     expect(keys).toEqual(expect.arrayContaining(['source', 'overall_status', 'orr', 'cr', 'dcr', 'median_pfs']));
     for (const gone of ['id', 'arm_id', 'arm_name', 'generic_name', 'abstract_id', 'publication_id', 'source_type', 'p_value_os', 'os_followup_months']) {
@@ -495,42 +548,31 @@ describe('outcomes turns', () => {
     ]);
   });
 
-  it("states each arm's sponsor type, line and biomarker, the arm's own line first", () => {
+  it("states each arm's sponsor type and biomarker, and sections it by its trial's line", () => {
     const table = toTurnTable([phase1Outcomes], today);
 
     expect(cell(table, 0, 'sponsor_type')).toBe('Non-industry');
-    expect(cell(table, 0, 'line')).toBe('2L');
-    expect(cell(table, 1, 'line')).toBe('1L; 2L; 3L; R/R');
+    // The trial's line beats the arm's own '2L', so the trial's arms share a section.
+    expect(cell(table, 0, 'setting')).toBe('1L; 2L; 3L; R/R');
     expect(cell(table, 2, 'sponsor_type')).toBe('Industry');
     expect(cell(table, 2, 'biomarker')).toBe('All comers');
     expect(cell(table, 3, 'biomarker')).toBe('—');
   });
 
-  it('places each arm in a setting from its line, so the table groups the way a landscape does', () => {
+  it('puts an arm with no line under "Line not reported", last', () => {
     const table = toTurnTable([phase1Outcomes], today);
 
-    expect(cell(table, 0, 'setting')).toBe('Advanced / metastatic');
-    expect(cell(table, 3, 'setting')).toBe('Unclassified');
+    expect(cell(table, 3, 'setting')).toBe('Line not reported');
   });
 
-  it('puts an adjuvant or neoadjuvant arm in peri-operative, whatever else its trial treats', () => {
-    const periOp = {
-      ok: true,
-      table: 'trial_outcomes',
-      rows: [{ nct_id: 'NCT1', arm_name: 'A', orr: 40, line_of_treatment: 'Neoadjuvant; R/R' }],
-    };
-
-    expect(cell(toTurnTable([periOp], today), 0, 'setting')).toBe('Peri-operative');
-  });
-
-  it('keeps the three trial facts even when every arm shares them', () => {
-    // A column identical on every row is usually noise; these three are what
-    // every answer states, so an all-industry result still says Industry.
+  it('keeps the trial facts even when every arm shares them', () => {
+    // A column identical on every row is usually noise; these are what every
+    // answer states, so an all-industry result still says Industry.
     const oneTrial = { ...phase1Outcomes, rows: phase1Outcomes.rows.slice(0, 2) };
 
     const keys = toTurnTable([oneTrial], today)!.columns.map((c) => c.key);
 
-    expect(keys).toEqual(expect.arrayContaining(['sponsor_type', 'line', 'biomarker']));
+    expect(keys).toEqual(expect.arrayContaining(['sponsor_type', 'biomarker', 'setting']));
   });
 
   it("cites a web-scraped readout by its page, since it has no abstract or publication ID", () => {
@@ -583,54 +625,126 @@ describe('outcomes turns', () => {
     ],
   };
 
-  it('ranks the asked endpoints first and keeps one no arm reports', () => {
+  it('shows the class most treatments report in place of an empty asked one, first, and keeps the asked column', () => {
     const table = toTurnTable([q3], today);
 
-    expect(table?.asked).toEqual(q3.askedColumns);
-    expect(table?.parameters?.slice(0, 3)).toEqual([
+    expect(table?.asked).toEqual(['median_pfs', 'grade_3_plus_trae_pct', 'ae_leading_to_discontinuation_pct']);
+    // Picked field by field: Task 4 adds `companions` to median PFS.
+    const ranked = table?.parameters?.slice(0, 4).map(({ key, label, family, arms }) => ({ key, label, family, arms }));
+    expect(ranked).toEqual([
       { key: 'median_pfs', label: 'Median PFS', family: 'efficacy', arms: 3 },
-      { key: 'grade_3_plus_teae_pct', label: 'Grade 3+ TEAE %', family: 'safety', arms: 0 },
+      { key: 'grade_3_plus_trae_pct', label: 'Grade 3+ TRAE %', family: 'safety', arms: 2 },
       { key: 'ae_leading_to_discontinuation_pct', label: 'AE leading to discontinuation %', family: 'safety', arms: 1 },
+      { key: 'grade_3_plus_teae_pct', label: 'Grade 3+ TEAE %', family: 'safety', arms: 0 },
     ]);
     expect(cell(table, 1, 'grade_3_plus_teae_pct')).toBe('—');
   });
 
-  it('draws the asked safety measures under every class when the named class is missing on most arms', () => {
-    const byClass = toTurnTable([q3], today)?.byClass;
-
-    expect(byClass?.note).toBe(
-      'No arm reports Grade 3+ TEAE; most arms do not report AE leading to discontinuation. ' +
-        'Below, the same measures under each class the sources reported.',
+  it('says above the table which class stands in, and which treatments report only another', () => {
+    expect(toTurnTable([q3], today)?.caveat).toBe(
+      'No treatment reports Grade 3+ TEAE; showing Grade 3+ TRAE (2 treatments), the class most treatments report. ' +
+        'AE leading to discontinuation: 1 treatment; 1 more reports it only as TRAE discontinuation.',
     );
-    expect(byClass?.table.columns.map((c) => c.label)).toEqual([
-      'Treatment', 'NCT', 'Setting', 'N',
-      'Grade 3+ AE %', 'Grade 3+ TEAE %', 'Grade 3+ TRAE %', 'AE disc. %', 'TEAE disc. %', 'TRAE disc. %',
-      'Source',
-    ]);
-    // The PFS-only arm has no value in any class, so it is only in the asked table.
-    expect(byClass?.table.rows).toEqual([
-      ['Nurulimab + prolgolimab', 'NCT05732805', 'Unclassified', '135', '—', '—', '17.8', '11.1', '—', '—', 'ASCO_2026_9544'],
-      ['Nivolumab + relatlimab', 'NCT03470922', 'Unclassified', '355', '40.3', '—', '18.9', '—', '—', '14.6', 'NEJM 2022'],
-    ]);
   });
 
-  it('draws no class table when most arms report the named class', () => {
-    const reported = {
-      ...q3,
-      askedColumns: ['median_pfs', 'grade_3_plus_trae_pct'],
+  it('counts a treatment reporting more than one other class once, not once per class', () => {
+    // Repro: a treatment reports TEAE disc and TRAE disc but not AE disc
+    // (shown). The old code counted it under both classes for one treatment.
+    const doubleCount = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['ae_leading_to_discontinuation_pct'],
+      rows: [
+        { nct_id: 'NCT1', arm_name: 'A', ae_leading_to_discontinuation_pct: 12 },
+        { nct_id: 'NCT2', arm_name: 'B', teae_discontinuation_pct: 8, trae_discontinuation_pct: 9 },
+      ],
     };
 
-    expect(toTurnTable([reported], today)?.byClass).toBeUndefined();
+    expect(toTurnTable([doubleCount], today)?.caveat).toBe(
+      'AE leading to discontinuation: 1 treatment; 1 more reports it only as TEAE discontinuation or TRAE discontinuation.',
+    );
   });
 
-  it('draws no class table when the question named no endpoints', () => {
-    const unasked = { ...q3, askedColumns: undefined };
+  it('keeps the asked class on a tie, and otherwise breaks a tie by the class precedence', () => {
+    const tied = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT1', arm_name: 'A', grade_3_plus_ae_pct: 30, trae_discontinuation_pct: 5 },
+        { nct_id: 'NCT2', arm_name: 'B', grade_3_plus_trae_pct: 20, ae_leading_to_discontinuation_pct: 8 },
+      ],
+    };
 
-    const table = toTurnTable([unasked], today);
+    // TEAE is empty: grade 3+ goes to AE (TEAE > AE > TRAE), discontinuation to AE (AE > TEAE > TRAE).
+    expect(toTurnTable([{ ...tied, askedColumns: ['grade_3_plus_teae_pct', 'teae_discontinuation_pct'] }], today)?.asked)
+      .toEqual(['grade_3_plus_ae_pct', 'ae_leading_to_discontinuation_pct']);
+    // TRAE ties AE and was asked, so it stays.
+    expect(toTurnTable([{ ...tied, askedColumns: ['grade_3_plus_trae_pct', 'trae_discontinuation_pct'] }], today)?.asked)
+      .toEqual(['grade_3_plus_trae_pct', 'trae_discontinuation_pct']);
+  });
+
+  it('draws no caveat when the asked class is shown and no treatment reports only another', () => {
+    const reported = { ...q3, askedColumns: ['median_pfs', 'grade_3_plus_trae_pct'] };
+
+    expect(toTurnTable([reported], today)?.caveat).toBeUndefined();
+  });
+
+  it('keeps both asked classes when one is the other one\'s own sibling, rather than standing in for both', () => {
+    // Repro: TEAE reported on 1 treatment, TRAE on 3 - without the fix,
+    // standIn picks TRAE for both asked keys and the TEAE column disappears.
+    const bothClasses = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['grade_3_plus_teae_pct', 'grade_3_plus_trae_pct'],
+      rows: [
+        { nct_id: 'NCT1', arm_name: 'A', grade_3_plus_teae_pct: 40 },
+        { nct_id: 'NCT2', arm_name: 'B', grade_3_plus_trae_pct: 20 },
+        { nct_id: 'NCT3', arm_name: 'C', grade_3_plus_trae_pct: 25 },
+        { nct_id: 'NCT4', arm_name: 'D', grade_3_plus_trae_pct: 30 },
+      ],
+    };
+
+    const table = toTurnTable([bothClasses], today);
+
+    expect(table?.asked).toEqual(['grade_3_plus_teae_pct', 'grade_3_plus_trae_pct']);
+    expect(table?.caveat).not.toMatch(/the class most treatments report/);
+  });
+
+  it('draws no caveat, and no unreported class column, when the question named no endpoints', () => {
+    const table = toTurnTable([{ ...q3, askedColumns: undefined }], today);
 
     expect(table?.asked).toBeUndefined();
-    expect(table?.byClass).toBeUndefined();
+    expect(table?.caveat).toBeUndefined();
     expect(table?.columns.map((c) => c.key)).not.toContain('grade_3_plus_teae_pct');
+  });
+
+  it('adds no companion column for an asked median when the rows never carried the key', () => {
+    // An old persisted session's query never selected pfs_followup_months or
+    // p_value_pfs, so no empty "PFS follow-up (mo)" column should appear.
+    const noCompanions = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['median_pfs'],
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', median_pfs: 10 }],
+    };
+
+    const keys = toTurnTable([noCompanions], today)?.columns.map((c) => c.key);
+
+    expect(keys).not.toContain('pfs_followup_months');
+    expect(keys).not.toContain('p_value_pfs');
+  });
+
+  it('keeps the companion columns for an asked median when the rows carry the keys as null', () => {
+    const nullCompanions = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['median_pfs'],
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', median_pfs: 10, pfs_followup_months: null, p_value_pfs: null }],
+    };
+
+    const keys = toTurnTable([nullCompanions], today)?.columns.map((c) => c.key);
+
+    expect(keys).toEqual(expect.arrayContaining(['pfs_followup_months', 'p_value_pfs']));
   });
 
   it('shows the expert verdict beside the source, only once some arm was reviewed', () => {
@@ -648,17 +762,167 @@ describe('outcomes turns', () => {
     expect(toTurnTable([phase1Outcomes], today)!.columns.map((c) => c.key)).not.toContain('expert_review');
   });
 
-  it('carries the expert verdict into the by-class table', () => {
-    const reviewed = { ...q3, rows: q3.rows.map((row) => ({ ...row, expert_review: 'issues' })) };
-
-    const byClass = toTurnTable([reviewed], today)?.byClass?.table;
-
-    expect(byClass?.columns.map((c) => c.key)).toContain('expert_review');
-    expect(byClass?.rows[0]).toContain('Issues found');
-  });
-
   it('leaves a landscape table without parameters', () => {
     expect(toTurnTable([landscapeTrials, landscapeCurated], today)?.parameters).toBeUndefined();
+  });
+});
+
+describe('one row per treatment', () => {
+  const today = new Date('2026-09-30');
+  const column = (table: ReturnType<typeof toTurnTable>, key: string) =>
+    table!.columns.findIndex((c) => c.key === key);
+
+  it('draws each treatment once, from its newest readout, under its longest name', () => {
+    const table = toTurnTable([readouts], today);
+
+    expect(table?.rows).toHaveLength(8);
+    expect(cell(table, 0, 'treatment_name')).toBe('Relatlimab + Nivolumab');
+    expect(cell(table, 0, 'source')).toBe('ASCO_2026_9532');
+    expect(cell(table, 0, 'num_patients')).toBe('355');
+    expect(cell(table, 0, 'median_pfs')).toBe('10.2');
+  });
+
+  it('folds the earlier readouts beneath it, newest first, and drops the ones that report nothing asked', () => {
+    const table = toTurnTable([readouts], today);
+    const source = column(table, 'source');
+
+    // ESMO_2025_1619P reports nothing asked, so it is not a readout of this answer.
+    expect(table?.readouts?.[0].map((row) => row[source])).toEqual([
+      'N Engl J Med 2022;386:24-34.',
+      'ASCO_2021_9503',
+    ]);
+    expect(table?.readouts?.[1]).toEqual([]);
+  });
+
+  it('keeps a placebo arm apart from the drug it is compared with', () => {
+    const table = toTurnTable([readouts], today);
+    const names = table!.rows.map((_, i) => cell(table, i, 'treatment_name'));
+
+    expect(names).toEqual(expect.arrayContaining(['Placebo', 'Pembrolizumab']));
+  });
+
+  it('never folds two arms of one readout into one treatment, even sharing a name', () => {
+    // E1609: ipi 3 mg/kg vs ipi 10 mg/kg, both just "Ipilimumab" - the dose
+    // lives in `dosage`, not `arm_name`. Folding these would silently keep
+    // one arm and hide the other under "1 earlier readout".
+    const e1609 = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['grade_3_plus_trae_pct'],
+      rows: [
+        {
+          nct_id: 'NCT01274338', arm_name: 'Ipilimumab', num_patients: 523, abstract_id: 'ASCO_2021_9582',
+          grade_3_plus_trae_pct: 24.9,
+        },
+        {
+          nct_id: 'NCT01274338', arm_name: 'Ipilimumab', num_patients: 511, abstract_id: 'ASCO_2021_9582',
+          grade_3_plus_trae_pct: 17.5,
+        },
+      ],
+    };
+
+    const table = toTurnTable([e1609], today);
+
+    expect(table?.rows).toHaveLength(2);
+    expect(table?.readouts).toBeUndefined();
+  });
+
+  it('never folds two arms of one publication into one treatment, even sharing a drug key', () => {
+    // S1801-style: neoadjuvant and adjuvant pembrolizumab are two randomised
+    // arms of one trial, reported in one publication; both key to `pembrolizumab`.
+    const s1801 = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['median_pfs'],
+      rows: [
+        {
+          nct_id: 'NCT03698019', arm_name: 'Neoadjuvant pembrolizumab', num_patients: 154,
+          publication_id: 'N Engl J Med 2023;388:813-23.', median_pfs: 72,
+        },
+        {
+          nct_id: 'NCT03698019', arm_name: 'Adjuvant pembrolizumab', num_patients: 159,
+          publication_id: 'N Engl J Med 2023;388:813-23.', median_pfs: 49.4,
+        },
+      ],
+    };
+
+    const table = toTurnTable([s1801], today);
+
+    expect(table?.rows).toHaveLength(2);
+  });
+
+  it('never merges rows that carry no nct_id, or no arm name', () => {
+    const nameless = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [
+        { nct_id: 'NCT1', abstract_id: 'ASCO_2024_1', orr: 30 },
+        { nct_id: 'NCT1', abstract_id: 'ASCO_2025_2', orr: 40 },
+      ],
+    };
+
+    expect(toTurnTable([nameless], today)?.rows).toHaveLength(2);
+    const table = toTurnTable([readouts], today);
+    expect(table!.rows.filter((_, i) => cell(table, i, 'nct_id') === '—')).toHaveLength(2);
+  });
+
+  it('keeps a treatment whose readouts report nothing asked, as one empty row the table counts', () => {
+    const tps = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['median_pfs'],
+      rows: [
+        { nct_id: 'NCT05155254', arm_name: 'IO102-IO103 + Pembrolizumab', abstract_id: 'ASCO_2022_TPS9589' },
+        { nct_id: 'NCT05155254', arm_name: 'IO102-IO103 + Pembrolizumab', abstract_id: 'ASCO_2022_9589' },
+      ],
+    };
+
+    const table = toTurnTable([tps], today);
+
+    expect(table?.rows).toHaveLength(1);
+    expect(cell(table, 0, 'median_pfs')).toBe('—');
+    expect(table?.readouts).toBeUndefined();
+  });
+
+  it('counts treatments, not readouts, and still offers an endpoint only an earlier readout reports', () => {
+    const parameters = toTurnTable([readouts], today)!.parameters!;
+
+    // NADINA's two arms; RELATIVITY-047's 40.3 is in NEJM 2022, an earlier readout.
+    expect(parameters.find((p) => p.key === 'grade_3_plus_ae_pct')?.arms).toBe(2);
+    expect(parameters.find((p) => p.key === 'orr')).toMatchObject({ arms: 0 });
+  });
+
+  it('puts the PFS follow-up and p-value right after median PFS, and hides them with it', () => {
+    const table = toTurnTable([readouts], today);
+    const keys = table!.columns.map((c) => c.key);
+    const at = keys.indexOf('median_pfs');
+
+    expect(keys.slice(at, at + 3)).toEqual(['median_pfs', 'pfs_followup_months', 'p_value_pfs']);
+    expect(table!.columns.slice(at + 1, at + 3).map((c) => c.label)).toEqual(['PFS follow-up (mo)', 'PFS p-value']);
+    expect(table!.parameters!.find((p) => p.key === 'median_pfs')?.companions).toEqual(['pfs_followup_months', 'p_value_pfs']);
+    expect(keys).not.toContain('os_followup_months');
+  });
+
+  it("sections treatments by their trial's line, so a trial's randomised arms stay together", () => {
+    const table = toTurnTable([readouts], today);
+
+    expect(table!.rows.map((_, i) => cell(table, i, 'setting'))).toEqual([
+      '1L', '1L', '2L',
+      'Adjuvant; Neoadjuvant', 'Adjuvant; Neoadjuvant',
+      'Adjuvant', 'Adjuvant',
+      'Line not reported',
+    ]);
+    expect(table!.columns.map((c) => c.key)).not.toContain('line');
+  });
+
+  it("falls back to the arm's line without its gloss when the trial has none", () => {
+    const armOnly = {
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', orr: 40, line_of_treatment: '1L (First Line)' }],
+    };
+
+    expect(cell(toTurnTable([armOnly], today), 0, 'setting')).toBe('1L');
   });
 });
 
@@ -792,5 +1056,18 @@ describe('withoutAskedPhase', () => {
 
   it('keeps it when no query did', () => {
     expect(withoutAskedPhase(table, [{ table: 'clinical_trials' }, undefined])).toBe(table);
+  });
+
+  it('drops the phase column from the folded readouts too, so no sub-row shifts left', () => {
+    const table = {
+      columns: [{ key: 'treatment_name', label: 'Treatment' }, { key: 'phases', label: 'Phases' }, { key: 'orr', label: 'ORR' }],
+      rows: [['A', 'Phase 3', '40']],
+      readouts: [[['A', 'Phase 3', '38']]],
+    };
+
+    const next = withoutAskedPhase(table, [{ phase: 'PHASE3' }]);
+
+    expect(next.rows).toEqual([['A', '40']]);
+    expect(next.readouts).toEqual([[['A', '38']]]);
   });
 });

@@ -225,6 +225,17 @@ export function classSiblings(key: string): string[] {
 }
 
 /**
+ * The follow-up and p-value that qualify a survival endpoint - what a reader
+ * needs beside a median to judge it - or none. Only columns the table carries:
+ * `mfs` has a follow-up but no p-value.
+ */
+export function companions(key: string): string[] {
+  const endpoint = /^(?:median_)?(pfs|os|rfs|efs|mfs)$/.exec(key)?.[1];
+  if (!endpoint) return [];
+  return [`${endpoint}_followup_months`, `p_value_${endpoint}`].filter((column) => TRIAL_OUTCOMES_ENDPOINTS.has(column));
+}
+
+/**
  * Every extracted efficacy and safety endpoint `trial_outcomes` carries, built
  * from families rather than typed out by hand so a new column from the loader
  * is one array entry, not a search-and-add across a 198-name string.
@@ -656,8 +667,9 @@ const OTHER_FAMILY: Record<Exclude<EndpointFamily, 'both'>, Set<string>> = {
  * `trial_outcomes` carries either family, so it is a no-op on the other four.
  *
  * `asked` - the endpoints the question named - is always selected, with its
- * class siblings, whatever `detail` and `endpoints` say: the table draws those
- * columns, and falls back to the siblings when the named class is empty.
+ * class siblings and companions, whatever `detail` and `endpoints` say: the
+ * table draws those columns, and falls back to the siblings when the named
+ * class is empty.
  */
 export function projectionFor(
   table: AgentTable,
@@ -672,7 +684,7 @@ export function projectionFor(
     .split(',')
     .map((column) => column.trim())
     .filter((column) => !dropped.has(column));
-  const extra = table === 'trial_outcomes' ? asked.flatMap((key) => [key, ...classSiblings(key)]) : [];
+  const extra = table === 'trial_outcomes' ? asked.flatMap((key) => [key, ...classSiblings(key), ...companions(key)]) : [];
   return [...new Set([...columns, ...extra])].join(', ');
 }
 

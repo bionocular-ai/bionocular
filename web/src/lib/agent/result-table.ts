@@ -41,12 +41,14 @@ export interface ResultSummary {
   nonIndustry: number;
 }
 
-/** An endpoint the reader can put on screen, and how many arms report it. */
+/** An endpoint the reader can put on screen, and how many treatments report it. */
 export interface ResultParameter {
   key: string;
   label: string;
   family: 'efficacy' | 'safety';
   arms: number;
+  /** Columns drawn beside this endpoint and hidden with it: its follow-up and p-value. */
+  companions?: string[];
 }
 
 export interface ResultTable {
@@ -63,11 +65,17 @@ export interface ResultTable {
   /** The endpoints the question named, in its order: drawn before the reader picks. */
   asked?: string[];
   /**
-   * The asked adverse-event measures under every class, present when the class
-   * the question named is missing on most arms. `note` states that gap; the
-   * model's prose says why it matters.
+   * Present only for an outcomes turn with a treatment reported more than
+   * once: aligned with `rows`, each treatment's earlier readouts as cells in
+   * `columns` order, newest first.
    */
-  byClass?: { note: string; table: ResultTable };
+  readouts?: string[][][];
+  /**
+   * Present when an asked adverse-event class had to stand in for another, or
+   * some treatments report the measure only under a class not shown. Drawn
+   * above the table.
+   */
+  caveat?: string;
 }
 
 /**
@@ -468,7 +476,8 @@ export function toFacets(table: ResultTable): Facet[] {
         !notFacets.includes(key) &&
         // Measurements, not groupings: CR reported as 15 or 20 on a few arms
         // reads as a closed set of values, and is not one. Every endpoint, not
-        // only the parameters: the by-class table has none.
+        // only the parameters: companion columns are endpoints that are not
+        // parameters.
         !TRIAL_OUTCOMES_ENDPOINTS.has(key) &&
         values.length > 1 &&
         values.length <= MAX_FACET_VALUES &&

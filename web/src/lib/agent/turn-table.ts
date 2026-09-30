@@ -32,7 +32,8 @@ import {
   type ResultSummary,
   type ResultTable,
 } from './result-table';
-import { TRIAL_OUTCOMES_EFFICACY, TRIAL_OUTCOMES_SAFETY, classSiblings } from './tools/schema';
+import { readoutDate, readoutOf, regimenKey } from './regimen';
+import { TRIAL_OUTCOMES_EFFICACY, TRIAL_OUTCOMES_SAFETY, classSiblings, companions } from './tools/schema';
 
 const KEY = 'nct_id';
 
@@ -194,12 +195,12 @@ const isQualifier = (key: string) => /^(p_value|ci)_|_followup_months$/.test(key
 
 /**
  * Who the arm is, then the facts every answer states about its trial.
- * `setting` is drawn as the section headings, not as a column.
+ * `setting` - the line of therapy - is drawn as the section headings, not as a column.
  */
 const OUTCOME_CONTEXT = [
-  'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'line', 'biomarker',
+  'treatment_name', 'nct_id', 'setting', 'phases', 'num_patients', 'sponsor_type', 'biomarker',
 ];
-const OUTCOME_FACTS = ['setting', 'sponsor_type', 'line', 'biomarker'];
+const OUTCOME_FACTS = ['setting', 'sponsor_type', 'biomarker'];
 const OUTCOME_TRAIL = ['expert_review', 'source', 'overall_status'];
 const OUTCOME_LABELS: Record<string, string> = {
   treatment_name: 'Treatment',
@@ -207,6 +208,14 @@ const OUTCOME_LABELS: Record<string, string> = {
   sponsor_type: 'Sponsor',
   expert_review: 'Expert review',
 };
+
+/** "PFS follow-up (mo)" and "PFS p-value", where word-splitting reads "PFS followup months". */
+function companionLabel(key: string): string | undefined {
+  const followUp = /^(\w+)_followup_months$/.exec(key);
+  if (followUp) return `${followUp[1].toUpperCase()} follow-up (mo)`;
+  const pValue = /^p_value_(\w+)$/.exec(key);
+  return pValue ? `${pValue[1].toUpperCase()} p-value` : undefined;
+}
 
 /**
  * The key must be in the row: `is_nr` names every censored column the arm has,
@@ -219,63 +228,189 @@ function reports(row: Row, key: string): boolean {
   return row[key] != null || (Array.isArray(notReached) && notReached.includes(key));
 }
 
+/** One treatment of one trial: its newest readout, and the readouts before it. */
+interface Treatment {
+  main: Row;
+  earlier: Row[];
+}
+
+/** Lines in the order a reader scans them; a label ranks by its earliest token. */
+const LINE_ORDER = ['1L', '2L', '3L', 'R/R', 'Neoadjuvant', 'Adjuvant'];
+const NO_LINE = 'Line not reported';
+
 /**
- * An outcomes result as the reader scans it: the arm, its trial and the three
+ * The section a treatment sits in: its trial's line of therapy, else the arm's
+ * own line without its gloss ("1L (First Line)"). The trial's comes first so a
+ * trial's randomised arms stay in one section - NADINA's arms are labelled
+ * Neoadjuvant and Adjuvant, and the trial is "Adjuvant; Neoadjuvant".
+ */
+function lineLabel(members: Row[]): string {
+  const first = (column: string) =>
+    members.map((row) => row[column]).find((line): line is string => typeof line === 'string' && line.trim() !== '');
+  const line = first('line_of_therapy') ?? first('line_of_treatment');
+  return line ? line.replace(/\s*\([^)]*\)/g, '').trim() : NO_LINE;
+}
+
+function lineRank(label: string): number {
+  if (label === NO_LINE) return LINE_ORDER.length + 1;
+  const ranks = label.split(/;\s*/).map((token) => LINE_ORDER.indexOf(token)).filter((rank) => rank !== -1);
+  return ranks.length > 0 ? Math.min(...ranks) : LINE_ORDER.length;
+}
+
+/**
+ * Readouts of one arm, folded into the treatment they report. A group is one
+ * nct_id and one drug set (`regimenKey`); a row with no nct_id or no arm name
+ * is its own group, since nothing says which treatment it is.
+ *
+ * A readout that reports none of `telling` - a trial-in-progress abstract, a
+ * poster about another endpoint - is not a readout of this answer and is
+ * dropped. The newest remaining one is the main row - except when one readout
+ * appears on more than one reporting row of a group: that is not one arm with
+ * a subgroup cut, it is distinct randomised arms or cohorts that happen to
+ * share a drug set and a name (E1609's ipi 3 vs 10 mg/kg are both just
+ * "Ipilimumab"; the dose lives in `dosage`, not `arm_name`). Folding those
+ * would silently keep one and hide the other, so every reporting row of such
+ * a group is its own treatment instead, with no earlier readouts. A treatment
+ * left with nothing keeps one empty row - the newest member - which the table
+ * counts as reporting none. Each treatment is sectioned by `lineLabel` and
+ * the list comes back in line order.
+ */
+function toTreatments(rows: Row[], telling: string[]): Treatment[] {
+  const said = (row: Row) => telling.filter((key) => reports(row, key)).length;
+  const nameOf = (row: Row) => String(row.arm_name ?? row.generic_name ?? '').trim();
+  const newestFirst = (a: Row, b: Row) => {
+    const [yearA, monthA] = readoutDate(a);
+    const [yearB, monthB] = readoutDate(b);
+    if (yearA !== yearB) return yearB - yearA;
+    if (monthA !== monthB) return monthB - monthA;
+    return said(b) - said(a);
+  };
+
+  const groups = new Map<string, Row[]>();
+  rows.forEach((row, index) => {
+    const name = nameOf(row);
+    const key = typeof row.nct_id === 'string' && name !== '' ? `${row.nct_id} ${regimenKey(name)}` : `row ${index}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  });
+
+  const treatments = [...groups.values()].flatMap((members) => {
+    const setting = lineLabel(members);
+    // Abbreviations are the short spellings: "Nivolumab + Relatlimab", not "NIVO + RELA".
+    const longest = members.map(nameOf).reduce((best, name) => (name.length > best.length ? name : best), '');
+    const reporting = members.filter((row) => said(row) > 0).sort(newestFirst);
+    if (reporting.length === 0) {
+      const newest = [...members].sort(newestFirst)[0];
+      return [{ main: { ...newest, treatment_name: longest || null, setting }, earlier: [] }];
+    }
+    const readoutCounts = new Map<string, number>();
+    for (const row of reporting) {
+      const readout = readoutOf(row);
+      if (readout !== null) readoutCounts.set(readout, (readoutCounts.get(readout) ?? 0) + 1);
+    }
+    if ([...readoutCounts.values()].some((count) => count > 1)) {
+      return reporting.map((row) => ({ main: { ...row, treatment_name: nameOf(row) || null, setting }, earlier: [] }));
+    }
+    const [main, ...earlier] = reporting;
+    return [{ main: { ...main, treatment_name: longest || null, setting }, earlier }];
+  });
+  // `toSections` keeps labels in the order it meets them, so the order is set here.
+  const label = ({ main }: Treatment) => String(main.setting);
+  return treatments.sort((a, b) => lineRank(label(a)) - lineRank(label(b)) || label(a).localeCompare(label(b)));
+}
+
+/**
+ * An outcomes result as the reader scans it: the arm, its trial and the two
  * trial facts, the endpoints, then where the numbers came from. Loader
  * bookkeeping (`id`, `arm_id`, `source_type`...) never becomes a column.
  *
  * Every endpoint any arm reports is a column, ranked by how many arms report
  * it; `TurnTable` draws the reader's pick of them. An endpoint the question
  * named ranks first and stays a column even when no arm reports it - an empty
- * "Grade 3+ TEAE %" is the answer to a TEAE question, not noise. The arm's own
- * line of treatment wins over the trial's line of therapy - it is the more
- * specific.
+ * "Grade 3+ TEAE %" is the answer to a TEAE question, not noise. Each
+ * treatment is sectioned by its trial's line of therapy, or its arm's own
+ * line when the trial names none - see `lineLabel`.
  */
 function toOutcomesTable(output: unknown): ResultTable | null {
   const rows: Row[] = rowsOf(output)
     .filter((row): row is Row => typeof row === 'object' && row !== null)
-    .map((row) => {
-      const line = row.line_of_treatment ?? row.line_of_therapy ?? null;
-      return {
-        ...row,
-        treatment_name: row.arm_name ?? row.generic_name ?? null,
-        // `source_name` is a loader batch label, never a reference; a web-scraped
-        // readout's page is.
-        source: row.abstract_id ?? row.publication_id ?? row.source_url ?? null,
-        line,
-        // Grouped like a landscape. The arm's line decides, so a trial with an
-        // adjuvant arm and a metastatic arm puts each in its own section.
-        setting: lineSetting(line) ?? 'Unclassified',
-        sponsor_type: sponsorType(row.lead_sponsor_class),
-      };
-    });
+    .map((row) => ({
+      ...row,
+      treatment_name: row.arm_name ?? row.generic_name ?? null,
+      // `source_name` is a loader batch label, never a reference; a web-scraped
+      // readout's page is.
+      source: row.abstract_id ?? row.publication_id ?? row.source_url ?? null,
+      sponsor_type: sponsorType(row.lead_sponsor_class),
+    }));
   if (rows.length === 0) return null;
 
   const asked = askedOf(output);
-  const askedRank = (key: string) => (asked.includes(key) ? asked.indexOf(key) : asked.length);
+  // What decides whether a readout says anything: the asked endpoints and
+  // their classes, or every endpoint when the question named none.
+  const telling = asked.length > 0
+    ? [...new Set(asked.flatMap((key) => [key, ...classSiblings(key)]))]
+    : [...ENDPOINT_FAMILY.keys()].filter((key) => !isQualifier(key));
+  const treatments = toTreatments(rows, telling);
+  const mains = treatments.map(({ main }) => main);
+  const everyRow = treatments.flatMap(({ main, earlier }) => [main, ...earlier]);
+
+  // Counted on the main rows: a class only an earlier readout reports does not
+  // fill the column the reader sees first.
+  const shown = asked.map((key) => standIn(key, mains, asked));
+
+  // The shown columns first, in the question's order; then an asked class that
+  // lost its column, still offered and still a column; then the rest.
+  const askedRank = (key: string) =>
+    shown.includes(key) ? shown.indexOf(key) : asked.includes(key) ? shown.length : shown.length + 1;
   const endpoints = orderColumns([...ENDPOINT_FAMILY.keys()].filter((key) => !isQualifier(key)))
-    .map((key) => ({ key, arms: rows.filter((row) => reports(row, key)).length }))
-    .filter(({ key, arms }) => arms > 0 || asked.includes(key))
+    .map((key) => ({
+      key,
+      arms: mains.filter((row) => reports(row, key)).length,
+      anywhere: everyRow.some((row) => reports(row, key)),
+    }))
+    // Offered when any readout reports it: RELATIVITY-047's any-cause 40.3 sits in
+    // an earlier readout, and the reader can pick it to see it there.
+    .filter(({ key, anywhere }) => anywhere || asked.includes(key))
     // Stable, so arms tied on a count keep the clinical order `orderColumns` gave them.
     .sort((a, b) => askedRank(a.key) - askedRank(b.key) || b.arms - a.arms);
-  const parameters: ResultParameter[] = endpoints.map(({ key, arms }) => ({
-    key,
-    label: humanizeColumn(key),
-    family: ENDPOINT_FAMILY.get(key)!,
-    arms,
-  }));
+  const parameters: ResultParameter[] = endpoints.map(({ key, arms }) => {
+    // A qualifier some readout actually reports is always worth a column. An
+    // asked median also keeps its qualifier columns when a row carried the
+    // key at all (even null) - an old session whose query never selected the
+    // column gets no empty "PFS follow-up (mo)" companion.
+    const qualifiers = companions(key).filter(
+      (column) =>
+        everyRow.some((row) => reports(row, column)) ||
+        (asked.includes(key) && everyRow.some((row) => column in row)),
+    );
+    return {
+      key,
+      label: humanizeColumn(key),
+      family: ENDPOINT_FAMILY.get(key)!,
+      arms,
+      ...(qualifiers.length > 0 ? { companions: qualifiers } : {}),
+    };
+  });
 
-  const columns = [...OUTCOME_CONTEXT, ...parameters.map((p) => p.key), ...OUTCOME_TRAIL].filter(
-    (key) => OUTCOME_FACTS.includes(key) || asked.includes(key) || rows.some((row) => reports(row, key)),
+  const endpointColumns = parameters.flatMap((p) => [p.key, ...(p.companions ?? [])]);
+  const columns = [...OUTCOME_CONTEXT, ...endpointColumns, ...OUTCOME_TRAIL].filter(
+    (key) =>
+      OUTCOME_FACTS.includes(key) ||
+      asked.includes(key) ||
+      shown.includes(key) ||
+      parameters.some((p) => p.companions?.includes(key)) ||
+      everyRow.some((row) => reports(row, key)),
   );
+  const cells = (row: Row) => columns.map((column) => formatRowCell(row, column));
+  const readouts = treatments.map(({ earlier }) => earlier.map(cells));
 
-  const byClass = toClassTable(rows, asked);
+  const caveat = caveatOf(asked, shown, mains);
   return {
-    columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? humanizeColumn(key) })),
-    rows: rows.map((row) => columns.map((column) => formatRowCell(row, column))),
+    columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? companionLabel(key) ?? humanizeColumn(key) })),
+    rows: mains.map(cells),
     parameters,
-    ...(asked.length > 0 ? { asked } : {}),
-    ...(byClass ? { byClass } : {}),
+    ...(asked.length > 0 ? { asked: shown } : {}),
+    ...(caveat ? { caveat } : {}),
+    ...(readouts.some((earlier) => earlier.length > 0) ? { readouts } : {}),
   };
 }
 
@@ -287,54 +422,75 @@ function askedOf(output: unknown): string[] {
     : [];
 }
 
-/** `setting` is drawn as section headings, the same grouping as the asked table. */
-const CLASS_CONTEXT = ['treatment_name', 'nct_id', 'setting', 'num_patients'];
+const CLASS_WORDS = ['ae', 'teae', 'trae'];
+const classOf = (key: string) => key.split('_').find((word) => CLASS_WORDS.includes(word)) ?? '';
 
 /**
- * The asked adverse-event measures under AE, TEAE and TRAE side by side, when
- * the class the question named is missing on most arms that say anything
- * about it. Sources label a rate with one class, and most label TRAE only, so
- * a TEAE question answered from the TEAE columns alone is a table of dashes.
- * Every class keeps its own column - including an all-empty one, which shows
- * the class was checked - so no value is ever read as a class it is not.
+ * The column that answers an asked adverse-event measure: whichever of its AE,
+ * TEAE and TRAE columns the most treatments report. Sources label a rate with
+ * one class, and most label TRAE only, so a TEAE question answered from the
+ * TEAE column alone is a column of dashes. A tie goes to the asked class, then
+ * to the class precedence settled on 2026-09-27: grade 3+ TEAE > AE > TRAE,
+ * discontinuation AE > TEAE > TRAE. The header always names the class shown,
+ * so no value is ever read as a class it is not.
+ *
+ * A key never stands in for another key the question itself asked: two asked
+ * classes of one measure ("TEAE and TRAE discontinuation") must each keep
+ * their own column, even when one of them is the emptier one.
  */
-function toClassTable(rows: Row[], asked: string[]): ResultTable['byClass'] {
-  const measures = asked.filter((key) => classSiblings(key).length > 0);
-  const siblings = [...new Set(measures.flatMap(classSiblings))];
-  const relevant = rows.filter((row) => [...asked, ...siblings].some((key) => reports(row, key)));
-  const missing = measures.filter(
-    (key) => relevant.filter((row) => !reports(row, key)).length * 2 > relevant.length,
-  );
-  const classRows = rows.filter((row) => siblings.some((key) => reports(row, key)));
-  if (missing.length === 0 || classRows.length === 0) return undefined;
+function standIn(key: string, rows: Row[], asked: string[]): string {
+  const siblings = classSiblings(key);
+  if (siblings.length === 0) return key;
+  if (siblings.some((sibling) => sibling !== key && asked.includes(sibling))) return key;
+  const precedence = /discontinuation/.test(key) ? ['ae', 'teae', 'trae'] : ['teae', 'ae', 'trae'];
+  const count = (column: string) => rows.filter((row) => reports(row, column)).length;
+  return [...siblings].sort(
+    (a, b) =>
+      count(b) - count(a) ||
+      Number(b === key) - Number(a === key) ||
+      precedence.indexOf(classOf(a)) - precedence.indexOf(classOf(b)),
+  )[0];
+}
 
-  const measure = (key: string) => humanizeColumn(key).replace(/ %$/, '');
-  const none = missing.filter((key) => relevant.every((row) => !reports(row, key)));
-  const most = missing.filter((key) => !none.includes(key));
-  const gaps = [
-    none.length > 0 ? `No arm reports ${none.map(measure).join(' or ')}` : null,
-    most.length > 0 ? `most arms do not report ${most.map(measure).join(' or ')}` : null,
-  ].filter((gap): gap is string => gap !== null);
-  const said = gaps.join('; ');
-  const note = `${said.charAt(0).toUpperCase()}${said.slice(1)}. Below, the same measures under each class the sources reported.`;
-
-  const columns = [
-    ...CLASS_CONTEXT,
-    ...siblings,
-    ...(classRows.some((row) => row.expert_review != null) ? ['expert_review'] : []),
-    'source',
-  ];
-  return {
-    note,
-    table: {
-      columns: columns.map((key) => ({
-        key,
-        // Six measure headers in one row; "discontinuation" is most of each.
-        label: OUTCOME_LABELS[key] ?? humanizeColumn(key).replace(/ (leading to )?discontinuation/, ' disc.'),
-      })),
-      rows: classRows.map((row) => columns.map((column) => formatRowCell(row, column))),
-    },
-  };
+/**
+ * The line above the table: which class stands in for an asked one, and how
+ * many treatments report a measure only under a class not on screen. The
+ * clinical reading - TRAE counts only drug-attributed events, so it runs lower -
+ * is the model's to write in prose.
+ */
+function caveatOf(asked: string[], shown: string[], rows: Row[]): string | undefined {
+  const count = (column: string) => rows.filter((row) => reports(row, column)).length;
+  const treatments = (n: number) => `${n} ${n === 1 ? 'treatment' : 'treatments'}`;
+  const measure = (column: string) => humanizeColumn(column).replace(/ %$/, '');
+  const sentences = asked.flatMap((key, i) => {
+    const shownKey = shown[i];
+    const said: string[] = [];
+    if (shownKey !== key) {
+      const n = count(key);
+      const lead = n === 0 ? 'No treatment reports' : `Only ${treatments(n)} ${n === 1 ? 'reports' : 'report'}`;
+      said.push(
+        `${lead} ${measure(key)}; showing ${measure(shownKey)} (${treatments(count(shownKey))}), the class most treatments report.`,
+      );
+    }
+    // Each treatment counted once, even when it reports more than one class
+    // besides the shown one - not once per class it happens to report.
+    const others = classSiblings(key).filter((other) => other !== shownKey);
+    const elsewhereRows = rows.filter(
+      (row) => !reports(row, shownKey) && others.some((other) => reports(row, other)),
+    );
+    if (elsewhereRows.length > 0) {
+      const classList = others
+        .filter((other) => elsewhereRows.some((row) => reports(row, other)))
+        .map((other) => measure(other))
+        .join(' or ');
+      const n = elsewhereRows.length;
+      said.push(
+        `${measure(shownKey)}: ${treatments(count(shownKey))}; ${n} more ${n === 1 ? 'reports' : 'report'} it only as ${classList}.`,
+      );
+    }
+    return said;
+  });
+  return sentences.length > 0 ? sentences.join(' ') : undefined;
 }
 
 function stripFolded(output: unknown, today: string): unknown {
@@ -459,10 +615,12 @@ export function withoutAskedPhase(table: ResultTable, inputs: unknown[]): Result
   );
   const index = table.columns.findIndex((column) => column.key === 'phases');
   if (!asked || index === -1) return table;
+  const drop = (row: string[]) => row.filter((_, i) => i !== index);
   return {
     ...table,
     columns: table.columns.filter((_, i) => i !== index),
-    rows: table.rows.map((row) => row.filter((_, i) => i !== index)),
+    rows: table.rows.map(drop),
+    ...(table.readouts ? { readouts: table.readouts.map((earlier) => earlier.map(drop)) } : {}),
   };
 }
 

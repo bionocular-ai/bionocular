@@ -6,6 +6,7 @@ import {
   applyNamedFilter,
   applyTrialKeys,
   classSiblings,
+  companions,
   describeTables,
   embedFor,
   projectionColumns,
@@ -672,6 +673,8 @@ describe('query_proprietary_data', () => {
     for (const column of ['grade_3_plus_ae_pct', 'grade_3_plus_teae_pct', 'grade_3_plus_trae_pct']) {
       expect(selected).toContain(column);
     }
+    expect(selected).toContain('pfs_followup_months');
+    expect(selected).toContain('p_value_pfs');
     expect(result).toMatchObject({ ok: true, askedColumns: ['median_pfs', 'grade_3_plus_teae_pct'] });
   });
 
@@ -712,6 +715,16 @@ describe('classSiblings', () => {
     expect(classSiblings('trae_ir_ae_pct')).toEqual(['teae_ir_ae_pct', 'trae_ir_ae_pct']);
     expect(classSiblings('serious_ir_ae_pct')).toEqual([]);
     expect(classSiblings('median_pfs')).toEqual([]);
+  });
+});
+
+describe('companions', () => {
+  it('names the follow-up and p-value that qualify a survival endpoint, only where the table has them', () => {
+    expect(companions('median_pfs')).toEqual(['pfs_followup_months', 'p_value_pfs']);
+    expect(companions('median_os')).toEqual(['os_followup_months', 'p_value_os']);
+    expect(companions('rfs')).toEqual(['rfs_followup_months', 'p_value_rfs']);
+    expect(companions('mfs')).toEqual(['mfs_followup_months']);
+    expect(companions('orr')).toEqual([]);
   });
 });
 
