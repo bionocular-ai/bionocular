@@ -687,10 +687,15 @@ export function TurnTable({
   // It is left out and counted, so the numbers on screen still add up.
   const [drawn, silent] = useMemo(() => {
     if (!parameters) return [rows, 0];
-    const has = (row: string[]) => pickedIndices.some((index) => row[index] !== ABSENT);
+    // A picked column an earlier readout reports still answers what was
+    // asked - RELATIVITY-047's any-cause rate sits in NEJM 2022, not the
+    // newest readout, and the treatment must not read as silent for that.
+    const has = (row: string[]) =>
+      pickedIndices.some((index) => row[index] !== ABSENT) ||
+      (earlierOf.get(row) ?? []).some((readout) => pickedIndices.some((index) => readout[index] !== ABSENT));
     const reporting = rows.filter(has);
     return [reporting, rows.length - reporting.length];
-  }, [rows, parameters, pickedIndices]);
+  }, [rows, parameters, pickedIndices, earlierOf]);
   const sections = useMemo(
     () => capSections(toSections(drawn, settingIndex, basketIndex), limit),
     [drawn, settingIndex, basketIndex, limit]
