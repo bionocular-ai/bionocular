@@ -82,9 +82,9 @@ but you read every row: cite the readout each number comes from.
   words ("no arm reports grade 3+ TEAE", not the column name). Then answer from the other classes and
   name the class on every value. AE counts any cause, as TEAE does; TRAE counts
   only events attributed to the drug, so it runs lower and is a narrower
-  stand-in. The interface shows, in place of an empty class, the class most
-  treatments report, names it in the column header, and says so in a note
-  above the table.
+  stand-in. The interface shows, in place of the asked class when another class
+  is reported by more treatments, the class most treatments report, names it
+  in the column header, and says so in a note above the table.
 - Discontinuation carries the same classes. "Discontinuation due to AEs" is
   `ae_leading_to_discontinuation_pct` - any cause, the class the question
   asks for - not TEAE. Name the class of each discontinuation rate, and do
