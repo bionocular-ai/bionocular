@@ -235,8 +235,10 @@ export const GOLDEN_CASES: EvalCase[] = [
     },
   },
   {
-    // The Q3 baseline: no arm reports a TEAE-labelled rate, and run 1
-    // answered in TRAE without saying so and dropped the PFS-only DREAMseq.
+    // The Q3 baseline: no treatment reports a TEAE-labelled rate. The table
+    // shows TRAE in its place with a caveat; the answer must still state the
+    // TEAE gap, keep the PFS-only DREAMseq, and ask for discontinuation as
+    // the any-cause AE class.
     id: 'active-phase3-pfs-vs-teae',
     category: 'clinical-reasoning',
     cancerSlug: CM,
@@ -246,7 +248,10 @@ export const GOLDEN_CASES: EvalCase[] = [
       skills: ['trial-outcomes'],
       filter: {
         table: 'trial_outcomes',
-        args: { phase: 'PHASE3', columns: ['median_pfs', 'grade_3_plus_teae_pct'] },
+        args: {
+          phase: 'PHASE3',
+          columns: ['median_pfs', 'grade_3_plus_teae_pct', 'ae_leading_to_discontinuation_pct'],
+        },
       },
       forbidFilter: { table: 'clinical_trials' },
       // States the TEAE gap, and keeps the trial that reports PFS only.

@@ -14,7 +14,9 @@ an abstract and a paper reported it. `arm_name`, `generic_name`,
 `line_of_treatment`, `num_patients` and `source_name` say which arm and which
 readout you are looking at; always carry them into the answer. `lead_sponsor_class`,
 `biomarker` and `line_of_therapy` are the trial's, joined in; `line_of_treatment`
-is the arm's own and wins when both are present.
+is the arm's own and wins when both are present. The interface draws one row
+per treatment - its newest readout, with earlier readouts folded beneath it -
+but you read every row: cite the readout each number comes from.
 
 ## Retrieval
 
@@ -28,6 +30,9 @@ is the arm's own and wins when both are present.
   or `trial_landscape`: every row already carries its trial's sponsor class,
   biomarker and line of therapy. Querying them spends the turn's budget and
   truncates the outcomes you came for.
+- "Metastatic / cutaneous melanoma" is the cutaneous scope, not a stage
+  filter: keep adjuvant and neoadjuvant trials and name each trial's line.
+  The interface sections treatments by line of therapy.
 - A re-query keeps the `endpoints`, `detail` and `columns` of the call it refines.
 - When the question names endpoints, pass them as `columns`, in the order it
   names them (up to five): "ORR and grade 3+ treatment-related AEs" is
@@ -77,14 +82,17 @@ is the arm's own and wins when both are present.
   words ("no arm reports grade 3+ TEAE", not the column name). Then answer from the other classes and
   name the class on every value. AE counts any cause, as TEAE does; TRAE counts
   only events attributed to the drug, so it runs lower and is a narrower
-  stand-in. The interface draws the three classes side by side beneath the
-  asked table.
-- Discontinuation carries the same classes. Name the class of each
-  discontinuation rate, and do not merge a TRAE rate with an AE rate.
+  stand-in. The interface shows, in place of an empty class, the class most
+  treatments report, names it in the column header, and says so in a note
+  above the table.
+- Discontinuation carries the same classes. "Discontinuation due to AEs" is
+  `ae_leading_to_discontinuation_pct` - any cause, the class the question
+  asks for - not TEAE. Name the class of each discontinuation rate, and do
+  not merge a TRAE rate with an AE rate.
 
 ## Answer shape
 
-Open with the shape: how many arms, from how many trials, grouped by the
+Open with the shape: how many treatments, from how many trials, grouped by the
 thing the question asked about (treatment, line, phase). Then what is notable,
 what is absent, and which rows are exceptions and why. An arm that reports
 some of the asked endpoints and not others is part of the answer: give what it
