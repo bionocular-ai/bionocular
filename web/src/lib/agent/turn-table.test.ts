@@ -445,11 +445,6 @@ const readouts = {
       nct_id: 'NCT03470922', arm_name: 'NIVO + RELA', num_patients: 355, abstract_id: 'ASCO_2026_9532',
       median_pfs: 10.2, grade_3_plus_trae_pct: 23, trae_discontinuation_pct: 17, line_of_therapy: '1L',
     },
-    // A subgroup cut of the same readout: the full population stands for it.
-    {
-      nct_id: 'NCT03470922', arm_name: 'Nivolumab + Relatlimab', num_patients: 66, abstract_id: 'ASCO_2026_9532',
-      median_pfs: 12, line_of_therapy: '1L',
-    },
     // Newer than NEJM 2022, but reports nothing asked: never the main row.
     {
       nct_id: 'NCT03470922', arm_name: 'Nivolumab + Relatlimab', num_patients: 355, abstract_id: 'ESMO_2025_1619P',
@@ -648,7 +643,25 @@ describe('outcomes turns', () => {
   it('says above the table which class stands in, and which treatments report only another', () => {
     expect(toTurnTable([q3], today)?.caveat).toBe(
       'No treatment reports Grade 3+ TEAE; showing Grade 3+ TRAE (2 treatments), the class most treatments report. ' +
-        'AE leading to discontinuation: 1 treatment; 1 more reports TRAE discontinuation only.',
+        'AE leading to discontinuation: 1 treatment; 1 more reports it only as TRAE discontinuation.',
+    );
+  });
+
+  it('counts a treatment reporting more than one other class once, not once per class', () => {
+    // Repro: a treatment reports TEAE disc and TRAE disc but not AE disc
+    // (shown). The old code counted it under both classes for one treatment.
+    const doubleCount = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['ae_leading_to_discontinuation_pct'],
+      rows: [
+        { nct_id: 'NCT1', arm_name: 'A', ae_leading_to_discontinuation_pct: 12 },
+        { nct_id: 'NCT2', arm_name: 'B', teae_discontinuation_pct: 8, trae_discontinuation_pct: 9 },
+      ],
+    };
+
+    expect(toTurnTable([doubleCount], today)?.caveat).toBe(
+      'AE leading to discontinuation: 1 treatment; 1 more reports it only as TEAE discontinuation or TRAE discontinuation.',
     );
   });
 
@@ -676,12 +689,62 @@ describe('outcomes turns', () => {
     expect(toTurnTable([reported], today)?.caveat).toBeUndefined();
   });
 
+  it('keeps both asked classes when one is the other one\'s own sibling, rather than standing in for both', () => {
+    // Repro: TEAE reported on 1 treatment, TRAE on 3 - without the fix,
+    // standIn picks TRAE for both asked keys and the TEAE column disappears.
+    const bothClasses = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['grade_3_plus_teae_pct', 'grade_3_plus_trae_pct'],
+      rows: [
+        { nct_id: 'NCT1', arm_name: 'A', grade_3_plus_teae_pct: 40 },
+        { nct_id: 'NCT2', arm_name: 'B', grade_3_plus_trae_pct: 20 },
+        { nct_id: 'NCT3', arm_name: 'C', grade_3_plus_trae_pct: 25 },
+        { nct_id: 'NCT4', arm_name: 'D', grade_3_plus_trae_pct: 30 },
+      ],
+    };
+
+    const table = toTurnTable([bothClasses], today);
+
+    expect(table?.asked).toEqual(['grade_3_plus_teae_pct', 'grade_3_plus_trae_pct']);
+    expect(table?.caveat).not.toMatch(/the class most treatments report/);
+  });
+
   it('draws no caveat, and no unreported class column, when the question named no endpoints', () => {
     const table = toTurnTable([{ ...q3, askedColumns: undefined }], today);
 
     expect(table?.asked).toBeUndefined();
     expect(table?.caveat).toBeUndefined();
     expect(table?.columns.map((c) => c.key)).not.toContain('grade_3_plus_teae_pct');
+  });
+
+  it('adds no companion column for an asked median when the rows never carried the key', () => {
+    // An old persisted session's query never selected pfs_followup_months or
+    // p_value_pfs, so no empty "PFS follow-up (mo)" column should appear.
+    const noCompanions = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['median_pfs'],
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', median_pfs: 10 }],
+    };
+
+    const keys = toTurnTable([noCompanions], today)?.columns.map((c) => c.key);
+
+    expect(keys).not.toContain('pfs_followup_months');
+    expect(keys).not.toContain('p_value_pfs');
+  });
+
+  it('keeps the companion columns for an asked median when the rows carry the keys as null', () => {
+    const nullCompanions = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['median_pfs'],
+      rows: [{ nct_id: 'NCT1', arm_name: 'A', median_pfs: 10, pfs_followup_months: null, p_value_pfs: null }],
+    };
+
+    const keys = toTurnTable([nullCompanions], today)?.columns.map((c) => c.key);
+
+    expect(keys).toEqual(expect.arrayContaining(['pfs_followup_months', 'p_value_pfs']));
   });
 
   it('shows the expert verdict beside the source, only once some arm was reviewed', () => {
@@ -723,10 +786,8 @@ describe('one row per treatment', () => {
     const table = toTurnTable([readouts], today);
     const source = column(table, 'source');
 
-    // The N 66 subgroup of the main readout, then NEJM 2022, then ASCO 2021.
     // ESMO_2025_1619P reports nothing asked, so it is not a readout of this answer.
     expect(table?.readouts?.[0].map((row) => row[source])).toEqual([
-      'ASCO_2026_9532',
       'N Engl J Med 2022;386:24-34.',
       'ASCO_2021_9503',
     ]);
@@ -738,6 +799,56 @@ describe('one row per treatment', () => {
     const names = table!.rows.map((_, i) => cell(table, i, 'treatment_name'));
 
     expect(names).toEqual(expect.arrayContaining(['Placebo', 'Pembrolizumab']));
+  });
+
+  it('never folds two arms of one readout into one treatment, even sharing a name', () => {
+    // E1609: ipi 3 mg/kg vs ipi 10 mg/kg, both just "Ipilimumab" - the dose
+    // lives in `dosage`, not `arm_name`. Folding these would silently keep
+    // one arm and hide the other under "1 earlier readout".
+    const e1609 = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['grade_3_plus_trae_pct'],
+      rows: [
+        {
+          nct_id: 'NCT01274338', arm_name: 'Ipilimumab', num_patients: 523, abstract_id: 'ASCO_2021_9582',
+          grade_3_plus_trae_pct: 24.9,
+        },
+        {
+          nct_id: 'NCT01274338', arm_name: 'Ipilimumab', num_patients: 511, abstract_id: 'ASCO_2021_9582',
+          grade_3_plus_trae_pct: 17.5,
+        },
+      ],
+    };
+
+    const table = toTurnTable([e1609], today);
+
+    expect(table?.rows).toHaveLength(2);
+    expect(table?.readouts).toBeUndefined();
+  });
+
+  it('never folds two arms of one publication into one treatment, even sharing a drug key', () => {
+    // S1801-style: neoadjuvant and adjuvant pembrolizumab are two randomised
+    // arms of one trial, reported in one publication; both key to `pembrolizumab`.
+    const s1801 = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['median_pfs'],
+      rows: [
+        {
+          nct_id: 'NCT03698019', arm_name: 'Neoadjuvant pembrolizumab', num_patients: 154,
+          publication_id: 'N Engl J Med 2023;388:813-23.', median_pfs: 72,
+        },
+        {
+          nct_id: 'NCT03698019', arm_name: 'Adjuvant pembrolizumab', num_patients: 159,
+          publication_id: 'N Engl J Med 2023;388:813-23.', median_pfs: 49.4,
+        },
+      ],
+    };
+
+    const table = toTurnTable([s1801], today);
+
+    expect(table?.rows).toHaveLength(2);
   });
 
   it('never merges rows that carry no nct_id, or no arm name', () => {

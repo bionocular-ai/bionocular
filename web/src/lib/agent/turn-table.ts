@@ -264,21 +264,25 @@ function lineRank(label: string): number {
  *
  * A readout that reports none of `telling` - a trial-in-progress abstract, a
  * poster about another endpoint - is not a readout of this answer and is
- * dropped. The newest remaining one is the main row; within one readout, the
- * largest arm stands for it, so a subgroup cut never does. A treatment left
- * with nothing keeps one empty row, which the table counts as reporting none.
- * Each treatment is sectioned by `lineLabel` and the list comes back in line order.
+ * dropped. The newest remaining one is the main row - except when one readout
+ * appears on more than one reporting row of a group: that is not one arm with
+ * a subgroup cut, it is distinct randomised arms or cohorts that happen to
+ * share a drug set and a name (E1609's ipi 3 vs 10 mg/kg are both just
+ * "Ipilimumab"; the dose lives in `dosage`, not `arm_name`). Folding those
+ * would silently keep one and hide the other, so every reporting row of such
+ * a group is its own treatment instead, with no earlier readouts. A treatment
+ * left with nothing keeps one empty row - the newest member - which the table
+ * counts as reporting none. Each treatment is sectioned by `lineLabel` and
+ * the list comes back in line order.
  */
 function toTreatments(rows: Row[], telling: string[]): Treatment[] {
   const said = (row: Row) => telling.filter((key) => reports(row, key)).length;
-  const size = (row: Row) => (typeof row.num_patients === 'number' ? row.num_patients : 0);
   const nameOf = (row: Row) => String(row.arm_name ?? row.generic_name ?? '').trim();
   const newestFirst = (a: Row, b: Row) => {
     const [yearA, monthA] = readoutDate(a);
     const [yearB, monthB] = readoutDate(b);
     if (yearA !== yearB) return yearB - yearA;
     if (monthA !== monthB) return monthB - monthA;
-    if (readoutOf(a) === readoutOf(b)) return size(b) - size(a);
     return said(b) - said(a);
   };
 
@@ -289,12 +293,25 @@ function toTreatments(rows: Row[], telling: string[]): Treatment[] {
     groups.set(key, [...(groups.get(key) ?? []), row]);
   });
 
-  const treatments = [...groups.values()].map((members) => {
-    const reporting = members.filter((row) => said(row) > 0).sort(newestFirst);
-    const [main, ...earlier] = reporting.length > 0 ? reporting : [members[0]];
+  const treatments = [...groups.values()].flatMap((members) => {
+    const setting = lineLabel(members);
     // Abbreviations are the short spellings: "Nivolumab + Relatlimab", not "NIVO + RELA".
     const longest = members.map(nameOf).reduce((best, name) => (name.length > best.length ? name : best), '');
-    return { main: { ...main, treatment_name: longest || null, setting: lineLabel(members) }, earlier };
+    const reporting = members.filter((row) => said(row) > 0).sort(newestFirst);
+    if (reporting.length === 0) {
+      const newest = [...members].sort(newestFirst)[0];
+      return [{ main: { ...newest, treatment_name: longest || null, setting }, earlier: [] }];
+    }
+    const readoutCounts = new Map<string, number>();
+    for (const row of reporting) {
+      const readout = readoutOf(row);
+      if (readout !== null) readoutCounts.set(readout, (readoutCounts.get(readout) ?? 0) + 1);
+    }
+    if ([...readoutCounts.values()].some((count) => count > 1)) {
+      return reporting.map((row) => ({ main: { ...row, treatment_name: nameOf(row) || null, setting }, earlier: [] }));
+    }
+    const [main, ...earlier] = reporting;
+    return [{ main: { ...main, treatment_name: longest || null, setting }, earlier }];
   });
   // `toSections` keeps labels in the order it meets them, so the order is set here.
   const label = ({ main }: Treatment) => String(main.setting);
@@ -338,7 +355,7 @@ function toOutcomesTable(output: unknown): ResultTable | null {
 
   // Counted on the main rows: a class only an earlier readout reports does not
   // fill the column the reader sees first.
-  const shown = asked.map((key) => standIn(key, mains));
+  const shown = asked.map((key) => standIn(key, mains, asked));
 
   // The shown columns first, in the question's order; then an asked class that
   // lost its column, still offered and still a column; then the rest.
@@ -356,10 +373,14 @@ function toOutcomesTable(output: unknown): ResultTable | null {
     // Stable, so arms tied on a count keep the clinical order `orderColumns` gave them.
     .sort((a, b) => askedRank(a.key) - askedRank(b.key) || b.arms - a.arms);
   const parameters: ResultParameter[] = endpoints.map(({ key, arms }) => {
-    // Asked medians always bring theirs, as asked columns do; otherwise only a
-    // qualifier some readout carries is worth a column.
+    // A qualifier some readout actually reports is always worth a column. An
+    // asked median also keeps its qualifier columns when a row carried the
+    // key at all (even null) - an old session whose query never selected the
+    // column gets no empty "PFS follow-up (mo)" companion.
     const qualifiers = companions(key).filter(
-      (column) => asked.includes(key) || everyRow.some((row) => reports(row, column)),
+      (column) =>
+        everyRow.some((row) => reports(row, column)) ||
+        (asked.includes(key) && everyRow.some((row) => column in row)),
     );
     return {
       key,
@@ -412,10 +433,15 @@ const classOf = (key: string) => key.split('_').find((word) => CLASS_WORDS.inclu
  * to the class precedence settled on 2026-09-27: grade 3+ TEAE > AE > TRAE,
  * discontinuation AE > TEAE > TRAE. The header always names the class shown,
  * so no value is ever read as a class it is not.
+ *
+ * A key never stands in for another key the question itself asked: two asked
+ * classes of one measure ("TEAE and TRAE discontinuation") must each keep
+ * their own column, even when one of them is the emptier one.
  */
-function standIn(key: string, rows: Row[]): string {
+function standIn(key: string, rows: Row[], asked: string[]): string {
   const siblings = classSiblings(key);
   if (siblings.length === 0) return key;
+  if (siblings.some((sibling) => sibling !== key && asked.includes(sibling))) return key;
   const precedence = /discontinuation/.test(key) ? ['ae', 'teae', 'trae'] : ['teae', 'ae', 'trae'];
   const count = (column: string) => rows.filter((row) => reports(row, column)).length;
   return [...siblings].sort(
@@ -446,18 +472,21 @@ function caveatOf(asked: string[], shown: string[], rows: Row[]): string | undef
         `${lead} ${measure(key)}; showing ${measure(shownKey)} (${treatments(count(shownKey))}), the class most treatments report.`,
       );
     }
-    const elsewhere = classSiblings(key)
-      .filter((other) => other !== shownKey)
-      .map((other) => ({
-        other,
-        n: rows.filter((row) => !reports(row, shownKey) && reports(row, other)).length,
-      }))
-      .filter(({ n }) => n > 0);
-    if (elsewhere.length > 0) {
-      const more = elsewhere
-        .map(({ other, n }) => `${n} more ${n === 1 ? 'reports' : 'report'} ${measure(other)} only`)
-        .join(', ');
-      said.push(`${measure(shownKey)}: ${treatments(count(shownKey))}; ${more}.`);
+    // Each treatment counted once, even when it reports more than one class
+    // besides the shown one - not once per class it happens to report.
+    const others = classSiblings(key).filter((other) => other !== shownKey);
+    const elsewhereRows = rows.filter(
+      (row) => !reports(row, shownKey) && others.some((other) => reports(row, other)),
+    );
+    if (elsewhereRows.length > 0) {
+      const classList = others
+        .filter((other) => elsewhereRows.some((row) => reports(row, other)))
+        .map((other) => measure(other))
+        .join(' or ');
+      const n = elsewhereRows.length;
+      said.push(
+        `${measure(shownKey)}: ${treatments(count(shownKey))}; ${n} more ${n === 1 ? 'reports' : 'report'} it only as ${classList}.`,
+      );
     }
     return said;
   });
