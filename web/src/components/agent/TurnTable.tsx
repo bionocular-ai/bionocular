@@ -15,8 +15,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { TRIAL_OUTCOMES_ENDPOINTS } from '@/lib/agent/tools/schema';
+import { toTurnChart } from '@/lib/agent/turn-chart';
 import { NCT_ID_PATTERN, trialRoute } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { TurnCharts } from './TurnCharts';
 
 /** Anchor treatment matched to the one `createMarkdownComponents` gives an in-app link. */
 const NCT_LINK_CLASSES = cn(
@@ -714,6 +716,18 @@ export function TurnTable({
     [drawn, settingIndex, basketIndex, limit]
   );
   const shownCount = Math.min(limit, drawn.length);
+  // The rows on screen, in reading order: the charts follow every filter, pick
+  // and "show more" the reader has set on the table rather than keeping their own.
+  const chart = useMemo(
+    () =>
+      toTurnChart(
+        table,
+        sections.flatMap((section) => section.rows),
+        picked,
+        (row) => earlierOf.get(row) ?? []
+      ),
+    [table, sections, picked, earlierOf]
+  );
 
   const select = useCallback((index: number, value: string) => {
     setSelected((previous) => {
@@ -958,6 +972,7 @@ export function TurnTable({
           ) : null}
         </div>
       ) : null}
+      {chart ? <TurnCharts chart={chart} /> : null}
       {efficacyLink ? (
         <div className="flex items-baseline gap-2 pt-1.5">
           <Link

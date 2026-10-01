@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ROUTES } from '@/lib/constants'
 import { createClient } from './client'
 import type { Session } from '@supabase/supabase-js'
 
@@ -27,5 +28,7 @@ export function useSession() {
 export const signOut = async () => {
   const supabase = createClient()
   await supabase.auth.signOut()
-  window.location.href = '/login'
+  // A full page load, not a client-side push: it drops every query cached for
+  // the user who just left. Replace, so Back does not return to their pages.
+  window.location.replace(ROUTES.LOGIN)
 }
