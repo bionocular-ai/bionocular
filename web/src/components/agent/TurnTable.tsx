@@ -633,20 +633,33 @@ export function TurnTable({
   // against.
   const cellContent = (row: string[], cell: string, cellIndex: number, mainRow?: string[]) => {
     const key = table.columns[cellIndex].key;
-    const value =
-      mainRow && cellIndex === treatmentIndex && sourceIndex !== -1
-        ? row[sourceIndex]
-        : mainRow && suppressIndices.has(cellIndex) && cell === mainRow[cellIndex]
-          ? ''
-          : cell;
+    const namesReadout = mainRow !== undefined && cellIndex === treatmentIndex && sourceIndex !== -1;
+    const value = namesReadout
+      ? row[sourceIndex]
+      : mainRow && suppressIndices.has(cellIndex) && cell === mainRow[cellIndex]
+        ? ''
+        : cell;
+    const isUrl = /^https?:\/\//.test(value);
     return (
       <>
         {value === '' ? null : key === 'nct_id' && NCT_ID_PATTERN.test(value) ? (
           <Link href={trialRoute(value, cancerType)} className={NCT_LINK_CLASSES}>
             {value}
           </Link>
-        ) : key === 'source' && /^https?:\/\//.test(value) ? (
+        ) : (key === 'source' || namesReadout) && isUrl ? (
           <SourceLink url={value} />
+        ) : namesReadout ? (
+          // A citation wraps between its words, never at the hyphen of its
+          // page range ("J Clin Oncol 2023;41:186-" / "197.").
+          value.split(/(\s+)/).map((part, index) =>
+            /^\s+$/.test(part) ? (
+              part
+            ) : (
+              <span key={index} className="whitespace-nowrap">
+                {part}
+              </span>
+            )
+          )
         ) : PILL_COLUMNS.includes(key) && value !== ABSENT ? (
           <Pill value={value} />
         ) : (
