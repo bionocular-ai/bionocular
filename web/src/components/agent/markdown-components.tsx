@@ -237,13 +237,15 @@ export function createMarkdownComponents(): Components {
       );
     },
 
-    p: ({ children }) => <p className="mb-3 max-w-[66ch] last:mb-0">{children}</p>,
+    // No measure of their own: the answer's 780px column sets it, so prose
+    // runs to the same edge as the dividers between its sections.
+    p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
 
     ul: ({ children }) => (
-      <ul className="mb-3 max-w-[66ch] list-disc pl-5 last:mb-0">{children}</ul>
+      <ul className="mb-3 list-disc pl-5 last:mb-0">{children}</ul>
     ),
     ol: ({ children }) => (
-      <ol className="mb-3 max-w-[66ch] list-decimal pl-5 last:mb-0">{children}</ol>
+      <ol className="mb-3 list-decimal pl-5 last:mb-0">{children}</ol>
     ),
     li: ({ children }) => <li className="mb-1 last:mb-0">{children}</li>,
 
@@ -260,7 +262,7 @@ export function createMarkdownComponents(): Components {
     blockquote: ({ children }) => (
       <blockquote
         className={cn(
-          'my-4 max-w-[70ch] border-l-2 border-(--brand-accent) bg-(--brand-surface)',
+          'my-4 border-l-2 border-(--brand-accent) bg-(--brand-surface)',
           'px-4 py-3 text-[12.5px] leading-relaxed text-(--brand-text-muted)'
         )}
       >
