@@ -114,14 +114,22 @@ export function TurnCharts({ chart }: { chart: TurnChart }) {
               </button>
             ))}
           </div>
-          <div role="tabpanel" id={`${id}-view`} aria-labelledby={`${id}-${tab}`}>
-            {tab === 'bar' ? (
-              <Bars chart={chart} />
-            ) : tab === 'heatmap' ? (
-              <Heatmap chart={chart} />
-            ) : (
-              <Bubble chart={chart} />
-            )}
+          {/* All three views share one grid cell and the inactive ones are only
+              invisible, so the card keeps the tallest view's height instead of
+              jumping on every tab change. `invisible` also takes them out of the
+              tab order and the accessibility tree. */}
+          <div role="tabpanel" id={`${id}-view`} aria-labelledby={`${id}-${tab}`} className="grid">
+            {TABS.map((t) => (
+              <div key={t.id} className={cn('col-start-1 row-start-1 min-w-0', tab !== t.id && 'invisible')}>
+                {t.id === 'bar' ? (
+                  <Bars chart={chart} />
+                ) : t.id === 'heatmap' ? (
+                  <Heatmap chart={chart} />
+                ) : (
+                  <Bubble chart={chart} />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       ) : null}
