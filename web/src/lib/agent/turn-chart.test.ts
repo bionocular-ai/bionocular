@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ABSENT, formatRowCell, type ResultParameter, type ResultTable } from './result-table';
-import { parseCell, toTurnChart } from './turn-chart';
+import { heatShade, niceTicks, parseCell, placeLabels, toTurnChart } from './turn-chart';
 
 const KEYS = [
   'treatment_name', 'nct_id', 'setting', 'num_patients', 'median_pfs', 'grade_3_plus_teae_pct',
@@ -153,5 +153,65 @@ describe('toTurnChart', () => {
   it('ignores a pick the table does not offer', () => {
     expect(toTurnChart(table, rows, ['median_pfs', 'not_a_column'], earlier)!.endpoints.map((e) => e.key)).toEqual(['median_pfs']);
     expect(toTurnChart(table, rows, ['not_a_column'], earlier)).toBeNull();
+  });
+});
+
+describe('niceTicks', () => {
+  it('steps by 1, 2 or 5 x 10^k from zero, ending at or past the max', () => {
+    expect(niceTicks(4.6, 11.5)).toEqual([0, 5, 10, 15]);
+    expect(niceTicks(11, 59)).toEqual([0, 20, 40, 60]);
+    expect(niceTicks(0.4, 0.9)).toEqual([0, 0.2, 0.4, 0.6, 0.8, 1]);
+  });
+
+  it('starts below zero only when the data does', () => {
+    expect(niceTicks(-3, 4)).toEqual([-4, -2, 0, 2, 4]);
+  });
+
+  it('still spans a range when every value is zero', () => {
+    expect(niceTicks(0, 0)).toEqual([0, 1]);
+  });
+});
+
+describe('placeLabels', () => {
+  it('puts a label above its bubble when nothing is in the way', () => {
+    const placed = placeLabels(
+      [{ x: 100, y: 100, r: 20, width: 60 }, { x: 300, y: 100, r: 10, width: 60 }],
+      0,
+      760,
+    );
+    expect(placed).toEqual([{ x: 100, y: 75 }, { x: 300, y: 85 }]);
+  });
+
+  it('moves a label below its bubble when the space above holds another bubble', () => {
+    const placed = placeLabels(
+      [{ x: 100, y: 140, r: 30, width: 40 }, { x: 110, y: 160, r: 10, width: 40 }],
+      0,
+      760,
+    );
+    expect(placed[1]).toEqual({ x: 110, y: 183 });
+  });
+
+  it('keeps a label inside the plot', () => {
+    expect(placeLabels([{ x: 740, y: 200, r: 10, width: 100 }], 56, 736)[0].x).toBe(686);
+  });
+});
+
+describe('heatShade', () => {
+  it('skips the middle of the ramp, where no text colour reaches 4.5:1', () => {
+    const stops = [0, 0.25, 0.49, 0.5, 0.75, 1].map((t) => heatShade(t));
+    expect(stops.map((s) => s.background)).toEqual([
+      'color-mix(in oklab, var(--brand-primary) 0%, var(--brand-accent-light))',
+      'color-mix(in oklab, var(--brand-primary) 25%, var(--brand-accent-light))',
+      'color-mix(in oklab, var(--brand-primary) 49%, var(--brand-accent-light))',
+      'color-mix(in oklab, var(--brand-primary) 72%, var(--brand-accent-light))',
+      'color-mix(in oklab, var(--brand-primary) 86%, var(--brand-accent-light))',
+      'color-mix(in oklab, var(--brand-primary) 100%, var(--brand-accent-light))',
+    ]);
+    expect(stops.map((s) => s.dark)).toEqual([false, false, false, true, true, true]);
+  });
+
+  it('clamps out-of-range input', () => {
+    expect(heatShade(-1)).toEqual(heatShade(0));
+    expect(heatShade(2)).toEqual(heatShade(1));
   });
 });

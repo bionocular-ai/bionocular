@@ -127,3 +127,81 @@ export function toTurnChart(
 
   return { endpoints, series, bubble };
 }
+
+/**
+ * Axis ticks a reader can count in: steps of 1, 2 or 5 x 10^k, from zero (or
+ * below it when the data is), ending at the first tick at or past `max`.
+ */
+export function niceTicks(min: number, max: number, count = 6): number[] {
+  const low = Math.min(0, min);
+  if (max <= low) return [low, low + 1];
+  const raw = (max - low) / (count - 1);
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const step = [1, 2, 5, 10].map((m) => m * magnitude).find((s) => s >= raw)!;
+  const start = Math.floor(low / step) * step;
+  const ticks: number[] = [];
+  for (let i = 0; ; i++) {
+    const tick = Number((start + i * step).toFixed(12));
+    ticks.push(tick);
+    if (tick >= max) return ticks;
+  }
+}
+
+export interface LabelBox {
+  /** The bubble's centre and radius, in the plot's own units. */
+  x: number;
+  y: number;
+  r: number;
+  /** The label's estimated width in the same units. */
+  width: number;
+}
+
+/** Cap height of a 10.5-unit label, plus the descender room under its baseline. */
+const LABEL_HEIGHT = 12;
+
+/**
+ * Where each bubble's name goes: centred above it, kept inside the plot, and
+ * moved below the bubble when the space above holds another bubble or a label
+ * already placed. Beside-the-bubble and above-only labels both collided in the
+ * mock. Returns each label's centre x and baseline y.
+ */
+export function placeLabels(points: LabelBox[], left: number, right: number): { x: number; y: number }[] {
+  type Box = { x0: number; x1: number; y0: number; y1: number };
+  const placed: Box[] = [];
+  const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+  const hits = (box: Box) =>
+    placed.some((other) => overlaps(box, other)) ||
+    points.some((p) => overlaps(box, { x0: p.x - p.r, x1: p.x + p.r, y0: p.y - p.r, y1: p.y + p.r }));
+
+  return points.map((p) => {
+    const half = p.width / 2;
+    const x = Math.min(right - half, Math.max(left + half, p.x));
+    const box = (baseline: number): Box => ({
+      x0: x - half,
+      x1: x + half,
+      y0: baseline - LABEL_HEIGHT + 2,
+      y1: baseline + 2,
+    });
+    let y = p.y - p.r - 5;
+    if (hits(box(y))) y = p.y + p.r + LABEL_HEIGHT + 1;
+    placed.push(box(y));
+    return { x, y };
+  });
+}
+
+/**
+ * A heatmap cell's colour for `t` in 0 (worst) to 1 (best).
+ *
+ * Mixing --brand-primary into --brand-accent-light, neither the dark text nor
+ * white reaches 4.5:1 on the middle of the ramp (at 60% primary: white 3.6:1,
+ * dark text 4.1:1). The ramp skips 50-72%: the worse half maps to 0-50% under
+ * dark text (>= 5.0:1), the better half to 72-100% under white (>= 4.7:1).
+ */
+export function heatShade(t: number): { background: string; dark: boolean } {
+  const clamped = Math.min(1, Math.max(0, t));
+  const stop = clamped < 0.5 ? clamped : 0.72 + (clamped - 0.5) * 0.56;
+  return {
+    background: `color-mix(in oklab, var(--brand-primary) ${Math.round(stop * 100)}%, var(--brand-accent-light))`,
+    dark: stop >= 0.72,
+  };
+}
