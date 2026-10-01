@@ -255,6 +255,33 @@ describe('censored measurements', () => {
     expect(table?.columns.map((c) => c.key)).toEqual(['nct_id', 'orr', 'median_dor']);
   });
 
+  it('keeps the decimal a month figure is reported with', () => {
+    // The column is a float, so IOB-013's "11.0 months" comes back as 11 and
+    // rendered bare beside "19.4" reads as a rounded value.
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [{ nct_id: 'NCT05155254', median_pfs: 11, pfs_followup_months: 24, median_age: 62, orr: 43 }],
+    });
+
+    const cell = (key: string) => table?.rows[0][table.columns.findIndex((c) => c.key === key)];
+    expect(cell('median_pfs')).toBe('11.0');
+    expect(cell('pfs_followup_months')).toBe('24.0');
+    // Not months, and not padded: an age, and a percentage reported as "43%".
+    expect(cell('median_age')).toBe('62');
+    expect(cell('orr')).toBe('43');
+  });
+
+  it('leaves a month figure with more precision as reported', () => {
+    const table = toResultTable({
+      ok: true,
+      table: 'trial_outcomes',
+      rows: [{ nct_id: 'NCT05625399', median_pfs: 12.65 }],
+    });
+
+    expect(table?.rows[0]).toEqual(['NCT05625399', '12.65']);
+  });
+
   it('leaves a null alone when no marker names it', () => {
     const table = toResultTable({
       ok: true,

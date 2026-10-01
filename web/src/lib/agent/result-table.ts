@@ -207,13 +207,22 @@ const ENUM_LABELS: Record<string, (raw: string) => string> = {
   expert_review: (raw) => (raw === 'good' ? 'Good' : raw === 'issues' ? 'Issues found' : raw),
 };
 
+/** Durations in months: the medians of time-to-event endpoints, and follow-up. */
+const MONTHS = /^median_(pfs|os|dor)$|_followup_months$/;
+
 /**
  * One cell, read with its row in hand - which `formatCell` cannot do, and which
  * the censoring markers require.
  */
 export function formatRowCell(row: Record<string, unknown>, column: string): string {
   if (marks(row, 'is_nr', column)) return NOT_REACHED;
-  const formatted = formatCell(row[column], ENUM_LABELS[column]);
+  const value = row[column];
+  // Months are reported to a decimal ("11.0 months"), and the float column
+  // drops a trailing zero, so 11.0 would read as a rounded 11 beside 19.4.
+  const formatted =
+    MONTHS.test(column) && typeof value === 'number' && Number.isInteger(value)
+      ? value.toFixed(1)
+      : formatCell(value, ENUM_LABELS[column]);
   if (formatted !== ABSENT && marks(row, 'is_lt', column)) return `<${formatted}`;
   return formatted;
 }
