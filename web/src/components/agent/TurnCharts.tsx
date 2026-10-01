@@ -4,6 +4,7 @@ import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { SETTING_ORDER } from '@/lib/agent/result-table';
 import {
+  gaps,
   heatShade,
   niceTicks,
   placeLabels,
@@ -300,7 +301,8 @@ function Heatmap({ chart }: { chart: TurnChart }) {
 /** The plot's own units; the SVG scales to its box, text with it. */
 const W = 760;
 const H = 380;
-const MARGIN = { left: 56, right: 24, top: 20, bottom: 52 };
+// The top margin holds a label above the top-most bubble, which `niceTicks` can put on the top tick.
+const MARGIN = { left: 56, right: 24, top: 44, bottom: 52 };
 /** Past this, names over every bubble crowd the plot; the tooltip still names each one. */
 const LABEL_LIMIT = 8;
 /** Width of one character of a 10.5-unit monospace label. */
@@ -371,7 +373,7 @@ function Bubble({ chart }: { chart: TurnChart }) {
   const maxSize = Math.max(0, ...points.map((p) => sizeOf(p.s) ?? 0));
   const radius = (value: number | null) =>
     value !== null && maxSize > 0 ? 6 + 16 * Math.sqrt(value / maxSize) : FIXED_RADIUS;
-  const unsized = sizeAxis ? points.filter((p) => sizeOf(p.s) === null).length : 0;
+  const hollow = sizeAxis ? gaps(points.map((p) => p.s), sizeAxis.key) : null;
 
   // Settings in their reading order, then any the order does not list.
   const groupNames = [...new Set(points.map((p) => p.s.group ?? 'Unclassified'))].sort((a, b) => {
@@ -418,7 +420,8 @@ function Bubble({ chart }: { chart: TurnChart }) {
             width: b.s.label.length * CHAR_WIDTH,
           })),
           MARGIN.left,
-          W - MARGIN.right
+          W - MARGIN.right,
+          0
         )
       : null;
 
@@ -441,6 +444,8 @@ function Bubble({ chart }: { chart: TurnChart }) {
     anchor: xAxis.lowerIsBetter ? 'start' : 'end',
   } as const;
   const shown = active === null ? null : bubbles[active];
+  /** Roughly the tooltip's height in plot units; nearer the top than this, it opens downward. */
+  const tooltipBelow = shown !== null && shown.cy - shown.r < 90;
 
   return (
     <figure className="m-0">
@@ -570,13 +575,17 @@ function Bubble({ chart }: { chart: TurnChart }) {
             <div
               aria-hidden
               className={cn(
-                'pointer-events-none absolute z-10 max-w-[18rem] -translate-x-1/2 -translate-y-full',
+                'pointer-events-none absolute z-10 max-w-[18rem] -translate-x-1/2',
+              // Above the bubble, or below it near the top, where the scroll box would clip it.
+              !tooltipBelow && '-translate-y-full',
                 'rounded-[3px] border border-(--brand-border) bg-(--brand-surface) px-2.5 py-1.5',
                 'text-[11.5px] leading-snug text-(--brand-text) shadow-sm'
               )}
               style={{
                 left: `${Math.min(85, Math.max(15, (shown.cx / W) * 100))}%`,
-                top: `calc(${((shown.cy - shown.r) / H) * 100}% - 6px)`,
+                top: tooltipBelow
+                ? `calc(${((shown.cy + shown.r) / H) * 100}% + 6px)`
+                : `calc(${((shown.cy - shown.r) / H) * 100}% - 6px)`,
               }}
             >
               <p className="m-0 font-medium">{shown.s.label}</p>
@@ -590,7 +599,15 @@ function Bubble({ chart }: { chart: TurnChart }) {
       <p className={NOTE_CLASSES}>
         {[
           `Bubble area = ${sizeAxis ? sizeAxis.label : 'N'}`,
-          unsized > 0 ? `hollow = no ${sizeAxis!.label} reported (${unsized})` : null,
+          hollow && hollow.notReached + hollow.earlier + hollow.missing > 0
+            ? `hollow = no exact ${sizeAxis!.label}: ${[
+                hollow.missing > 0 ? `${hollow.missing} not reported` : null,
+                hollow.earlier > 0 ? `${hollow.earlier} only in an earlier readout` : null,
+                hollow.notReached > 0 ? `${hollow.notReached} not reached` : null,
+              ]
+                .filter((part) => part !== null)
+                .join(', ')}`
+            : null,
           left > 0
             ? `${left} ${left === 1 ? 'treatment' : 'treatments'} not shown: no exact ${xAxis.label} and ${yAxis.label} (missing, not reached or censored)`
             : null,

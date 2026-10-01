@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ABSENT, formatRowCell, type ResultParameter, type ResultTable } from './result-table';
-import { heatShade, niceTicks, parseCell, placeLabels, toTurnChart } from './turn-chart';
+import { gaps, heatShade, niceTicks, parseCell, placeLabels, toTurnChart } from './turn-chart';
 
 const KEYS = [
   'treatment_name', 'nct_id', 'setting', 'num_patients', 'median_pfs', 'grade_3_plus_teae_pct',
@@ -150,6 +150,17 @@ describe('toTurnChart', () => {
     });
   });
 
+  it('numbers arms that share a name and a trial, which the NCT alone cannot tell apart', () => {
+    // E1609's ipilimumab 3 and 10 mg/kg: one name, one trial, two treatments.
+    const twin = KEYS.map((key) => formatRowCell({ ...raw[3], median_pfs: 4.2 }, key));
+    const chart = toTurnChart(table, [...rows, twin], PICKED, earlier)!;
+    expect(chart.series.map((s) => s.label).slice(2)).toEqual([
+      'Nivolumab · NCT03470922',
+      'Nivolumab · NCT01844505 (1)',
+      'Nivolumab · NCT01844505 (2)',
+    ]);
+  });
+
   it('ignores a pick the table does not offer', () => {
     expect(toTurnChart(table, rows, ['median_pfs', 'not_a_column'], earlier)!.endpoints.map((e) => e.key)).toEqual(['median_pfs']);
     expect(toTurnChart(table, rows, ['not_a_column'], earlier)).toBeNull();
@@ -191,6 +202,10 @@ describe('placeLabels', () => {
     expect(placed[1]).toEqual({ x: 110, y: 183 });
   });
 
+  it('moves a label below its bubble when the space above is past the top of the plot', () => {
+    expect(placeLabels([{ x: 300, y: 20, r: 22, width: 60 }], 0, 760, 0)).toEqual([{ x: 300, y: 55 }]);
+  });
+
   it('keeps a label inside the plot', () => {
     expect(placeLabels([{ x: 740, y: 200, r: 10, width: 100 }], 56, 736)[0].x).toBe(686);
   });
@@ -213,5 +228,13 @@ describe('heatShade', () => {
   it('clamps out-of-range input', () => {
     expect(heatShade(-1)).toEqual(heatShade(0));
     expect(heatShade(2)).toEqual(heatShade(1));
+  });
+});
+
+describe('gaps', () => {
+  it('counts why each treatment has no exact value, so a footnote can say which', () => {
+    const chart = toTurnChart(table, rows, ['median_pfs', 'grade_3_plus_teae_pct', 'ae_leading_to_discontinuation_pct'], earlier)!;
+    expect(gaps(chart.series, 'ae_leading_to_discontinuation_pct')).toEqual({ notReached: 0, earlier: 1, missing: 1 });
+    expect(gaps(chart.series, 'median_pfs')).toEqual({ notReached: 1, earlier: 0, missing: 0 });
   });
 });

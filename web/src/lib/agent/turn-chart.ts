@@ -112,6 +112,17 @@ export function toTurnChart(
     };
   });
 
+  // The NCT does not separate two arms of one trial under one name (E1609's
+  // ipilimumab 3 and 10 mg/kg); they are numbered in table order instead.
+  const labels = series.map((s) => s.label);
+  const seen = new Map<string, number>();
+  for (const s of series) {
+    if (labels.filter((label) => label === s.label).length < 2) continue;
+    const ordinal = (seen.get(s.label) ?? 0) + 1;
+    seen.set(s.label, ordinal);
+    s.label = `${s.label} (${ordinal})`;
+  }
+
   const efficacy = endpoints.find((e) => e.family === 'efficacy');
   const safety = endpoints.find((e) => e.family === 'safety');
   const axes =
@@ -126,6 +137,16 @@ export function toTurnChart(
   };
 
   return { endpoints, series, bubble };
+}
+
+/**
+ * Why treatments have no exact value for `key`, counted, so a chart can say
+ * which: a not-reached median is the best result there is, and a value in an
+ * earlier readout exists - neither is "not reported".
+ */
+export function gaps(series: ChartSeries[], key: string): { notReached: number; earlier: number; missing: number } {
+  const count = (value: ChartValue) => series.filter((s) => s.values[key] === value).length;
+  return { notReached: count('NR'), earlier: count('earlier'), missing: count(null) };
 }
 
 /**
@@ -162,14 +183,21 @@ const LABEL_HEIGHT = 12;
 /**
  * Where each bubble's name goes: centred above it, kept inside the plot, and
  * moved below the bubble when the space above holds another bubble or a label
- * already placed. Beside-the-bubble and above-only labels both collided in the
- * mock. Returns each label's centre x and baseline y.
+ * already placed, or when it would rise past `top` and be clipped. Beside-the-
+ * bubble and above-only labels both collided in the mock. Returns each label's
+ * centre x and baseline y.
  */
-export function placeLabels(points: LabelBox[], left: number, right: number): { x: number; y: number }[] {
+export function placeLabels(
+  points: LabelBox[],
+  left: number,
+  right: number,
+  top = -Infinity
+): { x: number; y: number }[] {
   type Box = { x0: number; x1: number; y0: number; y1: number };
   const placed: Box[] = [];
   const overlaps = (a: Box, b: Box) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
   const hits = (box: Box) =>
+    box.y0 < top ||
     placed.some((other) => overlaps(box, other)) ||
     points.some((p) => overlaps(box, { x0: p.x - p.r, x1: p.x + p.r, y0: p.y - p.r, y1: p.y + p.r }));
 
