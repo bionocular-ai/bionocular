@@ -149,6 +149,43 @@ export function gaps(series: ChartSeries[], key: string): { notReached: number; 
   return { notReached: count('NR'), earlier: count('earlier'), missing: count(null) };
 }
 
+/** Time-to-event endpoints a source reports in months, beyond the `median_*` ones. */
+const MONTH_ENDPOINTS = /^median_|^(efs|rfs|mfs|ttr|ttp|ttnt|ttf)$|_followup_months$/;
+
+/**
+ * What an endpoint is measured in, for an axis title: months for durations,
+ * % for every rate and every adverse-event figure, nothing for a hazard ratio.
+ */
+export function unitOf(key: string, family: ChartEndpoint['family']): 'months' | '%' | null {
+  if (key.startsWith('hr_')) return null;
+  if (MONTH_ENDPOINTS.test(key)) return 'months';
+  return family === 'safety' || /^(orr|cr|pcr|cmr|dcr|cbr)$|_rate/.test(key) ? '%' : null;
+}
+
+/**
+ * One endpoint's treatments in reading order for a ranking: best first by the
+ * endpoint's direction, a not-reached median ahead of every measured one (it
+ * outlasts them all), and the treatments with no value kept rather than
+ * dropped, so the ranking still accounts for every row of the table.
+ */
+export function barRows(
+  series: ChartSeries[],
+  endpoint: ChartEndpoint
+): { ranked: ChartSeries[]; absent: { series: ChartSeries; earlier: boolean }[] } {
+  const { key, lowerIsBetter } = endpoint;
+  const valueOf = (s: ChartSeries) => (s.values[key] as { n: number }).n;
+  const measured = series
+    .filter((s) => typeof s.values[key] === 'object' && s.values[key] !== null)
+    .sort((a, b) => (lowerIsBetter ? valueOf(a) - valueOf(b) : valueOf(b) - valueOf(a)));
+  const reached = series.filter((s) => s.values[key] === 'NR');
+  return {
+    ranked: lowerIsBetter ? [...measured, ...reached] : [...reached, ...measured],
+    absent: series
+      .filter((s) => s.values[key] === null || s.values[key] === 'earlier')
+      .map((s) => ({ series: s, earlier: s.values[key] === 'earlier' })),
+  };
+}
+
 /**
  * Axis ticks a reader can count in: steps of 1, 2 or 5 x 10^k, from zero (or
  * below it when the data is), ending at the first tick at or past `max`.

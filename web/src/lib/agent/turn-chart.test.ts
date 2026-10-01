@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ABSENT, formatRowCell, type ResultParameter, type ResultTable } from './result-table';
-import { gaps, heatShade, niceTicks, parseCell, placeLabels, toTurnChart } from './turn-chart';
+import { barRows, gaps, heatShade, niceTicks, parseCell, placeLabels, toTurnChart, unitOf } from './turn-chart';
 
 const KEYS = [
   'treatment_name', 'nct_id', 'setting', 'num_patients', 'median_pfs', 'grade_3_plus_teae_pct',
@@ -236,5 +236,42 @@ describe('gaps', () => {
     const chart = toTurnChart(table, rows, ['median_pfs', 'grade_3_plus_teae_pct', 'ae_leading_to_discontinuation_pct'], earlier)!;
     expect(gaps(chart.series, 'ae_leading_to_discontinuation_pct')).toEqual({ notReached: 0, earlier: 1, missing: 1 });
     expect(gaps(chart.series, 'median_pfs')).toEqual({ notReached: 1, earlier: 0, missing: 0 });
+  });
+});
+
+describe('unitOf', () => {
+  it('reads months for time-to-event medians, % for rates and safety, nothing for a ratio', () => {
+    expect(unitOf('median_pfs', 'efficacy')).toBe('months');
+    expect(unitOf('ttr', 'efficacy')).toBe('months');
+    expect(unitOf('rfs', 'efficacy')).toBe('months');
+    expect(unitOf('orr', 'efficacy')).toBe('%');
+    expect(unitOf('os_rate_24m', 'efficacy')).toBe('%');
+    expect(unitOf('grade_3_plus_trae_pct', 'safety')).toBe('%');
+    expect(unitOf('hr_pfs', 'efficacy')).toBeNull();
+  });
+});
+
+describe('barRows', () => {
+  const chart = toTurnChart(table, rows, PICKED, earlier)!;
+  const [pfs, , disc] = chart.endpoints;
+
+  it('ranks best first where higher is better, with not reached ahead of every measured median', () => {
+    const { ranked, absent } = barRows(chart.series, pfs);
+    expect(ranked.map((s) => s.label)).toEqual([
+      'Fianlimab + cemiplimab',
+      'Nivolumab · NCT03470922',
+      'Nivolumab + relatlimab',
+      'Nivolumab · NCT01844505',
+    ]);
+    expect(absent).toEqual([]);
+  });
+
+  it('ranks lowest first where lower is better, and keeps the treatments without a value', () => {
+    const { ranked, absent } = barRows(chart.series, disc);
+    expect(ranked.map((s) => s.label)).toEqual(['Fianlimab + cemiplimab', 'Nivolumab · NCT01844505']);
+    expect(absent.map(({ series, earlier }) => [series.label, earlier])).toEqual([
+      ['Nivolumab + relatlimab', true],
+      ['Nivolumab · NCT03470922', false],
+    ]);
   });
 });

@@ -4,10 +4,12 @@ import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { SETTING_ORDER } from '@/lib/agent/result-table';
 import {
+  barRows,
   gaps,
   heatShade,
   niceTicks,
   placeLabels,
+  unitOf,
   type ChartEndpoint,
   type ChartSeries,
   type ChartValue,
@@ -137,77 +139,167 @@ export function TurnCharts({ chart }: { chart: TurnChart }) {
   );
 }
 
-/** What a chart left out and why, so the numbers on screen still add up to the table's. */
-function NotShown({ missing, earlier, label }: { missing: number; earlier: number; label: string }) {
-  const parts = [
-    missing > 0 ? `${missing} ${missing === 1 ? 'treatment' : 'treatments'} not shown: no ${label} reported` : null,
-    earlier > 0
-      ? `${earlier} ${earlier === 1 ? 'reports' : 'report'} ${label} only in an earlier readout, expand it in the table`
-      : null,
-  ].filter((part) => part !== null);
-  return parts.length > 0 ? <p className={NOTE_CLASSES}>{parts.join(' · ')}</p> : null;
-}
+const SEGMENT_CLASSES = cn(
+  'h-7 rounded-full px-3 font-mono text-[10.5px] tracking-[0.04em] whitespace-nowrap transition-colors',
+  'text-(--brand-text-muted) hover:text-(--brand-primary)',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
+);
 
-/** One small chart per endpoint: the units differ, so one shared axis would mean nothing. */
+/**
+ * A ranking on one endpoint at a time, full width - precise comparison is the
+ * job the heatmap and the bubble do not do. The endpoints to choose from are
+ * the ones picked in the table, so the switch adds no filter of its own. Every
+ * treatment the table draws appears: ranked when it has a value, listed under
+ * the ranking when it does not.
+ */
 function Bars({ chart }: { chart: TurnChart }) {
-  return (
-    <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,300px),1fr))] gap-x-6 gap-y-5">
-      {chart.endpoints.map((endpoint) => (
-        <EndpointBars key={endpoint.key} endpoint={endpoint} series={chart.series} />
-      ))}
-    </div>
-  );
-}
+  const [chosen, setChosen] = useState<string | null>(null);
+  const endpoint = chart.endpoints.find((e) => e.key === chosen) ?? chart.endpoints[0];
+  if (chart.series.length === 0) return <p className={NOTE_CLASSES}>No treatments match the table&apos;s filters.</p>;
 
-function EndpointBars({ endpoint, series }: { endpoint: ChartEndpoint; series: ChartSeries[] }) {
-  const { key, label, lowerIsBetter } = endpoint;
-  const valueOf = (s: ChartSeries) => (s.values[key] as Measured).n;
-  const measured = series
-    .filter((s) => isMeasured(s.values[key]))
-    .sort((a, b) => (lowerIsBetter ? valueOf(a) - valueOf(b) : valueOf(b) - valueOf(a)));
-  const reached = series.filter((s) => s.values[key] === 'NR');
-  // Not reached outlasts every measured median, so it ranks first where higher is better.
-  const ordered = lowerIsBetter ? [...measured, ...reached] : [...reached, ...measured];
-  const max = Math.max(0, ...measured.map(valueOf));
+  const { ranked, absent } = barRows(chart.series, endpoint);
+  const unit = unitOf(endpoint.key, endpoint.family);
+  const measured = ranked.flatMap((s) => {
+    const value = s.values[endpoint.key];
+    return isMeasured(value) ? [value.n] : [];
+  });
+  const ticks = niceTicks(Math.min(0, ...measured), Math.max(0, ...measured));
+  const low = ticks[0];
+  const span = ticks[ticks.length - 1] - low;
+  const at = (n: number) => ((n - low) / span) * 100;
 
   return (
     <figure className="m-0">
-      <figcaption className="mb-1.5 flex justify-between gap-2 font-mono text-[10.5px] tracking-[0.04em]">
-        <span className="text-(--brand-text)">{label}</span>
-        <span className="text-(--brand-text-muted)">{lowerIsBetter ? 'lower is better' : 'higher is better'}</span>
+      {chart.endpoints.length > 1 ? (
+        <div
+          role="group"
+          aria-label="Endpoint"
+          className="mb-3 inline-flex flex-wrap gap-0.5 rounded-full border border-(--brand-border) p-0.5"
+        >
+          {chart.endpoints.map((e) => (
+            <button
+              key={e.key}
+              type="button"
+              aria-pressed={e.key === endpoint.key}
+              onClick={() => setChosen(e.key)}
+              className={cn(
+                SEGMENT_CLASSES,
+                e.key === endpoint.key && 'bg-(--brand-accent-light) text-(--brand-primary)'
+              )}
+            >
+              {e.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <figcaption className="mb-2 flex justify-between gap-3 font-mono text-[10.5px] tracking-[0.04em]">
+        <span className="text-(--brand-text)">
+          {endpoint.label}
+          {unit === 'months' ? ' (months)' : ''}
+        </span>
+        <span className="text-(--brand-text-muted)">
+          {endpoint.lowerIsBetter ? 'lower is better, best first' : 'higher is better, best first'}
+        </span>
       </figcaption>
-      {ordered.length === 0 ? (
-        <p className={NOTE_CLASSES}>No treatment reports {label}.</p>
-      ) : (
-        <ul className="m-0 list-none space-y-1 p-0">
-          {ordered.map((s, index) => {
-            const value = s.values[key];
-            return (
-              <li key={index} className="grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)] items-center gap-2">
-                <span className="truncate text-right text-[11.5px] text-(--brand-text)" title={s.label}>
+      {/* Names size the first column - up to 22rem, then they wrap rather
+          than truncate; the bars keep at least 9rem on a phone. The right
+          padding is room for the value at a bar's tip. */}
+      <div className="grid grid-cols-[minmax(0,auto)_minmax(9rem,1fr)] pr-14">
+        {ranked.length > 0 ? (
+          <div
+            aria-hidden
+            className="pointer-events-none relative col-start-2"
+            style={{ gridRow: `1 / span ${ranked.length}` }}
+          >
+            {ticks.map((tick) => (
+              <span
+                key={tick}
+                className="absolute inset-y-0 w-px bg-(--brand-border) opacity-60"
+                style={{ left: `${at(tick)}%` }}
+              />
+            ))}
+          </div>
+        ) : null}
+        {ranked.map((s, index) => {
+          const value = s.values[endpoint.key];
+          return (
+            <div key={index} className="group contents">
+              <span
+                className={cn(
+                  'col-start-1 max-w-[22rem] py-1.5 pr-3 text-right text-[12px] leading-snug text-(--brand-text)',
+                  'group-hover:bg-(--brand-bg)'
+                )}
+                style={{ gridRow: index + 1 }}
+              >
+                {s.label}
+              </span>
+              <span
+                className="relative col-start-2 flex items-center group-hover:bg-(--brand-bg)/60"
+                style={{ gridRow: index + 1 }}
+              >
+                {isMeasured(value) ? (
+                  // Square at the baseline, rounded at the data end.
+                  <span
+                    className="h-3.5 rounded-r-[4px] bg-(--brand-primary)"
+                    style={{ width: `${Math.max(0.5, at(value.n) - at(Math.max(low, 0)))}%`, marginLeft: `${at(Math.max(low, 0))}%` }}
+                  />
+                ) : (
+                  // Not reached has no length: an open, dashed track to the
+                  // end of the scale says "beyond what was followed".
+                  <span
+                    title="Median not reached"
+                    className="h-3.5 w-full rounded-r-[4px] border border-dashed border-(--brand-primary)/50"
+                  />
+                )}
+                <span className="absolute left-full ml-1 bg-(--brand-surface) px-1 font-mono text-[11px] whitespace-nowrap text-(--brand-text-muted)"
+                  style={isMeasured(value) ? { left: `${at(value.n)}%` } : undefined}
+                >
+                  {value === 'NR' ? 'NR' : s.text[endpoint.key]}
+                </span>
+              </span>
+            </div>
+          );
+        })}
+        {ranked.length > 0 ? (
+          <div
+            aria-hidden
+            className="relative col-start-2 mt-1 h-4 border-t border-(--brand-border)"
+            style={{ gridRow: ranked.length + 1 }}
+          >
+            {ticks.map((tick) => (
+              <span
+                key={tick}
+                className="absolute top-1 -translate-x-1/2 font-mono text-[10px] text-(--brand-text-muted)"
+                style={{ left: `${at(tick)}%` }}
+              >
+                {tick}
+                {unit === '%' ? '%' : ''}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className={cn(NOTE_CLASSES, 'col-span-2')}>No treatment reports {endpoint.label}.</p>
+        )}
+        {absent.length > 0 ? (
+          <>
+            <p
+              className="col-span-2 mt-5 mb-1 border-t border-(--brand-border) pt-2 font-mono text-[10px] tracking-[0.04em] text-(--brand-text-muted)"
+            >
+              No {endpoint.label} ({absent.length})
+            </p>
+            {absent.map(({ series: s, earlier }, index) => (
+              <div key={index} className="contents">
+                <span className="col-start-1 max-w-[22rem] py-1 pr-3 text-right text-[12px] leading-snug text-(--brand-text-muted)">
                   {s.label}
                 </span>
-                <span className="flex items-center gap-1.5 font-mono text-[11px] text-(--brand-text-muted)">
-                  {isMeasured(value) ? (
-                    // Square at the baseline, rounded at the data end.
-                    <span
-                      aria-hidden
-                      className="h-3 shrink-0 rounded-r-[4px] bg-(--brand-primary)"
-                      style={{ width: `${max > 0 ? Math.max(1, (value.n / max) * 85) : 1}%` }}
-                    />
-                  ) : null}
-                  {s.text[key]}
+                <span className="col-start-2 self-center font-mono text-[10.5px] text-(--brand-text-muted)">
+                  {earlier ? 'only in an earlier readout, expand it in the table' : 'not reported'}
                 </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      <NotShown
-        missing={series.filter((s) => s.values[key] === null).length}
-        earlier={series.filter((s) => s.values[key] === 'earlier').length}
-        label={label}
-      />
+              </div>
+            ))}
+          </>
+        ) : null}
+      </div>
     </figure>
   );
 }
