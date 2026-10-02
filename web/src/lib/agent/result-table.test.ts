@@ -408,7 +408,7 @@ describe('toFacets', () => {
         ...table.columns,
         { key: 'follow_up_only', label: 'Follow up only' },
         { key: 'is_basket', label: 'Is basket' },
-        // Filtered by the "Expert-reviewed only" toggle instead.
+        // Filtered by the "Reviewed by an expert (MD or PhD)" toggle instead.
         { key: 'expert_review', label: 'Expert review' },
       ],
       rows: table.rows.map((row, i) => [

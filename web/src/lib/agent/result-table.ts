@@ -467,7 +467,7 @@ export function toFacets(table: ResultTable): Facet[] {
   // `is_basket` as the "Set aside" section - and as filters they read "yes" or
   // "None" and took the slot Status needed.
   const notFacets = [
-    // Filtered by its own toggle, which says "expert-reviewed only" in words.
+    // Filtered by its own toggle, which says "reviewed by an expert (MD or PhD)" in words.
     'expert_review',
     'follow_up_only',
     'is_basket',
