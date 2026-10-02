@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Daily sync of oncology news articles into Supabase news_feed table.
 
-Scrapes OncLive (RSS), CancerNetwork (RSS), TargetedOnc (Google News RSS),
-and BioSpace (HTML), filters to 8 skin cancer types, extracts NCT IDs and
+Scrapes OncLive, CancerNetwork and TargetedOnc (Google News sitemaps) and
+BioSpace (Google News RSS search), filters to 8 skin cancer types, extracts NCT IDs and
 efficacy/safety data via Gemini, and upserts into `news_feed`.
 
 Usage:
@@ -30,13 +30,11 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 from src.infrastructure.news_scraper.base import NewsArticleRaw
 from src.infrastructure.news_scraper.biospace import BioSpaceScraper
 from src.infrastructure.news_scraper.cancer_filter import assign_cancer_types
-from src.infrastructure.news_scraper.cancernetwork import CancerNetworkScraper
 from src.infrastructure.news_scraper.gemini_extractor import (
     GeminiNewsExtractor,
     NewsExtractionResult,
 )
-from src.infrastructure.news_scraper.onclive import OncLiveScraper
-from src.infrastructure.news_scraper.targetedonc import TargetedOncScraper
+from src.infrastructure.news_scraper.sitemap_news import NewsSitemapScraper
 from src.infrastructure.cost_calculator import CostCalculator, ModelType
 
 logging.basicConfig(
@@ -133,17 +131,25 @@ def main() -> int:
     all_articles: list[NewsArticleRaw] = []
 
     scrapers = {
-        "onclive": OncLiveScraper(),
-        "cancernetwork": CancerNetworkScraper(),
-        "targetedonc": TargetedOncScraper(),
+        "onclive": NewsSitemapScraper(
+            "onclive", "https://www.onclive.com/sitemap-news.xml"
+        ),
+        "cancernetwork": NewsSitemapScraper(
+            "cancernetwork", "https://www.cancernetwork.com/sitemap-news.xml"
+        ),
+        "targetedonc": NewsSitemapScraper(
+            "targetedonc", "https://www.targetedonc.com/sitemap-news.xml"
+        ),
         "biospace": BioSpaceScraper(),
     }
+    failed_sources: list[str] = []
     for source_name in active_sources:
         try:
             articles = scrapers[source_name].fetch_articles(since)
             all_articles.extend(articles)
         except Exception as exc:
             logger.error("Scraper %s failed: %s", source_name, exc)
+            failed_sources.append(source_name)
 
     logger.info("Collected %d raw articles across all sources", len(all_articles))
 
@@ -193,6 +199,11 @@ def main() -> int:
 
     logger.info("Scrape complete: %s", counts)
     cost_calculator.print_summary()
+    # A blocked source must fail the run: these sites 403'd CI for months
+    # while every run stayed green.
+    if failed_sources:
+        logger.error("Failed sources: %s", ", ".join(failed_sources))
+        return 1
     return 0 if counts["error"] == 0 else 1
 
 

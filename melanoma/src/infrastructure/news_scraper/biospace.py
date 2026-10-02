@@ -9,7 +9,10 @@ from .base import NewsArticleRaw, NewsSourceBase
 
 logger = logging.getLogger(__name__)
 
+# Google News ranks by relevance, not recency, and BioSpace press releases
+# rarely say "cutaneous", so the bare "melanoma" query carries most of the load.
 _SEARCH_KEYWORDS: list[str] = [
+    "melanoma",
     "cutaneous+melanoma",
     "uveal+melanoma",
     "acral+melanoma",
@@ -57,6 +60,7 @@ class BioSpaceScraper(NewsSourceBase):
     def fetch_articles(self, since: date) -> list[NewsArticleRaw]:
         seen_urls: set[str] = set()
         articles: list[NewsArticleRaw] = []
+        failures = 0
 
         for keyword in _SEARCH_KEYWORDS:
             try:
@@ -65,6 +69,7 @@ class BioSpaceScraper(NewsSourceBase):
                 logger.warning(
                     "BioSpace Google News fetch failed for %s: %s", keyword, exc
                 )
+                failures += 1
                 continue
 
             feed = feedparser.parse(xml)
@@ -94,6 +99,9 @@ class BioSpaceScraper(NewsSourceBase):
                         full_text=None,
                     )
                 )
+
+        if failures == len(_SEARCH_KEYWORDS):
+            raise RuntimeError("BioSpace: every Google News fetch failed")
 
         logger.info("BioSpace: %d articles since %s", len(articles), since)
         return articles
