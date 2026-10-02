@@ -2,6 +2,8 @@ import pathlib
 from datetime import date
 from unittest.mock import patch
 
+import pytest
+
 from src.infrastructure.news_scraper.biospace import BioSpaceScraper
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
@@ -55,10 +57,26 @@ class TestBioSpaceScraper:
         urls = [a.url for a in articles]
         assert len(urls) == len(set(urls))
 
-    def test_returns_empty_on_fetch_failure(self):
+    def test_raises_when_every_fetch_fails(self):
         scraper = BioSpaceScraper()
-        with patch.object(
-            scraper, "_fetch_gnews_text", side_effect=Exception("timeout")
+        with (
+            patch.object(
+                scraper, "_fetch_gnews_text", side_effect=Exception("timeout")
+            ),
+            pytest.raises(RuntimeError),
+        ):
+            scraper.fetch_articles(since=date(2026, 4, 1))
+
+    def test_tolerates_some_fetch_failures(self):
+        xml = (FIXTURES / "targetedonc_gnews.xml").read_text()
+        scraper = BioSpaceScraper()
+        with (
+            patch.object(
+                scraper,
+                "_fetch_gnews_text",
+                side_effect=lambda kw: xml if kw == "melanoma" else 1 / 0,
+            ),
+            patch.object(scraper, "_resolve_url", side_effect=lambda url: url),
         ):
             articles = scraper.fetch_articles(since=date(2026, 4, 1))
-        assert articles == []
+        assert len(articles) > 0

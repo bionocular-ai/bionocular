@@ -8,30 +8,31 @@ from .base import NewsArticleRaw, NewsSourceBase
 
 logger = logging.getLogger(__name__)
 
-_SITEMAP_URL = "https://www.onclive.com/sitemap-news.xml"
 _SM_NS = "http://www.sitemaps.org/schemas/sitemap/0.9"
 _NEWS_NS = "http://www.google.com/schemas/sitemap-news/0.9"
 
 
-class OncLiveScraper(NewsSourceBase):
-    def __init__(self, timeout: int = 30) -> None:
+class NewsSitemapScraper(NewsSourceBase):
+    """Reads a Google News sitemap (sitemap-news.xml).
+
+    OncLive, CancerNetwork and TargetedOnc share one publisher platform and
+    publish the same sitemap shape, covering roughly the last week of articles.
+    """
+
+    def __init__(self, source: str, sitemap_url: str, timeout: int = 30) -> None:
+        self._source = source
+        self._sitemap_url = sitemap_url
         self._timeout = timeout
         self._session = requests.Session()
         self._session.headers["User-Agent"] = "Mozilla/5.0 (compatible; Bionocular/1.0)"
 
     def _fetch_sitemap_text(self) -> str:
-        resp = self._session.get(_SITEMAP_URL, timeout=self._timeout)
+        resp = self._session.get(self._sitemap_url, timeout=self._timeout)
         resp.raise_for_status()
         return resp.text
 
     def fetch_articles(self, since: date) -> list[NewsArticleRaw]:
-        try:
-            xml_text = self._fetch_sitemap_text()
-        except Exception as exc:
-            logger.warning("OncLive sitemap fetch failed: %s", exc)
-            return []
-
-        root = ET.fromstring(xml_text)
+        root = ET.fromstring(self._fetch_sitemap_text())
         articles: list[NewsArticleRaw] = []
 
         for url_el in root.findall(f"{{{_SM_NS}}}url"):
@@ -52,7 +53,7 @@ class OncLiveScraper(NewsSourceBase):
 
             articles.append(
                 NewsArticleRaw(
-                    source="onclive",
+                    source=self._source,
                     title=title,
                     url=loc,
                     published_date=pub_date,
@@ -61,5 +62,5 @@ class OncLiveScraper(NewsSourceBase):
                 )
             )
 
-        logger.info("OncLive: %d articles since %s", len(articles), since)
+        logger.info("%s: %d articles since %s", self._source, len(articles), since)
         return articles

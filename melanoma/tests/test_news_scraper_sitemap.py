@@ -2,8 +2,9 @@ import pathlib
 from datetime import date
 from unittest.mock import patch
 
-from src.infrastructure.news_scraper.cancernetwork import CancerNetworkScraper
-from src.infrastructure.news_scraper.onclive import OncLiveScraper
+import pytest
+
+from src.infrastructure.news_scraper.sitemap_news import NewsSitemapScraper
 
 FIXTURES = pathlib.Path(__file__).parent / "fixtures"
 
@@ -12,10 +13,14 @@ def _read(name: str) -> str:
     return (FIXTURES / name).read_text()
 
 
-class TestOncLiveSitemapScraper:
+def _onclive() -> NewsSitemapScraper:
+    return NewsSitemapScraper("onclive", "https://www.onclive.com/sitemap-news.xml")
+
+
+class TestNewsSitemapScraper:
     def test_parses_articles_from_sitemap(self):
         xml = _read("onclive_sitemap.xml")
-        scraper = OncLiveScraper()
+        scraper = _onclive()
         with patch.object(scraper, "_fetch_sitemap_text", return_value=xml):
             articles = scraper.fetch_articles(since=date(2026, 4, 1))
 
@@ -35,7 +40,7 @@ class TestOncLiveSitemapScraper:
 
     def test_filters_by_since_date(self):
         xml = _read("onclive_sitemap.xml")
-        scraper = OncLiveScraper()
+        scraper = _onclive()
         with patch.object(scraper, "_fetch_sitemap_text", return_value=xml):
             articles = scraper.fetch_articles(since=date(2026, 4, 1))
 
@@ -43,32 +48,19 @@ class TestOncLiveSitemapScraper:
         assert all(d >= date(2026, 4, 1) for d in dates)
         assert date(2026, 1, 1) not in dates
 
-    def test_returns_empty_on_fetch_failure(self):
-        scraper = OncLiveScraper()
-        with patch.object(scraper, "_fetch_sitemap_text", side_effect=Exception("403")):
-            articles = scraper.fetch_articles(since=date(2026, 4, 1))
-        assert articles == []
+    def test_raises_on_fetch_failure(self):
+        scraper = _onclive()
+        with (
+            patch.object(scraper, "_fetch_sitemap_text", side_effect=Exception("403")),
+            pytest.raises(Exception, match="403"),
+        ):
+            scraper.fetch_articles(since=date(2026, 4, 1))
 
     def test_url_is_real_article_url(self):
         xml = _read("onclive_sitemap.xml")
-        scraper = OncLiveScraper()
+        scraper = _onclive()
         with patch.object(scraper, "_fetch_sitemap_text", return_value=xml):
             articles = scraper.fetch_articles(since=date(2026, 4, 1))
 
         assert all(a.url.startswith("https://www.onclive.com/") for a in articles)
         assert all("news.google.com" not in a.url for a in articles)
-
-
-class TestCancerNetworkScraper:
-    def test_parses_articles(self):
-        xml = _read("cancernetwork_rss.xml")
-        scraper = CancerNetworkScraper()
-        with patch.object(scraper, "_fetch_feed_text", return_value=xml):
-            articles = scraper.fetch_articles(since=date(2026, 2, 7))
-
-        assert len(articles) == 2
-        assert articles[0].source == "cancernetwork"
-        urls = [a.url for a in articles]
-        assert (
-            "https://www.cancernetwork.com/view/til-therapy-metastatic-melanoma" in urls
-        )

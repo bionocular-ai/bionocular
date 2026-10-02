@@ -114,17 +114,51 @@ class TestPipelineWithoutGoogleApiKey:
             patch(
                 "scripts.scrape_news_supabase.load_dotenv"
             ),  # prevent .env from overwriting delenv
-            patch("scripts.scrape_news_supabase.OncLiveScraper") as mock_onclive,
-            patch("scripts.scrape_news_supabase.CancerNetworkScraper") as mock_cn,
-            patch("scripts.scrape_news_supabase.TargetedOncScraper") as mock_to,
+            patch("scripts.scrape_news_supabase.NewsSitemapScraper") as mock_sitemap,
             patch("scripts.scrape_news_supabase.BioSpaceScraper") as mock_bs,
             patch("scripts.scrape_news_supabase.create_client") as mock_create_client,
             patch("scripts.scrape_news_supabase.CostCalculator"),
         ):
-            for m in [mock_onclive, mock_cn, mock_to, mock_bs]:
+            for m in [mock_sitemap, mock_bs]:
                 m.return_value.fetch_articles.return_value = []
             mock_create_client.return_value = MagicMock()
 
             result = main()
 
         assert result != 2
+
+
+class TestFailedSource:
+    def test_failed_source_fails_run_but_others_still_upsert(self, monkeypatch):
+        from unittest.mock import MagicMock, patch
+
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+        monkeypatch.setenv("SUPABASE_URL", "https://fake.supabase.co")
+        monkeypatch.setenv("SUPABASE_KEY", "fake-key")
+        monkeypatch.setattr(sys, "argv", ["scrape_news_supabase.py", "--days", "1"])
+
+        article = NewsArticleRaw(
+            source="biospace",
+            title="Phase 3 Melanoma Trial Update",
+            url="https://www.biospace.com/melanoma-trial",
+            published_date=date.today(),
+            description="",
+            full_text=None,
+        )
+        supabase = MagicMock()
+
+        with (
+            patch("scripts.scrape_news_supabase.load_dotenv"),
+            patch("scripts.scrape_news_supabase.NewsSitemapScraper") as mock_sitemap,
+            patch("scripts.scrape_news_supabase.BioSpaceScraper") as mock_bs,
+            patch("scripts.scrape_news_supabase.create_client", return_value=supabase),
+            patch("scripts.scrape_news_supabase.CostCalculator"),
+        ):
+            mock_sitemap.return_value.fetch_articles.side_effect = Exception("403")
+            mock_bs.return_value.fetch_articles.return_value = [article]
+
+            result = main()
+
+        assert result == 1
+        upserted = supabase.table.return_value.upsert.call_args.args[0]
+        assert upserted["url"] == "https://www.biospace.com/melanoma-trial"
