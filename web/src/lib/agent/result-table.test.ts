@@ -421,6 +421,17 @@ describe('toFacets', () => {
     expect(toFacets(withDrawn).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor']);
   });
 
+  it('does not offer Status on an outcomes table', () => {
+    const withStatus = {
+      columns: [...table.columns, { key: 'overall_status', label: 'Status' }],
+      rows: table.rows.map((row, i) => [...row, i % 2 === 0 ? 'Recruiting' : 'Active']),
+    };
+    expect(toFacets(withStatus).map((facet) => facet.label)).toContain('Status');
+    expect(toFacets({ ...withStatus, parameters: [] }).map((facet) => facet.label)).not.toContain(
+      'Status'
+    );
+  });
+
   it('filters sponsors as industry or not, never by raw registry class', () => {
     expect(toFacets(table)[1].values).toEqual(['Industry', 'Non-industry']);
   });

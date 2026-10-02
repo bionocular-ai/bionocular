@@ -472,6 +472,9 @@ export function toFacets(table: ResultTable): Facet[] {
     'follow_up_only',
     'is_basket',
     ...(hasSponsorType ? ['lead_sponsor_class'] : []),
+    // An outcomes question already asked for active trials, so Status only
+    // split that set by recruiting or not.
+    ...(table.parameters ? ['overall_status'] : []),
   ];
   return table.columns
     .map((column, index) => ({
