@@ -467,11 +467,14 @@ export function toFacets(table: ResultTable): Facet[] {
   // `is_basket` as the "Set aside" section - and as filters they read "yes" or
   // "None" and took the slot Status needed.
   const notFacets = [
-    // Filtered by its own toggle, which says "expert-reviewed only" in words.
+    // Filtered by its own toggle, which says "reviewed by an expert (MD or PhD)" in words.
     'expert_review',
     'follow_up_only',
     'is_basket',
     ...(hasSponsorType ? ['lead_sponsor_class'] : []),
+    // An outcomes question already asked for active trials, so Status only
+    // split that set by recruiting or not.
+    ...(table.parameters ? ['overall_status'] : []),
   ];
   return table.columns
     .map((column, index) => ({

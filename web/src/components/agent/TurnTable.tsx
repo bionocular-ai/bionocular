@@ -275,6 +275,7 @@ function ReviewedToggle({ on, onToggle }: { on: boolean; onToggle: () => void })
       type="button"
       aria-pressed={on}
       onClick={onToggle}
+      title="This output has been reviewed and validated by a qualified biopharma expert (MD or PhD) for clinical and scientific accuracy."
       className={cn(
         TRIGGER_CLASSES,
         on
@@ -283,7 +284,7 @@ function ReviewedToggle({ on, onToggle }: { on: boolean; onToggle: () => void })
       )}
     >
       <ShieldCheck className={cn('h-3.5 w-3.5', on ? 'text-emerald-700' : '')} aria-hidden />
-      Expert-reviewed only
+      Reviewed by an expert (MD or PhD)
     </button>
   );
 }

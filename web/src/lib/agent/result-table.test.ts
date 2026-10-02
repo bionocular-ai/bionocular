@@ -408,7 +408,7 @@ describe('toFacets', () => {
         ...table.columns,
         { key: 'follow_up_only', label: 'Follow up only' },
         { key: 'is_basket', label: 'Is basket' },
-        // Filtered by the "Expert-reviewed only" toggle instead.
+        // Filtered by the "Reviewed by an expert (MD or PhD)" toggle instead.
         { key: 'expert_review', label: 'Expert review' },
       ],
       rows: table.rows.map((row, i) => [
@@ -419,6 +419,17 @@ describe('toFacets', () => {
       ]),
     };
     expect(toFacets(withDrawn).map((facet) => facet.label)).toEqual(['Setting', 'Sponsor']);
+  });
+
+  it('does not offer Status on an outcomes table', () => {
+    const withStatus = {
+      columns: [...table.columns, { key: 'overall_status', label: 'Status' }],
+      rows: table.rows.map((row, i) => [...row, i % 2 === 0 ? 'Recruiting' : 'Active']),
+    };
+    expect(toFacets(withStatus).map((facet) => facet.label)).toContain('Status');
+    expect(toFacets({ ...withStatus, parameters: [] }).map((facet) => facet.label)).not.toContain(
+      'Status'
+    );
   });
 
   it('filters sponsors as industry or not, never by raw registry class', () => {
