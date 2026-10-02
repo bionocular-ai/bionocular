@@ -22,11 +22,12 @@ import logging
 import os
 import pathlib
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 from dotenv import load_dotenv
 from supabase import Client, create_client
+from tenacity import before_sleep_log, retry, stop_after_attempt, wait_exponential
 
 # Allow `from src...` imports when running from the melanoma/ root.
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
@@ -113,6 +114,19 @@ def discover_ncts(
     return nct_to_cancer_types
 
 
+# Supabase occasionally drops one write (a 504, or a 400 with an empty body)
+# that succeeds when re-sent. Upserts are idempotent, so every failure is
+# retried, not just status codes we can name.
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, max=10),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
+def upsert_with_retry(supabase: Client, table: str, row: dict) -> None:
+    supabase.table(table).upsert(row).execute()
+
+
 def sync_one(
     nct: str,
     cancer_types_map: dict[str, list[str]],
@@ -132,15 +146,22 @@ def sync_one(
         return "fetched"
 
     try:
-        supabase.table("clinical_trials_cache").upsert(
-            {"nct_id": nct, "api_response_json": raw}
-        ).execute()
+        upsert_with_retry(
+            supabase,
+            "clinical_trials_cache",
+            {
+                "nct_id": nct,
+                "api_response_json": raw,
+                # The column default only fires on insert; set it so it moves on update.
+                "fetched_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
     except Exception as exc:  # noqa: BLE001 -- per-row failure must not abort run
         logger.error("Cache upsert failed for %s: %s", nct, exc)
         return "error"
 
     try:
-        supabase.table("clinical_trials").upsert(parsed).execute()
+        upsert_with_retry(supabase, "clinical_trials", parsed)
     except Exception as exc:  # noqa: BLE001 -- per-row failure must not abort run
         logger.error("clinical_trials upsert failed for %s: %s", nct, exc)
         return "error"
