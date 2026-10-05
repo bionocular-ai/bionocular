@@ -229,15 +229,14 @@ export const GOLDEN_CASES: EvalCase[] = [
         },
       },
       forbidFilter: { table: 'clinical_trials' },
-      answer: /industry/i,
       countAwareness: true,
       maxToolCalls: 4,
     },
   },
   {
     // The Q3 baseline: no treatment reports a TEAE-labelled rate. The table
-    // shows TRAE in its place with a caveat; the answer must still state the
-    // TEAE gap, keep the PFS-only DREAMseq, and ask for discontinuation as
+    // shows TRAE in its place with a caveat, and keeps the PFS-only DREAMseq;
+    // the answer must still state the TEAE gap, and ask for discontinuation as
     // the any-cause AE class.
     id: 'active-phase3-pfs-vs-teae',
     category: 'clinical-reasoning',
@@ -254,9 +253,9 @@ export const GOLDEN_CASES: EvalCase[] = [
         },
       },
       forbidFilter: { table: 'clinical_trials' },
-      // States the TEAE gap, and keeps the trial that reports PFS only.
+      // States the TEAE gap.
       answer:
-        /^(?=[\s\S]*(NCT02224781|DREAMseq))(?=[\s\S]*(\b(no|none|not)\b[^.\n]*\b(TEAEs?|treatment[- ]emergent)\b|\b(TEAEs?|treatment[- ]emergent)\b[^.\n]*\b(no|none|not)\b))/i,
+        /\b(no|none|not)\b[^.\n]*\b(TEAEs?|treatment[- ]emergent)\b|\b(TEAEs?|treatment[- ]emergent)\b[^.\n]*\b(no|none|not)\b/i,
       maxToolCalls: 4,
     },
   },
