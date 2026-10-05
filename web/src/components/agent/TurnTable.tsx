@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
-import { ArrowUpRight, Check, ChevronDown, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, Check, ChevronDown, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { ABSENT, capSections, columnTooltip, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
 import type { Facet, ResultParameter, ResultSummary, ResultTable } from '@/lib/agent/result-table';
 import type { EfficacyLink } from '@/lib/agent/efficacy-link';
@@ -71,11 +71,9 @@ const PILL_TONES: Record<string, string> = {
   'enrolling by invitation': 'bg-emerald-50 text-emerald-800 border-emerald-200',
   'active, not recruiting': 'bg-amber-50 text-amber-800 border-amber-200',
   industry: 'bg-violet-50 text-violet-800 border-violet-200',
-  good: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  'issues found': 'bg-red-50 text-red-800 border-red-200',
 };
 
-const PILL_COLUMNS = ['overall_status', 'sponsor_type', 'expert_review'];
+const PILL_COLUMNS = ['overall_status', 'sponsor_type'];
 
 function Pill({ value }: { value: string }) {
   return (
@@ -286,6 +284,25 @@ function ReviewedToggle({ on, onToggle }: { on: boolean; onToggle: () => void })
       <ShieldCheck className={cn('h-3.5 w-3.5', on ? 'text-emerald-700' : '')} aria-hidden />
       Reviewed by an expert (MD or PhD)
     </button>
+  );
+}
+
+/**
+ * A readout's expert review, on its own treatment cell. Review is per readout,
+ * so the NCT a trial's arms share cannot carry it, and a column spent its
+ * width on em dashes to say "Good" on a few rows. The same shield as the
+ * toggle above, so the two read as one thing. Amber rather than red for
+ * issues: the readout stands, and the reviewer flagged something to check.
+ * The shape and the label say which, not the colour.
+ */
+function ReviewMark({ value }: { value: string }) {
+  const good = value === 'Good';
+  const label = `Reviewed by an expert (MD or PhD)${good ? '' : `: ${value.toLowerCase()}`}`;
+  const Icon = good ? ShieldCheck : ShieldAlert;
+  return (
+    <span role="img" aria-label={label} title={label} className="ml-1.5 inline-block align-[-2px]">
+      <Icon className={cn('h-3.5 w-3.5', good ? 'text-emerald-700' : 'text-amber-600')} aria-hidden />
+    </span>
   );
 }
 
@@ -534,7 +551,8 @@ export function TurnTable({
   // dash, a whole column of width for one word about five rows.
   const statusIndex = indexOf('overall_status');
   const followUpIndex = statusIndex === -1 ? -1 : indexOf('follow_up_only');
-  // The column exists only when some row was reviewed, so neither does the toggle.
+  // The column exists only when some row was reviewed, so neither does the
+  // toggle. Drawn as a mark on the treatment cell, not as a column of its own.
   const reviewIndex = indexOf('expert_review');
   // What tells a folded readout apart from its treatment's other readouts,
   // since every one of them repeats the arm name.
@@ -581,6 +599,7 @@ export function TurnTable({
           sponsorClassIndex,
           basketIndex,
           followUpIndex,
+          reviewIndex,
           ...(parameters ?? [])
             .filter((p) => !picked.includes(p.key))
             .flatMap((p) => [p.key, ...(p.companions ?? [])])
@@ -593,6 +612,7 @@ export function TurnTable({
       sponsorClassIndex,
       basketIndex,
       followUpIndex,
+      reviewIndex,
       parameters,
       picked,
       table.columns,
@@ -643,6 +663,10 @@ export function TurnTable({
         ? ''
         : cell;
     const isUrl = /^https?:\/\//.test(value);
+    const review = cellIndex === treatmentIndex && reviewIndex !== -1 ? row[reviewIndex] : ABSENT;
+    const mark = review === ABSENT ? null : <ReviewMark value={review} />;
+    // Held to the last word, or the shield wraps onto a line of its own.
+    const lastSpace = value.lastIndexOf(' ');
     return (
       <>
         {value === '' ? null : key === 'nct_id' && NCT_ID_PATTERN.test(value) ? (
@@ -650,21 +674,33 @@ export function TurnTable({
             {value}
           </Link>
         ) : (key === 'source' || namesReadout) && isUrl ? (
-          <SourceLink url={value} />
+          <>
+            <SourceLink url={value} />
+            {mark}
+          </>
         ) : namesReadout ? (
           // A citation wraps between its words, never at the hyphen of its
           // page range ("J Clin Oncol 2023;41:186-" / "197.").
-          value.split(/(\s+)/).map((part, index) =>
+          value.split(/(\s+)/).map((part, index, parts) =>
             /^\s+$/.test(part) ? (
               part
             ) : (
               <span key={index} className="whitespace-nowrap">
                 {part}
+                {index === parts.length - 1 ? mark : null}
               </span>
             )
           )
         ) : PILL_COLUMNS.includes(key) && value !== ABSENT ? (
           <Pill value={value} />
+        ) : mark ? (
+          <>
+            {value.slice(0, lastSpace + 1)}
+            <span className="whitespace-nowrap">
+              {value.slice(lastSpace + 1)}
+              {mark}
+            </span>
+          </>
         ) : (
           value
         )}
