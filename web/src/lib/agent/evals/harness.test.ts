@@ -122,6 +122,14 @@ describe('classify', () => {
     expect(failures.map((f) => f.kind)).toEqual(['presentation']);
   });
 
+  it('names an answer that runs past the word cap as presentation', () => {
+    const calls = [okQuery({ table: 'clinical_trials', phase: 'PHASE3', limit: 500 }, 184)];
+    const long = `184 Phase 3 trials. ${'word '.repeat(300)}`;
+    expect(classify(byId('phase-filter'), observed({ calls, answer: long })).map((f) => f.kind)).toEqual(['presentation']);
+    const short = `184 Phase 3 trials. ${'word '.repeat(150)}`;
+    expect(classify(byId('phase-filter'), observed({ calls, answer: short }))).toEqual([]);
+  });
+
   it('flags a repeated identical call, a skipped fast path, and a missing skill as tool-selection', () => {
     const call = { tool: 'query_proprietary_data', input: { table: 'trial_outcomes', drug: 'relatlimab' }, outcome: 'ok' as const };
     const failures = classify(byId('efficacy-endpoints'), observed({ calls: [call, { ...call }] }));

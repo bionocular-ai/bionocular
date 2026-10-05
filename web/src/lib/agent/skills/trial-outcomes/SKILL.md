@@ -12,7 +12,7 @@ One row is one treatment arm as reported by one source: a conference abstract
 trial can appear several times - once per arm, and again per source when both
 an abstract and a paper reported it. `arm_name`, `generic_name`,
 `line_of_treatment`, `num_patients` and `source_name` say which arm and which
-readout you are looking at; always carry them into the answer. `lead_sponsor_class`,
+readout you are looking at; carry them into any claim you make about that arm. `lead_sponsor_class`,
 `biomarker` and `line_of_therapy` are the trial's, joined in; `line_of_treatment`
 is the arm's own and wins when both are present. The interface draws one row
 per treatment - its newest readout, with earlier readouts folded beneath it -
@@ -63,7 +63,8 @@ but you read every row: cite the readout each number comes from.
 - Pair a hazard ratio with its `ci_hr_*` and `p_value_*` from the same row.
   Landmark rates (`pfs_rate_12m`, `os_rate_24m`, ...) are the rate at that
   month; report the month.
-- `num_patients` is the arm's size and the strength of the evidence. Say it.
+- `num_patients` is the arm's size and the strength of the evidence. Say it
+  when a claim rests on one small arm.
 - `expert_review` is a pharmacology expert's check of the row against its
   source: `good` (it matches) or `issues` (errors found). Absent means never
   reviewed, not wrong. When the answer rests on specific rows, say which were
@@ -92,11 +93,10 @@ but you read every row: cite the readout each number comes from.
 
 ## Answer shape
 
-Open with the shape: how many treatments, from how many trials, grouped by the
-thing the question asked about (treatment, line, phase). Then what is notable,
-what is absent, and which rows are exceptions and why. An arm that reports
-some of the asked endpoints and not others is part of the answer: give what it
-has and say what it lacks - it is not a trial without a readout. Name the
-trials in scope whose rows carry none of the asked endpoints. Cite `nct_id` where a
-row has one, otherwise `abstract_id` or `publication_id`. The interface draws
-every row of the result as a table beside your answer; do not reproduce rows.
+Follow the answer shape in your instructions. The count sentence names how
+many treatments from how many trials, and counts the trials in scope whose
+rows carry none of the asked endpoints, grouped by why (adjuvant, still
+recruiting); do not list them. An arm that reports some of the asked endpoints
+and not others is in the table, not a trial without a readout. Bullets are for
+what the rows cannot show: a missed significance, a press-release-only source,
+an `issues` expert review, arms from different trials not being randomised.

@@ -132,6 +132,9 @@ function tableRowCount(answer: string): number {
 /** Rows reproduced in prose defeats the app-drawn table; a short comparison does not. */
 const MAX_TABLE_ROWS = 5;
 
+/** The app draws the rows, so the prose is scope, count and caveats - not a walk through every trial. */
+const MAX_ANSWER_WORDS = 250;
+
 export interface Observed {
   calls: ToolCallSummary[];
   /** Raw tool outputs, in call order. */
@@ -245,10 +248,14 @@ export function classify(c: EvalCase, observed: Observed): Failure[] {
     failures.push({ kind: 'grounding', detail: `ungrounded identifiers: ${observed.ungrounded.join(', ')}` });
   }
 
-  // 7. Presentation: rows reproduced as a table.
+  // 7. Presentation: rows reproduced as a table, or as prose.
   const rows = tableRowCount(answer);
   if (rows > MAX_TABLE_ROWS) {
     failures.push({ kind: 'presentation', detail: `answer reproduces ${rows} table rows; the app draws the rows` });
+  }
+  const words = answer.split(/\s+/).filter(Boolean).length;
+  if (words > MAX_ANSWER_WORDS) {
+    failures.push({ kind: 'presentation', detail: `answer runs ${words} words, max ${MAX_ANSWER_WORDS}` });
   }
 
   return failures;
