@@ -331,8 +331,8 @@ function Heatmap({ chart }: { chart: TurnChart }) {
                   key={endpoint.key}
                   scope="col"
                   className={cn(
-                    'px-1.5 py-1 text-center font-mono text-[10px] font-medium tracking-[0.04em]',
-                    'whitespace-nowrap text-(--brand-text-muted)'
+                    'w-28 px-1.5 py-1 text-center align-bottom font-mono text-[10px] font-medium tracking-[0.04em]',
+                    'text-balance text-(--brand-text-muted)'
                   )}
                 >
                   {endpoint.label}
@@ -354,7 +354,7 @@ function Heatmap({ chart }: { chart: TurnChart }) {
                         key={key}
                         title={value === 'earlier' ? 'Reported only in an earlier readout' : undefined}
                         className={cn(
-                          'min-w-[104px] rounded-[3px] border border-dashed border-(--brand-border)',
+                          'w-28 rounded-[3px] border border-dashed border-(--brand-border)',
                           'px-1.5 py-2 text-center font-mono text-(--brand-text-muted)'
                         )}
                       >
@@ -370,7 +370,7 @@ function Heatmap({ chart }: { chart: TurnChart }) {
                       key={key}
                       style={{ background: shade.background }}
                       className={cn(
-                        'min-w-[104px] rounded-[3px] px-1.5 py-2 text-center font-mono',
+                        'w-28 rounded-[3px] px-1.5 py-2 text-center font-mono',
                         shade.dark ? 'text-white' : 'text-(--brand-text)'
                       )}
                     >
