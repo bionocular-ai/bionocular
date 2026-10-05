@@ -4,7 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type React
 import Link from 'next/link';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { ArrowUpRight, Check, ChevronDown, ShieldCheck } from 'lucide-react';
-import { ABSENT, capSections, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
+import { ABSENT, capSections, columnTooltip, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
 import type { Facet, ResultParameter, ResultSummary, ResultTable } from '@/lib/agent/result-table';
 import type { EfficacyLink } from '@/lib/agent/efficacy-link';
 import {
@@ -818,6 +818,7 @@ export function TurnTable({
                       'text-(--brand-primary)'
                     )}
                     scope="col"
+                    title={columnTooltip(column.key)}
                   >
                     {column.label}
                   </th>

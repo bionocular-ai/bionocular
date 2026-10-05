@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState, type KeyboardEvent } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { SETTING_ORDER } from '@/lib/agent/result-table';
+import { SETTING_ORDER, columnTooltip } from '@/lib/agent/result-table';
 import {
   barRows,
   gaps,
@@ -195,7 +195,6 @@ function Bars({ chart }: { chart: TurnChart }) {
       <figcaption className="mb-2 flex justify-between gap-3 font-mono text-[10.5px] tracking-[0.04em]">
         <span className="text-(--brand-text)">
           {endpoint.label}
-          {unit === 'months' ? ' (months)' : ''}
         </span>
         <span className="text-(--brand-text-muted)">
           {endpoint.lowerIsBetter ? 'lower is better, best first' : 'higher is better, best first'}
@@ -330,6 +329,7 @@ function Heatmap({ chart }: { chart: TurnChart }) {
                 <th
                   key={endpoint.key}
                   scope="col"
+                  title={columnTooltip(endpoint.key)}
                   className={cn(
                     'w-28 px-1.5 py-1 text-center align-bottom font-mono text-[10px] font-medium tracking-[0.04em]',
                     'text-balance text-(--brand-text-muted)'

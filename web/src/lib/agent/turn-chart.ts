@@ -13,7 +13,7 @@
  * a 2022 y. It is marked 'earlier' so the chart can say where the value is.
  */
 
-import { ABSENT, NOT_REACHED, type ResultTable } from './result-table';
+import { ABSENT, MONTH_ENDPOINTS, NOT_REACHED, type ResultTable } from './result-table';
 
 /** 'earlier': empty on this row, reported by one of its earlier readouts. */
 export type ChartValue = { n: number; censored?: true } | 'NR' | 'earlier' | null;
@@ -148,9 +148,6 @@ export function gaps(series: ChartSeries[], key: string): { notReached: number; 
   const count = (value: ChartValue) => series.filter((s) => s.values[key] === value).length;
   return { notReached: count('NR'), earlier: count('earlier'), missing: count(null) };
 }
-
-/** Time-to-event endpoints a source reports in months, beyond the `median_*` ones. */
-const MONTH_ENDPOINTS = /^median_|^(efs|rfs|mfs|ttr|ttp|ttnt|ttf)$|_followup_months$/;
 
 /**
  * What an endpoint is measured in, for an axis title: months for durations,

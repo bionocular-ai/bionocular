@@ -461,7 +461,8 @@ function standIn(key: string, rows: Row[], asked: string[]): string {
 function caveatOf(asked: string[], shown: string[], rows: Row[]): string | undefined {
   const count = (column: string) => rows.filter((row) => reports(row, column)).length;
   const treatments = (n: number) => `${n} ${n === 1 ? 'treatment' : 'treatments'}`;
-  const measure = (column: string) => humanizeColumn(column).replace(/ %$/, '');
+  // Prose, so spelled out: "AE leading to discontinuation", not the header's "AE Disc".
+  const measure = (column: string) => humanizeColumn(column, false).replace(/ %$/, '');
   const sentences = asked.flatMap((key, i) => {
     const shownKey = shown[i];
     const said: string[] = [];
