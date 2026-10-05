@@ -528,7 +528,7 @@ describe('outcomes turns', () => {
       { key: 'orr', label: 'ORR', family: 'efficacy', arms: 3 },
       { key: 'cr', label: 'CR', family: 'efficacy', arms: 2 },
       { key: 'dcr', label: 'DCR', family: 'efficacy', arms: 1 },
-      { key: 'median_pfs', label: 'Median PFS', family: 'efficacy', arms: 1 },
+      { key: 'median_pfs', label: 'Median PFS (mo)', family: 'efficacy', arms: 1 },
     ]);
   });
 
@@ -632,10 +632,10 @@ describe('outcomes turns', () => {
     // Picked field by field: Task 4 adds `companions` to median PFS.
     const ranked = table?.parameters?.slice(0, 4).map(({ key, label, family, arms }) => ({ key, label, family, arms }));
     expect(ranked).toEqual([
-      { key: 'median_pfs', label: 'Median PFS', family: 'efficacy', arms: 3 },
-      { key: 'grade_3_plus_trae_pct', label: 'Grade 3+ TRAE %', family: 'safety', arms: 2 },
-      { key: 'ae_leading_to_discontinuation_pct', label: 'AE leading to discontinuation %', family: 'safety', arms: 1 },
-      { key: 'grade_3_plus_teae_pct', label: 'Grade 3+ TEAE %', family: 'safety', arms: 0 },
+      { key: 'median_pfs', label: 'Median PFS (mo)', family: 'efficacy', arms: 3 },
+      { key: 'grade_3_plus_trae_pct', label: 'G3+ TRAE %', family: 'safety', arms: 2 },
+      { key: 'ae_leading_to_discontinuation_pct', label: 'AE Disc %', family: 'safety', arms: 1 },
+      { key: 'grade_3_plus_teae_pct', label: 'G3+ TEAE %', family: 'safety', arms: 0 },
     ]);
     expect(cell(table, 1, 'grade_3_plus_teae_pct')).toBe('—');
   });

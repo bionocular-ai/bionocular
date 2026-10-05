@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
-import { Send, Square, RotateCcw, FlaskConical, Activity, Layers, Newspaper } from 'lucide-react';
+import { ArrowUp, Square, RotateCcw, FlaskConical, Activity, Layers, Newspaper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { agentFeedbackApi, type FeedbackRating } from '@/lib/api';
 import { UserBubble } from './UserBubble';
@@ -145,6 +145,8 @@ export function ChatPanel({
   // Before the first question the thread and the composer sit together in the
   // middle of the page, the way every other chat product opens; once there is a
   // transcript the thread takes the height and the composer pins to the bottom.
+  // The empty form's bottom padding lifts the pair above true centre, where the
+  // eye lands first.
   const isEmpty = messages.length === 0;
 
   return (
@@ -226,15 +228,19 @@ export function ChatPanel({
 
       <form
         onSubmit={handleSubmit}
-        className={cn('px-4 py-3 sm:px-8', isEmpty && 'mb-auto')}
+        className={cn('px-4 py-3 sm:px-8', isEmpty && 'mb-auto pb-[24vh]')}
       >
-        <div className="mx-auto max-w-[1080px]">
+        {/* Empty, the composer narrows to the answer prose's 780px measure; once
+            there is a transcript it spans the thread's width. */}
+        <div className={cn('mx-auto', isEmpty ? 'max-w-[780px]' : 'max-w-[1080px]')}>
           {/* The box is the bordered control; the textarea inside it is bare,
-              so the send button reads as part of the same field. */}
+              so the send button reads as part of the same field. Half the
+              one-line height makes it a pill; a fixed radius rather than
+              rounded-full keeps a grown multi-line box from turning oval. */}
           <div
             className={cn(
-              'flex items-end gap-2 rounded-xl border border-(--brand-border) bg-(--brand-surface)',
-              'py-1.5 pr-1.5 pl-3.5',
+              'flex items-end gap-2 rounded-[24px] border border-(--brand-border) bg-(--brand-surface)',
+              'py-1.5 pr-1.5 pl-5',
               'focus-within:border-(--brand-primary) focus-within:ring-3 focus-within:ring-(--brand-primary)/12'
             )}
           >
@@ -263,7 +269,7 @@ export function ChatPanel({
                 type="button"
                 onClick={stop}
                 className={cn(
-                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
                   'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)'
                 )}
                 aria-label="Stop generating"
@@ -275,13 +281,13 @@ export function ChatPanel({
                 type="submit"
                 disabled={!input.trim()}
                 className={cn(
-                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
                   'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)',
                   'disabled:cursor-not-allowed disabled:opacity-50'
                 )}
                 aria-label="Send"
               >
-                <Send className="h-4 w-4" />
+                <ArrowUp className="h-4.5 w-4.5" strokeWidth={2.25} />
               </button>
             )}
           </div>
