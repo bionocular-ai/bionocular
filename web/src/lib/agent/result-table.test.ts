@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   capSections,
+  columnTooltip,
   filterRows,
   humanizeColumn,
   orderColumns,
@@ -202,7 +203,7 @@ describe('toResultTable', () => {
       ],
     });
 
-    expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'Grade 3+ TRAE %', 'Serious AE %']);
+    expect(table?.columns.map((c) => c.label)).toEqual(['NCT', 'G3+ TRAE %', 'SAE %']);
   });
 });
 
@@ -502,11 +503,27 @@ describe('capSections', () => {
 describe('humanizeColumn', () => {
   it('writes endpoints the way a clinician does', () => {
     expect(humanizeColumn('os_rate_18m')).toBe('OS rate 18m');
-    expect(humanizeColumn('grade_3_plus_trae_pct')).toBe('Grade 3+ TRAE %');
-    expect(humanizeColumn('trae_discontinuation_pct')).toBe('TRAE discontinuation %');
+    expect(humanizeColumn('median_pfs')).toBe('Median PFS (mo)');
+    expect(humanizeColumn('ttnt')).toBe('TTNT (mo)');
+    expect(humanizeColumn('grade_3_plus_trae_pct')).toBe('G3+ TRAE %');
+    expect(humanizeColumn('grade_4_teae_pct')).toBe('G4 TEAE %');
+    expect(humanizeColumn('ae_leading_to_discontinuation_pct')).toBe('AE Disc %');
+    expect(humanizeColumn('trae_discontinuation_pct')).toBe('TRAE Disc %');
+    expect(humanizeColumn('grade_3_plus_trae_neutrophil_count_decreased')).toBe('G3+ TRAE neutrophil↓');
+    expect(humanizeColumn('serious_ir_ae_pct')).toBe('Serious irAE %');
+    expect(humanizeColumn('immune_related_ae_pct')).toBe('irAE %');
+    expect(humanizeColumn('trae_dose_interruption_pct')).toBe('TRAE dose int. %');
+    expect(humanizeColumn('pcr')).toBe('pCR');
     expect(humanizeColumn('cr')).toBe('CR');
     expect(humanizeColumn('line_of_therapy')).toBe('Line');
     expect(humanizeColumn('line')).toBe('Line');
+  });
+
+  it('spells an abbreviated header out for its tooltip, and only then', () => {
+    expect(columnTooltip('ae_leading_to_discontinuation_pct')).toBe('AE leading to discontinuation %');
+    expect(columnTooltip('grade_3_plus_trae_ir_ae')).toBe('Grade 3+ TRAE immune-related AE');
+    expect(columnTooltip('median_pfs')).toBeUndefined();
+    expect(columnTooltip('orr')).toBeUndefined();
   });
 });
 

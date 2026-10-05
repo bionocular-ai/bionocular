@@ -237,12 +237,6 @@ const INITIALISMS: Record<string, string> = {
   hr_pfs: 'HR PFS',
   hr_os: 'HR OS',
   median_dor: 'Median DoR',
-  // The two safety endpoints the concise projection carries. Word-splitting
-  // renders them "Grade 3 plus trae pct" and "Serious ae pct" - the wider
-  // `detailed` safety columns are the same shape, and get the same treatment
-  // if a question ever puts one on screen.
-  grade_3_plus_trae_pct: 'Grade 3+ TRAE %',
-  serious_ae_pct: 'Serious AE %',
   lead_sponsor_name: 'Sponsor',
   overall_status: 'Status',
   sponsor_type: 'Type',
@@ -256,26 +250,74 @@ const INITIALISMS: Record<string, string> = {
 
 /**
  * Endpoint abbreviations as a clinician writes them. Matched per word, so the
- * hundred-odd endpoint columns read "OS rate 18m" and "Grade 3+ TRAE %" without
+ * hundred-odd endpoint columns read "OS rate 18m" and "G3+ TRAE %" without
  * each being listed.
  */
 const ENDPOINT_WORDS: Record<string, string> = {
   os: 'OS', pfs: 'PFS', efs: 'EFS', rfs: 'RFS', mfs: 'MFS', orr: 'ORR', dcr: 'DCR', cr: 'CR',
   pcr: 'pCR', cmr: 'CMR', cbr: 'CBR', dor: 'DoR', ttr: 'TTR', ttp: 'TTP', ttnt: 'TTNT', ttf: 'TTF',
-  hr: 'HR', ci: 'CI', ae: 'AE', trae: 'TRAE', teae: 'TEAE', ir: 'IR', crs: 'CRS', irr: 'IRR',
+  hr: 'HR', ci: 'CI', ae: 'AE', trae: 'TRAE', teae: 'TEAE', crs: 'CRS', irr: 'IRR',
   wbc: 'WBC', alt: 'ALT', ast: 'AST', pct: '%',
 };
 
-export function humanizeColumn(key: string): string {
+/** The columns spell it two ways, and word-splitting the short one reads "IR AE". */
+const IR_AE = /(^|_)(immune_related|ir)_ae(?=_|$)/;
+
+/**
+ * Phrases rewritten on the key before it is split into words. The short forms
+ * are the ones the hubs' labels use (`src/types/analytics.ts`), so a header
+ * fits a heatmap column - "AE Disc %", not "AE leading to discontinuation %" -
+ * but every safety header still names its AE class. The long forms are the
+ * header's tooltip.
+ */
+const SHORT_PHRASES: [RegExp, string][] = [
+  [/^grade_3_plus_/, 'G3+_'],
+  [/^grade_(\d)_/, 'G$1_'],
+  [/^serious_ae_pct$/, 'SAE_pct'],
+  [IR_AE, '$1irAE'],
+  [/(leading_to_)?discontinuation/, 'Disc'],
+  [/neutrophil_count_decreased/, 'neutrophil↓'],
+  [/dose_interruption/, 'dose int.'],
+  [/dose_reduction/, 'dose red.'],
+  [/hospitalization/, 'hosp.'],
+];
+const LONG_PHRASES: [RegExp, string][] = [
+  [/^grade_3_plus_/, 'grade 3+_'],
+  [IR_AE, '$1immune-related AE'],
+];
+
+/** Abbreviations whose lower-case first letter is the spelling, not a slip. */
+const MIXED_CASE = new Set(['pCR', 'irAE']);
+
+/** Time-to-event endpoints a source reports in months, beyond the `median_*` ones. */
+export const MONTH_ENDPOINTS = /^median_|^(efs|rfs|mfs|ttr|ttp|ttnt|ttf)$|_followup_months$/;
+
+/**
+ * A column's header; `short = false` spells the endpoint out, for its tooltip.
+ * A duration carries its unit, so "19.4" under Median PFS reads as months.
+ */
+export function humanizeColumn(key: string, short = true): string {
+  const label = spellColumn(key, short);
+  return MONTH_ENDPOINTS.test(key) && !key.endsWith('_followup_months') ? `${label} (mo)` : label;
+}
+
+function spellColumn(key: string, short: boolean): string {
   const known = INITIALISMS[key];
   if (known) return known;
-  const words = key
-    .replace(/^grade_3_plus_/, 'grade 3+_')
+  const words = (short ? SHORT_PHRASES : LONG_PHRASES)
+    .reduce((phrase, [pattern, replacement]) => phrase.replace(pattern, replacement), key)
     .split('_')
     .map((word) => ENDPOINT_WORDS[word] ?? word)
     .join(' ')
     .trim();
+  if (MIXED_CASE.has(words.split(' ')[0])) return words;
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** The spelled-out header, when the shown one abbreviates it. */
+export function columnTooltip(key: string): string | undefined {
+  const long = humanizeColumn(key, false);
+  return long !== humanizeColumn(key) ? long : undefined;
 }
 
 /**
