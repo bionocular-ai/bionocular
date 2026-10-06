@@ -3,7 +3,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useParams, usePathname, useSearchParams } from 'next/navigation';
-import { Menu, PanelLeft, X } from 'lucide-react';
+import { ChevronDown, Menu, PanelLeft, X } from 'lucide-react';
 import { DASHBOARD_NAV_GROUPS } from '@/lib/dashboard-constants';
 import type { DashboardNavItem } from '@/lib/dashboard-constants';
 import {
@@ -143,7 +143,6 @@ function NavItemLink({
   currentMode,
   sidebarMode,
   onNavigate,
-  isChild = false,
 }: {
   item: DashboardNavItem;
   slug: string;
@@ -151,7 +150,6 @@ function NavItemLink({
   currentMode: string;
   sidebarMode: SidebarMode;
   onNavigate?: () => void;
-  isChild?: boolean;
 }) {
   const Icon = item.icon;
   const active = isItemActive(item, pathname, currentMode);
@@ -161,18 +159,6 @@ function NavItemLink({
   const isUpcoming = item.status === 'upcoming';
   // Disabled when an upcoming item has no destination, or any item lacks an href.
   const isDisabled = (isUpcoming && !item.section) || !href;
-
-  // Nesting shows as an indent plus a connector rule, and only while labels show -
-  // a collapsed rail has no column to indent into. The indent is kept shallow so
-  // the longest child label still clears the rail's inner width.
-  const CONNECTOR =
-    'before:absolute before:inset-y-0 before:left-[19px] before:w-px before:bg-(--brand-border) before:content-[""]';
-  const indent =
-    isChild &&
-    (sidebarMode === 'expanded'
-      ? cn('pl-[30px]', CONNECTOR)
-      : sidebarMode === 'hover' &&
-        cn('group-hover/rail:pl-[30px]', CONNECTOR, 'before:opacity-0 group-hover/rail:before:opacity-100'));
 
   const content = (
     <>
@@ -192,7 +178,7 @@ function NavItemLink({
       <div
         title={`${item.label} - coming soon`}
         aria-disabled="true"
-        className={cn(ROW_BASE, indent, 'cursor-not-allowed text-(--brand-text-muted)/70')}
+        className={cn(ROW_BASE, 'cursor-not-allowed text-(--brand-text-muted)/70')}
       >
         {content}
       </div>
@@ -207,7 +193,6 @@ function NavItemLink({
       title={item.label}
       className={cn(
         ROW_BASE,
-        indent,
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-2 focus-visible:ring-offset-(--brand-bg)',
         active
           ? 'bg-(--brand-primary) font-semibold text-white shadow-[0_1px_2px_rgba(16,43,54,0.12),0_8px_18px_-12px_rgba(16,43,54,0.85)]'
@@ -217,6 +202,82 @@ function NavItemLink({
     >
       {content}
     </Link>
+  );
+}
+
+/** A parent with no page of its own: a disclosure row over its children, open by default. */
+function NavGroup({
+  item,
+  slug,
+  pathname,
+  currentMode,
+  sidebarMode,
+  onNavigate,
+}: {
+  item: DashboardNavItem;
+  slug: string;
+  pathname: string;
+  currentMode: string;
+  sidebarMode: SidebarMode;
+  onNavigate?: () => void;
+}) {
+  const [open, setOpen] = useState(true);
+  const Icon = item.icon;
+  const children = item.children ?? [];
+  const childActive = children.some((child) => isItemActive(child, pathname, currentMode));
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        title={item.label}
+        className={cn(
+          ROW_BASE,
+          'cursor-pointer text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary)',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-2 focus-visible:ring-offset-(--brand-bg)',
+          // Folded over the current page, the group stands in for the hidden active row.
+          !open && childActive && 'font-semibold text-(--brand-primary)',
+        )}
+      >
+        <Icon className="size-[18px] shrink-0" aria-hidden />
+        <span className={labelClasses(sidebarMode)}>{item.label}</span>
+        <ChevronDown
+          className={cn(
+            labelClasses(sidebarMode),
+            'size-4 flex-none transition-transform duration-150',
+            !open && '-rotate-90',
+          )}
+          aria-hidden
+        />
+      </button>
+      {open && (
+        // The connector rule runs down the parent icon's centre (row margin +
+        // padding + half the icon) and the children sit right of it, so an
+        // active pill never covers the line. Only while labels show - a
+        // collapsed rail has no column to indent into.
+        <div
+          className={cn(
+            'flex flex-col gap-px border-l border-transparent',
+            sidebarMode === 'expanded' && 'ml-[27px] border-(--brand-border)',
+            sidebarMode === 'hover' && 'group-hover/rail:ml-[27px] group-hover/rail:border-(--brand-border)',
+          )}
+        >
+          {children.map((child) => (
+            <NavItemLink
+              key={child.key}
+              item={child}
+              slug={slug}
+              pathname={pathname}
+              currentMode={currentMode}
+              sidebarMode={sidebarMode}
+              onNavigate={onNavigate}
+            />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -241,29 +302,29 @@ function NavList({
       {DASHBOARD_NAV_GROUPS.map((group, groupIndex) => (
         <div key={group[0].key} className="flex flex-col gap-px">
           {groupIndex > 0 && <div aria-hidden className="mx-4 my-2 h-px bg-(--brand-border)" />}
-          {group.flatMap((item) => [
-            <NavItemLink
-              key={item.key}
-              item={item}
-              slug={slug}
-              pathname={pathname}
-              currentMode={currentMode}
-              sidebarMode={sidebarMode}
-              onNavigate={onNavigate}
-            />,
-            ...(item.children ?? []).map((child) => (
-              <NavItemLink
-                key={child.key}
-                item={child}
+          {group.map((item) =>
+            item.children && !item.section ? (
+              <NavGroup
+                key={item.key}
+                item={item}
                 slug={slug}
                 pathname={pathname}
                 currentMode={currentMode}
                 sidebarMode={sidebarMode}
                 onNavigate={onNavigate}
-                isChild
               />
-            )),
-          ])}
+            ) : (
+              <NavItemLink
+                key={item.key}
+                item={item}
+                slug={slug}
+                pathname={pathname}
+                currentMode={currentMode}
+                sidebarMode={sidebarMode}
+                onNavigate={onNavigate}
+              />
+            ),
+          )}
         </div>
       ))}
     </nav>
