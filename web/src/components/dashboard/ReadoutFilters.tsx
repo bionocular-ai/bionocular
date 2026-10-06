@@ -127,11 +127,11 @@ export function ReadoutFilters({
 }) {
   const wide = useWide();
   return (
-    // Sticks 16px below the app's 56px sticky header, and scrolls on its own
-    // when taller than the space left, so the lower groups stay reachable.
+    // Same geometry as the global sidebar it docks against: sticky under the
+    // 56px top nav, full remaining height, scrolling on its own.
     <aside
       aria-label="Filters"
-      className="flex flex-col self-start lg:sticky lg:top-[72px] lg:max-h-[calc(100dvh-88px)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1.5 lg:[scrollbar-width:thin]"
+      className="flex flex-col lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:border-r lg:border-(--brand-border) lg:bg-(--brand-surface) lg:px-4 lg:pt-6 lg:pb-8 lg:[scrollbar-width:thin]"
     >
       <label className="flex items-center gap-2 rounded-lg border border-(--brand-border) bg-(--brand-surface) px-2.5 py-2 text-[13px] focus-within:border-(--brand-primary)">
         <Search className="h-[15px] w-[15px] shrink-0 text-[#7F9BA5]" aria-hidden="true" />
