@@ -5,7 +5,16 @@ import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { readoutsApi } from '@/lib/api';
-import { EMPTY_FILTERS, filterReadouts, groupReadouts, sortReadouts, type ReadoutFilters as Filters } from '@/lib/readouts';
+import {
+  EMPTY_FILTERS,
+  MAX_SELECTED,
+  filterReadouts,
+  groupReadouts,
+  sortReadouts,
+  type Readout,
+  type ReadoutFilters as Filters,
+} from '@/lib/readouts';
+import { AgentDrawer } from '@/components/agent/AgentDrawer';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { ReadoutCard } from '@/components/dashboard/ReadoutCard';
 import { ReadoutFilters } from '@/components/dashboard/ReadoutFilters';
@@ -22,6 +31,10 @@ export default function IntelligenceHubPage() {
   const [filters, setFilters] = React.useState<Filters>({ ...EMPTY_FILTERS, onlyResults: true });
   const [page, setPage] = React.useState(1);
   const listRef = React.useRef<HTMLElement>(null);
+  // Kept as readouts, not keys, so a selection survives paging and filters
+  // that hide it. Insertion order is the order the agent hears them in.
+  const [selected, setSelected] = React.useState<Map<string, Readout>>(new Map());
+
 
   const { data: rows, isLoading, error } = useQuery({
     queryKey: ['intelligence-hub-readouts', categorySlug],
@@ -37,6 +50,19 @@ export default function IntelligenceHubPage() {
   const pageItems = visible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const trials = new Set(visible.map((r) => r.nctId)).size;
   const withoutResults = visible.filter((r) => !r.hasResults).length;
+
+  const full = selected.size >= MAX_SELECTED;
+
+  const update = (fn: (next: Map<string, Readout>) => void) =>
+    setSelected((prev) => {
+      const next = new Map(prev);
+      fn(next);
+      return next;
+    });
+  const toggle = (r: Readout) =>
+    update((next) => {
+      if (!next.delete(r.key) && next.size < MAX_SELECTED) next.set(r.key, r);
+    });
 
   const changeFilters = (next: Filters) => {
     setFilters(next);
@@ -58,6 +84,11 @@ export default function IntelligenceHubPage() {
             ? `with results, from ${trials.toLocaleString()} ${trials === 1 ? 'trial' : 'trials'}`
             : `including ${withoutResults.toLocaleString()} without results yet`}
         </span>
+        {selected.size > 0 && (
+          <span className="text-[13px] font-medium text-(--brand-primary)" aria-live="polite">
+            {selected.size} of {MAX_SELECTED} selected for the agent
+          </span>
+        )}
         <span className="ml-auto text-[13px] text-(--brand-text-muted)">
           Sorted by <span className="font-medium text-(--brand-text)">primary completion, newest</span>
         </span>
@@ -78,7 +109,14 @@ export default function IntelligenceHubPage() {
         <>
           <div className="flex flex-col gap-3">
             {pageItems.map((r) => (
-              <ReadoutCard key={r.key} readout={r} category={categorySlug} />
+              <ReadoutCard
+                key={r.key}
+                readout={r}
+                category={categorySlug}
+                selected={selected.has(r.key)}
+                onToggle={() => toggle(r)}
+                selectDisabled={full}
+              />
             ))}
           </div>
 
@@ -119,7 +157,7 @@ export default function IntelligenceHubPage() {
       <div className="mx-auto w-full max-w-7xl px-4 pt-8 md:px-6 lg:col-start-2 lg:row-start-1">
         <PageHeader
           category={slugToCategory(categorySlug)}
-          title="Intelligence Hub"
+          title="Outcome Intelligence Hub"
           description="Every reported result for this indication, one readout per card."
         />
       </div>
@@ -130,7 +168,8 @@ export default function IntelligenceHubPage() {
         </div>
       )}
 
-      <div className="mx-auto w-full max-w-7xl px-4 pt-6 pb-8 md:px-6 lg:col-start-2 lg:row-start-2">
+      {/* Bottom padding keeps the last card and the pager clear of the floating agent button. */}
+      <div className="mx-auto w-full max-w-7xl px-4 pt-6 pb-28 md:px-6 lg:col-start-2 lg:row-start-2">
         {isLoading ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-(--brand-text-muted)" aria-label="Loading readouts" />
@@ -143,6 +182,13 @@ export default function IntelligenceHubPage() {
           results
         )}
       </div>
+
+      <AgentDrawer
+        cancerType={categorySlug}
+        selected={[...selected.values()]}
+        onRemove={(key) => update((next) => void next.delete(key))}
+        onClear={() => setSelected(new Map())}
+      />
     </div>
   );
 }

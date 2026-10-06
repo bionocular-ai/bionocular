@@ -2,7 +2,7 @@ import { PHASE_MAP } from './clinical-trials-enums';
 import { MODALITY_VALUES } from './dashboard-constants';
 
 /**
- * Readouts for the Intelligence Hub. A readout is one abstract or publication
+ * Readouts for the Outcome Intelligence Hub. A readout is one abstract or publication
  * reporting a trial's results; each `trial_outcomes` row is one of its arms.
  * The whole indication is small enough (827 rows for Cutaneous Melanoma) to
  * group, filter and count in the browser.
@@ -303,4 +303,20 @@ export function facetCounts(readouts: Readout[], filters: ReadoutFilters, group:
     for (const v of r.facets[group]) counts.set(v, (counts.get(v) ?? 0) + 1);
   }
   return new Map([...counts].sort((a, b) => b[1] - a[1]));
+}
+
+/** Readouts that can go to the agent at once: enough to compare, and each costs it a trial lookup. */
+export const MAX_SELECTED = 5;
+
+/**
+ * The selection as it goes to the agent, in front of the user's question. Any
+ * NCT number in a message makes the agent look the trial up first, and the
+ * source tells it which of a trial's readouts was picked.
+ */
+export function describeSelection(readouts: Readout[]): string {
+  const items = readouts.map((r) => {
+    const source = [r.source.label, r.source.detail].filter(Boolean).join(' ');
+    return `${r.acronym ?? r.drug ?? r.nctId} (${r.nctId}, ${source})`;
+  });
+  return `About ${items.length === 1 ? 'this readout' : 'these readouts'}: ${items.join('; ')}.`;
 }

@@ -283,6 +283,12 @@ body{
   to {opacity:1}
 }
 
+/* PeekIcon: the agent mark blinks once when its button is hovered. */
+@keyframes peek-blink {
+  0%, 100% { transform: scaleY(1) }
+  45%, 55% { transform: scaleY(.12) }
+}
+
 /* Mobile menu toggle */
 .mobile-menu-toggle{
   display:none; 

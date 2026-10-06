@@ -1482,7 +1482,7 @@ const POSTGREST_PAGE = 1000;
 export const readoutsApi = {
   /**
    * Every outcome row for a cancer type whose trial is in Trial Landscape, for
-   * the Intelligence Hub to group into readouts. The two inner joins are that
+   * the Outcome Intelligence Hub to group into readouts. The two inner joins are that
    * scope: an outcome reaches `trial_landscape` only through `clinical_trials`.
    * Paged in a stable order, since one indication can outgrow a single response.
    */
