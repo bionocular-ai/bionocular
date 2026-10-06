@@ -46,7 +46,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    // The font variables go on <html>, not <body>: globals.css aliases them on
+    // :root (--font-display, --font-mono), and an alias there can only see
+    // variables set on that same element.
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={[fraunces.variable, publicSans.variable, ibmPlexMono.variable, lora.variable].join(" ")}
+    >
       <head>
         <link
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
@@ -54,7 +61,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={[fraunces.variable, publicSans.variable, ibmPlexMono.variable, lora.variable, "antialiased"].join(" ")}
+        className="antialiased"
         style={{ fontFamily: "var(--font-public-sans)" }}
         suppressHydrationWarning
       >
