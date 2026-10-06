@@ -157,7 +157,7 @@ export default function IntelligenceHubPage() {
       <div className="mx-auto w-full max-w-7xl px-4 pt-8 md:px-6 lg:col-start-2 lg:row-start-1">
         <PageHeader
           category={slugToCategory(categorySlug)}
-          title="Intelligence Hub"
+          title="Outcome Intelligence Hub"
           description="Every reported result for this indication, one readout per card."
         />
       </div>

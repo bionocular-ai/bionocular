@@ -65,9 +65,9 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavItem[][] = [
     { key: 'landscape',     label: 'Trial Landscape',  icon: Target,        section: 'landscape',     status: 'live' },
   ],
   [
-    { key: 'intelligence-hub', label: 'Intelligence Hub', icon: Database, section: 'intelligence-hub', status: 'live' },
+    { key: 'intelligence-hub', label: 'Outcome Intelligence Hub', icon: Database, section: 'intelligence-hub', status: 'live' },
     {
-      key: 'analytics', label: 'Analytics', icon: ChartColumn, status: 'live',
+      key: 'analytics', label: 'Analytics Hub', icon: ChartColumn, status: 'live',
       children: [
         { key: 'efficacy', label: 'Efficacy',           icon: TrendingUp,  section: 'analytics', query: { mode: 'efficacy' }, status: 'live' },
         { key: 'safety',   label: 'Safety',             icon: ShieldCheck, section: 'analytics', query: { mode: 'safety' },   status: 'live' },

@@ -37,7 +37,7 @@ export interface ChatPanelProps {
   header?: ReactNode;
   /**
    * Context the user picked elsewhere, such as readouts ticked on the
-   * Intelligence Hub. It goes in front of a question whenever it differs from
+   * Outcome Intelligence Hub. It goes in front of a question whenever it differs from
    * what the last question carried, so it stays visible in the transcript and
    * follow-ups about the same selection don't repeat it.
    */

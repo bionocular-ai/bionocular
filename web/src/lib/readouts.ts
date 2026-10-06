@@ -2,7 +2,7 @@ import { PHASE_MAP } from './clinical-trials-enums';
 import { MODALITY_VALUES } from './dashboard-constants';
 
 /**
- * Readouts for the Intelligence Hub. A readout is one abstract or publication
+ * Readouts for the Outcome Intelligence Hub. A readout is one abstract or publication
  * reporting a trial's results; each `trial_outcomes` row is one of its arms.
  * The whole indication is small enough (827 rows for Cutaneous Melanoma) to
  * group, filter and count in the browser.
