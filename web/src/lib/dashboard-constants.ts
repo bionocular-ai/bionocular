@@ -9,6 +9,8 @@ import {
   Workflow,
   Landmark,
   Sparkles,
+  Database,
+  ChartColumn,
 } from 'lucide-react';
 import { SurvivalCurveIcon } from '@/components/icons/SurvivalCurveIcon';
 
@@ -53,8 +55,8 @@ export interface DashboardNavItem {
 
 /**
  * Nav items in rail order, split into the groups the sidebar separates with a
- * hairline rule. The rail is sized to fit the longest label on one line
- * ("Efficacy vs Safety Index Hub"), so no label wraps or truncates.
+ * hairline rule. The rail is sized so no label wraps or truncates. An item with
+ * children and no section is a collapsible group, not a link.
  */
 export const DASHBOARD_NAV_GROUPS: DashboardNavItem[][] = [
   [
@@ -63,14 +65,18 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavItem[][] = [
     { key: 'landscape',     label: 'Trial Landscape',  icon: Target,        section: 'landscape',     status: 'live' },
   ],
   [
+    { key: 'intelligence-hub', label: 'Intelligence Hub', icon: Database, section: 'intelligence-hub', status: 'live' },
     {
-      key: 'efficacy', label: 'Efficacy Intelligence Hub', icon: TrendingUp, section: 'analytics', query: { mode: 'efficacy' }, status: 'live',
+      key: 'analytics', label: 'Analytics', icon: ChartColumn, status: 'live',
       children: [
-        { key: 'survival', label: 'Survival Intelligence Hub', icon: SurvivalCurveIcon, section: 'head-to-head-survival', status: 'live' },
+        { key: 'efficacy', label: 'Efficacy',           icon: TrendingUp,  section: 'analytics', query: { mode: 'efficacy' }, status: 'live' },
+        { key: 'safety',   label: 'Safety',             icon: ShieldCheck, section: 'analytics', query: { mode: 'safety' },   status: 'live' },
+        { key: 'index',    label: 'Efficacy vs Safety', icon: Scale,       section: 'analytics', query: { mode: 'all' },      status: 'live' },
       ],
     },
-    { key: 'safety', label: 'Safety Intelligence Hub',     icon: ShieldCheck, section: 'analytics', query: { mode: 'safety' }, status: 'live' },
-    { key: 'index',  label: 'Efficacy vs Safety Index Hub', icon: Scale,       section: 'analytics', query: { mode: 'all' },    status: 'live' },
+  ],
+  [
+    { key: 'survival', label: 'KM Curves Intelligence', icon: SurvivalCurveIcon, section: 'head-to-head-survival', status: 'live' },
   ],
   [
     { key: 'treatment-algorithm', label: 'Treatment Algorithm', icon: Workflow,  status: 'upcoming' },

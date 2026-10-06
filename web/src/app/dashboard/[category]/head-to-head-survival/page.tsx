@@ -265,7 +265,7 @@ export default function HeadToHeadEfficacyPage() {
       <div className="mx-auto max-w-7xl px-6 py-8">
         <PageHeader
           category={slugToCategory(categorySlug)}
-          title="Survival Intelligence Hub"
+          title="KM Curves Intelligence"
           description="Reconstructed digitized-twin Kaplan–Meier survival curves by treatment arm, head-to-head across publications and cohorts."
           right={
             <div className="flex flex-wrap items-center justify-end gap-2">
