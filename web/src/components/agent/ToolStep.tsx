@@ -180,7 +180,7 @@ export function ToolStep(props: ToolStepProps) {
         <span className="font-mono text-[12.5px] font-medium text-(--brand-primary)">{subject}</span>
         <span
           className={cn(
-            'rounded-[3px] px-1.5 py-0.5 font-mono text-[10px] whitespace-nowrap',
+            'max-w-full rounded-[3px] px-1.5 py-0.5 font-mono text-[10px] [overflow-wrap:anywhere]',
             CHIP_TONE[tone]
           )}
         >
