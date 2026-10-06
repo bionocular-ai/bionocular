@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
-import { ArrowUp, Square, RotateCcw, FlaskConical, Activity, Layers, Newspaper } from 'lucide-react';
+import { ArrowUp, Square, RotateCcw, FlaskConical, Activity, Layers, Newspaper, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { agentFeedbackApi, type FeedbackRating } from '@/lib/api';
 import { UserBubble } from './UserBubble';
@@ -35,6 +35,21 @@ export interface ChatPanelProps {
    * its height on every turn to say the same two words.
    */
   header?: ReactNode;
+  /**
+   * Context the user picked elsewhere, such as readouts ticked on the
+   * Intelligence Hub. It goes in front of a question whenever it differs from
+   * what the last question carried, so it stays visible in the transcript and
+   * follow-ups about the same selection don't repeat it.
+   */
+  contextPrefix?: string;
+  /** Replaces the default starter questions, for a panel opened with context. */
+  suggestions?: Suggestion[];
+}
+
+export interface Suggestion {
+  label: string;
+  icon: LucideIcon;
+  question: string;
 }
 
 export function ChatPanel({
@@ -43,6 +58,8 @@ export function ChatPanel({
   initialMessages,
   onTurnFinished,
   header,
+  contextPrefix,
+  suggestions,
 }: ChatPanelProps) {
   // `id` and `messages` seed the chat on mount only, so the page remounts this
   // component (keyed on sessionId) when another conversation is opened.
@@ -57,6 +74,7 @@ export function ChatPanel({
   });
 
   const [input, setInput] = useState('');
+  const lastPrefix = useRef<string | undefined>(undefined);
   // Ratings this user has already given, by assistant message id. Seeded from
   // the database so a reopened conversation shows the thumbs it was given.
   const [ratings, setRatings] = useState<Record<string, FeedbackRating>>({});
@@ -135,7 +153,9 @@ export function ChatPanel({
     const trimmed = input.trim();
     if (!trimmed || isBusy) return;
     pinnedToBottom.current = true;
-    sendMessage({ text: trimmed });
+    const prefix = contextPrefix && contextPrefix !== lastPrefix.current ? contextPrefix : null;
+    lastPrefix.current = contextPrefix;
+    sendMessage({ text: prefix ? `${prefix}\n\n${trimmed}` : trimmed });
     setInput('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -293,6 +313,7 @@ export function ChatPanel({
           </div>
           {isEmpty && (
             <Suggestions
+              examples={suggestions}
               onPick={(q) => {
                 setInput(q);
                 textareaRef.current?.focus();
@@ -305,34 +326,35 @@ export function ChatPanel({
   );
 }
 
-function Suggestions({ onPick }: { onPick: (q: string) => void }) {
-  // One per table the agent can reach - registry, outcomes, landscape, news -
-  // so the four together show what it holds rather than seeding one query. None
-  // of them names a drug, a biomarker or an NCT number: the same chips are
-  // shown on every cancer-type dashboard, and the agent is scoped to that type,
-  // so anything specific would be a question it cannot answer half the time.
-  const examples = [
-    {
-      label: 'Recruiting phase 3',
-      icon: FlaskConical,
-      question: 'Which phase 3 trials are currently recruiting?',
-    },
-    {
-      label: 'Survival reported',
-      icon: Activity,
-      question: 'Which treatments have reported a median overall survival?',
-    },
-    {
-      label: 'First-line treatments',
-      icon: Layers,
-      question: 'What treatment modalities show up most in first-line trials?',
-    },
-    {
-      label: 'Latest news',
-      icon: Newspaper,
-      question: 'What is the most recent news coverage we have?',
-    },
-  ];
+// One per table the agent can reach - registry, outcomes, landscape, news -
+// so the four together show what it holds rather than seeding one query. None
+// of them names a drug, a biomarker or an NCT number: the same chips are
+// shown on every cancer-type dashboard, and the agent is scoped to that type,
+// so anything specific would be a question it cannot answer half the time.
+const DEFAULT_SUGGESTIONS: Suggestion[] = [
+  {
+    label: 'Recruiting phase 3',
+    icon: FlaskConical,
+    question: 'Which phase 3 trials are currently recruiting?',
+  },
+  {
+    label: 'Survival reported',
+    icon: Activity,
+    question: 'Which treatments have reported a median overall survival?',
+  },
+  {
+    label: 'First-line treatments',
+    icon: Layers,
+    question: 'What treatment modalities show up most in first-line trials?',
+  },
+  {
+    label: 'Latest news',
+    icon: Newspaper,
+    question: 'What is the most recent news coverage we have?',
+  },
+];
+
+function Suggestions({ examples = DEFAULT_SUGGESTIONS, onPick }: { examples?: Suggestion[]; onPick: (q: string) => void }) {
   return (
     <div className="mt-3 flex flex-wrap justify-center gap-2">
       {examples.map(({ label, icon: Icon, question }) => (

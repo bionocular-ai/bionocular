@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   EMPTY_FILTERS,
+  describeSelection,
   facetCounts,
   filterReadouts,
   groupReadouts,
@@ -195,5 +196,22 @@ describe('filterReadouts and facetCounts', () => {
   it('searches acronym, drug, arm and NCT number', () => {
     expect(filterReadouts(rs, filters({ search: 'nadina' })).map((r) => r.nctId)).toEqual(['NCT2']);
     expect(filterReadouts(rs, filters({ search: 'nct3' })).map((r) => r.nctId)).toEqual(['NCT3']);
+  });
+});
+
+describe('describeSelection', () => {
+  it('names each readout by acronym, NCT number and source', () => {
+    const rs = groupReadouts([
+      row({ id: 1, nct_id: 'NCT04949113', abstract_id: null, publication_id: 'N Engl J Med 2024;391:1696-708.', source_type: 'publication', clinical_trials: { ...row().clinical_trials, acronym: 'NADINA' } }),
+      row({ id: 2, nct_id: 'NCT03767348', abstract_id: 'SITC_2025_611', clinical_trials: { ...row().clinical_trials, acronym: 'IGNYTE' } }),
+    ]);
+    expect(describeSelection(rs)).toBe(
+      'About these readouts: NADINA (NCT04949113, N Engl J Med 2024;391:1696-708.); IGNYTE (NCT03767348, SITC 2025 Abstract 611).',
+    );
+  });
+
+  it('falls back to the drug when the trial has no acronym', () => {
+    const rs = groupReadouts([row({ clinical_trials: { ...row().clinical_trials, acronym: null } })]);
+    expect(describeSelection(rs)).toBe('About this readout: Drug A (NCT00000001, ASCO 2024 Abstract 9500).');
   });
 });

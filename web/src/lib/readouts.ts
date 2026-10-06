@@ -304,3 +304,19 @@ export function facetCounts(readouts: Readout[], filters: ReadoutFilters, group:
   }
   return new Map([...counts].sort((a, b) => b[1] - a[1]));
 }
+
+/** Readouts that can go to the agent at once: enough to compare, and each costs it a trial lookup. */
+export const MAX_SELECTED = 5;
+
+/**
+ * The selection as it goes to the agent, in front of the user's question. Any
+ * NCT number in a message makes the agent look the trial up first, and the
+ * source tells it which of a trial's readouts was picked.
+ */
+export function describeSelection(readouts: Readout[]): string {
+  const items = readouts.map((r) => {
+    const source = [r.source.label, r.source.detail].filter(Boolean).join(' ');
+    return `${r.acronym ?? r.drug ?? r.nctId} (${r.nctId}, ${source})`;
+  });
+  return `About ${items.length === 1 ? 'this readout' : 'these readouts'}: ${items.join('; ')}.`;
+}

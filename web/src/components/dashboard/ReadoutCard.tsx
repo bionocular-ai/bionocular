@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { trialRoute } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import type { Arm, Cell, Endpoint, Readout } from '@/lib/readouts';
+import { MAX_SELECTED, type Arm, type Cell, type Endpoint, type Readout } from '@/lib/readouts';
 
 /** Light rule, connector line and faint text: shades the brand tokens don't carry. */
 const HAIR = 'border-[#E3EEEA]';
@@ -146,15 +146,42 @@ function ArmRow({ arm, index, readout, maxN, last }: { arm: Arm; index: number; 
 }
 
 /** One readout: an abstract or publication reporting a trial's results, one row per group. */
-export function ReadoutCard({ readout, category }: { readout: Readout; category: string }) {
+export function ReadoutCard({
+  readout,
+  category,
+  selected,
+  onToggle,
+  selectDisabled,
+}: {
+  readout: Readout;
+  category: string;
+  selected: boolean;
+  onToggle: () => void;
+  /** The selection is full; only ticked cards can change. */
+  selectDisabled?: boolean;
+}) {
   const href = trialRoute(readout.nctId, category);
   const { arms } = readout;
   const maxN = Math.max(0, ...arms.map((a) => a.n ?? 0));
   const targets = readout.facets.target;
 
   return (
-    <article className="rounded-[10px] border border-(--brand-border) bg-(--brand-surface) p-4 md:px-[18px] md:pt-3.5 md:pb-3">
+    <article
+      className={cn(
+        'rounded-[10px] border p-4 transition-colors md:px-[18px] md:pt-3.5 md:pb-3',
+        selected ? 'border-(--brand-primary) bg-[#F3F9F6]' : 'border-(--brand-border) bg-(--brand-surface)',
+      )}
+    >
       <div className="flex flex-wrap items-start gap-2.5 md:items-center">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={onToggle}
+          disabled={selectDisabled && !selected}
+          title={selectDisabled && !selected ? `Up to ${MAX_SELECTED} readouts can go to the agent at once` : undefined}
+          aria-label={`Select ${readout.acronym ?? readout.drug ?? readout.nctId}, ${readout.source.label}`}
+          className="mt-0.5 h-[15px] w-[15px] shrink-0 cursor-pointer accent-(--brand-primary) disabled:cursor-not-allowed md:mt-0"
+        />
         <div className="flex min-w-0 flex-1 flex-col gap-0.5 text-[13.5px] md:flex-row md:flex-wrap md:items-baseline md:gap-[7px]">
           {readout.acronym && (
             <>
@@ -169,7 +196,7 @@ export function ReadoutCard({ readout, category }: { readout: Readout; category:
             {targets.length > 0 && <span className="text-(--brand-text-muted)"> ({targets.join(' × ')})</span>}
           </span>
         </div>
-        <div className="flex w-full flex-wrap gap-1.5 md:ml-auto md:w-auto">
+        <div className="flex w-full flex-wrap gap-1.5 pl-[25px] md:ml-auto md:w-auto md:pl-0">
           {readout.phase && (
             <span className="inline-flex h-[22px] items-center rounded-[5px] bg-(--brand-primary) px-2 text-xs font-medium text-white">
               {readout.phase}
