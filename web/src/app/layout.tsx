@@ -1,31 +1,38 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Mono, Lora, Fraunces, Public_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
-const fraunces = Fraunces({
+// Self-hosted (Latin subset, the files Google Fonts serves) so the build never
+// downloads fonts: fetching them from Google intermittently failed CI builds.
+// Fraunces, Public Sans and Lora are variable fonts, one file each; licenses
+// sit beside the files.
+const fraunces = localFont({
   variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  src: "./fonts/fraunces-latin.woff2",
+  weight: "400 700",
 });
 
-const publicSans = Public_Sans({
+const publicSans = localFont({
   variable: "--font-public-sans",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  src: "./fonts/public-sans-latin.woff2",
+  weight: "400 700",
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
+const ibmPlexMono = localFont({
   variable: "--font-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  src: [
+    { path: "./fonts/ibm-plex-mono-latin-400.woff2", weight: "400" },
+    { path: "./fonts/ibm-plex-mono-latin-500.woff2", weight: "500" },
+    { path: "./fonts/ibm-plex-mono-latin-600.woff2", weight: "600" },
+  ],
 });
 
 // Kept: still referenced via --font-lora in dashboard/page.tsx
-const lora = Lora({
+const lora = localFont({
   variable: "--font-lora",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  src: "./fonts/lora-latin.woff2",
+  weight: "400 700",
 });
 
 export const metadata: Metadata = {
