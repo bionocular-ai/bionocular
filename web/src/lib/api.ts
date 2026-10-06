@@ -1,6 +1,7 @@
 import type { UIMessage } from 'ai';
 import { createClient } from './supabase/client';
 import type { TrialDataFile } from '@/types/analytics';
+import { OUTCOME_SELECT, type OutcomeRow } from './readouts';
 
 export interface Trial {
   id: string;
@@ -1474,6 +1475,33 @@ export interface KmCurveRow {
   n_points: number | null;
   reference: string | null;
 }
+
+/** PostgREST returns at most this many rows per request. */
+const POSTGREST_PAGE = 1000;
+
+export const readoutsApi = {
+  /**
+   * Every outcome row for a cancer type whose trial is in Trial Landscape, for
+   * the Intelligence Hub to group into readouts. The two inner joins are that
+   * scope: an outcome reaches `trial_landscape` only through `clinical_trials`.
+   * Paged in a stable order, since one indication can outgrow a single response.
+   */
+  getCategoryRows: async (slug: string): Promise<OutcomeRow[]> => {
+    const supabase = createClient();
+    const rows: OutcomeRow[] = [];
+    for (let from = 0; ; from += POSTGREST_PAGE) {
+      const { data, error } = await supabase
+        .from('trial_outcomes')
+        .select(OUTCOME_SELECT)
+        .contains('cancer_type', [getDbCancerType(slug)])
+        .order('id')
+        .range(from, from + POSTGREST_PAGE - 1);
+      if (error) throw new Error(`[readoutsApi.getCategoryRows] ${error.message}`);
+      rows.push(...(data as unknown as OutcomeRow[]));
+      if (data.length < POSTGREST_PAGE) return rows;
+    }
+  },
+};
 
 export const kmCurvesApi = {
   /** All reconstructed KM curves for a cancer type, optionally filtered by endpoint. */
