@@ -1,34 +1,39 @@
 'use client';
 
 import * as React from 'react';
-import { ListChecks, Scale, ShieldCheck, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { describeSelection, type Readout } from '@/lib/readouts';
 import { PeekIcon } from '@/components/icons/PeekIcon';
 import { ChatPanel, type Suggestion } from './ChatPanel';
 
-function suggestionsFor(n: number): Suggestion[] {
-  const these = n === 1 ? 'this readout' : 'these readouts';
-  return [
-    ...(n > 1 ? [{ label: 'Compare them', icon: Scale, question: `Compare the efficacy and safety of ${these}.` }] : []),
-    { label: 'Key results', icon: ListChecks, question: `Summarise the key results of ${these}.` },
-    { label: 'Safety', icon: ShieldCheck, question: n === 1 ? 'What safety findings does this readout report?' : 'What safety findings do these readouts report?' },
-  ];
+export interface AgentDrawerItem {
+  key: string;
+  label: string;
+  detail: string;
 }
 
 /**
- * The agent, opened from a floating button over a page. The readouts selected
- * on the page travel with the next question as context; the conversation
- * survives closing the drawer and changing the selection.
+ * The agent, opened from a floating button over a page. The items selected
+ * on the page travel with the next question as `contextPrefix`; the
+ * conversation survives closing the drawer and changing the selection.
  */
 export function AgentDrawer({
   cancerType,
+  noun,
+  emptyHint,
   selected,
+  contextPrefix,
+  suggestions,
   onRemove,
   onClear,
 }: {
   cancerType: string;
-  selected: Readout[];
+  /** Singular name of a selected item, e.g. "readout". */
+  noun: string;
+  emptyHint: string;
+  selected: AgentDrawerItem[];
+  contextPrefix?: string;
+  suggestions?: Suggestion[];
   onRemove: (key: string) => void;
   onClear: () => void;
 }) {
@@ -48,18 +53,23 @@ export function AgentDrawer({
   const selection = (
     <div className="flex flex-col gap-2">
       <h3 className="text-[13px] font-semibold text-(--brand-text)">
-        {n ? `Answering about ${n === 1 ? 'this readout' : `these ${n} readouts`}` : 'No readouts selected'}
+        {n ? `Answering about ${n === 1 ? `this ${noun}` : `these ${n} ${noun}s`}` : `No ${noun}s selected`}
       </h3>
       {n ? (
         <>
           <ul className="flex flex-col border-t border-[#E3EEEA]">
-            {selected.map((r) => (
-              <li key={r.key} className="flex items-center gap-2.5 border-b border-[#E3EEEA] py-2 text-[13px]">
-                <b className="shrink-0 font-semibold text-(--brand-primary)">{r.acronym ?? r.drug ?? r.nctId}</b>
-                <span className="min-w-0 flex-1 truncate text-(--brand-text-muted)">{r.source.label}</span>
+            {selected.map((item) => (
+              <li key={item.key} className="flex items-center gap-2.5 border-b border-[#E3EEEA] py-2 text-[13px]">
+                {/* Long labels (KM arm names) truncate too, so the detail keeps some room. */}
+                <b className="max-w-[65%] truncate font-semibold text-(--brand-primary)" title={item.label}>
+                  {item.label}
+                </b>
+                <span className="min-w-0 flex-1 truncate text-(--brand-text-muted)" title={item.detail}>
+                  {item.detail}
+                </span>
                 <button
                   type="button"
-                  onClick={() => onRemove(r.key)}
+                  onClick={() => onRemove(item.key)}
                   className="shrink-0 px-1 text-[12.5px] text-(--brand-text-muted) hover:text-(--brand-primary) hover:underline"
                 >
                   Remove
@@ -76,9 +86,7 @@ export function AgentDrawer({
           </button>
         </>
       ) : (
-        <p className="text-[13px] text-(--brand-text-muted)">
-          Tick readout cards to ask about them, or ask anything about this indication.
-        </p>
+        <p className="text-[13px] text-(--brand-text-muted)">{emptyHint}</p>
       )}
     </div>
   );
@@ -89,7 +97,7 @@ export function AgentDrawer({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        aria-label={n ? `Open agent, ${n} ${n === 1 ? 'readout' : 'readouts'} selected` : 'Open agent'}
+        aria-label={n ? `Open agent, ${n} ${n === 1 ? noun : `${noun}s`} selected` : 'Open agent'}
         className={cn(
           'group fixed right-5 bottom-6 z-30 flex h-[46px] min-w-[46px] items-center rounded-full border border-(--brand-border) bg-(--brand-surface) px-[5px] md:right-14 md:bottom-11',
           'shadow-[0_1px_2px_rgba(16,43,54,.12),0_12px_28px_-14px_rgba(16,43,54,.6)] transition-[transform,box-shadow] hover:-translate-y-px',
@@ -147,8 +155,8 @@ export function AgentDrawer({
             cancerType={cancerType}
             sessionId={sessionId}
             header={selection}
-            contextPrefix={n ? describeSelection(selected) : undefined}
-            suggestions={n ? suggestionsFor(n) : undefined}
+            contextPrefix={n ? contextPrefix : undefined}
+            suggestions={n ? suggestions : undefined}
           />
         </div>
       </aside>
