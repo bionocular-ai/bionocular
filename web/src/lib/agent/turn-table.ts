@@ -349,7 +349,20 @@ function toOutcomesTable(output: unknown): ResultTable | null {
   const telling = asked.length > 0
     ? [...new Set(asked.flatMap((key) => [key, ...classSiblings(key)]))]
     : [...ENDPOINT_FAMILY.keys()].filter((key) => !isQualifier(key));
-  const treatments = toTreatments(rows, telling);
+  // "Median PFS vs grade 3+ AEs" compares safety against the efficacy it buys:
+  // a treatment reporting safety and none of the asked efficacy - an adjuvant
+  // trial reports RFS, not PFS - answers nothing, so it is left out before it
+  // can sway the class choice, and counted in the caveat. One reporting nothing
+  // asked stays, for the table's own "reports none" count.
+  const efficacyAsked = asked.filter((key) => ENDPOINT_FAMILY.get(key) === 'efficacy');
+  const anchored = efficacyAsked.length > 0 && efficacyAsked.length < asked.length;
+  const readoutsOf = ({ main, earlier }: Treatment) => [main, ...earlier];
+  const withheld = (treatment: Treatment) =>
+    anchored &&
+    readoutsOf(treatment).some((row) => telling.some((key) => reports(row, key))) &&
+    !readoutsOf(treatment).some((row) => efficacyAsked.some((key) => reports(row, key)));
+  const all = toTreatments(rows, telling);
+  const treatments = all.filter((treatment) => !withheld(treatment));
   const mains = treatments.map(({ main }) => main);
   const everyRow = treatments.flatMap(({ main, earlier }) => [main, ...earlier]);
 
@@ -403,7 +416,7 @@ function toOutcomesTable(output: unknown): ResultTable | null {
   const cells = (row: Row) => columns.map((column) => formatRowCell(row, column));
   const readouts = treatments.map(({ earlier }) => earlier.map(cells));
 
-  const caveat = caveatOf(asked, shown, mains);
+  const caveat = caveatOf(asked, shown, mains, all.length - treatments.length, efficacyAsked);
   return {
     columns: columns.map((key) => ({ key, label: OUTCOME_LABELS[key] ?? companionLabel(key) ?? humanizeColumn(key) })),
     rows: mains.map(cells),
@@ -458,11 +471,17 @@ function standIn(key: string, rows: Row[], asked: string[]): string {
  * clinical reading - TRAE counts only drug-attributed events, so it runs lower -
  * is the model's to write in prose.
  */
-function caveatOf(asked: string[], shown: string[], rows: Row[]): string | undefined {
+function caveatOf(
+  asked: string[],
+  shown: string[],
+  rows: Row[],
+  withheld: number,
+  efficacyAsked: string[],
+): string | undefined {
   const count = (column: string) => rows.filter((row) => reports(row, column)).length;
   const treatments = (n: number) => `${n} ${n === 1 ? 'treatment' : 'treatments'}`;
   // Prose, so spelled out: "AE leading to discontinuation", not the header's "AE Disc".
-  const measure = (column: string) => humanizeColumn(column, false).replace(/ %$/, '');
+  const measure = (column: string) => humanizeColumn(column, false).replace(/ (%|\(mo\))$/, '');
   const sentences = asked.flatMap((key, i) => {
     const shownKey = shown[i];
     const said: string[] = [];
@@ -491,6 +510,12 @@ function caveatOf(asked: string[], shown: string[], rows: Row[]): string | undef
     }
     return said;
   });
+  if (withheld > 0) {
+    sentences.push(
+      `${treatments(withheld)} ${withheld === 1 ? 'reports' : 'report'} safety but no ` +
+        `${efficacyAsked.map(measure).join(' or ')}, not shown.`,
+    );
+  }
   return sentences.length > 0 ? sentences.join(' ') : undefined;
 }
 
