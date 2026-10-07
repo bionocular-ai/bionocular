@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/dashboard/PageHeader';
 import { ReadoutCard } from '@/components/dashboard/ReadoutCard';
 import { ReadoutFilters } from '@/components/dashboard/ReadoutFilters';
 import { slugToCategory } from '@/lib/dashboard-constants';
+import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
 
@@ -34,6 +35,7 @@ export default function IntelligenceHubPage() {
   // Kept as readouts, not keys, so a selection survives paging and filters
   // that hide it. Insertion order is the order the agent hears them in.
   const [selected, setSelected] = React.useState<Map<string, Readout>>(new Map());
+  const [filtersCollapsed, setFiltersCollapsed] = React.useState(false);
 
 
   const { data: rows, isLoading, error } = useQuery({
@@ -153,7 +155,12 @@ export default function IntelligenceHubPage() {
   // column, with the header and cards to their right. Phone: one column,
   // filters between the header and the cards.
   return (
-    <div className="grid min-h-screen grid-cols-1 bg-(--brand-bg) lg:grid-cols-[264px_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
+    <div
+      className={cn(
+        'grid min-h-screen grid-cols-1 bg-(--brand-bg) transition-[grid-template-columns] duration-200 lg:grid-rows-[auto_1fr]',
+        filtersCollapsed ? 'lg:grid-cols-[48px_minmax(0,1fr)]' : 'lg:grid-cols-[264px_minmax(0,1fr)]',
+      )}
+    >
       <div className="mx-auto w-full max-w-7xl px-4 pt-8 md:px-6 lg:col-start-2 lg:row-start-1">
         <PageHeader
           category={slugToCategory(categorySlug)}
@@ -164,7 +171,13 @@ export default function IntelligenceHubPage() {
 
       {readouts.length > 0 && (
         <div className="px-4 pt-6 md:px-6 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:p-0">
-          <ReadoutFilters readouts={readouts} filters={filters} onChange={changeFilters} />
+          <ReadoutFilters
+            readouts={readouts}
+            filters={filters}
+            onChange={changeFilters}
+            collapsed={filtersCollapsed}
+            onCollapsedChange={setFiltersCollapsed}
+          />
         </div>
       )}
 
