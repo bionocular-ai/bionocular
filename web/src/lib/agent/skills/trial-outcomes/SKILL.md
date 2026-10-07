@@ -31,8 +31,13 @@ but you read every row: cite the readout each number comes from.
   biomarker and line of therapy. Querying them spends the turn's budget and
   truncates the outcomes you came for.
 - "Metastatic / cutaneous melanoma" is the cutaneous scope, not a stage
-  filter: keep adjuvant and neoadjuvant trials and name each trial's line.
-  The interface sections treatments by line of therapy.
+  filter; the interface sections treatments by line of therapy.
+- A question setting efficacy against safety ("median PFS vs grade 3+ AEs")
+  is answered only by treatments that report the asked efficacy endpoint.
+  Adjuvant and neoadjuvant trials report RFS or EFS, not PFS, so they drop
+  out; the interface leaves out every treatment with safety but none of the
+  asked efficacy, and counts them in the note above the table. Leave them
+  out of the prose too.
 - A re-query keeps the `endpoints`, `detail` and `columns` of the call it refines.
 - When the question names endpoints, pass them as `columns`, in the order it
   names them (up to five): "ORR and grade 3+ treatment-related AEs" is
@@ -95,8 +100,9 @@ but you read every row: cite the readout each number comes from.
 
 Follow the answer shape in your instructions. The count sentence names how
 many treatments from how many trials, and counts the trials in scope whose
-rows carry none of the asked endpoints, grouped by why (adjuvant, still
-recruiting); do not list them. An arm that reports some of the asked endpoints
+rows carry none of the asked endpoints - or, for an efficacy-versus-safety
+question, none of the asked efficacy endpoints - grouped by why (adjuvant,
+still recruiting); do not list them. An arm that reports some of the asked endpoints
 and not others is in the table, not a trial without a readout. Bullets are for
 what the rows cannot show: a missed significance, a press-release-only source,
 an `issues` expert review, arms from different trials not being randomised.

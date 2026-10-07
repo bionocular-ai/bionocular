@@ -477,6 +477,10 @@ const readouts = {
   ],
 };
 
+// The same rows asked about safety alone, so the adjuvant and neoadjuvant arms,
+// which report no PFS, stay in the table.
+const safetyReadouts = { ...readouts, askedColumns: ['grade_3_plus_teae_pct', 'ae_leading_to_discontinuation_pct'] };
+
 describe('outcomes turns', () => {
   const today = new Date('2026-09-22');
 
@@ -647,6 +651,45 @@ describe('outcomes turns', () => {
     );
   });
 
+  it('leaves out a treatment with safety but none of the asked efficacy endpoints, and says so', () => {
+    // KEYNOTE-716 is adjuvant: it reports RFS and TRAE, never median PFS, so it
+    // answers nothing in "median PFS vs grade 3+ TEAE". It must not count
+    // toward the class choice either.
+    const adjuvant = {
+      ...q3,
+      rows: [
+        ...q3.rows,
+        {
+          nct_id: 'NCT03553836', arm_name: 'Pembrolizumab', line_of_therapy: 'Adjuvant', abstract_id: 'ASCO_2024_9500',
+          median_rfs: null, rfs_rate_24m: 81.2, grade_3_plus_trae_pct: 17.4, trae_discontinuation_pct: 12.1,
+        },
+        { nct_id: 'NCT9', arm_name: 'Trial in progress', abstract_id: 'ASCO_2026_TPS9599' },
+      ],
+    };
+
+    const table = toTurnTable([adjuvant], today);
+
+    expect(table?.rows.map((row) => row[0])).not.toContain('Pembrolizumab');
+    // A treatment reporting nothing asked stays, for the table's own "reports none" count.
+    expect(table?.rows).toHaveLength(4);
+    expect(table?.caveat).toBe(
+      'No treatment reports Grade 3+ TEAE; showing Grade 3+ TRAE (2 treatments), the class most treatments report. ' +
+        'AE leading to discontinuation: 1 treatment; 1 more reports it only as TRAE discontinuation. ' +
+        '1 treatment reports safety but no Median PFS, not shown.',
+    );
+  });
+
+  it('keeps a safety-only treatment when the question asked no efficacy endpoint', () => {
+    const safety = {
+      ok: true,
+      table: 'trial_outcomes',
+      askedColumns: ['grade_3_plus_trae_pct'],
+      rows: [{ nct_id: 'NCT03553836', arm_name: 'Pembrolizumab', grade_3_plus_trae_pct: 17.4 }],
+    };
+
+    expect(toTurnTable([safety], today)?.rows).toHaveLength(1);
+  });
+
   it('counts a treatment reporting more than one other class once, not once per class', () => {
     // Repro: a treatment reports TEAE disc and TRAE disc but not AE disc
     // (shown). The old code counted it under both classes for one treatment.
@@ -775,7 +818,7 @@ describe('one row per treatment', () => {
   it('draws each treatment once, from its newest readout, under its longest name', () => {
     const table = toTurnTable([readouts], today);
 
-    expect(table?.rows).toHaveLength(8);
+    expect(table?.rows).toHaveLength(4);
     expect(cell(table, 0, 'treatment_name')).toBe('Relatlimab + Nivolumab');
     expect(cell(table, 0, 'source')).toBe('ASCO_2026_9532');
     expect(cell(table, 0, 'num_patients')).toBe('355');
@@ -795,7 +838,7 @@ describe('one row per treatment', () => {
   });
 
   it('keeps a placebo arm apart from the drug it is compared with', () => {
-    const table = toTurnTable([readouts], today);
+    const table = toTurnTable([safetyReadouts], today);
     const names = table!.rows.map((_, i) => cell(table, i, 'treatment_name'));
 
     expect(names).toEqual(expect.arrayContaining(['Placebo', 'Pembrolizumab']));
@@ -887,8 +930,9 @@ describe('one row per treatment', () => {
   it('counts treatments, not readouts, and still offers an endpoint only an earlier readout reports', () => {
     const parameters = toTurnTable([readouts], today)!.parameters!;
 
-    // NADINA's two arms; RELATIVITY-047's 40.3 is in NEJM 2022, an earlier readout.
-    expect(parameters.find((p) => p.key === 'grade_3_plus_ae_pct')?.arms).toBe(2);
+    // RELATIVITY-047's 40.3 is in NEJM 2022, an earlier readout; NADINA's arms
+    // report no PFS and are left out.
+    expect(parameters.find((p) => p.key === 'grade_3_plus_ae_pct')?.arms).toBe(0);
     expect(parameters.find((p) => p.key === 'orr')).toMatchObject({ arms: 0 });
   });
 
@@ -904,7 +948,7 @@ describe('one row per treatment', () => {
   });
 
   it("sections treatments by their trial's line, so a trial's randomised arms stay together", () => {
-    const table = toTurnTable([readouts], today);
+    const table = toTurnTable([safetyReadouts], today);
 
     expect(table!.rows.map((_, i) => cell(table, i, 'setting'))).toEqual([
       '1L', '1L', '2L',
