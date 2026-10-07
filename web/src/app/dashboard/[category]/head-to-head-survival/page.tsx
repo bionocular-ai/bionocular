@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ListFilter, Loader2 } from 'lucide-react';
+import { BadgeCheck, ChevronDown, Lightbulb, ListFilter, Loader2, Scale } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,9 +25,12 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
+import { AgentDrawer } from '@/components/agent/AgentDrawer';
+import type { Suggestion } from '@/components/agent/ChatPanel';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { slugToCategory } from '@/lib/dashboard-constants';
 import { kmCurvesApi, type KmCurveRow, type KmPoint } from '@/lib/api';
+import { describeKmSelection } from '@/lib/km-agent';
 import { formatArmName } from '@/lib/utils/arm-name';
 import KaplanMeierChart from '@/components/charts/KaplanMeierChart';
 import { SurvivalCurveIcon } from '@/components/icons/SurvivalCurveIcon';
@@ -79,6 +82,16 @@ function toTitleCase(s: string): string {
 }
 
 const endpointLabel = (e: string) => ENDPOINT_LABELS[e] ?? toTitleCase(e);
+
+function suggestionsFor(n: number): Suggestion[] {
+  return [
+    ...(n > 1
+      ? [{ label: 'Compare them', icon: Scale, question: 'Compare these survival curves: where do they separate, cross or plateau, and what does the twin HR suggest?' }]
+      : []),
+    { label: 'Key insights', icon: Lightbulb, question: n === 1 ? 'What does this survival curve show?' : 'What are the key insights from these survival curves?' },
+    { label: 'Twin fidelity', icon: BadgeCheck, question: `How closely ${n === 1 ? 'does the digitized twin' : 'do the digitized twins'} match the published results, and where ${n === 1 ? 'does it' : 'do they'} diverge?` },
+  ];
+}
 
 // Stable empty reference so query-loading state doesn't churn memo/effect deps.
 const EMPTY_CURVES: KmCurveRow[] = [];
@@ -262,7 +275,8 @@ export default function HeadToHeadEfficacyPage() {
 
   return (
     <div className="min-h-screen bg-(--brand-bg)">
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      {/* Bottom padding keeps the table clear of the floating agent button. */}
+      <div className="mx-auto max-w-7xl px-6 pt-8 pb-28">
         <PageHeader
           category={slugToCategory(categorySlug)}
           title="KM Curves Intelligence"
@@ -447,6 +461,21 @@ export default function HeadToHeadEfficacyPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AgentDrawer
+        cancerType={categorySlug}
+        noun="curve"
+        emptyHint="Pick treatment arms to ask about their curves, or ask anything about this indication."
+        selected={visibleCurves.map((c) => ({ key: c.id, label: formatArmName(c.arm_name), detail: comparisonLabel(c) }))}
+        contextPrefix={describeKmSelection(
+          endpointLabel(endpoint),
+          visibleCurves,
+          hrInfo && { value: hrInfo.hr, cmpName: hrInfo.cmpName, refName: hrInfo.refName },
+        )}
+        suggestions={suggestionsFor(visibleCurves.length)}
+        onRemove={toggleId}
+        onClear={clearArms}
+      />
     </div>
   );
 }

@@ -3,11 +3,12 @@
 import * as React from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListChecks, Loader2, Scale, ShieldCheck } from 'lucide-react';
 import { readoutsApi } from '@/lib/api';
 import {
   EMPTY_FILTERS,
   MAX_SELECTED,
+  describeSelection,
   filterReadouts,
   groupReadouts,
   sortReadouts,
@@ -15,6 +16,7 @@ import {
   type ReadoutFilters as Filters,
 } from '@/lib/readouts';
 import { AgentDrawer } from '@/components/agent/AgentDrawer';
+import type { Suggestion } from '@/components/agent/ChatPanel';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { ReadoutCard } from '@/components/dashboard/ReadoutCard';
 import { ReadoutFilters } from '@/components/dashboard/ReadoutFilters';
@@ -22,6 +24,15 @@ import { slugToCategory } from '@/lib/dashboard-constants';
 import { cn } from '@/lib/utils';
 
 const PAGE_SIZE = 20;
+
+function suggestionsFor(n: number): Suggestion[] {
+  const these = n === 1 ? 'this readout' : 'these readouts';
+  return [
+    ...(n > 1 ? [{ label: 'Compare them', icon: Scale, question: `Compare the efficacy and safety of ${these}.` }] : []),
+    { label: 'Key results', icon: ListChecks, question: `Summarise the key results of ${these}.` },
+    { label: 'Safety', icon: ShieldCheck, question: n === 1 ? 'What safety findings does this readout report?' : 'What safety findings do these readouts report?' },
+  ];
+}
 
 const PAGE_BUTTON =
   'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:opacity-40';
@@ -198,7 +209,11 @@ export default function IntelligenceHubPage() {
 
       <AgentDrawer
         cancerType={categorySlug}
-        selected={[...selected.values()]}
+        noun="readout"
+        emptyHint="Tick readout cards to ask about them, or ask anything about this indication."
+        selected={[...selected.values()].map((r) => ({ key: r.key, label: r.acronym ?? r.drug ?? r.nctId, detail: r.source.label }))}
+        contextPrefix={describeSelection([...selected.values()])}
+        suggestions={suggestionsFor(selected.size)}
         onRemove={(key) => update((next) => void next.delete(key))}
         onClear={() => setSelected(new Map())}
       />
