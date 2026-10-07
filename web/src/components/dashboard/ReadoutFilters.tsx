@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   FILTER_GROUPS,
@@ -120,53 +120,95 @@ export function ReadoutFilters({
   readouts,
   filters,
   onChange,
+  collapsed,
+  onCollapsedChange,
 }: {
   readouts: Readout[];
   filters: Filters;
   onChange: (f: Filters) => void;
+  /** Desktop only: the rail shrinks to its toggle. A phone always shows the filters. */
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
 }) {
   const wide = useWide();
+
+  // Cmd/Ctrl+B, as on the agent page's history rail.
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'b' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        onCollapsedChange(!collapsed);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [collapsed, onCollapsedChange]);
+
+  const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+
   return (
     // Same geometry as the global sidebar it docks against: sticky under the
     // 56px top nav, full remaining height, scrolling on its own.
     <aside
       aria-label="Filters"
-      className="flex flex-col lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:border-r lg:border-(--brand-border) lg:bg-(--brand-surface) lg:px-4 lg:pt-6 lg:pb-8 lg:[scrollbar-width:thin]"
+      className={cn(
+        'flex flex-col lg:sticky lg:top-14 lg:h-[calc(100vh-3.5rem)] lg:overflow-y-auto lg:overscroll-contain lg:pb-8 lg:[scrollbar-width:thin]',
+        // Collapsed the rail is a single icon on the page background, as on the
+        // agent page: a panel and border would frame an empty column.
+        collapsed ? 'lg:px-2' : 'lg:border-r lg:border-(--brand-border) lg:bg-(--brand-surface) lg:px-4',
+      )}
     >
-      <label className="flex items-center gap-2 rounded-lg border border-(--brand-border) bg-(--brand-surface) px-2.5 py-2 text-[13px] focus-within:border-(--brand-primary)">
-        <Search className="h-[15px] w-[15px] shrink-0 text-[#7F9BA5]" aria-hidden="true" />
-        <input
-          type="search"
-          value={filters.search}
-          onChange={(e) => onChange({ ...filters, search: e.target.value })}
-          placeholder="Drug, trial or NCT number"
-          aria-label="Search readouts"
-          className="w-full min-w-0 bg-transparent outline-none placeholder:text-[#7F9BA5]"
-        />
-      </label>
-      <label className="flex cursor-pointer items-center gap-2.5 pt-3.5 pb-1.5 text-[13px]">
+      <div className={cn('hidden h-12 shrink-0 items-center lg:flex', collapsed ? 'justify-center' : 'justify-between')}>
+        {!collapsed && (
+          <span className="font-mono text-[10px] tracking-[0.12em] text-(--brand-text-muted) uppercase">Filters</span>
+        )}
         <button
           type="button"
-          role="switch"
-          aria-checked={filters.onlyResults}
-          onClick={() => onChange({ ...filters, onlyResults: !filters.onlyResults })}
-          className={cn(
-            'relative h-[17px] w-[30px] shrink-0 rounded-full transition-colors',
-            filters.onlyResults ? 'bg-(--brand-primary)' : 'bg-[#B4C9C1]',
-          )}
+          onClick={() => onCollapsedChange(!collapsed)}
+          title={`${collapsed ? 'Show' : 'Hide'} filters (⌘B)`}
+          aria-label={`${collapsed ? 'Show' : 'Hide'} filters`}
+          aria-expanded={!collapsed}
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-(--brand-text-muted) transition hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none"
         >
-          <span
-            className={cn(
-              'absolute top-0.5 h-[13px] w-[13px] rounded-full bg-white transition-[left]',
-              filters.onlyResults ? 'left-[15px]' : 'left-0.5',
-            )}
-          />
+          <ToggleIcon className="h-4 w-4" aria-hidden />
         </button>
-        Only readouts with results
-      </label>
-      {FILTER_GROUPS.map((g) => (
-        <Group key={g} group={g} readouts={readouts} filters={filters} onChange={onChange} open={wide} />
-      ))}
+      </div>
+      <div className={cn('flex flex-col', collapsed && 'lg:hidden')}>
+        <label className="flex items-center gap-2 rounded-lg border border-(--brand-border) bg-(--brand-surface) px-2.5 py-2 text-[13px] focus-within:border-(--brand-primary)">
+          <Search className="h-[15px] w-[15px] shrink-0 text-[#7F9BA5]" aria-hidden="true" />
+          <input
+            type="search"
+            value={filters.search}
+            onChange={(e) => onChange({ ...filters, search: e.target.value })}
+            placeholder="Drug, trial or NCT number"
+            aria-label="Search readouts"
+            className="w-full min-w-0 bg-transparent outline-none placeholder:text-[#7F9BA5]"
+          />
+        </label>
+        <label className="flex cursor-pointer items-center gap-2.5 pt-3.5 pb-1.5 text-[13px]">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={filters.onlyResults}
+            onClick={() => onChange({ ...filters, onlyResults: !filters.onlyResults })}
+            className={cn(
+              'relative h-[17px] w-[30px] shrink-0 rounded-full transition-colors',
+              filters.onlyResults ? 'bg-(--brand-primary)' : 'bg-[#B4C9C1]',
+            )}
+          >
+            <span
+              className={cn(
+                'absolute top-0.5 h-[13px] w-[13px] rounded-full bg-white transition-[left]',
+                filters.onlyResults ? 'left-[15px]' : 'left-0.5',
+              )}
+            />
+          </button>
+          Only readouts with results
+        </label>
+        {FILTER_GROUPS.map((g) => (
+          <Group key={g} group={g} readouts={readouts} filters={filters} onChange={onChange} open={wide} />
+        ))}
+      </div>
     </aside>
   );
 }
