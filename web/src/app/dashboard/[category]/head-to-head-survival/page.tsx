@@ -29,6 +29,7 @@ import { AgentDrawer } from '@/components/agent/AgentDrawer';
 import type { Suggestion } from '@/components/agent/ChatPanel';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { slugToCategory } from '@/lib/dashboard-constants';
+import { cn } from '@/lib/utils';
 import { kmCurvesApi, type KmCurveRow, type KmPoint } from '@/lib/api';
 import { describeKmSelection } from '@/lib/km-agent';
 import { formatArmName } from '@/lib/utils/arm-name';
@@ -152,40 +153,32 @@ function computeApproxHR(cmpArm: KmCurveRow, refArm: KmCurveRow): number | null 
   return OCmp / ECmp;
 }
 
-export default function HeadToHeadEfficacyPage() {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const categorySlug = params?.category as string;
-  // Deep link from the endpoints table's KM Curve column: preselect that trial's arms.
-  const linkedNctId = searchParams.get('nct');
+const MAX_ARMS = 4;
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['km-curves', categorySlug],
-    queryFn: () => kmCurvesApi.getByCancerType(categorySlug),
-    staleTime: 5 * 60 * 1000,
-  });
-  const allCurves = data ?? EMPTY_CURVES;
+/**
+ * The endpoint a panel opens on: the first one the other panel has not taken,
+ * preferring one the deep-linked trial has a curve for.
+ */
+function defaultEndpoint(endpoints: string[], taken: string | undefined, curves: KmCurveRow[], linkedNctId: string | null) {
+  const free = endpoints.filter((e) => e !== taken);
+  const linked = linkedNctId
+    ? free.find((e) => curves.some((c) => c.nct_id === linkedNctId && canonicalEndpoint(c.endpoint) === e))
+    : undefined;
+  return linked ?? free[0] ?? '';
+}
 
-  // Distinct canonical endpoints across all publications (PFS, OS, …), in a fixed
-  // clinical order with any unrecognized ones trailing alphabetically.
-  const endpoints = React.useMemo(() => {
-    const set = new Set(allCurves.map((c) => canonicalEndpoint(c.endpoint)));
-    return [...set].sort((a, b) => {
-      const ai = ENDPOINT_ORDER.indexOf(a);
-      const bi = ENDPOINT_ORDER.indexOf(b);
-      if (ai !== -1 || bi !== -1) return (ai === -1 ? ENDPOINT_ORDER.length : ai) - (bi === -1 ? ENDPOINT_ORDER.length : bi);
-      return a.localeCompare(b);
-    });
-  }, [allCurves]);
-
+/**
+ * One endpoint's chart and table: the endpoint, the arms picked for it, and
+ * what is drawn from them. `taken` is the other panel's endpoint, which this
+ * one moves off; only the second panel passes it, so the two never chase each
+ * other.
+ */
+function useKmPanel(allCurves: KmCurveRow[], endpoints: string[], linkedNctId: string | null, taken?: string) {
   const [endpoint, setEndpoint] = React.useState<string>('');
   React.useEffect(() => {
-    if (!endpoints.length || endpoints.includes(endpoint)) return;
-    const linked = linkedNctId
-      ? allCurves.find((c) => c.nct_id === linkedNctId)
-      : undefined;
-    setEndpoint(linked ? canonicalEndpoint(linked.endpoint) : endpoints[0]);
-  }, [endpoints, endpoint, allCurves, linkedNctId]);
+    if (endpoints.includes(endpoint) && endpoint !== taken) return;
+    setEndpoint(defaultEndpoint(endpoints, taken, allCurves, linkedNctId));
+  }, [endpoints, endpoint, taken, allCurves, linkedNctId]);
 
   // All arms for the selected endpoint, across every publication/cohort.
   const armsForEndpoint = React.useMemo(
@@ -243,8 +236,145 @@ export default function HeadToHeadEfficacyPage() {
     const [cmp, ref] = medA >= medB ? [a, b] : [b, a];
     const hr = computeApproxHR(cmp, ref);
     if (hr == null) return null;
-    return { hr, cmpName: formatArmName(cmp.arm_name), refName: formatArmName(ref.arm_name) };
+    return { value: hr, cmpName: formatArmName(cmp.arm_name), refName: formatArmName(ref.arm_name) };
   }, [visibleCurves]);
+
+  const toggleId = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else if (next.size < MAX_ARMS) next.add(id);
+      return next;
+    });
+  };
+  const removeId = (id: string) =>
+    setSelectedIds((prev) => (prev.has(id) ? new Set([...prev].filter((x) => x !== id)) : prev));
+  const selectAllArms = () =>
+    setSelectedIds(new Set(armsForEndpoint.slice(0, MAX_ARMS).map((c) => c.id)));
+  const clearArms = () => setSelectedIds(new Set());
+
+  return {
+    endpoint,
+    setEndpoint,
+    armsForEndpoint,
+    armGroups,
+    selectedIds,
+    visibleCurves,
+    hrInfo,
+    toggleId,
+    removeId,
+    selectAllArms,
+    clearArms,
+  };
+}
+
+type KmPanel = ReturnType<typeof useKmPanel>;
+
+const FILTER_BUTTON =
+  'h-9 gap-2 rounded-full border-(--brand-border) bg-(--brand-surface) pl-3 pr-2.5 text-(--brand-text) shadow-sm hover:border-(--brand-primary) hover:bg-(--brand-accent-light)';
+
+/** One panel's endpoint and treatment-arm filters. `taken` is the other panel's endpoint, disabled here. */
+function KmFilters({ panel, endpoints, taken }: { panel: KmPanel; endpoints: string[]; taken: string }) {
+  const { endpoint, setEndpoint, armsForEndpoint, armGroups, selectedIds, toggleId, selectAllArms, clearArms } = panel;
+  return (
+    // `contents`: each row's two buttons sit in the page's shared grid, so the rows line up.
+    <div className="contents">
+      {endpoints.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className={cn(FILTER_BUTTON, 'w-full')}>
+              <SurvivalCurveIcon className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
+              <span className="max-w-[180px] flex-1 truncate text-left font-medium">
+                {endpoint ? endpointLabel(endpoint) : 'Endpoint'}
+              </span>
+              <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-72">
+            <DropdownMenuRadioGroup value={endpoint} onValueChange={setEndpoint}>
+              {endpoints.map((e) => (
+                <DropdownMenuRadioItem key={e} value={e} disabled={e === taken}>
+                  {endpointLabel(e)}
+                  {e === taken && <span className="ml-auto shrink-0 pl-2 text-xs text-(--brand-text-muted)">In use</span>}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" disabled={!armsForEndpoint.length} className={cn(FILTER_BUTTON, 'w-full')}>
+            <ListFilter className="h-4 w-4 text-(--brand-text-muted)" />
+            <span className="flex-1 text-left font-medium">Treatment arms</span>
+            <Badge
+              variant="secondary"
+              className="bg-(--brand-accent-light) px-1.5 py-0 text-(--brand-primary)"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {selectedIds.size}
+            </Badge>
+            <ChevronDown className="h-4 w-4 text-(--brand-text-muted)" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-[300px] p-0">
+          <div className="flex items-center justify-between gap-2 border-b border-(--brand-border) px-3 py-2">
+            <span
+              className="text-xs text-(--brand-text-muted)"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {selectedIds.size} of {Math.min(armsForEndpoint.length, MAX_ARMS)} selected (max {MAX_ARMS})
+            </span>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={selectAllArms}
+                disabled={selectedIds.size === armsForEndpoint.length}
+                className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={clearArms}
+                disabled={selectedIds.size === 0}
+                className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          <div className="max-h-[360px] overflow-y-auto py-1">
+            {armGroups.map((g, gi) => (
+              <React.Fragment key={g.key}>
+                {gi > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuLabel className="truncate text-xs font-normal text-(--brand-text-muted)">
+                  {g.label}
+                </DropdownMenuLabel>
+                {g.arms.map((c) => (
+                  <DropdownMenuCheckboxItem
+                    key={c.id}
+                    checked={selectedIds.has(c.id)}
+                    disabled={!selectedIds.has(c.id) && selectedIds.size >= MAX_ARMS}
+                    onCheckedChange={() => toggleId(c.id)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {formatArmName(c.arm_name)}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
+/** One panel's KM chart and its published-vs-twin table. */
+function KmResults({ panel, isLoading }: { panel: KmPanel; isLoading: boolean }) {
+  const { endpoint, visibleCurves, hrInfo } = panel;
 
   // Rate timepoint can differ per arm. When selected arms agree, name it in the
   // column header; when they mix, keep the header generic and annotate each cell.
@@ -259,19 +389,116 @@ export default function HeadToHeadEfficacyPage() {
   const fmtRate = (value: number | null | undefined, tp: number | null | undefined) =>
     value == null ? '—' : `${value}%${rateMixed && tp != null ? ` @ ${tp}m` : ''}`;
 
-  const MAX_ARMS = 4;
+  return (
+    <>
+      {/* Chart */}
+      <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
+        <CardHeader className="pb-0">
+          <CardTitle className="text-center text-base font-semibold text-(--brand-text)">
+            {endpoint ? `${endpointLabel(endpoint)} — Digitized twin` : 'Survival curves'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex h-[400px] items-center justify-center text-(--brand-text-muted)">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading curves…
+            </div>
+          ) : (
+            <KaplanMeierChart curves={visibleCurves} endpoint={endpoint} hr={hrInfo} />
+          )}
+        </CardContent>
+      </Card>
 
-  const toggleId = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else if (next.size < MAX_ARMS) next.add(id);
-      return next;
+      {/* Table: published vs digitized-twin */}
+      <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
+        <CardContent className="overflow-x-auto pt-6">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-(--brand-border) bg-(--brand-bg) hover:bg-(--brand-bg)">
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Treatment Arm</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (published)</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (twin)</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">{rateLabel} (published)</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">{rateLabel} (twin)</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Med. Follow-up</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Digitized Twin Status</TableHead>
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Reference</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visibleCurves.map((c) => (
+                <TableRow key={c.id} className="border-(--brand-border)">
+                  <TableCell className="font-medium text-(--brand-text)">
+                    {formatArmName(c.arm_name)}
+                  </TableCell>
+                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.published_median, 'm')}</TableCell>
+                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.twin_median, 'm')}</TableCell>
+                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.published_rate, c.rate_timepoint)}</TableCell>
+                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.twin_rate, c.rate_timepoint)}</TableCell>
+                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.median_follow_up, 'm')}</TableCell>
+                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>
+                    {c.match_pct == null
+                      ? '—'
+                      : `${c.match_pct}% Match${c.n_points != null ? ` (${c.n_points} pts)` : ''}`}
+                  </TableCell>
+                  <TableCell className="max-w-[220px] truncate">
+                    {c.reference
+                      ? /^https?:\/\//.test(c.reference)
+                        ? (
+                          <a
+                            href={c.reference}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-(--brand-primary) hover:underline"
+                          >
+                            {c.reference}
+                          </a>
+                        )
+                        : c.reference
+                      : '—'}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </>
+  );
+}
+
+export default function HeadToHeadEfficacyPage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const categorySlug = params?.category as string;
+  // Deep link from the endpoints table's KM Curve column: preselect that trial's arms.
+  const linkedNctId = searchParams.get('nct');
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['km-curves', categorySlug],
+    queryFn: () => kmCurvesApi.getByCancerType(categorySlug),
+    staleTime: 5 * 60 * 1000,
+  });
+  const allCurves = data ?? EMPTY_CURVES;
+
+  // Distinct canonical endpoints across all publications (PFS, OS, …), in a fixed
+  // clinical order with any unrecognized ones trailing alphabetically.
+  const endpoints = React.useMemo(() => {
+    const set = new Set(allCurves.map((c) => canonicalEndpoint(c.endpoint)));
+    return [...set].sort((a, b) => {
+      const ai = ENDPOINT_ORDER.indexOf(a);
+      const bi = ENDPOINT_ORDER.indexOf(b);
+      if (ai !== -1 || bi !== -1) return (ai === -1 ? ENDPOINT_ORDER.length : ai) - (bi === -1 ? ENDPOINT_ORDER.length : bi);
+      return a.localeCompare(b);
     });
-  };
-  const selectAllArms = () =>
-    setSelectedIds(new Set(armsForEndpoint.slice(0, MAX_ARMS).map((c) => c.id)));
-  const clearArms = () => setSelectedIds(new Set());
+  }, [allCurves]);
+
+  // Two stacked panels, one endpoint each (OS above, PFS below by default), with
+  // their own arms. An endpoint shown in one panel is disabled in the other's filter.
+  const first = useKmPanel(allCurves, endpoints, linkedNctId);
+  const second = useKmPanel(allCurves, endpoints, linkedNctId, first.endpoint);
+  const panels = endpoints.length > 1 ? [first, second] : [first];
+  const selectedCurves = panels.flatMap((p) => p.visibleCurves);
 
   return (
     <div className="min-h-screen bg-(--brand-bg)">
@@ -282,199 +509,33 @@ export default function HeadToHeadEfficacyPage() {
           title="KM Curves Intelligence"
           description="Reconstructed digitized-twin Kaplan–Meier survival curves by treatment arm, head-to-head across publications and cohorts."
           right={
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              {endpoints.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-9 gap-2 rounded-full border-(--brand-border) bg-(--brand-surface) pl-3 pr-2.5 text-(--brand-text) shadow-sm hover:border-(--brand-primary) hover:bg-(--brand-accent-light)"
-                    >
-                      <SurvivalCurveIcon className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
-                      <span className="max-w-[180px] truncate font-medium">
-                        {endpoint ? endpointLabel(endpoint) : 'Endpoint'}
-                      </span>
-                      <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
-                    <DropdownMenuRadioGroup value={endpoint} onValueChange={setEndpoint}>
-                      {endpoints.map((e) => (
-                        <DropdownMenuRadioItem key={e} value={e}>
-                          {endpointLabel(e)}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!armsForEndpoint.length}
-                    className="h-9 gap-2 rounded-full border-(--brand-border) bg-(--brand-surface) pl-3 pr-2.5 text-(--brand-text) shadow-sm hover:border-(--brand-primary) hover:bg-(--brand-accent-light)"
-                  >
-                    <ListFilter className="h-4 w-4 text-(--brand-text-muted)" />
-                    <span className="font-medium">Treatment arms</span>
-                    <Badge
-                      variant="secondary"
-                      className="bg-(--brand-accent-light) px-1.5 py-0 text-(--brand-primary)"
-                      style={{ fontFamily: 'var(--font-mono)' }}
-                    >
-                      {selectedIds.size}
-                    </Badge>
-                    <ChevronDown className="h-4 w-4 text-(--brand-text-muted)" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[300px] p-0">
-                  <div className="flex items-center justify-between gap-2 border-b border-(--brand-border) px-3 py-2">
-                    <span
-                      className="text-xs text-(--brand-text-muted)"
-                      style={{ fontFamily: 'var(--font-mono)' }}
-                    >
-                      {selectedIds.size} of {Math.min(armsForEndpoint.length, MAX_ARMS)} selected (max {MAX_ARMS})
-                    </span>
-                    <div className="flex items-center gap-0.5">
-                      <button
-                        type="button"
-                        onClick={selectAllArms}
-                        disabled={selectedIds.size === armsForEndpoint.length}
-                        className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
-                      >
-                        All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={clearArms}
-                        disabled={selectedIds.size === 0}
-                        className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </div>
-                  <div className="max-h-[360px] overflow-y-auto py-1">
-                    {armGroups.map((g, gi) => (
-                      <React.Fragment key={g.key}>
-                        {gi > 0 && <DropdownMenuSeparator />}
-                        <DropdownMenuLabel className="truncate text-xs font-normal text-(--brand-text-muted)">
-                          {g.label}
-                        </DropdownMenuLabel>
-                        {g.arms.map((c) => (
-                          <DropdownMenuCheckboxItem
-                            key={c.id}
-                            checked={selectedIds.has(c.id)}
-                            disabled={!selectedIds.has(c.id) && selectedIds.size >= MAX_ARMS}
-                            onCheckedChange={() => toggleId(c.id)}
-                            onSelect={(e) => e.preventDefault()}
-                          >
-                            {formatArmName(c.arm_name)}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[auto_auto]">
+              {panels.map((p, i) => (
+                <KmFilters key={i} panel={p} endpoints={endpoints} taken={panels[1 - i]?.endpoint ?? ''} />
+              ))}
             </div>
           }
         />
 
-        {/* Chart */}
-        <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
-          <CardHeader className="pb-0">
-            <CardTitle className="text-center text-base font-semibold text-(--brand-text)">
-              {endpoint ? `${endpointLabel(endpoint)} — Digitized twin` : 'Survival curves'}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex h-[400px] items-center justify-center text-(--brand-text-muted)">
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading curves…
-              </div>
-            ) : (
-              <KaplanMeierChart
-                curves={visibleCurves}
-                endpoint={endpoint}
-                hr={hrInfo ? { value: hrInfo.hr, cmpName: hrInfo.cmpName, refName: hrInfo.refName } : null}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Table: published vs digitized-twin */}
-        <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
-          <CardContent className="overflow-x-auto pt-6">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b border-(--brand-border) bg-(--brand-bg) hover:bg-(--brand-bg)">
-                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Treatment Arm</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (published)</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (twin)</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">{rateLabel} (published)</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">{rateLabel} (twin)</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Med. Follow-up</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Digitized Twin Status</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Reference</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleCurves.map((c) => (
-                  <TableRow key={c.id} className="border-(--brand-border)">
-                    <TableCell className="font-medium text-(--brand-text)">
-                      {formatArmName(c.arm_name)}
-                    </TableCell>
-                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.published_median, 'm')}</TableCell>
-                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.twin_median, 'm')}</TableCell>
-                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.published_rate, c.rate_timepoint)}</TableCell>
-                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.twin_rate, c.rate_timepoint)}</TableCell>
-                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.median_follow_up, 'm')}</TableCell>
-                    <TableCell style={{ fontFamily: 'var(--font-mono)' }}>
-                      {c.match_pct == null
-                        ? '—'
-                        : `${c.match_pct}% Match${c.n_points != null ? ` (${c.n_points} pts)` : ''}`}
-                    </TableCell>
-                    <TableCell className="max-w-[220px] truncate">
-                      {c.reference
-                        ? /^https?:\/\//.test(c.reference)
-                          ? (
-                            <a
-                              href={c.reference}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-(--brand-primary) hover:underline"
-                            >
-                              {c.reference}
-                            </a>
-                          )
-                          : c.reference
-                        : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        {panels.map((p, i) => (
+          <KmResults key={i} panel={p} isLoading={isLoading} />
+        ))}
       </div>
 
       <AgentDrawer
         cancerType={categorySlug}
         noun="curve"
         emptyHint="Pick treatment arms to ask about their curves, or ask anything about this indication."
-        selected={visibleCurves.map((c) => ({ key: c.id, label: formatArmName(c.arm_name), detail: comparisonLabel(c) }))}
-        contextPrefix={describeKmSelection(
-          endpointLabel(endpoint),
-          visibleCurves,
-          hrInfo && { value: hrInfo.hr, cmpName: hrInfo.cmpName, refName: hrInfo.refName },
+        selected={panels.flatMap((p) =>
+          p.visibleCurves.map((c) => ({ key: c.id, label: formatArmName(c.arm_name), detail: `${p.endpoint} · ${comparisonLabel(c)}` }))
         )}
-        suggestions={suggestionsFor(visibleCurves.length)}
-        onRemove={toggleId}
-        onClear={clearArms}
+        contextPrefix={panels
+          .filter((p) => p.visibleCurves.length)
+          .map((p) => describeKmSelection(endpointLabel(p.endpoint), p.visibleCurves, p.hrInfo))
+          .join('\n\n')}
+        suggestions={suggestionsFor(selectedCurves.length)}
+        onRemove={(id) => panels.forEach((p) => p.removeId(id))}
+        onClear={() => panels.forEach((p) => p.clearArms())}
       />
     </div>
   );
