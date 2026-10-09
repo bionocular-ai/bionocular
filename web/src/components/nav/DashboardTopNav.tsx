@@ -15,10 +15,7 @@ export function DashboardTopNav() {
     <header className="sticky top-0 z-40 h-14 border-b border-(--brand-border) bg-(--brand-surface) shadow-sm">
       <div className="flex h-full items-center justify-between gap-4 px-6">
         <Link href="/" className="brand flex-shrink-0">
-          <Logo height={32} />
-          <span className="brand-text text-lg">
-            bi<span className="brand-o">o</span>nocular
-          </span>
+          <Logo className="text-[22px]" />
         </Link>
         <div className="flex items-center gap-2">
           <HomeNavLink />

@@ -273,10 +273,7 @@ export default function Home() {
       <header className="site-header">
         <div className="container header-inner">
           <a className="brand" href="#" aria-label="Bionocular Home">
-            <Logo height={32} />
-            <span className="brand-text" style={{ lineHeight: '1.2' }}>
-              bi<span className="brand-o">o</span>nocular
-            </span>
+            <Logo className="text-[22px] xl:text-[26px]" />
           </a>
           <button 
             className="mobile-menu-toggle" 
@@ -471,7 +468,7 @@ export default function Home() {
                 {/* Top accent stripe */}
                 <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ background: 'linear-gradient(90deg, var(--brand-primary), var(--brand-accent))' }} />
                 <h3 className="text-2xl font-bold mb-1" style={{ color: 'var(--brand-primary)' }}>
-                  With bi<span style={{ textDecoration: 'underline', textDecorationColor: 'var(--brand-accent)', textDecorationThickness: '2px', textUnderlineOffset: '4px' }}>o</span>nocularAI
+                  With <span className="brand-text"><span className="brand-bio">bio</span>nocular</span>AI
                 </h3>
                 <p className="font-medium mb-8" style={{ color: 'var(--brand-accent)' }}>Dynamic, AI-Driven Intelligence</p>
 
@@ -546,9 +543,7 @@ export default function Home() {
                 The Clinical Clarity Pipeline
               </h2>
               <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--brand-text-muted)' }}>
-                From data noise to clinical clarity: The bi
-                <span style={{ textDecoration: 'underline', textDecorationColor: 'var(--brand-accent)', textDecorationThickness: '2px', textUnderlineOffset: '4px' }}>o</span>
-                nocular AI Advantage
+                From data noise to clinical clarity: The bionocular AI Advantage
               </p>
             </div>
 
@@ -645,10 +640,7 @@ export default function Home() {
           <div className="footer-section">
             {/* Brand lockup */}
             <div className="flex items-center gap-2 mb-2">
-              <Logo height={28} />
-              <span style={{ fontWeight: 700, fontSize: '1.25rem', color: '#fff', fontFamily: "'IBM Plex Sans', Inter, system-ui, sans-serif", letterSpacing: '0.2px' }}>
-                bi<span className="brand-o">o</span>nocular
-              </span>
+              <Logo className="text-xl text-white" />
             </div>
             <p>Human‑verified oncology intelligence for research and medical teams.</p>
           </div>
