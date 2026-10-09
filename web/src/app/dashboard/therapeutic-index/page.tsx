@@ -29,10 +29,7 @@ export default function TherapeuticIndexPage() {
         <div className="w-full px-3 sm:px-4 md:px-6">
           <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
             <Link href="/" className="brand flex-shrink-0">
-              <Logo height={32} />
-              <span className="brand-text" style={{ lineHeight: '1.2' }}>
-                bi<span className="brand-o">o</span>nocular
-              </span>
+              <Logo className="text-[22px]" />
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
               {session?.user && (
