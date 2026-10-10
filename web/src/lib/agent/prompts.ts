@@ -4,7 +4,7 @@ import { describeSkills } from './skills';
  * Bumped whenever the instructions below or a SKILL.md changes, so a run
  * record and an eval result can say which prompt produced them.
  */
-export const PROMPT_VERSION = '2026-10-07.1';
+export const PROMPT_VERSION = '2026-10-10.1';
 
 /**
  * Only what holds on every turn: who the assistant is, where its facts may
@@ -32,7 +32,7 @@ ${describeSkills()}
 ANSWERING
 The interface draws every row as a table beside your answer, each with its source, so the table is the references. Do not reproduce rows or repeat their numbers. Answer in this shape:
 1. "**Scope:**" one sentence on what was searched, key terms bold.
-2. One sentence with the count that answers the question, and how many in scope have no data, grouped by why. Count those; do not list them.
+2. One sentence with the count that answers the question, and how many in scope have no data, grouped by why; do not list them. Quote both from the coverage report; never count rows.
 3. At most four bullets for what the table cannot say: a missed significance, a press-release-only source, a coverage caveat. One point each, never a trial's results: "NCT05155254 missed significance (p=0.0558)."
 No headings, about 150 words. Counts match what the tools returned.
 

@@ -4,7 +4,16 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type React
 import Link from 'next/link';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { ArrowUpRight, Check, ChevronDown, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { ABSENT, capSections, columnTooltip, filterRows, toFacets, toSections } from '@/lib/agent/result-table';
+import {
+  ABSENT,
+  capSections,
+  columnTooltip,
+  defaultPicks,
+  filterRows,
+  reportsAny,
+  toFacets,
+  toSections,
+} from '@/lib/agent/result-table';
 import type { Facet, ResultParameter, ResultSummary, ResultTable } from '@/lib/agent/result-table';
 import type { EfficacyLink } from '@/lib/agent/efficacy-link';
 import {
@@ -141,13 +150,6 @@ const PAGE_ROWS = 20;
  * source without the table becoming a spreadsheet the reader has to scroll.
  */
 const MAX_PARAMETERS = 5;
-
-/**
- * Endpoints drawn before the reader picks. `parameters` is ranked by how many
- * arms report each, so these are the three the most arms can be compared on -
- * ORR, DCR and CR for the active Phase 1 set, PFS and OS where trials mature.
- */
-const DEFAULT_PARAMETERS = 3;
 
 const FAMILY_LABELS: Record<ResultParameter['family'], string> = {
   efficacy: 'Efficacy',
@@ -570,11 +572,9 @@ export function TurnTable({
     if (!parameters) return [];
     const known = (keys: string[]) => keys.filter((key) => parameters.some((p) => p.key === key));
     const kept = known(picks ?? []);
-    if (kept.length > 0) return kept;
-    // What the question named, before what the most arms happen to report.
-    const asked = known(table.asked ?? []);
-    return asked.length > 0 ? asked : parameters.slice(0, DEFAULT_PARAMETERS).map((p) => p.key);
-  }, [parameters, picks, table.asked]);
+    // The same pick the agent's count is taken from, so the two agree.
+    return kept.length > 0 ? kept : defaultPicks(table);
+  }, [parameters, picks, table]);
   const togglePick = useCallback(
     (key: string) =>
       setPicks(picked.includes(key) ? picked.filter((k) => k !== key) : [...picked, key]),
@@ -739,13 +739,7 @@ export function TurnTable({
   // It is left out and counted, so the numbers on screen still add up.
   const [drawn, silent] = useMemo(() => {
     if (!parameters) return [rows, 0];
-    // A picked column an earlier readout reports still answers what was
-    // asked - RELATIVITY-047's any-cause rate sits in NEJM 2022, not the
-    // newest readout, and the treatment must not read as silent for that.
-    const has = (row: string[]) =>
-      pickedIndices.some((index) => row[index] !== ABSENT) ||
-      (earlierOf.get(row) ?? []).some((readout) => pickedIndices.some((index) => readout[index] !== ABSENT));
-    const reporting = rows.filter(has);
+    const reporting = rows.filter((row) => reportsAny([row, ...(earlierOf.get(row) ?? [])], pickedIndices));
     return [reporting, rows.length - reporting.length];
   }, [rows, parameters, pickedIndices, earlierOf]);
   const sections = useMemo(

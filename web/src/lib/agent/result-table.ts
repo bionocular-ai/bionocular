@@ -15,6 +15,7 @@
  */
 
 import { normalizePhase, normalizePurpose, normalizeStatus } from '@/lib/clinical-trials-enums';
+import { regimenKey } from './regimen';
 import { TRIAL_OUTCOMES_ENDPOINTS } from './tools/schema';
 
 export interface ResultColumn {
@@ -566,4 +567,83 @@ export function filterRows(
       chosen.every(([index, value]) => row[Number(index)] === value) &&
       (needle === '' || row.join(' ').toLowerCase().includes(needle))
   );
+}
+
+/**
+ * Endpoints drawn before the reader picks: the ones the question named, else
+ * the most-reported. `parameters` is ranked by how many arms report each, so
+ * these are the three the most arms can be compared on - ORR, DCR and CR for
+ * the active Phase 1 set, PFS and OS where trials mature.
+ */
+export const DEFAULT_PARAMETERS = 3;
+
+export function defaultPicks(table: ResultTable): string[] {
+  const parameters = table.parameters ?? [];
+  const asked = (table.asked ?? []).filter((key) => parameters.some((p) => p.key === key));
+  return asked.length > 0 ? asked : parameters.slice(0, DEFAULT_PARAMETERS).map((p) => p.key);
+}
+
+/**
+ * Whether a treatment answers the picked columns: its own cells, or any earlier
+ * readout's - RELATIVITY-047's any-cause rate sits in NEJM 2022, not the newest
+ * readout, and the treatment must not read as silent for that.
+ */
+export function reportsAny(readouts: string[][], indices: number[]): boolean {
+  return readouts.some((cells) => indices.some((index) => cells[index] !== ABSENT));
+}
+
+interface Counted {
+  /** Table rows: one per treatment arm or cohort of a trial, earlier readouts folded in. */
+  arms: number;
+  /**
+   * Distinct regimens per trial, by `regimenKey`: three cohorts of one combination
+   * in one trial are one treatment, the same combination in two trials is two.
+   */
+  treatments: number;
+  trials: number;
+}
+
+export interface AnswerCounts extends Counted {
+  /** The endpoints counted: the ones the table draws before the reader picks. */
+  columns: string[];
+  reporting: Counted;
+  /**
+   * What reports none of `columns`: arms, the treatments with no reporting arm
+   * anywhere, and the trials those arms belong to - read as "36 arms across
+   * 22 trials", which a trial that also has a reporting arm is part of.
+   */
+  none: Counted;
+}
+
+/**
+ * The count an outcomes answer opens with, taken from the table the app draws
+ * rather than left to the model. Counting the rows itself, the model wrote
+ * "16 arms across 9 trials" and, from the same 72 rows, "17 across 8", beside a
+ * table of 19 arms - 16 treatments - across 12 trials.
+ */
+export function answerCounts(table: ResultTable): AnswerCounts | null {
+  const columns = defaultPicks(table);
+  if (columns.length === 0) return null;
+  const index = (key: string) => table.columns.findIndex((column) => column.key === key);
+  const indices = columns.map(index);
+  const [nct, name] = [index('nct_id'), index('treatment_name')];
+  const present = (cell: string | undefined): cell is string => cell !== undefined && cell !== ABSENT;
+  const distinct = (rows: string[][], at: number) => new Set(rows.map((row) => row[at]).filter(present));
+  const regimens = (rows: string[][]) =>
+    new Set(rows.filter((row) => present(row[name])).map((row) => `${row[nct]} ${regimenKey(row[name])}`));
+  const count = (rows: string[][], treatments = regimens(rows).size): Counted => ({
+    arms: rows.length,
+    treatments,
+    trials: distinct(rows, nct).size,
+  });
+  const reports = (row: string[], i: number) => reportsAny([row, ...(table.readouts?.[i] ?? [])], indices);
+  const reporting = table.rows.filter(reports);
+  const silent = table.rows.filter((row, i) => !reports(row, i));
+  const answered = regimens(reporting);
+  return {
+    columns,
+    ...count(table.rows),
+    reporting: count(reporting),
+    none: count(silent, [...regimens(silent)].filter((key) => !answered.has(key)).length),
+  };
 }

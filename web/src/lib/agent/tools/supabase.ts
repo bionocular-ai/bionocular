@@ -5,6 +5,8 @@ import { getDbCancerType } from '@/lib/api';
 import { NCT_ID_PATTERN } from '@/lib/constants';
 import { PHASE_MAP, STATUS_MAP } from '@/lib/clinical-trials-enums';
 import { DATA_TOOL_NAMES } from './names';
+import { answerCounts } from '../result-table';
+import { toTurnTable } from '../turn-table';
 import { runTool } from './logging';
 import { MIN_RESULT_CHARS, type TurnState } from './turn';
 import {
@@ -600,11 +602,16 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
 
         // Echoed so the table drawn from this result knows which columns were
         // asked for without pairing outputs back to their inputs.
+        const askedColumns = columns && table === 'trial_outcomes' ? { askedColumns: columns } : {};
+        // The answer's count sentence, counted from the table the reader will
+        // see: the model's own tally of the rows drifted between runs.
+        const drawn = table === 'trial_outcomes' ? toTurnTable([{ ok: true, table, ...askedColumns, rows }]) : null;
+        const answered = drawn ? answerCounts(drawn) : null;
         const result = {
           ok: true as const,
           table,
-          coverage,
-          ...(columns && table === 'trial_outcomes' ? { askedColumns: columns } : {}),
+          coverage: answered ? { ...coverage, answered } : coverage,
+          ...askedColumns,
           rows,
         };
         turn.spend(JSON.stringify(result).length);

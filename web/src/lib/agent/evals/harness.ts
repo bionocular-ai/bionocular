@@ -45,6 +45,8 @@ export interface ToolCallSummary {
   rows?: number;
   matched?: number;
   complete?: boolean;
+  /** `coverage.answered.reporting`: distinct treatments and trials, as the table beside the answer counts them. */
+  answered?: { treatments: number; trials: number };
 }
 
 export interface CaseResult {
@@ -97,7 +99,25 @@ function summariseCall(tool: string, input: unknown, output: unknown): ToolCallS
     rows,
     matched: typeof coverage.matched === 'number' ? coverage.matched : undefined,
     complete: typeof coverage.complete === 'boolean' ? coverage.complete : undefined,
+    answered: isRecord(coverage.answered) && isRecord(coverage.answered.reporting)
+      ? (coverage.answered.reporting as { treatments: number; trials: number })
+      : undefined,
   };
+}
+
+const NUMBER_WORDS = [
+  'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve',
+  'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty',
+];
+
+/**
+ * Whether the answer states `n`, as digits or, for a sentence that opens on
+ * the count, as a word. "1,056" and "1056" are the same claim - the group
+ * separator is presentation, and every count over a thousand carries one.
+ */
+function states(answer: string, n: number): boolean {
+  const plain = answer.replace(/(\d),(?=\d{3}\b)/g, '$1');
+  return new RegExp(`\\b${n}\\b`).test(plain) || (n <= 20 && new RegExp(`\\b${NUMBER_WORDS[n]}\\b`, 'i').test(plain));
 }
 
 function argMatches(actual: unknown, expected: string | RegExp | string[]): boolean {
@@ -208,11 +228,7 @@ export function classify(c: EvalCase, observed: Observed): Failure[] {
   //    that does not match what the tool returned.
   const firstOk = calls.find((x) => x.tool === 'query_proprietary_data' && x.outcome === 'ok');
   if (e.countAwareness && firstOk) {
-    // "1,056" and "1056" are the same claim - the group separator is
-    // presentation, and every count over a thousand carries one.
-    const statesMatched =
-      firstOk.matched !== undefined &&
-      new RegExp(`\\b${firstOk.matched}\\b`).test(answer.replace(/(\d),(?=\d{3}\b)/g, '$1'));
+    const statesMatched = firstOk.matched !== undefined && states(answer, firstOk.matched);
     // A truncated row set only misleads when the answer rests on the rows. An
     // answer that states the matched count has not passed a subset off as the
     // whole, and for a count question that number is the entire answer -
@@ -220,7 +236,17 @@ export function classify(c: EvalCase, observed: Observed): Failure[] {
     if (firstOk.complete === false && !PARTIAL.test(answer) && !statesMatched) {
       failures.push({ kind: 'incomplete-evidence', detail: `result was partial (${firstOk.rows} of ${firstOk.matched}) and the answer does not say so` });
     }
-    if (firstOk.complete === true && firstOk.matched !== undefined && !statesMatched) {
+    // An outcomes answer counts what the table beside it draws - treatments,
+    // earlier readouts folded in - not the arm rows the query matched.
+    const answered = firstOk.answered;
+    if (firstOk.complete === true && answered) {
+      if (!states(answer, answered.treatments) || !states(answer, answered.trials)) {
+        failures.push({
+          kind: 'incomplete-evidence',
+          detail: `answer never states the table's count: ${answered.treatments} treatments from ${answered.trials} trials`,
+        });
+      }
+    } else if (firstOk.complete === true && firstOk.matched !== undefined && !statesMatched) {
       failures.push({ kind: 'incomplete-evidence', detail: `answer never states the matched count ${firstOk.matched}` });
     }
   }

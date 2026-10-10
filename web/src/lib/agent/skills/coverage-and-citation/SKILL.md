@@ -1,6 +1,6 @@
 ---
 name: coverage-and-citation
-description: How to read a tool result's coverage report (matched, returned, complete, truncated, missing, viaJoin, caveat, budget), how to phrase absence and partial results, and how to cite. Load when a result is incomplete, a lookup misses, a query is refused, or the user asks how complete an answer is.
+description: How to read a tool result's coverage report (matched, returned, complete, truncated, missing, viaJoin, answered, caveat, budget), how to phrase absence and partial results, and how to cite. Load when a result is incomplete, a lookup misses, a query is refused, or the user asks how complete an answer is.
 ---
 
 # Coverage and citation
@@ -24,6 +24,9 @@ Every `query_proprietary_data` result carries `coverage`:
 - `viaJoin` appears when `phase`, `status` or `funding` resolved through the
   registry join. Rows with no `nct_id` could not be filtered and are not in
   the result; that is a linkage gap, not evidence they fail the filter.
+- `answered` appears on `trial_outcomes` results: how many treatments and
+  trials report the asked endpoints, and how many report none, counted the
+  way the table beside the answer draws them. Quote these; never recount.
 - `caveat` is the table's standing limitation. Relay it when it bears on the
   answer.
 
