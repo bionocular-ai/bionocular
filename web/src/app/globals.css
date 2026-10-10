@@ -199,15 +199,18 @@ body{
 .brand{display:flex; gap:clamp(6px, 1.5vw, 8px); align-items:center; color:var(--brand-text); text-decoration:none; z-index:21; outline:none}
 .brand:focus-visible{outline:none}
 .brand-mark{height:28px; width:auto}
-.brand-text{font-weight:700; font-family:'IBM Plex Sans', Inter, system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; font-size:clamp(24px, 4vw, 36px); letter-spacing:0.2px; color:var(--brand-primary)}
-.brand-o{text-decoration:underline; text-decoration-color:var(--brand-accent); text-decoration-thickness:2px; text-underline-offset:3px}
-@media (min-width: 1280px){ .site-header .brand-text{font-size:32px} }
-@media (min-width: 1920px){ .site-header .brand-text{font-size:36px} }
 
-/* Responsive logo sizing */
-.responsive-logo{
-  height:clamp(24px, 5vw, var(--logo-height, 32px)) !important;
-  max-height:var(--logo-height, 32px);
+/* The brand lockup (Logo.tsx), every length in em of the wordmark's size, as
+   measured off the brand artwork. In a layer so a call site's text-* utilities
+   set its size and colour. .brand-text is the wordmark alone, also set inline
+   in headings. */
+@layer components {
+  .brand-lockup{display:inline-block; white-space:nowrap; line-height:1; color:#1A1A1A}
+  .brand-text{font-family:var(--font-plus-jakarta-sans), system-ui, sans-serif; font-weight:500; letter-spacing:0.004em}
+  /* The mark stands 1.05em tall, its foot 0.12em below the baseline. The
+     artwork leaves a 1.25em gap; 0.4em reads as one unit at nav sizes. */
+  .brand-lockup-mark{display:inline-block; height:1.05em; width:auto; vertical-align:-0.12em; margin-right:0.4em}
+  .brand-bio{font-weight:800}
 }
 
 /* Dashboard-specific brand text (smaller on mobile) */
@@ -219,10 +222,6 @@ body{
 @media (max-width: 640px){
   .dashboard-brand-text{
     font-size:18px;
-  }
-  .responsive-logo{
-    height:22px !important;
-    max-height:22px;
   }
 }
 
@@ -1036,7 +1035,6 @@ body{
 /* Small Tablet styles (640px - 768px) */
 @media (max-width: 768px){
   .container{width:min(100%, 88%)}
-  .brand-text{font-size:28px}
   .nav{gap:16px}
   .nav a{font-size:13px}
   .hero-title{font-size:26px}
@@ -1088,11 +1086,6 @@ body{
   }
   .nav .btn{width:100%; justify-content:center}
   .brand{gap:6px}
-  .brand-text{font-size:20px}
-  .responsive-logo{
-    height:24px !important;
-    max-height:24px;
-  }
   
   /* Hero section */
   .hero:not(.hero-split){min-height:70vh; padding-top:70px}

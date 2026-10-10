@@ -98,9 +98,9 @@ function SignupForm() {
 
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white rounded-2xl relative z-10">
         <CardHeader className="pb-8 pt-10">
-          <div className="flex justify-center mb-1">
-            <div className="relative w-32 h-32">
-              <Image src="/logo.png" alt="Bionocular Logo" fill sizes="128px" className="object-contain" priority />
+          <div className="flex justify-center mb-4">
+            <div className="relative w-24 h-24">
+              <Image src="/logo.svg" alt="Bionocular Logo" fill sizes="96px" className="object-contain" priority />
             </div>
           </div>
           <h1 className="text-3xl font-bold text-center -mt-1" style={{ color: '#1B4F65' }}>

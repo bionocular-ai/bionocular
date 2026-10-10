@@ -53,8 +53,7 @@ export default function MainDashboardPage() {
           <div className="w-full px-8">
             <div className="flex items-center justify-between h-14 gap-4">
               <Link href="/" className="brand flex-shrink-0">
-                <Logo height={32} />
-                <span className="brand-text text-lg">bi<span className="brand-o">o</span>nocular</span>
+                <Logo className="text-[22px]" />
               </Link>
               <div className="flex items-center gap-2">
                 <HomeNavLink />
@@ -82,7 +81,7 @@ export default function MainDashboardPage() {
                 <h1 className="text-3xl sm:text-4xl font-extrabold text-[var(--brand-text)] tracking-tight leading-none">
                   Disease Portfolios{' '}
                   <span style={{ color: 'var(--brand-primary)' }}>
-                    bi<span className="brand-o">o</span>nocular
+                    <span className="brand-text"><span className="brand-bio">bio</span>nocular</span>
                   </span>
                 </h1>
                 <p className="mt-2 text-sm text-[var(--brand-text-muted)] max-w-md">
