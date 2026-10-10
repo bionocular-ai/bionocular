@@ -98,11 +98,16 @@ but you read every row: cite the readout each number comes from.
 
 ## Answer shape
 
-Follow the answer shape in your instructions. The count sentence names how
-many treatments from how many trials, and counts the trials in scope whose
-rows carry none of the asked endpoints - or, for an efficacy-versus-safety
-question, none of the asked efficacy endpoints - grouped by why (adjuvant,
-still recruiting); do not list them. An arm that reports some of the asked endpoints
+Follow the answer shape in your instructions. The count sentence quotes
+`coverage.answered` exactly, distinct treatments first: "`reporting.treatments`
+treatments (`reporting.arms` arms) from `reporting.trials` trials report at
+least one asked endpoint; `none.treatments` more (`none.arms` arms, in
+`none.trials` trials) report none" - grouped by why (adjuvant, still
+recruiting), with no number per reason; do not list them. Three cohorts of one
+combination in one trial are one treatment and three arms; the same
+combination in two trials is two treatments. A trial can be on both sides,
+so never add or subtract these; never count rows yourself, since your tally
+will not match the table beside the answer. An arm that reports some of the asked endpoints
 and not others is in the table, not a trial without a readout. Bullets are for
 what the rows cannot show: a missed significance, a press-release-only source,
 an `issues` expert review, arms from different trials not being randomised.
