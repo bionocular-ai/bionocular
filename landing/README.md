@@ -13,7 +13,8 @@ landing/
 ├── tailwind.generated.css  built Tailwind output, committed and served as-is
 ├── tailwind.config.js
 ├── _headers                Cloudflare Pages headers (CSP and security headers)
-├── logo.png, favicon.ico, og.jpg, Bionocular.mp4
+├── fonts/                  self-hosted Plus Jakarta Sans (the wordmark face) and its licence
+├── logo.svg, icon.svg, favicon.ico, apple-touch-icon.png, og.jpg, Bionocular.mp4
 ```
 
 ## Local development
