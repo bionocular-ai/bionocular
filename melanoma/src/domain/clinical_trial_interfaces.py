@@ -107,21 +107,6 @@ class ClinicalTrialRepository(ABC):
         pass
 
     @abstractmethod
-    def get_therapeutic_index_trials(
-        self, skip: int = 0, limit: int = 100
-    ) -> tuple[list[dict], int]:
-        """Get full trial details for trials in extraction_provenance.
-
-        Args:
-            skip: Number of records to skip
-            limit: Maximum number of records to return
-
-        Returns:
-            Tuple of (list of trial dictionaries, total count)
-        """
-        pass
-
-    @abstractmethod
     def batch_upsert_discovery(self, records: list[tuple[str, str, str]]) -> None:
         """Efficiently batch insert discovery records.
 
