@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bionocular film preview</title>
+<style>
+  @font-face { font-family: FilmDisplay; font-weight: 100 900; src: url(assets/fonts/fraunces-latin.woff2) format('woff2'); }
+  @font-face { font-family: FilmSans; font-weight: 100 900; src: url(assets/fonts/public-sans-latin.woff2) format('woff2'); }
+  @font-face { font-family: FilmMono; font-weight: 400; src: url(assets/fonts/ibm-plex-mono-latin-400.woff2) format('woff2'); }
+  @font-face { font-family: FilmMono; font-weight: 500; src: url(assets/fonts/ibm-plex-mono-latin-500.woff2) format('woff2'); }
+  @font-face { font-family: FilmMono; font-weight: 600; src: url(assets/fonts/ibm-plex-mono-latin-600.woff2) format('woff2'); }
+  html, body { margin: 0; background: #F7FAF9; color: #102B36; font: 14px system-ui, sans-serif; }
+  canvas { display: block; }
+  body:not(.render) { display: grid; place-items: center; min-height: 100vh; gap: 12px; }
+  body:not(.render) canvas { width: min(96vw, calc((100vh - 90px) * 16 / 9)); height: auto; border-radius: 8px; }
+  .bar { display: flex; gap: 12px; align-items: center; width: min(96vw, calc((100vh - 90px) * 16 / 9)); }
+  .bar input[type=range] { flex: 1; }
+  .bar button { background: #fff; color: inherit; border: 1px solid #C8E0D8; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  body.render .bar { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="bar">
+  <button id="play">Pause</button>
+  <input id="scrub" type="range" min="0" step="0.001" value="0">
+  <span id="time">0.00s</span>
+  <span style="opacity:.6">space: play/pause · ←/→: ±1 frame · shift+←/→: ±1 s</span>
+</div>
+<script type="module">
+  import { FILM, CUES, IMAGES, draw } from './film.js';
+
+  const canvas = document.getElementById('c');
+  canvas.width = FILM.w;
+  canvas.height = FILM.h;
+  const g = canvas.getContext('2d');
+
+  // Fonts must be loaded before any frame is drawn, or canvas falls back silently.
+  // Every face the film draws with. Canvas falls back silently, so a missing one is reported.
+  const faces = ['400 48px FilmDisplay', '600 48px FilmDisplay', '400 48px FilmSans', '600 48px FilmSans',
+    '400 48px FilmMono', '500 48px FilmMono', '600 48px FilmMono'];
+  window.ready = Promise.all([...faces.map((f) => document.fonts.load(f)), ...IMAGES.map((img) => img.decode())])
+    .then((loaded) => {
+      const missing = faces.filter((_, i) => loaded[i].length === 0);
+      if (missing.length) console.warn('Fonts failed to load for weights', missing);
+      return { fontsMissing: missing };
+    });
+
+  window.FILM = FILM;
+  window.CUES = CUES;
+  window.seek = (t) => { draw(g, t); return true; };
+  window.frame = () => canvas.toDataURL('image/png');
+
+  const renderMode = new URLSearchParams(location.search).has('render');
+  if (renderMode) {
+    document.body.classList.add('render');
+  } else {
+    // Live preview with scrubber. Uses wall-clock time only to choose WHICH t to show.
+    const scrub = document.getElementById('scrub'), label = document.getElementById('time'), btn = document.getElementById('play');
+    scrub.max = FILM.dur;
+    let playing = true, t = 0, last = performance.now();
+    const show = () => { window.seek(t); scrub.value = t; label.textContent = t.toFixed(2) + 's'; };
+    const toggle = () => { playing = !playing; btn.textContent = playing ? 'Pause' : 'Play'; last = performance.now(); };
+    btn.onclick = toggle;
+    scrub.oninput = () => { t = +scrub.value; show(); };
+    addEventListener('keydown', (e) => {
+      if (e.code === 'Space') { e.preventDefault(); toggle(); }
+      const step = e.shiftKey ? 1 : 1 / 60;
+      if (e.key === 'ArrowRight') { t = Math.min(FILM.dur, t + step); show(); }
+      if (e.key === 'ArrowLeft') { t = Math.max(0, t - step); show(); }
+    });
+    window.ready.then(() => {
+      (function loop(now) {
+        if (playing) { t = (t + (now - last) / 1000) % FILM.dur; }
+        last = now;
+        show();
+        requestAnimationFrame(loop);
+      })(performance.now());
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+node_modules/
+out/
+!lib/
+
+# Film content and media stay local: screenshots, brief/storyboard, music, style refs.
+assets/screens/
+docs/
+audio/
+refs/
