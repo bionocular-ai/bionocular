@@ -1,0 +1,21 @@
+{
+  "name": "motion-studio",
+  "version": "1.0.0",
+  "description": "Code-rendered motion graphics: HTML canvas + Playwright + ffmpeg, with optional synthesized sound.",
+  "scripts": {
+    "preview": "node render.mjs --serve",
+    "stills": "node render.mjs --stills 1,3,5,7,9",
+    "draft": "node render.mjs --draft",
+    "render": "node render.mjs",
+    "sound": "node sound/score.mjs",
+    "sound:sfx-only": "node sound/score.mjs --no-music",
+    "mux": "ffmpeg -hide_banner -loglevel error -y -i out/silent.mp4 -i out/audio.wav -map 0:v -map 1:a -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000 -c:a aac -b:a 192k -shortest -movflags +faststart out/final.mp4 && echo \"-> out/final.mp4\"",
+    "final": "npm run render && npm run sound && npm run mux",
+    "review": "bash scripts/review.sh out/silent.mp4"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  },
+  "type": "module"
+}

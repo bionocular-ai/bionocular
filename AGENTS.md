@@ -2,7 +2,7 @@
 
 ## Project overview
 
-Bionocular is an oncology intelligence platform that surfaces clinical trial data, treatment landscapes, and regulatory timelines for cancer researchers. Two packages: `melanoma/` (Python/FastAPI backend and data pipelines) and `web/` (Next.js frontend). Each has its own `AGENTS.md` with the conventions for that package. `landing/` is the static marketing page at bionocular.ai, deployed by Cloudflare Pages (see `landing/README.md`).
+Bionocular is an oncology intelligence platform that surfaces clinical trial data, treatment landscapes, and regulatory timelines for cancer researchers. Two packages: `melanoma/` (Python/FastAPI backend and data pipelines) and `web/` (Next.js frontend). Each has its own `AGENTS.md` with the conventions for that package. `landing/` is the static marketing page at bionocular.ai, deployed by Cloudflare Pages (see `landing/README.md`). `video/` is the code-rendered product demo film (see `video/README.md`).
 
 **Production today**: `web` + Supabase, plus `landing` on Cloudflare. `melanoma` runs locally and in scheduled CI jobs.
 
