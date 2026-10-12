@@ -6,6 +6,7 @@ import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { DashboardNavLink } from '@/components/nav/DashboardNavLink';
 import { UserMenu } from '@/components/user-menu';
 import { useSession } from '@/lib/supabase/hooks';
+import { ROUTES } from '@/lib/constants';
 
 /** Global navigation banner shown across all dashboard category pages, above the page content. */
 export function DashboardTopNav() {
@@ -14,7 +15,7 @@ export function DashboardTopNav() {
   return (
     <header className="sticky top-0 z-40 h-14 border-b border-(--brand-border) bg-(--brand-surface) shadow-sm">
       <div className="flex h-full items-center justify-between gap-4 px-6">
-        <Link href="/" className="brand flex-shrink-0">
+        <Link href={ROUTES.DASHBOARD} className="brand flex-shrink-0">
           <Logo className="text-[22px]" />
         </Link>
         <div className="flex items-center gap-2">

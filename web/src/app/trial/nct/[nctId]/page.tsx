@@ -15,6 +15,7 @@ import Link from 'next/link';
 import { Logo } from '@/components/Logo';
 import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { BackNav } from '@/components/nav/BackNav';
+import { ROUTES } from '@/lib/constants';
 
 export default function NCTTrialsPage() {
   const { data: session } = useSession();
@@ -59,7 +60,7 @@ export default function NCTTrialsPage() {
       <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50 shrink-0">
         <div className="w-full px-3 sm:px-4 md:px-6">
           <div className="flex items-center justify-between h-16 gap-2 sm:gap-4">
-            <Link href="/" className="brand flex-shrink-0">
+            <Link href={ROUTES.DASHBOARD} className="brand flex-shrink-0">
               <Logo className="text-[22px]" />
             </Link>
             <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
