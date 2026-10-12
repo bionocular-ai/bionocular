@@ -2269,38 +2269,6 @@ async def get_landscape_stats(cancer_type: str | None = None) -> dict:
         ) from e
 
 
-@app.get("/api/landscape/therapeutic-index")
-async def get_therapeutic_index(skip: int = 0, limit: int = 100) -> dict:
-    """Get therapeutic index trials (extracted subset).
-
-    Args:
-        skip: Number of records to skip
-        limit: Maximum number of records to return
-
-    Returns:
-        Dictionary with trials and pagination info
-    """
-    try:
-        service = create_clinical_trials_service()
-        trials, total = service.repository.get_therapeutic_index_trials(
-            skip=skip, limit=limit
-        )
-
-        return {
-            "trials": trials,
-            "total": total,
-            "skip": skip,
-            "limit": limit,
-            "has_more": (skip + limit) < total,
-        }
-
-    except Exception as e:
-        logger.error(f"Error fetching therapeutic index: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500, detail=f"Internal server error: {str(e)}"
-        ) from e
-
-
 @app.get("/api/landscape/dashboard-trials")
 async def get_dashboard_trials(
     cancer_type: str,
