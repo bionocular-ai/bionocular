@@ -533,26 +533,6 @@ export const trialsApi = {
     return { trials, total };
   },
 
-  getTherapeuticIndex: async (skip = 0, limit = 100): Promise<TherapeuticIndexResponse> => {
-    const supabase = createClient();
-    const { data, count } = await supabase.from('trial_landscape')
-      .select('nct_id, clinical_trials(brief_title, phases, lead_sponsor_name, overall_status)', { count: 'exact' })
-      .range(skip, skip + limit - 1);
-    
-    const trials: Trial[] = (data || []).map(d => {
-       const ctEntry = Array.isArray(d.clinical_trials) ? d.clinical_trials[0] : d.clinical_trials;
-       return {
-         id: d.nct_id,
-         nct_id: d.nct_id,
-         title: ctEntry?.brief_title || d.nct_id,
-         phase: Array.isArray(ctEntry?.phases) ? ctEntry.phases.join(', ') : (ctEntry?.phases || ''),
-         sponsor: ctEntry?.lead_sponsor_name || 'Unknown',
-         status: ctEntry?.overall_status || 'Unknown',
-       };
-    });
-    return { trials, total: count || 0, skip, limit, has_more: (count || 0) > skip + limit - 1 };
-  },
-
   getDiseaseLandscapeStats: async (
     category: string,
     opts?: { sponsor_type?: string }
@@ -1062,14 +1042,6 @@ export interface DashboardTrialsFilters {
   category_limit?: number;
   /** When set with limit, fetches open/closed trials in separate DB queries to guarantee the ratio. */
   open_fraction?: number;
-}
-
-export interface TherapeuticIndexResponse {
-  trials: Trial[];
-  total: number;
-  skip: number;
-  limit: number;
-  has_more?: boolean;
 }
 
 export interface DiseaseLandscapeStats {

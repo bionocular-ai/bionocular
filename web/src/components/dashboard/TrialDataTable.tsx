@@ -124,9 +124,6 @@ export function TrialDataTable({
       );
     }
     
-    // Phase filter is handled in the parent component (therapeutic-index page)
-    // No need to filter here since trials are already filtered by phase
-    
     // Arm Type filter (if available in data)
     if (armTypeFilter.trim()) {
       filtered = filtered.filter(trial => {

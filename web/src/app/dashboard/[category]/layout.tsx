@@ -1,8 +1,20 @@
 import { Suspense } from 'react';
+import { notFound } from 'next/navigation';
 import { DashboardSidebar } from '@/components/nav/DashboardSidebar';
 import { DashboardTopNav } from '@/components/nav/DashboardTopNav';
+import { CATEGORY_SLUG_MAP } from '@/lib/dashboard-constants';
 
-export default function CategoryLayout({ children }: { children: React.ReactNode }) {
+export default async function CategoryLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ category: string }>;
+}) {
+  // An unknown slug would otherwise render as an empty, made-up category.
+  const { category } = await params;
+  if (!Object.hasOwn(CATEGORY_SLUG_MAP, category)) notFound();
+
   return (
     <div className="flex min-h-screen flex-col bg-(--brand-bg)">
       <DashboardTopNav />
