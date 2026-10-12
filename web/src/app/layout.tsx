@@ -5,8 +5,8 @@ import "./globals.css";
 
 // Self-hosted (Latin subset, the files Google Fonts serves) so the build never
 // downloads fonts: fetching them from Google intermittently failed CI builds.
-// Fraunces, Public Sans, Lora and Plus Jakarta Sans are variable fonts, one
-// file each; licenses sit beside the files.
+// Fraunces, Public Sans, IBM Plex Sans, Lora and Plus Jakarta Sans are
+// variable fonts, one file each; licenses sit beside the files.
 const fraunces = localFont({
   variable: "--font-fraunces",
   src: "./fonts/fraunces-latin.woff2",
@@ -26,6 +26,13 @@ const ibmPlexMono = localFont({
     { path: "./fonts/ibm-plex-mono-latin-500.woff2", weight: "500" },
     { path: "./fonts/ibm-plex-mono-latin-600.woff2", weight: "600" },
   ],
+});
+
+// The hero "bionocular AI" line; the landing page uses the same face.
+const ibmPlexSans = localFont({
+  variable: "--font-plex-sans",
+  src: "./fonts/ibm-plex-sans-latin.woff2",
+  weight: "600 700",
 });
 
 // The wordmark's face: "bio" at 800, "nocular" at 500.
@@ -59,7 +66,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={[fraunces.variable, publicSans.variable, ibmPlexMono.variable, lora.variable, plusJakartaSans.variable].join(" ")}
+      className={[fraunces.variable, publicSans.variable, ibmPlexMono.variable, ibmPlexSans.variable, lora.variable, plusJakartaSans.variable].join(" ")}
     >
       <head>
         <link

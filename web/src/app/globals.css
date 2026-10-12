@@ -515,7 +515,7 @@ body{
   flex-wrap:wrap;
   align-items:baseline;
   gap:0.35em;
-  font-family:'IBM Plex Sans', Inter, system-ui, sans-serif;
+  font-family:var(--font-plex-sans), system-ui, sans-serif;
   font-size:clamp(1rem, 1.9vw, 1.25rem);
   font-weight:700;
   color:var(--brand-accent);
