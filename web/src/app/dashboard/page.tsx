@@ -7,6 +7,7 @@ import { Logo } from '@/components/Logo';
 import { UserMenu } from '@/components/user-menu';
 import { HomeNavLink } from '@/components/nav/HomeNavLink';
 import { Search, ArrowUpRight } from 'lucide-react';
+import { ROUTES } from '@/lib/constants';
 
 const CANCER_TYPES = [
   { name: 'Cutaneous Melanoma',                        slug: 'cutaneous-melanoma',                           accent: '#1B4F65', category: 'Cutaneous' },
@@ -52,7 +53,7 @@ export default function MainDashboardPage() {
         <header className="bg-white border-b border-slate-200 shrink-0 z-50 sticky top-0 shadow-sm">
           <div className="w-full px-8">
             <div className="flex items-center justify-between h-14 gap-4">
-              <Link href="/" className="brand flex-shrink-0">
+              <Link href={ROUTES.DASHBOARD} className="brand flex-shrink-0">
                 <Logo className="text-[22px]" />
               </Link>
               <div className="flex items-center gap-2">
