@@ -100,6 +100,25 @@ describe('classify', () => {
     expect(failures.map((f) => f.kind)).toEqual(['incomplete-evidence']);
   });
 
+  it("holds an outcomes answer to the table's count, not the row count", () => {
+    // From the 2026-10-07 run: 72 rows, a table of 19 arms - 16 treatments -
+    // across 12 trials, and an answer that tallied the rows itself.
+    const outcomes = {
+      ...okQuery({ table: 'trial_outcomes', phase: 'PHASE1', columns: ['orr', 'dcr', 'cr'] }, 72),
+      answered: { treatments: 16, trials: 12 },
+    };
+    const check = (answer: string) =>
+      classify(byId('active-phase1-efficacy-one-call'), observed({ calls: [outcomes], answer })).filter(
+        (f) => f.kind === 'incomplete-evidence',
+      );
+
+    expect(check('Sixteen treatment arms across 9 trials report at least one requested endpoint.')).toHaveLength(1);
+    expect(check('Of 72 arm readouts, 17 arms across 8 trials report at least one.')).toHaveLength(1);
+    expect(check('Nineteen treatments from 12 trials report at least one; 36 report none.')).toHaveLength(1);
+    expect(check('Fifteen treatments (19 arms) from 12 trials report at least one.')).toHaveLength(1);
+    expect(check('Sixteen treatments (19 arms) from 12 trials report at least one.')).toEqual([]);
+  });
+
   it('names a missing refusal as reasoning', () => {
     const failures = classify(byId('out-of-scope-cancer'), observed({ answer: 'Pancreatic cancer trials include ...' }));
     expect(failures.map((f) => f.kind)).toEqual(['reasoning']);

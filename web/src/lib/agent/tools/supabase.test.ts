@@ -678,6 +678,38 @@ describe('query_proprietary_data', () => {
     expect(result).toMatchObject({ ok: true, askedColumns: ['median_pfs', 'grade_3_plus_teae_pct'] });
   });
 
+  it('carries the count the table will draw, so the answer never tallies the rows itself', async () => {
+    const tools = toolsWith({
+      trial_outcomes: {
+        rows: [
+          { nct_id: 'NCT1', arm_name: 'Drug A', abstract_id: 'ASCO_2025_1', orr: 30 },
+          { nct_id: 'NCT1', arm_name: 'Drug A', abstract_id: 'ASCO_2023_1', orr: 25 },
+          { nct_id: 'NCT2', arm_name: 'Drug B', abstract_id: 'ASCO_2024_TPS2' },
+        ],
+      },
+    });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', columns: ['orr', 'cr'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      coverage: {
+        returned: 3,
+        answered: {
+          columns: ['orr', 'cr'],
+          arms: 2,
+          treatments: 2,
+          trials: 2,
+          reporting: { arms: 1, treatments: 1, trials: 1 },
+          none: { arms: 1, treatments: 1, trials: 1 },
+        },
+      },
+    });
+  });
+
   it('refuses an asked column trial_outcomes does not have, before querying', async () => {
     const tools = toolsWith({ trial_outcomes: { rows: [{ nct_id: 'NCT1' }] } });
 

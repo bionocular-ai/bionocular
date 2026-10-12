@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { answerCounts } from './result-table';
 import { toTurnTable, withoutAskedPhase } from './turn-table';
 
 const trials = {
@@ -1113,5 +1114,57 @@ describe('withoutAskedPhase', () => {
 
     expect(next.rows).toEqual([['A', '40']]);
     expect(next.readouts).toEqual([[['A', '38']]]);
+  });
+});
+
+describe('answerCounts', () => {
+  const today = new Date('2026-10-08');
+  // NCT1 has one arm reporting and one silent, so it is counted on both sides;
+  // Drug C reports in two trials, so it is two treatments; NCT3 has two
+  // readouts of one arm and neither reports anything asked; NCT6 reports two
+  // cohorts of Drug E in one abstract: two arms, one treatment.
+  const phase1 = {
+    ok: true,
+    table: 'trial_outcomes',
+    askedColumns: ['orr', 'dcr', 'cr'],
+    rows: [
+      { nct_id: 'NCT1', arm_name: 'Drug A', abstract_id: 'ASCO_2025_1', orr: 30 },
+      { nct_id: 'NCT1', arm_name: 'Drug A', abstract_id: 'ASCO_2023_1', orr: 25 },
+      { nct_id: 'NCT1', arm_name: 'Drug B', abstract_id: 'ASCO_2025_2' },
+      { nct_id: 'NCT2', arm_name: 'Drug C', abstract_id: 'ESMO_2024_3', dcr: 50 },
+      { nct_id: 'NCT3', arm_name: 'Drug D', abstract_id: 'ASCO_2022_TPS4' },
+      { nct_id: 'NCT3', arm_name: 'Drug D', abstract_id: 'ASCO_2024_4' },
+      { nct_id: 'NCT4', arm_name: 'Drug C', abstract_id: 'ASCO_2025_5', orr: 40 },
+      { nct_id: 'NCT5', arm_name: 'Drug A', abstract_id: 'ASCO_2025_TPS6' },
+      { nct_id: 'NCT6', arm_name: 'Drug E', abstract_id: 'ASCO_2025_7', num_patients: 12, orr: 20 },
+      { nct_id: 'NCT6', arm_name: 'Drug E', abstract_id: 'ASCO_2025_7', num_patients: 14, orr: 30 },
+    ],
+  };
+
+  it('counts the arms the table draws, the distinct treatments among them, and their trials', () => {
+    expect(answerCounts(toTurnTable([phase1], today)!)).toEqual({
+      columns: ['orr', 'dcr', 'cr'],
+      arms: 8,
+      treatments: 7,
+      trials: 6,
+      reporting: { arms: 5, treatments: 4, trials: 4 },
+      none: { arms: 3, treatments: 3, trials: 3 },
+    });
+  });
+
+  it('counts the most-reported endpoints when the question named none, as the table picks them', () => {
+    const { askedColumns: _asked, ...unasked } = phase1;
+    void _asked;
+
+    expect(answerCounts(toTurnTable([unasked], today)!)).toMatchObject({
+      columns: ['orr', 'dcr'],
+      reporting: { arms: 5, treatments: 4, trials: 4 },
+    });
+  });
+
+  it('has nothing to count on a table with no endpoints', () => {
+    const landscape = { ok: true, table: 'clinical_trials', rows: [{ nct_id: 'NCT1', phase: 'PHASE1' }] };
+
+    expect(answerCounts(toTurnTable([landscape], today)!)).toBeNull();
   });
 });
