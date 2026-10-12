@@ -160,62 +160,72 @@ export default function TrialUpdatesPage() {
             </div>
           ) : (
             <>
-              <div className="sticky top-0 z-10 grid grid-cols-[110px_1fr_96px] items-center gap-4 border-b border-(--brand-border) bg-(--brand-surface) px-5 py-2.5">
-                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Date</span>
+              <div className="sticky top-0 z-10 grid grid-cols-[1fr_auto] items-center gap-3 border-b border-(--brand-border) bg-(--brand-surface) px-4 py-2.5 sm:grid-cols-[110px_1fr_96px] sm:gap-4 sm:px-5">
+                <span className="hidden text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted) sm:block">Date</span>
                 <span className="min-w-0 text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Record</span>
                 <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Type</span>
               </div>
               <ul className="divide-y divide-(--brand-border)">
-                {updates.map((item: LatestTrialUpdateItem) => (
-                  <li key={item.nct_id} className="group">
-                    <Link
-                      href={`/trial/nct/${item.nct_id}?category=${categorySlug}`}
-                      className="grid grid-cols-[110px_1fr_96px] items-center gap-4 px-5 py-3.5 text-left transition-colors hover:bg-(--brand-accent-light)"
-                    >
-                      <span
-                        className="shrink-0 text-xs font-medium text-(--brand-text-muted)"
-                        style={{ fontFamily: 'var(--font-mono)' }}
+                {updates.map((item: LatestTrialUpdateItem) => {
+                  const date = item.date_iso
+                    ? new Date(item.date_iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                    : 'Unknown';
+                  return (
+                    <li key={item.nct_id} className="group">
+                      <Link
+                        href={`/trial/nct/${item.nct_id}?category=${categorySlug}`}
+                        className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-(--brand-accent-light) sm:grid-cols-[110px_1fr_96px] sm:gap-4 sm:px-5"
                       >
-                        {item.date_iso
-                          ? new Date(item.date_iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                          : 'Unknown'}
-                      </span>
-                      <div className="min-w-0">
-                        <span className="line-clamp-1 text-sm font-semibold leading-snug text-(--brand-text) transition-colors group-hover:text-(--brand-primary)">
-                          {item.title || item.nct_id}
+                        <span
+                          className="hidden shrink-0 text-xs font-medium text-(--brand-text-muted) sm:block"
+                          style={{ fontFamily: 'var(--font-mono)' }}
+                        >
+                          {date}
                         </span>
-                        <div className="mt-0.5 flex items-center gap-2">
-                          {item.nct_id && (
+                        <div className="min-w-0">
+                          <span className="line-clamp-2 text-sm font-semibold leading-snug text-(--brand-text) transition-colors group-hover:text-(--brand-primary) sm:line-clamp-1">
+                            {item.title || item.nct_id}
+                          </span>
+                          <div className="mt-0.5 flex items-center gap-2">
                             <span
-                              className="text-[10px] text-(--brand-text-muted)"
+                              className="shrink-0 text-[10px] text-(--brand-text-muted) sm:hidden"
                               style={{ fontFamily: 'var(--font-mono)' }}
                             >
-                              {item.nct_id}
+                              {date}
                             </span>
-                          )}
-                          {item.sponsor_name && (
-                            <>
-                              <span className="text-[10px] text-(--brand-border)">·</span>
-                              <span className="truncate text-[10px] text-(--brand-text-muted)">{item.sponsor_name}</span>
-                            </>
-                          )}
+                            <span className="text-[10px] text-(--brand-border) sm:hidden">·</span>
+                            {item.nct_id && (
+                              <span
+                                className="shrink-0 text-[10px] text-(--brand-text-muted)"
+                                style={{ fontFamily: 'var(--font-mono)' }}
+                              >
+                                {item.nct_id}
+                              </span>
+                            )}
+                            {item.sponsor_name && (
+                              <>
+                                <span className="text-[10px] text-(--brand-border)">·</span>
+                                <span className="truncate text-[10px] text-(--brand-text-muted)">{item.sponsor_name}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn(
-                          'h-1.5 w-1.5 shrink-0 rounded-full',
-                          item.update_type === 'new' ? 'bg-amber-400' : 'bg-(--brand-primary)'
-                        )} />
-                        <span className={cn(
-                          'text-xs font-medium',
-                          item.update_type === 'new' ? 'text-amber-700' : 'text-(--brand-primary)'
-                        )}>
-                          {item.update_type === 'new' ? 'New' : 'Updated'}
-                        </span>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
+                        <div className="flex items-center gap-1.5">
+                          <span className={cn(
+                            'h-1.5 w-1.5 shrink-0 rounded-full',
+                            item.update_type === 'new' ? 'bg-amber-400' : 'bg-(--brand-primary)'
+                          )} />
+                          <span className={cn(
+                            'text-xs font-medium',
+                            item.update_type === 'new' ? 'text-amber-700' : 'text-(--brand-primary)'
+                          )}>
+                            {item.update_type === 'new' ? 'New' : 'Updated'}
+                          </span>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </>
           )}
