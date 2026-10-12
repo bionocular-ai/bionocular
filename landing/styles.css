@@ -64,6 +64,11 @@ body {
   position: relative;
 }
 
+/* 61px + the 1px border = the hero's 62px top offset (pt-[62px] in index.html). */
+@media (min-width: 768px) {
+  .header-inner { min-height: 61px; }
+}
+
 .brand {
   display: flex;
   gap: clamp(6px, 1.5vw, 8px);
@@ -75,20 +80,27 @@ body {
 
 .brand:focus, .brand:focus-visible { outline: none; }
 
-.brand-text {
-  font-weight: 700;
-  font-family: 'IBM Plex Sans', Inter, sans-serif;
-  font-size: clamp(24px, 4vw, 36px);
-  letter-spacing: 0.2px;
-  color: var(--brand-primary);
+/* The wordmark's face: "bio" at 800, "nocular" at 500. Self-hosted, licence in fonts/. */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  src: url('fonts/plus-jakarta-sans-latin.woff2') format('woff2');
+  font-weight: 500 800;
+  font-display: swap;
 }
 
-.brand-o {
-  text-decoration: underline;
-  text-decoration-color: var(--brand-accent);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 3px;
-}
+/* The brand lockup, matching web/src/components/Logo.tsx: every length in em of
+   the wordmark's size, so the mark keeps its proportion to the text. Set the
+   size with font-size and the colour with color. .brand-text is the wordmark
+   alone, also used inline in headings. */
+.brand-lockup { display: inline-block; white-space: nowrap; line-height: 1; color: #1A1A1A; }
+.brand-text { font-family: 'Plus Jakarta Sans', system-ui, sans-serif; font-weight: 500; letter-spacing: 0.004em; }
+/* The mark stands 1.05em tall, its foot 0.12em below the baseline. */
+.brand-lockup-mark { display: inline-block; height: 1.05em; width: auto; vertical-align: -0.12em; margin-right: 0.4em; }
+.brand-bio { font-weight: 800; }
+
+.site-header .brand-lockup { font-size: 22px; }
+@media (min-width: 1280px) { .site-header .brand-lockup { font-size: 26px; } }
+.site-footer .brand-lockup { font-size: 20px; color: #fff; }
 
 /* Nav */
 .nav {
