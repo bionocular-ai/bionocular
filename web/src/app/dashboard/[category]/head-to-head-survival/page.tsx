@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { BadgeCheck, ChevronDown, Lightbulb, ListFilter, Loader2, Scale } from 'lucide-react';
+import { BadgeCheck, ChevronDown, Lightbulb, ListFilter, Loader2, Scale, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -390,10 +390,29 @@ function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolea
     <>
       {/* Chart */}
       <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
-        <CardHeader className="pb-0">
+        <CardHeader className="relative items-center pb-0 sm:block">
           <CardTitle className="text-center text-base font-semibold text-(--brand-text)">
             Survival Curves
           </CardTitle>
+          {/* Placeholder until users can upload their own curves. aria-disabled, not
+              disabled: a disabled button drops pointer events, which hides the tooltip. */}
+          <Button
+            variant="outline"
+            size="sm"
+            aria-disabled
+            title="Upload your own curves - coming soon"
+            className="h-9 cursor-not-allowed gap-2 rounded-full border-dashed border-(--brand-border) bg-(--brand-surface) pl-3 pr-2.5 text-(--brand-text-muted) hover:bg-(--brand-surface) hover:text-(--brand-text-muted) sm:absolute sm:right-6 sm:top-[18px]"
+          >
+            <Upload className="h-4 w-4" />
+            Upload curves
+            <Badge
+              variant="secondary"
+              className="bg-(--brand-accent-light) px-1.5 py-0 text-[10px] uppercase tracking-[0.08em] text-(--brand-primary) hover:bg-(--brand-accent-light)"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              Upcoming
+            </Badge>
+          </Button>
         </CardHeader>
         <CardContent>
           {isLoading ? (
