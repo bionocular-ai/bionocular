@@ -372,18 +372,15 @@ function KmFilters({ panel, endpoints, taken }: { panel: KmPanel; endpoints: str
   );
 }
 
-/** One panel's KM chart and its published-vs-twin table. */
-function KmResults({ panel, isLoading }: { panel: KmPanel; isLoading: boolean }) {
-  const { endpoint, visibleCurves, hrInfo } = panel;
+/** Every panel's curves on one KM chart, and one published-vs-twin table. */
+function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolean }) {
+  const rows = panels.flatMap((p) => p.visibleCurves.map((c) => ({ endpoint: p.endpoint, c })));
 
   // Rate timepoint can differ per arm. When selected arms agree, name it in the
   // column header; when they mix, keep the header generic and annotate each cell.
-  const { rateLabel, rateMixed } = React.useMemo(() => {
-    const tps = [...new Set(visibleCurves.map((c) => c.rate_timepoint).filter((t) => t != null))];
-    return tps.length === 1
-      ? { rateLabel: `Rate @ ${tps[0]}m`, rateMixed: false }
-      : { rateLabel: 'Rate', rateMixed: tps.length > 1 };
-  }, [visibleCurves]);
+  const tps = [...new Set(rows.map(({ c }) => c.rate_timepoint).filter((t) => t != null))];
+  const rateLabel = tps.length === 1 ? `Rate @ ${tps[0]}m` : 'Rate';
+  const rateMixed = tps.length > 1;
 
   // Rate value with a per-arm timepoint suffix when the selection mixes timepoints.
   const fmtRate = (value: number | null | undefined, tp: number | null | undefined) =>
@@ -395,7 +392,7 @@ function KmResults({ panel, isLoading }: { panel: KmPanel; isLoading: boolean })
       <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
         <CardHeader className="pb-0">
           <CardTitle className="text-center text-base font-semibold text-(--brand-text)">
-            {endpoint ? `${endpointLabel(endpoint)} — Digitized twin` : 'Survival curves'}
+            Survival Curves
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -404,7 +401,9 @@ function KmResults({ panel, isLoading }: { panel: KmPanel; isLoading: boolean })
               <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading curves…
             </div>
           ) : (
-            <KaplanMeierChart curves={visibleCurves} endpoint={endpoint} hr={hrInfo} />
+            <KaplanMeierChart
+              series={panels.map((p) => ({ endpoint: p.endpoint, curves: p.visibleCurves, hr: p.hrInfo }))}
+            />
           )}
         </CardContent>
       </Card>
@@ -415,6 +414,7 @@ function KmResults({ panel, isLoading }: { panel: KmPanel; isLoading: boolean })
           <Table>
             <TableHeader>
               <TableRow className="border-b border-(--brand-border) bg-(--brand-bg) hover:bg-(--brand-bg)">
+                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Endpoint</TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Treatment Arm</TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (published)</TableHead>
                 <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (twin)</TableHead>
@@ -426,8 +426,9 @@ function KmResults({ panel, isLoading }: { panel: KmPanel; isLoading: boolean })
               </TableRow>
             </TableHeader>
             <TableBody>
-              {visibleCurves.map((c) => (
+              {rows.map(({ endpoint, c }) => (
                 <TableRow key={c.id} className="border-(--brand-border)">
+                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{endpoint}</TableCell>
                   <TableCell className="font-medium text-(--brand-text)">
                     {formatArmName(c.arm_name)}
                   </TableCell>
@@ -493,8 +494,9 @@ export default function HeadToHeadEfficacyPage() {
     });
   }, [allCurves]);
 
-  // Two stacked panels, one endpoint each (OS above, PFS below by default), with
-  // their own arms. An endpoint shown in one panel is disabled in the other's filter.
+  // Two panels, one endpoint each (OS solid, PFS dashed by default), with their
+  // own arms, drawn on one chart. An endpoint shown in one panel is disabled in
+  // the other's filter.
   const first = useKmPanel(allCurves, endpoints, linkedNctId);
   const second = useKmPanel(allCurves, endpoints, linkedNctId, first.endpoint);
   const panels = endpoints.length > 1 ? [first, second] : [first];
@@ -517,9 +519,7 @@ export default function HeadToHeadEfficacyPage() {
           }
         />
 
-        {panels.map((p, i) => (
-          <KmResults key={i} panel={p} isLoading={isLoading} />
-        ))}
+        <KmResults panels={panels} isLoading={isLoading} />
       </div>
 
       <AgentDrawer
