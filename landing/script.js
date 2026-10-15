@@ -9,15 +9,24 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const hdr = document.getElementById('hdr'), nav = document.getElementById('nav');
   const links = [...nav.querySelectorAll('a')], btn = document.getElementById('menuBtn'), sheet = document.getElementById('sheet');
   // The footer is too short to reach the middle of the viewport, so the page bottom counts as Contact.
+  // The band only reports crossings, so remember which section is in it and re-apply on every scroll:
+  // that clears Contact again when the reader scrolls back up from the bottom.
   const atBottom = () => innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
-  addEventListener('scroll', () => atBottom() && setActive('contact'), { passive: true });
+  let inBand = 'hero';
   const setActive = id => links.forEach(a => a.getAttribute('href') === '#' + id ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'));
-  const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && setActive(atBottom() ? 'contact' : e.target.id)), { rootMargin: '-45% 0px -50% 0px' });
+  const sync = () => setActive(atBottom() ? 'contact' : inBand);
+  addEventListener('scroll', sync, { passive: true });
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
   ['hero', 'product', 'survival', 'about', 'contact'].forEach(id => io.observe(document.getElementById(id)));
   const toggle = open => { hdr.toggleAttribute('data-open', open); btn.setAttribute('aria-expanded', open); };
   btn.addEventListener('click', () => toggle(!hdr.hasAttribute('data-open')));
   sheet.querySelectorAll('a').forEach(a => a.addEventListener('click', () => toggle(false)));
-  addEventListener('keydown', e => e.key === 'Escape' && toggle(false));
+  addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || !hdr.hasAttribute('data-open')) return;
+    const inSheet = sheet.contains(document.activeElement);
+    toggle(false);
+    if (inSheet) btn.focus(); // the sheet hides, so focus would otherwise fall to <body>
+  });
 })();
 
 // ── Headline rotator ──
@@ -123,7 +132,8 @@ function coreCanvas(cv) {
   for (let k = 0; k < ROWS; k++) for (let i = 0; i < PER; i++) pts.push({ k, ph: i / PER, ro: hash(k * PER + i) * 2 - 1, ro2: hash(k * PER + i + 999) });
   let size = 0;
   const resize = () => { const d = devicePixelRatio || 1; size = cv.clientWidth * d; cv.width = cv.height = size; };
-  addEventListener('resize', resize); resize();
+  // Resizing resets the canvas; under reduced motion there is no loop to repaint it, so redraw the still frame.
+  addEventListener('resize', () => { resize(); if (still) frame(4000); }); resize();
   const frame = t => {
     ctx.clearRect(0, 0, size, size); ctx.globalCompositeOperation = 'lighter';
     const c = size / 2, R = size * (110 / 340), d = devicePixelRatio || 1;
@@ -224,7 +234,7 @@ coreCanvas(document.querySelector('#coreM canvas'));
     scroller.dataset.mode = pinned ? 'pinned' : 'static';
     draw();
     if (pinned) { addEventListener('scroll', onScroll, { passive: true }); pick(); }
-    else { pills.forEach(p => p.removeAttribute('aria-current')); show(7); }
+    else { pills.forEach(p => p.removeAttribute('aria-current')); cur = N; show(N); }
   };
   wide.addEventListener('change', mode);
   addEventListener('resize', () => { draw(); if (pinned) pick(); });
