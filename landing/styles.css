@@ -195,6 +195,113 @@ a { color: inherit; }
 .chip.g { background: var(--gold-tint); color: var(--gold-ink); }
 
 
+/* ── Product ── */
+.product { position: relative; background: var(--deep); color: #EAF4F0; padding: clamp(4.5rem, 9vw, 7.5rem) 0; overflow: hidden; }
+.product::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 55% 45% at 33% 58%, rgba(122,193,162,.14), transparent 70%), radial-gradient(ellipse 45% 55% at 88% 40%, rgba(10,40,54,.55), transparent 70%); }
+.product .kicker { color: var(--accent); }
+.product .lead { color: rgba(218,240,230,.78); }
+.diagram { position: relative; margin-top: clamp(2.5rem, 5vw, 3.5rem); }
+.diagram svg { width: 100%; height: auto; overflow: visible; }
+.diagram text { font-family: var(--text-font); }
+#core { position: absolute; left: calc(230 / 1200 * 100%); top: calc(124 / 580 * 100%); width: calc(340 / 1200 * 100%); aspect-ratio: 1; pointer-events: none; }
+.flow { fill: none; stroke-linecap: round; animation: flow 1.1s linear infinite; }
+@keyframes flow { to { stroke-dashoffset: -18; } }
+.dotted { fill: none; stroke: var(--gold); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: .1 9; animation: dots 1.2s linear infinite; }
+@keyframes dots { to { stroke-dashoffset: -9.1; } }
+.stack { display: none; }
+@media (max-width: 767px) { .diagram { display: none; } .stack { display: grid; } }
+.stack { gap: 0; margin-top: 2.5rem; }
+.stack h3 { margin: 0 0 .75rem; font: 600 1.125rem/1.2 var(--display); letter-spacing: -0.01em; display: flex; align-items: center; gap: .5rem; }
+.stack .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.pillbox { padding: .7rem .8rem; border-radius: 12px; font-size: .875rem; line-height: 1.25; text-align: center; }
+.pillbox.raw { background: rgba(201,162,39,.12); box-shadow: 0 0 0 1px rgba(201,162,39,.45) inset; color: #F3EBD3; }
+.pillbox.dim { background: rgba(10,40,54,.45); box-shadow: 0 0 0 1px rgba(122,193,162,.4) inset; color: #E4F3EC; }
+.vlink { height: 40px; width: 2px; margin: .5rem auto; background: repeating-linear-gradient(to bottom, var(--accent) 0 5px, transparent 5px 14px); background-size: 2px 14px; animation: dash .9s linear infinite; }
+.vlink.raw { background-image: repeating-linear-gradient(to bottom, var(--gold) 0 5px, transparent 5px 14px); }
+#coreM { width: min(260px, 70vw); aspect-ratio: 1; margin: 0 auto; position: relative; }
+#coreM canvas { width: 100%; height: 100%; }
+#coreM span { position: absolute; inset: 0; display: grid; place-items: center; font: 400 1rem/1 'Plus Jakarta Sans', sans-serif; letter-spacing: .16em; text-shadow: 0 0 10px rgba(6,26,36,.8); }
+.mod { padding: 1rem 1.1rem; border-radius: 12px; background: rgba(10,40,54,.5); box-shadow: 0 0 0 1px rgba(122,193,162,.55) inset; }
+.mod b { display: block; font-size: .9375rem; letter-spacing: .03em; }
+.mod span { font-size: .875rem; color: rgba(218,240,230,.8); }
+.mod.ag { box-shadow: 0 0 0 1.5px var(--gold) inset; background: rgba(201,162,39,.1); }
+.mods { display: grid; gap: .6rem; }
+.expert { margin-top: clamp(2rem, 4vw, 3rem); display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2rem; padding: 1.15rem 1.4rem; border-radius: 18px; background: rgba(255,255,255,.05); box-shadow: 0 0 0 1px rgba(122,193,162,.32) inset; }
+.expert .seal { display: flex; align-items: center; gap: .75rem; font: 600 1.0625rem/1.25 var(--text-font); letter-spacing: -0.01em; color: #fff; }
+.expert ol { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; margin: 0; padding: 0; font-size: .875rem; color: rgba(218,240,230,.82); }
+.expert li { display: flex; gap: .5rem; align-items: baseline; }
+.expert li + li::before { content: "→"; color: var(--accent); margin-right: .5rem; }
+.expert li span { font: 400 .75rem/1 var(--mono); color: var(--accent); }
+
+/* ── Survival Intelligence ── */
+.survival { padding: clamp(4.5rem, 9vw, 7.5rem) 0; }
+/* Pinned scroll: in pinned mode the whole stage sticks below the header and scrolling only advances the step.
+   The pills sit top-left; the active one opens into a card; the chart builds one layer per step; a bar shows progress.
+   JS sets data-mode="pinned" (wide screens, motion allowed); otherwise it is a plain list with the finished chart. */
+.sv-scroll { margin-top: clamp(2.5rem, 5vw, 3.5rem); }
+.sv-stage { display: grid; gap: 1.5rem; }
+.sv-scroll:not([data-mode="pinned"]) .chart-wrap { order: -1; }
+/* 32vh of scroll per step: about 3 wheel notches, so each layer has time to land without the run dragging (2.2 viewports in all). */
+.sv-scroll[data-mode="pinned"] { --per-step: 32vh; height: calc(7 * var(--per-step) + 100vh - var(--header-h)); }
+.sv-scroll[data-mode="pinned"] .sv-stage { position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); padding: 1.5rem 0;
+  grid-template-columns: 21rem minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 1.25rem 2.5rem; }
+.sv-scroll[data-mode="pinned"] .chart-wrap { grid-column: 2; grid-row: 1 / span 2; min-height: 0; display: flex; }
+.sv-scroll[data-mode="pinned"] .chart { flex: 1; height: 100%; min-height: 0; max-height: 760px; align-self: start; display: flex; flex-direction: column; }
+.sv-scroll[data-mode="pinned"] .chart #km { flex: 1 1 0; min-height: 0; width: 100%; }
+.sv-progress { display: none; }
+.sv-scroll[data-mode="pinned"] .sv-progress { display: block; grid-column: 1; grid-row: 2; align-self: end; width: 8rem; height: 4px; border-radius: 4px; background: var(--hair); overflow: hidden; }
+.sv-progress span { display: block; height: 100%; background: var(--accent-ink); transform-origin: left; transform: scaleX(0); }
+.pills { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; align-content: start; justify-items: start; }
+.pills li { width: 100%; display: flex; }
+.pill { all: unset; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 0 .65rem; padding: .6rem .65rem .6rem 1rem; border-radius: 22px;
+  background: var(--surface); box-shadow: 0 0 0 1px var(--border); color: var(--text); font-size: .9375rem; font-weight: 500; letter-spacing: -0.005em;
+  transition: background .45s var(--settle), color .45s var(--settle), box-shadow .45s, padding .45s var(--settle), border-radius .45s, transform .1s ease-out; }
+.pill:hover { box-shadow: 0 0 0 1px var(--accent); }
+.pill:active { transform: scale(.98); }
+.pill:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+.pill .n { font: 500 .6875rem/1 var(--mono); letter-spacing: .06em; color: var(--accent-ink); }
+.pill .plus { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--tint); color: var(--primary); font-size: 15px; line-height: 1; transition: transform .45s var(--settle), opacity .3s; }
+.pill .d { contain: inline-size; grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .5s var(--settle); }
+/* A closed pill's description leaves layout (display: none) once the fold finishes, so it is removed rather than clipped. */
+.pill .d > span { overflow: hidden; display: none; font-size: .9375rem; font-weight: 400; line-height: 1.5; opacity: 0; transition: opacity .3s, display 0s .5s; transition-behavior: allow-discrete; }
+.pill[aria-current="step"] { width: 100%; padding: 1rem 1.1rem 1.1rem; border-radius: 18px; background: var(--primary); color: #fff; box-shadow: none; }
+.pill[aria-current="step"] .n { color: var(--accent); }
+.pill[aria-current="step"] .plus { opacity: 0; transform: rotate(45deg); }
+.pill[aria-current="step"] .d { grid-template-rows: 1fr; }
+.pill[aria-current="step"] .d > span { display: block; opacity: .88; padding-top: .4rem; transition: opacity .3s .12s, display 0s; transition-behavior: allow-discrete; }
+@starting-style { .pill[aria-current="step"] .d > span { opacity: 0; } }
+/* Static mode: every step open, read top to bottom. */
+.sv-scroll:not([data-mode="pinned"]) .pill { width: 100%; cursor: default; border-radius: 16px; padding: 1rem 1.1rem; }
+.sv-scroll:not([data-mode="pinned"]) .pill .plus { display: none; }
+.sv-scroll:not([data-mode="pinned"]) .pill .d { grid-template-rows: 1fr; }
+.sv-scroll:not([data-mode="pinned"]) .pill .d > span { display: block; opacity: 1; padding-top: .35rem; color: var(--muted); }
+.chart { background: var(--surface); border-radius: 22px; box-shadow: 0 0 0 1px var(--hair), 0 30px 60px -36px rgba(16,43,54,.35); padding: 1.25rem 1.25rem 1rem; }
+.chart header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.chart header b { font-size: 1rem; letter-spacing: -0.01em; }
+.chart svg text { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; font-size: .8125rem; color: var(--muted); margin-top: .25rem; }
+.legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: .4rem; }
+.layer { transition: opacity .6s var(--settle), transform .8s var(--settle), filter .6s; }
+.layer:not(.on) { opacity: 0; }
+/* Step 1: the figure as it arrives from the PDF, at its own scale. Step 2 rescales it from the origin onto our axes. */
+#Lsrc { transform: scale(.8, .86); opacity: 1; }
+#Lsrc.norm { transform: none; }
+#Lsrc .cap { transition: opacity .3s; }
+#Lsrc.norm .cap { opacity: 0; }
+#Lsrc.dim { opacity: .18; }
+.twin path { stroke-dasharray: var(--len); stroke-dashoffset: var(--len); transition: stroke-dashoffset 1.6s var(--settle); }
+.twin.on path { stroke-dashoffset: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: .4rem; min-height: 1.75rem; margin-top: .6rem; }
+.meta span { font: 500 .6875rem/1 var(--mono); padding: .4rem .6rem; border-radius: 999px; background: var(--tint); color: var(--primary); }
+.meta span.g { background: var(--gold-tint); color: var(--gold-ink); }
+.meta span { opacity: 0; transform: translateY(4px); transition: opacity .4s var(--settle), transform .5s var(--settle); }
+.meta span.on { opacity: 1; transform: none; }
+.endpoints { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; margin-top: 2rem; padding: 1.1rem 1.3rem; border-radius: 18px; background: var(--surface); box-shadow: 0 0 0 1px var(--hair); }
+.endpoints b { font-weight: 600; letter-spacing: -0.008em; }
+.endpoints div { display: flex; flex-wrap: wrap; gap: .4rem; }
+.endpoints span { font: 500 .75rem/1 var(--mono); padding: .45rem .7rem; border-radius: 999px; background: var(--tint); color: var(--primary); }
+
+
 /* ── Accessibility preferences: gentler, not absent ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
