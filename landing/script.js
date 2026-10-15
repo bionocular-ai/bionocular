@@ -231,5 +231,16 @@ coreCanvas(document.querySelector('#coreM canvas'));
   mode();
 })();
 
+// About: the comparison-row sparkline is the same three CheckMate 067 twins, at icon scale.
+(() => {
+  const sv = document.getElementById('cmpSpark'); if (!sv) return;
+  const X = m => 2 + m / 60 * 146, Y = p => 2 + (100 - p) / 100 * 32;
+  [['nivolumab_plus_ipilimumab', '#BFE6D4'], ['nivolumab', '#7AC1A2'], ['ipilimumab', '#D9BE5C']].forEach(([k, c]) => {
+    const d = KM.main[k].reduce((d, [t, p], i) => i ? d + ` H${X(t).toFixed(1)} V${Y(p).toFixed(1)}` : `M${X(t)},${Y(p)}`, '') + ` H${X(60)}`;
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', d); p.setAttribute('fill', 'none'); p.setAttribute('stroke', c); p.setAttribute('stroke-width', '1.6'); sv.append(p);
+  });
+})();
+
 // ── Footer year ──
 document.getElementById('copyright').textContent = `© ${new Date().getFullYear()} Bionocular.ai. All rights reserved.`;
