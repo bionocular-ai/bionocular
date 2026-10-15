@@ -42,7 +42,65 @@
   </nav>
 </header>
 
-<section id="hero"></section>
+<section class="hero" id="hero" aria-labelledby="h1">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <div class="rotator"><h1 class="h1" id="h1" data-on><span>Next-gen AI and Machine learning</span><span class="soft"> for Oncology insights.</span></h1><p class="h1" aria-hidden="true"><span>Cutting the noise</span><span class="soft"> and only focusing on the key elements.</span></p></div>
+      <p class="lead">Human-verified oncology intelligence for research and medical teams <span class="sep">-</span> from raw data noise to clinical clarity, instantly.</p>
+      <div class="ai-line"><span style="white-space:nowrap">bionocular AI</span> <s>Artificial</s> <b>Authenticated</b> Intelligence</div>
+      <p class="vision">Where Clinical Rigor Meets Strategic Vision.<small>By Biopharma Strategists, for Biopharma Leaders.</small></p>
+      <ul class="caps">
+        <li style="display:block"><span class="label">Cancer specific <span class="sep">-</span> platform capabilities</span></li>
+        <li><i>01</i>Innovative dashboard</li>
+        <li><i>02</i>Efficacy &amp; safety of all treatments <span class="sep">-</span> stopped, ongoing or SoC</li>
+        <li><i>03</i>Live news &amp; live monitoring of all treatments</li>
+        <li><i>04</i>Clinical trial landscape with treatment, modality, target, line &amp; more</li>
+        <li><i>05</i>AI agent</li>
+      </ul>
+      <a class="cta" href="#product">See How It Works <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
+    </div>
+
+    <div class="story" id="story" data-beat="0">
+      <p class="sr-only">Example: CheckMate 067, NEJM 2015. Median progression-free survival 11.5 months with nivolumab plus ipilimumab, 6.9 months with nivolumab and 2.9 months with ipilimumab. Extracted from the source, checked cell by cell by an LLM judge and adjudicated by an MD or PhD, then answered by the bionocular AI Agent.</p>
+      <div class="story-bar">
+        <div class="segs" role="group" aria-label="Story steps">
+          <button class="seg" aria-label="Step 1: source"><span></span></button><button class="seg" aria-label="Step 2: highlight"><span></span></button><button class="seg" aria-label="Step 3: verify"><span></span></button><button class="seg" aria-label="Step 4: answer"><span></span></button>
+        </div>
+        <button class="pause" id="pause" aria-pressed="false"><svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true"><rect x="2" y="1.5" width="2.6" height="9" rx="1"/><rect x="7.4" y="1.5" width="2.6" height="9" rx="1"/></svg><span>Pause</span></button>
+      </div>
+      <div aria-hidden="true">
+        <article class="card src">
+          <div class="label">Publication · NEJM 2015 · Larkin et al.</div>
+          <h3>Combined Nivolumab and Ipilimumab or Monotherapy in Untreated Melanoma</h3>
+          <p>"The median progression-free survival was <mark>11.5 months</mark> … with nivolumab plus ipilimumab, as compared with <mark>2.9 months</mark> … with ipilimumab … and <mark>6.9 months</mark> … with nivolumab."</p>
+        </article>
+        <div class="link"></div>
+        <div class="checks">
+          <div><i><svg viewBox="0 0 12 12"><path pathLength="1" d="M2.5 6.2 5 8.5l4.5-5"/></svg></i>Extracted from the Source Record</div>
+          <div><i><svg viewBox="0 0 12 12"><path pathLength="1" d="M2.5 6.2 5 8.5l4.5-5"/></svg></i>Checked Cell by Cell by an LLM Judge</div>
+          <div><i><svg viewBox="0 0 12 12"><path pathLength="1" d="M2.5 6.2 5 8.5l4.5-5"/></svg></i>Adjudicated by an MD or PhD</div>
+        </div>
+        <div class="link"></div>
+        <article class="card hub">
+          <header><b>Outcome Intelligence Hub</b><span class="label">CheckMate 067 · Melanoma · Phase 3 · 1L</span></header>
+          <table>
+            <tr><th>Arm</th><th>Median PFS</th><th>ORR</th><th>Source</th></tr>
+            <tr><td>Nivolumab + ipilimumab</td><td class="v"><b>11.5 mo</b></td><td class="v"><b>57.6%</b></td><td><a class="cite" href="#" tabindex="-1">NEJM 2015 ↗</a></td></tr>
+            <tr><td>Nivolumab</td><td class="v"><b>6.9 mo</b></td><td class="v"><b>43.7%</b></td><td><a class="cite" href="#" tabindex="-1">NEJM 2015 ↗</a></td></tr>
+            <tr><td>Ipilimumab</td><td class="v"><b>2.9 mo</b></td><td class="v"><b>19.0%</b></td><td><a class="cite" href="#" tabindex="-1">NEJM 2015 ↗</a></td></tr>
+          </table>
+        </article>
+        <div class="link gold"></div>
+        <article class="agent">
+          <div class="label">bionocular AI Agent</div>
+          <p class="q">"Compare median PFS across the CheckMate 067 arms."</p>
+          <p class="a">Nivolumab + ipilimumab <b>11.5 mo</b>, nivolumab <b>6.9 mo</b>, ipilimumab <b>2.9 mo</b>.</p>
+          <div class="chips"><span class="chip">Expert Reviewed</span><span class="chip g">Opens in Survival Intelligence</span></div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
 
 <main>
 <section id="product"></section>
