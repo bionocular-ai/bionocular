@@ -16,8 +16,9 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const setActive = id => links.forEach(a => a.getAttribute('href') === '#' + id ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'));
   const sync = () => setActive(atBottom() ? 'contact' : inBand);
   addEventListener('scroll', sync, { passive: true });
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
-  ['hero', 'product', 'survival', 'about', 'contact'].forEach(id => io.observe(document.getElementById(id)));
+  // The diagram after the comparison is part of Product too, so it keeps the Product link lit.
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = e.target.id === 'how-it-works' ? 'product' : e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
+  ['hero', 'product', 'how-it-works', 'survival', 'about', 'contact'].forEach(id => io.observe(document.getElementById(id)));
   const toggle = open => { hdr.toggleAttribute('data-open', open); btn.setAttribute('aria-expanded', open); };
   btn.addEventListener('click', () => toggle(!hdr.hasAttribute('data-open')));
   sheet.querySelectorAll('a').forEach(a => a.addEventListener('click', () => toggle(false)));
@@ -37,28 +38,6 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   setInterval(() => { P[i].removeAttribute('data-on'); i = (i + 1) % P.length; P[i].setAttribute('data-on', ''); }, 6000);
 })();
 
-// ── Hero story: beats advance when the active segment finishes filling, so pause and jump are exact ──
-(() => {
-  const story = document.getElementById('story'), segs = [...story.querySelectorAll('.seg')], pause = document.getElementById('pause');
-  const HOLD = [2000, 2000, 3600, 3600];
-  let beat = 0, userPaused = false;
-  const go = n => {
-    beat = n; story.dataset.beat = n;
-    segs.forEach((s, i) => { s.toggleAttribute('data-done', i < n); s.removeAttribute('data-active'); });
-    void segs[n].offsetWidth; // restart the fill animation
-    segs[n].style.setProperty('--hold', HOLD[n] + 'ms'); segs[n].setAttribute('data-active', '');
-  };
-  if (still) { story.dataset.beat = 3; segs.forEach(s => s.setAttribute('data-done', '')); return; }
-  segs.forEach((s, i) => { s.firstElementChild.addEventListener('animationend', () => i === beat && go((beat + 1) % 4)); s.addEventListener('click', () => go(i)); });
-  const setPaused = () => story.toggleAttribute('data-paused', userPaused || !visible);
-  let visible = true;
-  new IntersectionObserver(([e]) => { visible = e.isIntersecting; setPaused(); }, { threshold: .25 }).observe(story);
-  document.addEventListener('visibilitychange', () => { visible = !document.hidden; setPaused(); });
-  pause.addEventListener('click', () => { userPaused = !userPaused; pause.setAttribute('aria-pressed', userPaused); pause.querySelector('span').textContent = userPaused ? 'Play' : 'Pause';
-    pause.querySelector('svg').innerHTML = userPaused ? '<path d="M3 1.5v9l7.5-4.5z"/>' : '<rect x="2" y="1.5" width="2.6" height="9" rx="1"/><rect x="7.4" y="1.5" width="2.6" height="9" rx="1"/>'; setPaused(); });
-  go(0);
-})();
-
 // ── Product: shared data, drawn as an SVG diagram (≥768px) or a stacked list (<768px) ──
 const SOURCES = ['Clinical Trials', 'Conference Abstracts', 'Publications', 'Press Releases', 'Live News', 'Standard of Care'];
 const DIMS = ['Indication & Subtype', 'Clinical Setting', 'Disease Stage', 'Line of Therapy', 'Biomarker', 'Modality', 'Target', 'Efficacy Endpoints', 'Safety Endpoints'];
@@ -71,9 +50,10 @@ const MODS = [['CORE', 'Clinical Landscape and Trial Data'], ['OUTCOME INTELLIGE
   };
   const box = (x, y, w, h, fill, stroke, r = 12, sw = 1) => el('rect', { x, y, width: w, height: h, rx: r, fill, stroke, 'stroke-width': sw }, s);
   const CX = 400, CY = 294, R = 110;
-  box(10, 20, 224, 546, 'rgba(201,162,39,.06)', 'rgba(201,162,39,.5)', 18, 1.3);
-  el('circle', { cx: 32, cy: 45, r: 4.5, fill: '#C9A227' }, s);
-  txt(s, 44, 51, 'Raw Scientific Data', { fill: '#fff', 'font-size': 17, 'font-weight': 600, 'font-family': 'Fraunces', 'letter-spacing': '-.01em' });
+  // The title sits above its box, not inside it, so the box holds only the sources.
+  box(10, 48, 224, 518, 'rgba(201,162,39,.06)', 'rgba(201,162,39,.5)', 18, 1.3);
+  el('circle', { cx: 16, cy: 24, r: 4.5, fill: '#C9A227' }, s);
+  txt(s, 28, 30, 'Raw Scientific Data', { fill: '#fff', 'font-size': 17, 'font-weight': 600, 'font-family': 'Onest', 'letter-spacing': '-.03em' });
   SOURCES.forEach((n, i) => {
     const y = 70 + i * 84, cy = y + 27, ty = 254 + i * 16, ex = CX - Math.sqrt(R * R - (ty - CY) ** 2);
     line(`M220,${cy} C282,${cy} 262,${ty} ${ex},${ty}`, 'rgba(201,162,39,.8)', -i * .17);
@@ -83,7 +63,7 @@ const MODS = [['CORE', 'Clinical Landscape and Trial Data'], ['OUTCOME INTELLIGE
   [0, 2, 4, 5].forEach((i, k) => {
     const y = 70 + i * 84 + 27, ty = 254 + i * 16, ex = CX - Math.sqrt(R * R - (ty - CY) ** 2);
     const c = el('circle', { r: 3.2, fill: '#F1D77A' }, s);
-    if (!still) el('animateMotion', { dur: '2.8s', repeatCount: 'indefinite', begin: (k * .7) + 's', path: `M220,${y} C282,${y} 262,${ty} ${ex},${ty}` }, c); else c.remove();
+    if (!still) el('animateMotion', { dur: '2.8s', repeatCount: 'indefinite', begin: (-k * .7) + 's', path: `M220,${y} C282,${y} 262,${ty} ${ex},${ty}` }, c); else c.remove();
   });
   [['RAW', CX - R * .55, 'rgba(243,235,211,.7)'], ['STRUCTURED', CX + R * .55, 'rgba(218,240,230,.7)']].forEach(([t, x, f]) => txt(s, x, CY - R - 10, t, { 'text-anchor': 'middle', fill: f, 'font-size': 10.5, 'font-family': 'IBM Plex Mono', 'letter-spacing': '.14em' }));
   txt(s, CX, CY + 7, 'BIONOCULAR', { 'text-anchor': 'middle', 'font-size': 17, 'letter-spacing': '.16em', 'font-family': 'Plus Jakarta Sans', fill: '#fff', 'paint-order': 'stroke', stroke: 'rgba(6,26,36,.55)', 'stroke-width': 6, 'stroke-linejoin': 'round' });
@@ -98,7 +78,7 @@ const MODS = [['CORE', 'Clinical Landscape and Trial Data'], ['OUTCOME INTELLIGE
     txt(s, 644, pillC(i) + 5, n, { 'text-anchor': 'middle', fill: '#E4F3EC', 'font-size': 14 });
   });
   box(800, 20, 390, 400, 'rgba(122,193,162,.07)', 'rgba(122,193,162,.7)', 18, 1.3);
-  txt(s, 822, 56, 'Visual Platform', { fill: '#7AC1A2', 'font-size': 21, 'font-weight': 600, 'font-family': 'Fraunces', 'letter-spacing': '-.01em' });
+  txt(s, 822, 56, 'Visual Platform', { fill: '#7AC1A2', 'font-size': 21, 'font-weight': 600, 'font-family': 'Onest', 'letter-spacing': '-.03em' });
   txt(s, 990, 55, 'Cancer Specific', { fill: 'rgba(218,240,230,.7)', 'font-size': 12, 'font-family': 'IBM Plex Mono' });
   MODS.forEach(([h, d], i) => {
     const y = 76 + i * 110;
@@ -160,23 +140,25 @@ coreCanvas(document.querySelector('#coreM canvas'));
   document.getElementById('kmStored').textContent = `${KM.stored} twin points stored`;
   const s = document.getElementById('km'), chart = document.getElementById('chart');
   const wide = matchMedia('(min-width: 1024px)');
-  const x0 = 52, x1 = 620, y0 = 14; let y1 = 322;
+  const x0 = 52, y0 = 14; let x1 = 620, y1 = 322;
   const X = m => x0 + m / 60 * (x1 - x0), Y = p => y1 - p / 100 * (y1 - y0);
   const step = pts => pts.reduce((d, [t, p], i) => i ? d + ` H${X(t).toFixed(1)} V${Y(p).toFixed(1)}` : `M${X(t)},${Y(p)}`, '') + ` H${X(Math.min(60, pts.at(-1)[0] + 1.5))}`;
   const ARMS = [['nivolumab_plus_ipilimumab', '#1B4F65', 11.5], ['nivolumab', '#2F8A66', 6.9], ['ipilimumab', '#C9A227', 2.9]];
-  // When pinned, the card fills the viewport below the header, so the plot is drawn to whatever height the svg
-  // gets there (the viewBox matches its box). Elsewhere it keeps the default 640x380 proportions.
+  // When pinned, the card scales with the viewport, so the plot is drawn to the svg's own box. One unit stays 1.3px
+  // once the box outgrows 640 units: the plot grows on big screens while the axis text keeps its laptop size.
+  // Elsewhere it keeps the default 640x380 proportions.
   const draw = () => {
-    const r = s.getBoundingClientRect();
-    const H = wide.matches && !still && r.width ? Math.max(380, Math.round(640 * r.height / r.width)) : 380;
-    s.replaceChildren(); s.setAttribute('viewBox', `0 0 640 ${H}`); y1 = H - 58;
+    const r = s.getBoundingClientRect(), fit = wide.matches && !still && r.width;
+    const W = fit ? Math.max(640, Math.round(r.width / 1.3)) : 640;
+    const H = fit ? Math.max(380, Math.round(W * r.height / r.width)) : 380;
+    s.replaceChildren(); s.setAttribute('viewBox', `0 0 ${W} ${H}`); x1 = W - 20; y1 = H - 58;
     const g = id => el('g', { id, class: 'layer' }, s);
     // Axes (step 2 snaps them into place)
     const ax = g('Lax');
     [0, 12, 24, 36, 48, 60].forEach(m => { el('line', { x1: X(m), x2: X(m), y1: y0, y2: y1, stroke: '#EEF4F1' }, ax); txt(ax, X(m), y1 + 20, m, { 'text-anchor': 'middle' }); });
     [0, 25, 50, 75, 100].forEach(p => { el('line', { x1: x0, x2: x1, y1: Y(p), y2: Y(p), stroke: '#EEF4F1' }, ax); txt(ax, x0 - 10, Y(p) + 4, p + '%', { 'text-anchor': 'end' }); });
     el('path', { d: `M${x0},${y0} V${y1} H${x1}`, fill: 'none', stroke: '#C8E0D8', 'stroke-width': 1.2 }, ax);
-    txt(ax, (x0 + x1) / 2, y1 + 44, 'Months', { 'text-anchor': 'middle', style: 'font-family:Public Sans;font-size:12px' });
+    txt(ax, (x0 + x1) / 2, y1 + 44, 'Months', { 'text-anchor': 'middle', style: 'font-family:Poppins;font-size:12px' });
     // Other trials' twins (step 5)
     const bg = g('Lbg');
     KM.bg.forEach(b => el('path', { d: step(b.pts), fill: 'none', stroke: '#9DB8AD', 'stroke-width': 1.3, opacity: .55 }, bg));
