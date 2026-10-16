@@ -33,9 +33,14 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // ── Headline rotator ──
 (() => {
   if (still) return;
-  const P = [...document.querySelectorAll('.rotator > .h1')];
+  const R = document.querySelector('.rotator'), P = [...R.children];
   let i = 0;
-  setInterval(() => { P[i].removeAttribute('data-on'); i = (i + 1) % P.length; P[i].setAttribute('data-on', ''); }, 6000);
+  setInterval(() => {
+    R.setAttribute('data-live', ''); // set on the first swap, so the page loads with the headline already in place
+    P[i].removeAttribute('data-on'); P[i].setAttribute('data-out', '');
+    i = (i + 1) % P.length;
+    P[i].removeAttribute('data-out'); P[i].setAttribute('data-on', '');
+  }, 6000);
 })();
 
 // ── Product: shared data, drawn as an SVG diagram (≥768px) or a stacked list (<768px) ──
