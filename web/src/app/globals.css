@@ -50,7 +50,7 @@
   --card:         var(--brand-surface);
   --border:       var(--brand-border);
 
-  --font-display: var(--font-fraunces);
+  --font-display: var(--font-onest);
   --font-mono:    var(--font-plex-mono);
 }
 *{box-sizing:border-box}
@@ -68,7 +68,7 @@ select option {
 }
 body{
   margin:0;
-  font-family:var(--font-public-sans),system-ui,-apple-system,sans-serif;
+  font-family:var(--font-poppins),system-ui,-apple-system,sans-serif;
   background:var(--bg); 
   color:var(--text); 
   line-height:1.6;

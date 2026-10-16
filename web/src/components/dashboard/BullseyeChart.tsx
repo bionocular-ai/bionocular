@@ -251,7 +251,6 @@ export function BullseyeChart({
               fontSize={10.5}
               fill="#475569"
               fontWeight={500}
-              fontFamily="Georgia, 'Times New Roman', serif"
               letterSpacing="0.02em"
             >
               {label}
