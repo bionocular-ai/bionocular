@@ -4,8 +4,11 @@
 <meta charset="utf-8">
 <title>Bionocular film preview</title>
 <style>
-  @font-face { font-family: FilmDisplay; font-weight: 100 900; src: url(assets/fonts/fraunces-latin.woff2) format('woff2'); }
-  @font-face { font-family: FilmSans; font-weight: 100 900; src: url(assets/fonts/public-sans-latin.woff2) format('woff2'); }
+  @font-face { font-family: FilmDisplay; font-weight: 100 900; src: url(assets/fonts/onest-latin.woff2) format('woff2'); }
+  @font-face { font-family: FilmSans; font-weight: 400; src: url(assets/fonts/poppins-latin-400.woff2) format('woff2'); }
+  @font-face { font-family: FilmSans; font-weight: 500; src: url(assets/fonts/poppins-latin-500.woff2) format('woff2'); }
+  @font-face { font-family: FilmSans; font-weight: 600; src: url(assets/fonts/poppins-latin-600.woff2) format('woff2'); }
+  @font-face { font-family: FilmSans; font-weight: 700; src: url(assets/fonts/poppins-latin-700.woff2) format('woff2'); }
   @font-face { font-family: FilmMono; font-weight: 400; src: url(assets/fonts/ibm-plex-mono-latin-400.woff2) format('woff2'); }
   @font-face { font-family: FilmMono; font-weight: 500; src: url(assets/fonts/ibm-plex-mono-latin-500.woff2) format('woff2'); }
   @font-face { font-family: FilmMono; font-weight: 600; src: url(assets/fonts/ibm-plex-mono-latin-600.woff2) format('woff2'); }
@@ -28,7 +31,9 @@
   <span style="opacity:.6">space: play/pause · ←/→: ±1 frame · shift+←/→: ±1 s</span>
 </div>
 <script type="module">
-  import { FILM, CUES, IMAGES, draw } from './film.js';
+  // One module per chapter: ?film=km loads km.js; no parameter loads film.js.
+  const chapter = new URLSearchParams(location.search).get('film') || 'film';
+  const { FILM, CUES, IMAGES, draw } = await import(`./${chapter}.js`);
 
   const canvas = document.getElementById('c');
   canvas.width = FILM.w;
@@ -37,7 +42,7 @@
 
   // Fonts must be loaded before any frame is drawn, or canvas falls back silently.
   // Every face the film draws with. Canvas falls back silently, so a missing one is reported.
-  const faces = ['400 48px FilmDisplay', '600 48px FilmDisplay', '400 48px FilmSans', '600 48px FilmSans',
+  const faces = ['400 48px FilmDisplay', '600 48px FilmDisplay', '400 48px FilmSans', '500 48px FilmSans', '600 48px FilmSans',
     '400 48px FilmMono', '500 48px FilmMono', '600 48px FilmMono'];
   window.ready = Promise.all([...faces.map((f) => document.fonts.load(f)), ...IMAGES.map((img) => img.decode())])
     .then((loaded) => {
