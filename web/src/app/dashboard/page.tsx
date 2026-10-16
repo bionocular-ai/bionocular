@@ -127,7 +127,7 @@ export default function MainDashboardPage() {
                         opacity: 0.07,
                         fontSize: '72px',
                         fontVariantNumeric: 'tabular-nums',
-                        fontFamily: 'Georgia, serif',
+                        fontFamily: 'var(--font-display)',
                       }}
                     >
                       {String(i + 1).padStart(2, '0')}
@@ -148,11 +148,11 @@ export default function MainDashboardPage() {
                         </p>
                       </div>
 
-                      {/* Cancer name in Lora serif */}
+                      {/* Cancer name in the display face */}
                       <h2
                         className="leading-snug flex-1 text-[var(--brand-text)] line-clamp-3"
                         style={{
-                          fontFamily: "var(--font-lora), Georgia, serif",
+                          fontFamily: "var(--font-display)",
                           fontWeight: 600,
                           fontSize: '15px',
                           letterSpacing: '-0.01em',

@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 export interface PageHeaderProps {
   /** Eyebrow / breadcrumb — e.g. the cancer category name. */
   category: string;
-  /** Large serif section title — e.g. "Trial Updates". */
+  /** Large display-face section title — e.g. "Trial Updates". */
   title: string;
   /** Optional muted one-line description. */
   description?: string;

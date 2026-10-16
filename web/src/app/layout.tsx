@@ -5,18 +5,25 @@ import "./globals.css";
 
 // Self-hosted (Latin subset, the files Google Fonts serves) so the build never
 // downloads fonts: fetching them from Google intermittently failed CI builds.
-// Fraunces, Public Sans, Lora and Plus Jakarta Sans are variable fonts, one
-// file each; licenses sit beside the files.
-const fraunces = localFont({
-  variable: "--font-fraunces",
-  src: "./fonts/fraunces-latin.woff2",
-  weight: "400 700",
+// Onest and Plus Jakarta Sans are variable fonts, one file each; Poppins ships
+// one file per weight. Licenses sit beside the files. Onest + Poppins match the
+// landing page's type.
+const onest = localFont({
+  variable: "--font-onest",
+  src: "./fonts/onest-latin.woff2",
+  weight: "100 900",
 });
 
-const publicSans = localFont({
-  variable: "--font-public-sans",
-  src: "./fonts/public-sans-latin.woff2",
-  weight: "400 700",
+const poppins = localFont({
+  variable: "--font-poppins",
+  src: [
+    { path: "./fonts/poppins-latin-400.woff2", weight: "400" },
+    { path: "./fonts/poppins-latin-500.woff2", weight: "500" },
+    { path: "./fonts/poppins-latin-600.woff2", weight: "600" },
+    { path: "./fonts/poppins-latin-700.woff2", weight: "700" },
+    { path: "./fonts/poppins-latin-800.woff2", weight: "800" },
+    { path: "./fonts/poppins-latin-900.woff2", weight: "900" },
+  ],
 });
 
 const ibmPlexMono = localFont({
@@ -33,13 +40,6 @@ const plusJakartaSans = localFont({
   variable: "--font-plus-jakarta-sans",
   src: "./fonts/plus-jakarta-sans-latin.woff2",
   weight: "500 800",
-});
-
-// Kept: still referenced via --font-lora in dashboard/page.tsx
-const lora = localFont({
-  variable: "--font-lora",
-  src: "./fonts/lora-latin.woff2",
-  weight: "400 700",
 });
 
 export const metadata: Metadata = {
@@ -59,7 +59,7 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={[fraunces.variable, publicSans.variable, ibmPlexMono.variable, lora.variable, plusJakartaSans.variable].join(" ")}
+      className={[onest.variable, poppins.variable, ibmPlexMono.variable, plusJakartaSans.variable].join(" ")}
     >
       <head>
         <link
@@ -69,7 +69,7 @@ export default function RootLayout({
       </head>
       <body
         className="antialiased"
-        style={{ fontFamily: "var(--font-public-sans)" }}
+        style={{ fontFamily: "var(--font-poppins)" }}
         suppressHydrationWarning
       >
         <QueryProvider>{children}</QueryProvider>
