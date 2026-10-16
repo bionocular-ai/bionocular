@@ -3,383 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.">
-  <meta name="theme-color" content="#1B4F65">
+  <meta name="description" content="Human-verified oncology intelligence for research and medical teams - from raw data noise to clinical clarity, instantly.">
+  <meta name="theme-color" content="#F7FAF9">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://bionocular.ai/">
-  <meta property="og:title" content="Bionocular.ai — Human‑Verified Oncology Signal, Not Noise">
-  <meta property="og:description" content="Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.">
+  <meta property="og:title" content="Bionocular.ai - Human-Verified Oncology Signal, Not Noise">
+  <meta property="og:description" content="Human-verified oncology intelligence for research and medical teams - from raw data noise to clinical clarity, instantly.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://bionocular.ai/">
-  <meta property="og:image" content="https://bionocular.ai/og.jpg?v=20261012">
+  <meta property="og:image" content="https://bionocular.ai/og.jpg?v=20261016">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Bionocular.ai — next-gen AI and machine learning for oncology insights.">
+  <meta property="og:image:alt" content="Bionocular.ai - next-gen AI and machine learning for oncology insights.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="favicon.ico?v=20261012" sizes="any">
   <link rel="icon" href="icon.svg?v=20261012" type="image/svg+xml">
   <link rel="apple-touch-icon" href="apple-touch-icon.png?v=20261012">
-  <title>Bionocular.ai — The New Standard in Oncology Intelligence</title>
-
-  <!-- Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@600;700&display=swap" rel="stylesheet">
-  
-  <!-- Tailwind (precompiled) -->
-  <link rel="preload" href="tailwind.generated.css?v=20261012" as="style">
-  <link rel="stylesheet" href="tailwind.generated.css?v=20261012">
-  
-  <!-- Custom Styles -->
-  <link rel="preload" href="styles.css?v=20261012" as="style">
-  <link rel="stylesheet" href="styles.css?v=20261012">
+  <title>Bionocular.ai - The New Standard in Oncology Intelligence</title>
+  <link rel="preload" href="fonts/onest-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/poppins-latin-300.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/poppins-latin-400.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css?v=20261016f">
+  <script src="data/km-checkmate067-pfs.js?v=20261015" defer></script>
+  <script src="script.js?v=20261016d" defer></script>
 </head>
-<body class="bg-brand-bg text-brand-text font-sans antialiased selection:bg-brand-accent-light selection:text-brand-primary">
+<body>
 
-  <div id="mobileMenuBackdrop" class="mobile-menu-backdrop" aria-hidden="true"></div>
+<header class="site-header" id="hdr">
+  <div class="wrap bar">
+    <a class="brand" href="#hero" aria-label="Bionocular home"><img src="logo.svg?v=20261012" alt=""><span><span class="bio">bio</span>nocular</span></a>
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="#product">Product</a><a href="#survival">Survival Intelligence</a><a href="#about">About</a><a href="#contact">Contact</a>
+    </nav>
+    <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="sheet"><span></span></button>
+  </div>
+  <nav class="sheet" id="sheet" aria-label="Menu">
+    <a href="#product">Product</a><a href="#survival">Survival Intelligence</a><a href="#about">About</a>
+    <a href="#contact">Contact</a>
+  </nav>
+</header>
 
-  <header class="site-header">
-    <div class="container header-inner">
-      <a class="brand" href="#" aria-label="Bionocular Home">
-        <span class="brand-lockup"><img src="logo.svg?v=20261012" alt="" class="brand-lockup-mark"><span class="brand-text"><span class="brand-bio">bio</span>nocular</span></span>
-      </a>
-      <button id="mobileMenuToggle" class="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
-        <span class="hamburger">
-          <span></span><span></span><span></span>
-        </span>
-      </button>
-      
-      <nav id="siteNav" class="nav">
-        <div class="nav-links-wrap" id="navLinksWrap">
-          <span id="navIndicator" class="nav-indicator" aria-hidden="true"></span>
-          <a href="#hero" class="active">Home</a>
-          <a href="#platform">Product</a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
-        </div>
-      </nav>
+<section class="hero" id="hero" aria-labelledby="h1">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <div class="rotator"><h1 class="h1" id="h1" data-on><span>Next-gen AI and Machine learning</span><span class="soft"> for Oncology insights.</span></h1><p class="h1" aria-hidden="true"><span>Cutting the noise</span><span class="soft"> and only focusing on the key elements.</span></p></div>
+      <p class="lead">Human-verified oncology intelligence for research and medical teams&nbsp;- from raw data noise to clinical clarity, instantly.</p>
+      <a class="cta" href="#how-it-works">See How It Works <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
     </div>
-  </header>
-
-  <section class="hero hero-split min-h-[92vh] pt-[62px] md:min-h-[92vh] relative" id="hero" aria-labelledby="heroHeadline">
-    <div class="hero-atmosphere absolute inset-0 pointer-events-none" aria-hidden="true"></div>
-
-    <div class="hero-split-grid grid grid-cols-1 md:grid-cols-[2fr_3fr] min-h-[calc(92vh-62px)] relative z-0">
-      <div class="hero-text-column flex flex-col justify-center gap-4 md:gap-5 py-6 md:py-8 text-left">
-        <h1 id="heroHeadline" class="hero-split-title w-full max-w-xl m-0">
-          <div class="hero-rotator-wrapper relative min-h-20 sm:min-h-24 md:min-h-28 lg:min-h-[8.5rem] w-full max-w-xl flex flex-col justify-center">
-            <!-- Must stay in sync with HERO_PHRASES[0] in script.js; rendered here so the h1 is non-empty before JS runs. -->
-            <p id="heroRotatorPhrase" class="hero-rotator-phrase w-full text-[#E9ECEF] text-xl leading-[1.2] tracking-[-0.02em] sm:text-2xl md:text-3xl lg:text-4xl text-left pr-4" style="transition: opacity 0.6s ease, transform 0.6s ease;">
-              <span class="font-bold" style="font-weight: 700">Next-gen AI and Machine learning</span>
-              <span class="font-light" style="font-weight: 300; opacity: 0.85"> for Oncology insights.</span>
-            </p>
-          </div>
-        </h1>
-
-        <p class="text-sm md:text-base max-w-md leading-snug m-0" style="color: rgba(218,240,230,0.8);">
-          Human‑verified oncology intelligence for research and medical teams — from raw data noise to clinical clarity, instantly.
-        </p>
-
-        <!-- bionocular AI name animation block -->
-        <div class="hero-ai-name-block" aria-label="bionocular Authenticated Intelligence">
-          <span class="hero-ai-prefix">bionocular AI</span>
-          <span class="hero-ai-words">
-            <span class="hero-ai-artificial" aria-hidden="true">Artificial</span><span class="hero-ai-strike" aria-hidden="true"></span>
-            <span class="hero-ai-authenticated">Authenticated</span>
-          </span>
-          <span class="hero-ai-suffix">Intelligence</span>
-        </div>
-
-        <p class="hero-vision-line m-0">
-          <em>Where Clinical Rigor Meets Strategic Vision.</em><br>
-          <span class="hero-vision-sub">By Biopharma Strategists, for Biopharma Leaders.</span>
-        </p>
-
-        <div class="hero-index-list">
-          <span class="hero-index-label">Cancer specific — platform capabilities</span>
-          <div class="hero-index-row">
-            <span class="hero-index-num">01</span>
-            <span class="hero-index-desc">Innovative dashboard</span>
-          </div>
-          <div class="hero-index-row">
-            <span class="hero-index-num">02</span>
-            <span class="hero-index-desc">Efficacy &amp; safety of all treatments — stopped, ongoing or SoC</span>
-          </div>
-          <div class="hero-index-row">
-            <span class="hero-index-num">03</span>
-            <span class="hero-index-desc">Live news &amp; live monitoring of all treatments</span>
-          </div>
-          <div class="hero-index-row">
-            <span class="hero-index-num">04</span>
-            <span class="hero-index-desc">Clinical trial landscape with treatment, modality, target, line &amp; many more key filters</span>
-          </div>
-          <div class="hero-index-row hero-index-row-last">
-            <span class="hero-index-num">05</span>
-            <span class="hero-index-desc">AI agent</span>
-          </div>
-        </div>
-
-        <div class="hero-split-ctas flex mt-2">
-          <a href="#platform" class="hero-cta-underline inline-flex items-center">
-            See How It Works
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-right" aria-hidden="true" class="lucide lucide-arrow-right hero-cta-arrow w-5 h-5 ml-2"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-          </a>
-        </div>
-
-        <div class="hero-glass-divider hidden md:block" aria-hidden="true"></div>
-      </div>
-
-      <div class="hero-video-column relative min-h-[50vh] md:min-h-[calc(92vh-62px)] w-full overflow-hidden">
-        <video class="absolute inset-0 w-full h-full object-cover object-center" src="Bionocular.mp4?v=20261012" autoplay loop muted playsinline aria-hidden="true"></video>
-        <div class="hero-video-overlay absolute inset-0 pointer-events-none" aria-hidden="true"></div>
-      </div>
+    <div class="hero-copy">
+      <div class="ai-line"><span style="white-space:nowrap">bionocular AI</span> <s>Artificial</s> <b>Authenticated</b> Intelligence</div>
+      <p class="vision">Where Clinical Rigor Meets Strategic Vision.<small>By Biopharma Strategists, for Biopharma Leaders.</small></p>
+      <ul class="caps">
+        <li style="display:block"><span class="label">Cancer specific&nbsp;- platform capabilities</span></li>
+        <li><i>01</i>Innovative dashboard</li>
+        <li><i>02</i><span>Efficacy &amp; safety of all treatments&nbsp;- stopped, ongoing or SoC</span></li>
+        <li><i>03</i>Live news &amp; live monitoring of all treatments</li>
+        <li><i>04</i>Clinical trial landscape with treatment, modality, target, line &amp; more</li>
+        <li><i>05</i>AI agent</li>
+      </ul>
     </div>
-  </section>
+  </div>
+</section>
 
-  <main>
-    <!-- SECTION 1: COMPARISON -->
-    <section class="section py-20" id="platform" style="background: var(--brand-bg)">
-      <div class="container max-w-6xl mx-auto px-4">
-        <div class="text-center mb-16">
-          <span class="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4" style="background: var(--brand-accent-light); color: var(--brand-primary)">
-            Why Bionocular
-          </span>
-          <h2 class="text-3xl md:text-4xl font-bold mb-4" style="color: var(--brand-text)">
-            The New Standard in <span style="color: var(--brand-primary)">Oncology Intelligence</span>
-          </h2>
-          <p class="text-lg max-w-2xl mx-auto" style="color: var(--brand-text-muted)">
-            Discover why leading research and medical teams are leaving static databases behind for dynamic, AI-driven insights.
-          </p>
-        </div>
+<main>
+<section class="why" id="product" aria-labelledby="w-h">
+  <div class="wrap">
+    <p class="kicker">Why Bionocular</p>
+    <h2 class="h2" id="w-h">Other tools hand you data. Bionocular answers with it.</h2>
+    <p class="lead">Database logins give you lists to read. General chatbots answer without a source. Bionocular reads the trials for one disease, keeps the source on every number, and adds expert review.</p>
+    <table class="cmp">
+      <caption class="sr-only">How bionocular compares with oncology databases and general-purpose LLMs</caption>
+      <thead><tr><td></td><th scope="col">Oncology databases</th><th scope="col">General-purpose LLMs</th><th scope="col" class="us"><span class="brand"><img src="logo.svg?v=20261012" alt=""><span><span class="bio">bio</span>nocular</span></span></th></tr></thead>
+      <tbody>
+        <tr><th scope="row">What changed in my cancer this month?</th>
+          <td class="them" data-label="Oncology databases">A feed of trial updates to read through yourself</td>
+          <td class="them" data-label="General-purpose LLMs">Stops at its training cutoff</td>
+          <td class="us"><p>The treatment landscape for your cancer, updated as new trials and readouts land</p><div class="art"><span class="chip">Melanoma · Phase 3 · 1L</span></div></td></tr>
+        <tr><th scope="row">How do these arms compare?</th>
+          <td class="them" data-label="Oncology databases">One record per trial, each in its own format</td>
+          <td class="them" data-label="General-purpose LLMs">Can't read a survival curve inside a PDF</td>
+          <td class="us"><p>100+ endpoints side by side, and digitized survival curves on one timeline</p><div class="art"><svg id="cmpSpark" width="150" height="36" viewBox="0 0 150 36" aria-hidden="true"></svg><span class="chip">mPFS 11.5 vs 6.9 vs 2.9 mo</span></div></td></tr>
+        <tr><th scope="row">Can I trust this number?</th>
+          <td class="them" data-label="Oncology databases">Fields with no link back to the paper</td>
+          <td class="them" data-label="General-purpose LLMs">A fluent answer with no citation</td>
+          <td class="us"><p>Every value keeps its source, backed by expert review</p><div class="art"><span class="chip">NEJM 2019 · Larkin et al.</span><span class="chip g">Expert Reviewed</span></div></td></tr>
+        <tr><th scope="row">Does it know my disease?</th>
+          <td class="them" data-label="Oncology databases">Every cancer forced into one flat schema</td>
+          <td class="them" data-label="General-purpose LLMs">General training, no oncology review</td>
+          <td class="us"><p>A disease-specific agent that reasons across the whole connected dataset</p><div class="art"><span class="chip g">bionocular AI Agent</span></div></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+<section class="product" id="how-it-works" aria-labelledby="p-h">
+  <div class="wrap" style="position:relative">
+    <p class="kicker">Product</p>
+    <h2 class="h2" id="p-h">From raw scientific data to one cancer-specific view.</h2>
+    <p class="lead">Every source is extracted into the same clinical dimensions, then served through three visual modules and an AI agent that reads the same curated data.</p>
 
-        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
-          <!-- VS Badge -->
-          <div class="hidden lg:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full items-center justify-center font-bold shadow-lg z-10 border-4" style="background: var(--brand-primary); color: #fff; border-color: var(--brand-bg)">
-            VS
+    <div class="diagram"><canvas id="core" aria-hidden="true"></canvas><svg id="flowSvg" viewBox="0 0 1200 580" role="img" aria-label="Six raw sources flow into bionocular, are structured into nine clinical dimensions, and are served through the Visual Platform and the bionocular AI Agent"></svg></div>
+
+    <div class="stack">
+      <h3><svg width="10" height="10"><circle cx="5" cy="5" r="4.5" fill="#C9A227"/></svg>Raw Scientific Data</h3>
+      <div class="grid2" id="mSources"></div>
+      <div class="vlink raw"></div>
+      <div id="coreM" aria-hidden="true"><canvas></canvas><span>BIONOCULAR</span></div>
+      <div class="vlink"></div>
+      <div class="grid2" id="mDims"></div>
+      <div class="vlink"></div>
+      <h3 style="color:#7AC1A2">Visual Platform <span class="label" style="color:rgba(218,240,230,.7)">Cancer Specific</span></h3>
+      <div class="mods" id="mMods"></div>
+      <div class="vlink raw"></div>
+      <div class="mod ag"><b style="letter-spacing:0;font-family:'Plus Jakarta Sans',sans-serif">bionocular AI Agent</b><span>Plain-Language Answers from the Same Data</span></div>
+    </div>
+
+    <div class="expert">
+      <div class="seal"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#7AC1A2" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>Reviewed by Biopharma Expert (MD or PhD)</div>
+      <ol><li><span>01</span>Extracted from the Source Record</li><li><span>02</span>Checked Cell by Cell by an LLM Judge</li><li><span>03</span>Expert Review by an MD or PhD</li></ol>
+    </div>
+  </div>
+</section>
+<section class="survival" id="survival" aria-labelledby="s-h">
+  <div class="wrap">
+    <p class="kicker">Survival Intelligence</p>
+    <h2 class="h2" id="s-h">From a published curve to a comparable survival twin.</h2>
+    <p class="lead">Kaplan-Meier curves are locked inside PDFs. We rebuild each one as a digitized twin, so survival can be compared across trials on one timeline.</p>
+
+    <div class="sv-scroll" id="svScroll">
+      <div class="sv-stage">
+      <ol class="pills" id="steps" aria-label="Survival Intelligence workflow">
+        <li><button class="pill" data-step="1"><span class="n">01</span><span class="t">PDF Ingestion</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>An expert uploads the trial publication or congress readout.</span></span></button></li>
+        <li><button class="pill" data-step="2"><span class="n">02</span><span class="t">Curve Normalization</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Axes, scale and time units are aligned to one standard.</span></span></button></li>
+        <li><button class="pill" data-step="3"><span class="n">03</span><span class="t">Digital Twin</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Event steps and censoring are reconstructed from the published curve.</span></span></button></li>
+        <li><button class="pill" data-step="4"><span class="n">04</span><span class="t">Secure Storage</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Event histories and trial metadata are cataloged with their source.</span></span></button></li>
+        <li><button class="pill" data-step="5"><span class="n">05</span><span class="t">Scale</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>The same ingestion runs for every historical and competitor trial.</span></span></button></li>
+        <li><button class="pill" data-step="6"><span class="n">06</span><span class="t">Comparative View</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Layer and benchmark curves from different trials on one timeline.</span></span></button></li>
+        <li><button class="pill" data-step="7"><span class="n">07</span><span class="t">bionocular AI Agent</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Ask across curves: medians, landmarks and cross-trial comparisons.</span></span></button></li>
+      </ol>
+      <div class="chart-wrap">
+        <figure class="chart" id="chart" style="margin:0">
+          <header><b>Progression-free survival · CheckMate 067</b><span class="label">NEJM 2019 · Larkin et al.</span></header>
+          <div class="legend"><span><i style="background:#1B4F65"></i>Nivolumab + ipilimumab</span><span><i style="background:#2F8A66"></i>Nivolumab</span><span><i style="background:#C9A227"></i>Ipilimumab</span></div>
+          <svg id="km" viewBox="0 0 640 380" role="img" aria-label="Digitized twin Kaplan-Meier curves for progression-free survival in CheckMate 067, three arms, 0 to 60 months"></svg>
+          <div class="meta" id="meta">
+            <span data-from="4">NCT01844505</span><span data-from="4">Melanoma · Phase 3 · 1L</span><span data-from="4" id="kmStored">112 twin points stored</span>
+            <span data-from="7" class="g">bionocular AI Agent: median PFS 11.5 vs 6.9 vs 2.9 mo</span>
           </div>
-
-          <!-- Left: bionocularAI -->
-          <div class="rounded-2xl shadow-xl p-8 relative overflow-hidden" style="background: #fff; border: 1.5px solid var(--brand-border)">
-            <!-- Top accent stripe -->
-            <div class="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style="background: linear-gradient(90deg, var(--brand-primary), var(--brand-accent))"></div>
-            <h3 class="text-2xl font-bold mb-1" style="color: var(--brand-primary)">
-              With <span class="brand-text"><span class="brand-bio">bio</span>nocular</span>AI
-            </h3>
-            <p class="font-medium mb-8" style="color: var(--brand-accent)">Dynamic, AI-Driven Intelligence</p>
-
-            <div class="space-y-6">
-              <div class="flex gap-4">
-                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: var(--brand-accent-light); color: var(--brand-primary)">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="clock" aria-hidden="true" class="lucide lucide-clock w-6 h-6"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
-                </div>
-                <div class="flex items-center">
-                  <p class="font-medium" style="color: var(--brand-text)">Offers real-time trial and treatment landscape changes in specific cancers</p>
-                </div>
-              </div>
-              
-              <div class="flex gap-4">
-                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: var(--brand-accent-light); color: var(--brand-primary)">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="line-chart" aria-hidden="true" class="lucide lucide-line-chart w-6 h-6"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
-                </div>
-                <div class="flex items-center">
-                  <p class="font-medium" style="color: var(--brand-text)">Instantly plots 100+ endpoints on dynamic 2D & 3D analytical models</p>
-                </div>
-              </div>
-              
-              <div class="flex gap-4">
-                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: var(--brand-accent-light); color: var(--brand-primary)">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="brain-circuit" aria-hidden="true" class="lucide lucide-brain-circuit w-6 h-6"><path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"></path><path d="M9 13a4.5 4.5 0 0 0 3-4"></path><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"></path><path d="M3.477 10.896a4 4 0 0 1 .585-.396"></path><path d="M6 18a4 4 0 0 1-1.967-.516"></path><path d="M12 13h4"></path><path d="M12 18h6a2 2 0 0 1 2 2v1"></path><path d="M12 8h8"></path><path d="M16 8V5a2 2 0 0 1 2-2"></path><circle cx="16" cy="13" r=".5"></circle><circle cx="18" cy="3" r=".5"></circle><circle cx="20" cy="21" r=".5"></circle><circle cx="20" cy="8" r=".5"></circle></svg>
-                </div>
-                <div class="flex items-center">
-                  <p class="font-medium" style="color: var(--brand-text)">Disease-Specific AI Agent, Active Reasoning Partner</p>
-                </div>
-              </div>
-              
-              <div class="flex gap-4">
-                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: var(--brand-accent-light); color: var(--brand-primary)">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="filter" aria-hidden="true" class="lucide lucide-filter w-6 h-6"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"></path></svg>
-                </div>
-                <div class="flex items-center">
-                  <p class="font-medium" style="color: var(--brand-text)">The full ecosystem is connected with innovative filters to streamline data and is very user-friendly</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Right: Others -->
-          <div class="rounded-2xl p-8" style="background: var(--brand-bg); border: 1.5px solid var(--brand-border)">
-            <h3 class="text-2xl font-bold mb-1" style="color: var(--brand-text)">Others</h3>
-            <p class="font-medium mb-8" style="color: var(--brand-text-muted)">Static, Passive Data</p>
-
-            <div class="space-y-6">
-              <div class="flex gap-4 opacity-75">
-                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: #E8EFF2; color: #8AAAB5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="database" aria-hidden="true" class="lucide lucide-database w-6 h-6"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg>
-                </div>
-                <div class="flex items-center flex-col items-start justify-center">
-                  <p style="color: var(--brand-text-muted); margin: 0;">Siloed Oncology Vendors & Flat Clinical Scrapers</p>
-                  <span class="italic text-sm" style="color: var(--brand-text-muted);">"Give you a login to a database"</span>
-                </div>
-              </div>
-              
-              <div class="flex gap-4 opacity-75">
-                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: #E8EFF2; color: #8AAAB5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="help-circle" aria-hidden="true" class="lucide lucide-help-circle w-6 h-6"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg>
-                </div>
-                <div class="flex items-center">
-                  <p style="color: var(--brand-text-muted); margin: 0;">Generic LLMs lacking disease-specific context or specialized oncology training.</p>
-                </div>
-              </div>
-              
-              <div class="flex gap-4 opacity-75">
-                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: #E8EFF2; color: #8AAAB5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="clipboard-list" aria-hidden="true" class="lucide lucide-clipboard-list w-6 h-6"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg>
-                </div>
-                <div class="flex items-center flex-col items-start justify-center">
-                  <p style="color: var(--brand-text-muted); margin: 0;">Static Data Aggregators</p>
-                  <span class="italic text-sm" style="color: var(--brand-text-muted);">"Just dump lists of trial updates"</span>
-                </div>
-              </div>
-              
-              <div class="flex gap-4 opacity-75">
-                <div class="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center" style="background: #E8EFF2; color: #8AAAB5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-lucide="unplug" aria-hidden="true" class="lucide lucide-unplug w-6 h-6"><path d="m19 5 3-3"></path><path d="m2 22 3-3"></path><path d="M6.3 20.3a2.4 2.4 0 0 0 3.4 0L12 18l-6-6-2.3 2.3a2.4 2.4 0 0 0 0 3.4Z"></path><path d="M7.5 13.5 10 11"></path><path d="M10.5 16.5 13 14"></path><path d="m12 6 6 6 2.3-2.3a2.4 2.4 0 0 0 0-3.4l-2.6-2.6a2.4 2.4 0 0 0-3.4 0Z"></path></svg>
-                </div>
-                <div class="flex items-center">
-                  <p style="color: var(--brand-text-muted); margin: 0;">Data is highly fragmented and segregated</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        </figure>
       </div>
-    </section>
-
-    <!-- SECTION 2: PIPELINE FLOW -->
-    <section class="section py-20" id="about" style="background: #fff">
-      <div class="container max-w-6xl mx-auto px-4">
-        <div class="text-center mb-16">
-          <span class="inline-block text-xs font-semibold uppercase tracking-widest px-3 py-1 rounded-full mb-4" style="background: var(--brand-accent-light); color: var(--brand-primary)">
-            How It Works
-          </span>
-          <h2 class="text-3xl md:text-4xl font-bold mb-4" style="color: var(--brand-text)">
-            The Clinical Clarity Pipeline
-          </h2>
-          <p class="text-lg max-w-2xl mx-auto" style="color: var(--brand-text-muted)">
-            From data noise to clinical clarity: The bionocular AI Advantage
-          </p>
-        </div>
-
-        <div class="flex flex-col md:flex-row items-stretch gap-4 md:gap-2 lg:gap-4 relative w-full">
-          <!-- Step 1: Challenge -->
-          <div class="flex-1 flex flex-col items-center text-center p-6 rounded-xl" style="background: var(--brand-bg); border: 1.5px solid var(--brand-border)">
-            <h4 class="font-bold mb-1 text-xl" style="color: var(--brand-text)">The Challenge:</h4>
-            <p class="text-sm mb-6" style="color: var(--brand-text-muted)">Fragmented Data &amp; Noise</p>
-
-            <div class="relative w-32 h-32 mb-6 flex items-center justify-center opacity-60">
-              <div class="absolute grid grid-cols-2 gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="file-x" aria-hidden="true" class="lucide lucide-file-x w-8 h-8" style="color: #E57373"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="m14.5 12.5-5 5"></path><path d="m9.5 12.5 5 5"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="table" aria-hidden="true" class="lucide lucide-table w-8 h-8" style="color: var(--brand-text-muted)"><path d="M12 3v18"></path><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M3 15h18"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="file-text" aria-hidden="true" class="lucide lucide-file-text w-8 h-8" style="color: var(--brand-accent)"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="file-x" aria-hidden="true" class="lucide lucide-file-x w-8 h-8" style="color: var(--brand-text-muted)"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="m14.5 12.5-5 5"></path><path d="m9.5 12.5 5 5"></path></svg>
-              </div>
-            </div>
-
-            <p class="text-sm leading-relaxed" style="color: var(--brand-text-muted)">
-              Voluminous, unstructured data across disparate sources makes manual analysis slow and incomplete.
-            </p>
-          </div>
-
-          <!-- Arrow 1 -->
-          <div class="hidden md:flex items-center justify-center px-1 lg:px-2 shrink-0" style="color: var(--brand-border)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-right" aria-hidden="true" class="lucide lucide-arrow-right w-8 h-8 lg:w-10 lg:h-10"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-          </div>
-
-          <!-- Step 2: Solution -->
-          <div class="flex-1 flex flex-col items-center text-center p-6 rounded-xl" style="background: var(--brand-accent-light); border: 1.5px solid var(--brand-accent)">
-            <h4 class="font-bold mb-1 text-xl" style="color: var(--brand-primary)">The Solution:</h4>
-            <p class="text-sm mb-6" style="color: var(--brand-primary)">Intelligent Synthesis &amp; Structure</p>
-
-            <div class="relative w-32 h-32 mb-6 flex flex-col items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="filter" aria-hidden="true" class="lucide lucide-filter w-16 h-16 mb-2" style="color: var(--brand-primary)"><path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"></path></svg>
-              <div class="text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded" style="background: var(--brand-primary); color: #fff">
-                AI + Human Engine
-              </div>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="network" aria-hidden="true" class="lucide lucide-network w-8 h-8 mt-2" style="color: var(--brand-accent)"><rect x="16" y="16" width="6" height="6" rx="1"></rect><rect x="2" y="16" width="6" height="6" rx="1"></rect><rect x="9" y="2" width="6" height="6" rx="1"></rect><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3"></path><path d="M12 12V8"></path></svg>
-            </div>
-
-            <p class="text-sm leading-relaxed" style="color: var(--brand-text)">
-              Real-time aggregation and structuring of trials, publications, and news using advanced NLP and machine learning.
-            </p>
-          </div>
-
-          <!-- Arrow 2 -->
-          <div class="hidden md:flex items-center justify-center px-1 lg:px-2 shrink-0" style="color: var(--brand-accent)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="arrow-right" aria-hidden="true" class="lucide lucide-arrow-right w-8 h-8 lg:w-10 lg:h-10"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
-          </div>
-
-          <!-- Step 3: Edge -->
-          <div class="flex-1 flex flex-col items-center text-left p-6 rounded-xl" style="background: var(--brand-primary); border: 1.5px solid var(--brand-primary)">
-            <h4 class="font-bold mb-1 text-center w-full text-xl" style="color: #fff">The Unique Edge:</h4>
-            <p class="text-sm mb-6 text-center w-full" style="color: var(--brand-accent)">Expert-Curated Visualization</p>
-
-            <div class="flex gap-4 mb-6 w-full justify-center" style="color: var(--brand-accent)">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="layout-dashboard" aria-hidden="true" class="lucide lucide-layout-dashboard w-8 h-8"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="brain" aria-hidden="true" class="lucide lucide-brain w-8 h-8"><path d="M12 18V5"></path><path d="M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4"></path><path d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5"></path><path d="M17.997 5.125a4 4 0 0 1 2.526 5.77"></path><path d="M18 18a4 4 0 0 0 2-7.464"></path><path d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517"></path><path d="M6 18a4 4 0 0 1-2-7.464"></path><path d="M6.003 5.125a4 4 0 0 0-2.526 5.77"></path></svg>
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" data-lucide="refresh-cw" aria-hidden="true" class="lucide lucide-refresh-cw w-8 h-8"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
-            </div>
-
-            <ul class="text-sm space-y-2 list-disc pl-4" style="color: rgba(218,240,230,0.9)">
-              <li>Real-time trial updates and live news</li>
-              <li>Trial landscape with treatment cards and critical filters</li>
-              <li>All trial outcome data with user friendly analytics</li>
-              <li>Cancer specific AI agent</li>
-              <li>Regulatory timeline analytics</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- FOOTER -->
-  <footer id="contact" class="site-footer" style="background: linear-gradient(180deg, #09232F 0%, #041218 100%); color: #ffffff; padding: 56px 0 16px;">
-    <div class="container footer-content grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-      <div class="footer-section flex flex-col items-center md:items-start text-center md:text-left gap-4">
-        <div class="flex items-center gap-2">
-          <span class="brand-lockup"><img src="logo.svg?v=20261012" alt="" class="brand-lockup-mark"><span class="brand-text"><span class="brand-bio">bio</span>nocular</span></span>
-        </div>
-        <p style="color: rgba(255, 255, 255, 0.82); max-width: 250px; margin: 0;">Human‑verified oncology intelligence for research and medical teams.</p>
-      </div>
-      
-      <div class="footer-section flex flex-col items-center gap-2">
-        <h4 style="color: #fff; margin: 0; font-size: 1.1rem; font-weight: 600;">Contact</h4>
-        <p style="margin: 0;"><a href="mailto:info@bionocular.ai" class="footer-link">info@bionocular.ai</a></p>
-      </div>
-      
-      <div class="footer-section flex flex-col items-center md:items-end gap-3">
-        <h4 style="color: #fff; margin:0; font-size: 1.1rem; font-weight: 600;">Connect</h4>
-        <!-- Icons: Font Awesome Free 6.5.0 (CC BY 4.0) — https://fontawesome.com/license/free — Copyright 2023 Fonticons, Inc. -->
-        <div class="social-links flex gap-4">
-          <a href="#" aria-label="LinkedIn" class="footer-link">
-            <svg class="social-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" fill="currentColor" aria-hidden="true"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg>
-          </a>
-          <a href="#" aria-label="Twitter/X" class="footer-link">
-            <svg class="social-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z"/></svg>
-          </a>
-          <a href="mailto:info@bionocular.ai" aria-label="Email" class="footer-link">
-            <svg class="social-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg>
-          </a>
-        </div>
+      <div class="sv-progress" aria-hidden="true"><span id="svBar"></span></div>
       </div>
     </div>
-    
-    <div class="container footer-bottom mt-12 pt-6 border-t border-white/10 text-center text-white/70 text-sm">
-      <p id="copyright" style="margin: 0;"></p>
-    </div>
-  </footer>
+    <div class="endpoints"><b>Query, align and compare survival curves across trials</b><div><span>PFS</span><span>OS</span><span>DFS</span><span>RFS</span><span>EFS</span><span>MFS</span></div></div>
+  </div>
+</section>
+<!-- Placeholder About: copy drawn only from claims made elsewhere on this page. Replace when the real About lands. -->
+<section class="about" id="about" aria-labelledby="a-h">
+  <div class="wrap">
+    <p class="kicker">About</p>
+    <h2 class="h2" id="a-h">Built by biopharma strategists, for the teams who make the calls.</h2>
+    <p class="lead">Bionocular is oncology intelligence for research and medical teams. We take one cancer at a time and keep every number traceable to its source.</p>
+    <ul class="principles">
+      <li><b>One disease at a time</b><span>Each cancer gets its own dimensions, endpoints and review, instead of one flat schema for every indication.</span></li>
+      <li><b>A source on every number</b><span>Every value links back to the trial record, abstract or publication it came from.</span></li>
+      <li><b>An expert in the loop</b><span>An LLM judge checks each cell, backed by expert review from an MD or PhD.</span></li>
+    </ul>
+  </div>
+</section>
+</main>
 
-  <script src="script.js?v=20261012"></script>
+<footer class="footer" id="contact">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div><a class="brand" href="#hero"><img src="logo.svg?v=20261012" alt=""><span><span class="bio">bio</span>nocular</span></a><p>Human-verified oncology intelligence for research and medical teams.</p></div>
+      <div><h4>Platform</h4><ul><li><a href="#product">Product</a></li><li><a href="#survival">Survival Intelligence</a></li></ul></div>
+      <div><h4>Company</h4><ul><li><a href="#about">About</a></li><li><a href="#contact">Contact</a></li></ul></div>
+      <div><h4>Contact</h4><ul><li><a href="mailto:info@bionocular.ai">info@bionocular.ai</a></li></ul></div>
+    </div>
+    <div class="footer-bottom"><span id="copyright">© 2026 Bionocular.ai. All rights reserved.</span><div class="social"><a href="#" aria-label="LinkedIn"><svg viewBox="0 0 448 512"><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"/></svg></a>
+      <a href="#" aria-label="X"><svg viewBox="0 0 512 512"><path d="M389.2 48h70.6L305.6 224.2 487 464H345L233.7 318.6 106.5 464H35.8L200.7 275.5 26.8 48H172.4L272.9 180.9 389.2 48zM364.4 421.8h39.1L151.1 88h-42L364.4 421.8z"/></svg></a>
+      <a href="mailto:info@bionocular.ai" aria-label="Email"><svg viewBox="0 0 512 512"><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4L236.8 313.6c11.4 8.5 27 8.5 38.4 0L492.8 150.4c12.1-9.1 19.2-23.3 19.2-38.4c0-26.5-21.5-48-48-48H48zM0 176V384c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V176L294.4 339.2c-22.8 17.1-54 17.1-76.8 0L0 176z"/></svg></a></div></div>
+  </div>
+</footer>
+
 </body>
 </html>
