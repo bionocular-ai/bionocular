@@ -30,24 +30,28 @@ const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
             right ? 'flex-wrap items-start justify-between' : 'flex-col'
           )}
         >
-          <h1
-            className="font-semibold leading-[1.1] tracking-[-0.01em] text-(--brand-text)"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontSize: 'clamp(24px, 3.4vw, 34px)',
-            }}
-          >
-            {title}
-          </h1>
+          {/* The description stays with the title, so a tall `right` slot (stacked
+              filters) can't push it away. */}
+          <div className="flex flex-col gap-2">
+            <h1
+              className="font-semibold leading-[1.1] tracking-[-0.01em] text-(--brand-text)"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 'clamp(24px, 3.4vw, 34px)',
+              }}
+            >
+              {title}
+            </h1>
+
+            {description ? (
+              <p className="max-w-[60ch] text-sm leading-relaxed text-(--brand-text-muted)">
+                {description}
+              </p>
+            ) : null}
+          </div>
 
           {right ? <div className="max-w-full shrink-0">{right}</div> : null}
         </div>
-
-        {description ? (
-          <p className="max-w-[60ch] text-sm leading-relaxed text-(--brand-text-muted)">
-            {description}
-          </p>
-        ) : null}
       </header>
     );
   }
