@@ -2,11 +2,13 @@
 
 The Bionocular product film, rendered from code: an HTML canvas draws every frame, Playwright captures
 them, ffmpeg encodes. Read this file before every task here. The film is a set of chapters (one per
-question or feature); the current storyboard is `docs/storyboard.md`.
+question or feature). Chapters: `film.js` (Question 2, `docs/storyboard.md`) and `km.js` (KM Curves
+Intelligence, `docs/storyboard-km.md`). Pass `--film km` to `render.mjs` (or `?film=km` to the preview) for a
+chapter other than `film.js`.
 
 ## How a film is made
 
-- `film.js` is the film. It exports `FILM` (size, duration, bpm), `CUES` (sound cues) and `draw(g, T)`.
+- Each chapter module (`film.js`, `km.js`) is a film. It exports `FILM` (size, duration, bpm), `CUES` (sound cues) and `draw(g, T)`.
 - `draw(g, T)` paints the exact frame for global time `T` in seconds. It must be a **pure function of T**:
   no timers, no `requestAnimationFrame` logic, no CSS transitions, no state carried between frames,
   no `Math.random` (use `rng(seed)` from `lib/motion.js`).
@@ -15,8 +17,8 @@ question or feature); the current storyboard is `docs/storyboard.md`.
   Never restart a spring when a value changes target; add one with `track()`.
 - Drawing helpers are in `lib/draw.js` (`risingText`, `drawCursor`, `rrect`, `mixColor`, `font`).
 - Fonts are the product's own, symlinked from `web/src/app/fonts` into `assets/fonts` and registered in
-  `index.html`: `font(weight, size, 'display')` is Fraunces, `'sans'` (default) Public Sans, `'mono'`
-  IBM Plex Mono. Never rely on system fonts. `assets/logo.svg` links to `web/public/logo.svg`.
+  `index.html`: `font(weight, size, 'display')` is Onest, `'sans'` (default) Poppins (400-700), `'mono'`
+  IBM Plex Mono, the app's faces since PR #166. Never rely on system fonts. `assets/logo.svg` links to `web/public/logo.svg`.
 - Format: 1920×1080, 16:9, 60 fps. A chapter starts and ends on the bare canvas so chapters join without a seam.
 
 ## Workflow — stop at each gate and wait for my OK
@@ -48,7 +50,7 @@ blurry scaled text, dead beats where nothing happens, elements touching the fram
 - Bionocular tokens only (`C` in `film.js`, from `web/src/app/globals.css`): page #F7FAF9, ink #102B36,
   muted #4A6B77, border #C8E0D8, deep teal #1B4F65 as the one strong colour, seafoam #7AC1A2 / #DAF0E6 to
   mark what the viewer should look at. Light canvas; real UI sits on it as a white sheet with one soft shadow.
-- Fraunces only for the few words of display type, Public Sans for UI text, Plex Mono for every number.
+- Onest only for the few words of display type, Poppins for UI text, Plex Mono for every number.
 - Left-aligned editorial layout on a consistent grid (x = 160 margin) unless the brief says otherwise.
 - Elements enter with springs or masks, not opacity fades. Opacity is for exits and secondary details only.
 - Something new must happen on screen every 2–4 seconds. The last 1.5–2 s may hold on the end card.

@@ -5,6 +5,7 @@
 //   node render.mjs --stills 1,3.5,6     key frames only                         -> out/stills/
 //   node render.mjs --from 4 --to 6      render only part of the film
 //   node render.mjs --serve              live preview in your browser (http://127.0.0.1:8080)
+//   node render.mjs --film km ...        render another chapter (km.js) instead of film.js
 //
 // Always writes out/cues.json (sound cues in the rendered range) for sound/score.mjs.
 
@@ -46,7 +47,8 @@ if (has('serve')) {
   await new Promise(() => {});
 }
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
-const url = `http://127.0.0.1:${server.address().port}/index.html?render`;
+const FILM_ARG = arg('film', null);
+const url = `http://127.0.0.1:${server.address().port}/index.html?render${FILM_ARG ? `&film=${FILM_ARG}` : ''}`;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
