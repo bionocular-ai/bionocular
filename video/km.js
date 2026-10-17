@@ -1,6 +1,6 @@
 // KM Curves Intelligence chapter: every feature of the page in 16 s. The curves
 // draw in, the endpoint and arm filters are used, the chart and the
-// published-vs-twin table are read, the floating agent opens and three
+// published-vs-twin table are read, the floating agent opens and two
 // prompts are typed (never sent), and the upload button closes it.
 // Everything is a pure function of global time T (seconds). No timers, no state.
 // Storyboard: docs/storyboard-km.md. Every screen is a real 2x capture of the
@@ -26,10 +26,10 @@ const C = {
 };
 
 const image = (name) => Object.assign(new Image(), { src: `assets/screens/${name}@2x.png` });
+// Split as the composer wraps them ("Post-Progression" breaks at its hyphen).
 const PROMPT_LINES = [
-  ['Calculate the delta between the PFS', 'and OS digital twins to identify which', 'parameters most strongly drive', 'Post-Progression Survival ?'],
+  ['Calculate the delta between the PFS', 'and OS digital twins to identify which', 'parameters most strongly drive Post-', 'Progression Survival?'],
   ['Compare the PFS and OS digital twins to', 'model Post-Progression Survival and', 'highlight top hazard drivers?'],
-  ['Show how Grade 3+ AEs impact both', 'curves. How significantly does high', 'toxicity pull down the PFS curve versus', 'the OS twin compared to the baseline', 'cohort?'],
 ];
 const IMG = {
   full: image('km-page-full'), // agent button hidden: it is fixed, drawn on its own
@@ -82,35 +82,35 @@ const R = {
 const COMPOSER = { x: 1074, top1: 484, pad: 8, lh: 20, w: 283 };
 
 // ---------------------------------------------------------------- timeline
-const T_WIPE = [0.18, 0.95]; // curves draw along the time axis
-const T_LEGEND = 0.85;
-const T_FILTERS = 1.2; // camera leans into the filter cluster
-const T_EP_HOVER = 1.55;
-const T_EP_OPEN = 1.8;
-const T_IN_USE = 2.05;
-const T_EP_PICK = 2.5;
-const T_A1_HOVER = 2.95;
-const T_A1_OPEN = 3.1;
-const T_A1_TICKS = [3.45, 3.75];
-const T_A1_BADGE = 3.95;
-const T_A1_CLOSE = 4.25;
-const T_A2_OPEN = 4.55;
-const T_A2_TICKS = [4.8, 4.98];
-const T_A2_CLOSE = 5.22;
-const T_CHART = 5.4; // camera pulls out to the chart, then leans to the legend
-const T_LEGEND_LEAN = 5.75;
-const T_HR = [6.0, 6.12];
-const T_TABLE = 6.8; // the page scrolls to the table
-const T_COLS = [7.3, 7.7];
-const T_BACK = 8.4; // scroll back up
-const T_FAB_HOVER = 8.68;
-const T_FAB_CLICK = 8.85;
-const T_COMPOSER = 9.3;
-const SLOTS = [[9.45, 1.35], [10.85, 1.35], [12.25, 1.95]]; // [start, length] per prompt
-const T_DRAWER_OUT = 14.2;
-const T_UPLOAD = 14.6;
-const T_CAPTION = 14.72;
-const T_END = 15.6;
+const T_WIPE = [0.2, 1.05]; // curves draw along the time axis
+const T_LEGEND = 0.94;
+const T_FILTERS = 1.32; // camera leans into the filter cluster
+const T_EP_HOVER = 1.7;
+const T_EP_OPEN = 1.98;
+const T_IN_USE = 2.26;
+const T_EP_PICK = 2.75;
+const T_A1_HOVER = 3.25;
+const T_A1_OPEN = 3.41;
+const T_A1_TICKS = [3.8, 4.13];
+const T_A1_BADGE = 4.35;
+const T_A1_CLOSE = 4.68;
+const T_A2_OPEN = 5.0;
+const T_A2_TICKS = [5.28, 5.48];
+const T_A2_CLOSE = 5.74;
+const T_CHART = 5.94; // camera pulls out to the chart, then leans to the legend
+const T_LEGEND_LEAN = 6.33;
+const T_HR = [6.6, 6.73];
+const T_TABLE = 7.48; // the page scrolls to the table
+const T_COLS = [8.03, 8.47];
+const T_BACK = 9.77; // scroll back up, 1 s after the match % ring lands
+const T_FAB_HOVER = 10.08;
+const T_FAB_CLICK = 10.27;
+const T_COMPOSER = 10.76;
+const SLOTS = [[10.93, 1.49], [12.47, 1.49]]; // [start, length] per prompt
+const T_DRAWER_OUT = 13.96;
+const T_UPLOAD = 14.4;
+const T_CAPTION = 14.53;
+const T_END = 15.5;
 
 // ---------------------------------------------------------------- camera
 // The page sits in a 1600 px wide sheet at x = 160. The camera is the page point
