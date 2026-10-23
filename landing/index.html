@@ -23,9 +23,9 @@
   <link rel="preload" href="fonts/onest-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/poppins-latin-300.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/poppins-latin-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=20261023a">
+  <link rel="stylesheet" href="styles.css?v=20261024o">
   <script src="data/km-checkmate067-pfs.js?v=20261015" defer></script>
-  <script src="script.js?v=20261023a" defer></script>
+  <script src="script.js?v=20261024o" defer></script>
 </head>
 <body>
 
@@ -49,7 +49,6 @@
     <div class="hero-copy">
       <div class="rotator"><h1 class="h1" id="h1" data-on><span>Next-gen AI and Machine learning</span><span class="soft"> for Oncology insights.</span></h1><p class="h1" aria-hidden="true"><span>Cutting the noise</span><span class="soft"> and only focusing on the key elements.</span></p></div>
       <p class="lead">Human-verified oncology intelligence for research and medical teams&nbsp;- from raw data noise to clinical clarity, instantly.</p>
-      <a class="cta" href="#how-it-works">See How It Works <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
     </div>
     <div class="hero-copy">
       <div class="ai-line"><span style="white-space:nowrap">bionocular AI</span> <s>Artificial</s> <b>Authenticated</b> Intelligence</div>
@@ -67,6 +66,46 @@
 </section>
 
 <main>
+<section class="os" id="platform" aria-labelledby="os-h">
+  <div class="wrap os-head">
+    <h2 class="h2" id="os-h">Introducing <span class="wm"><b>bio</b>nocular</span> OS<sup>*</sup></h2>
+    <p class="lead">The outcome suite for comparing oncology evidence.</p>
+  </div>
+
+  <div class="wrap os-scroll" id="osScroll">
+    <div class="os-stage">
+      <ol class="os-pills" aria-label="bionocular OS layers, bottom to top">
+        <li><button class="osp" data-step="1"><span class="t">Efficacy</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>50+ efficacy endpoints for every arm, ORR, PFS and OS among them, with digitized survival curves you can overlay across trials.</span></span></button></li>
+        <li><button class="osp" data-step="2"><span class="t">Safety</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>50+ safety endpoints: adverse events by grade and class, AE, TEAE or TRAE, as each source reports them, ready to weigh against benefit.</span></span></button></li>
+        <li><button class="osp" data-step="3"><span class="t">Clinical Trials</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>The trial landscape for one cancer: phase, status, line of therapy and sponsor, from registry to readout.</span></span></button></li>
+        <li><button class="osp" data-step="4"><span class="t">Treatments</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Approved, investigational and standard-of-care regimens, each linked to its trials and readouts.</span></span></button></li>
+        <li><button class="osp" data-step="5"><span class="t">Biomarkers</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>The populations each trial selects, such as BRAF V600 or PD-L1, so you compare like with like.</span></span></button></li>
+        <li><button class="osp" data-step="6"><span class="t">Modality</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>What each treatment is: monoclonal antibody, small molecule, cytokine, vaccine, TIL therapy, oncolytic virus and more.</span></span></button></li>
+        <li><button class="osp" data-step="7"><span class="t">Expert Review</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Reviewed by biopharma experts, MD or PhD, who check sampled trials against the source.</span></span></button></li>
+        <li><button class="osp" data-step="8"><span class="t">AI Agent</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>A disease-specific agent that reasons across every layer below and cites the source for each number.</span></span></button></li>
+      </ol>
+
+      <div class="os-scene" aria-hidden="true">
+        <div class="os-stack" id="osStack">
+          <div class="os-floor"></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Efficacy</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Safety</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Clinical Trials</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Treatments</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Biomarkers</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Modality</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Expert Review</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">AI Agent</span></div></div>
+          <div class="case" id="osCase">
+            <div class="case-glow"></div><div class="case-lid"><b><span class="bio">bio</span>nocular OS<sup>*</sup></b></div></div>
+        </div>
+      </div>
+      <p class="os-note" id="osNote"><sup>*</sup>OS: Outcome Suite</p>
+      <div class="os-progress" aria-hidden="true"><i><span id="osBar"></span></i></div>
+    </div>
+  </div>
+</section>
+
 <section class="why" id="product" aria-labelledby="w-h">
   <div class="wrap">
     <p class="kicker">Why Bionocular</p>
@@ -162,13 +201,38 @@
 <section class="about" id="about" aria-labelledby="a-h">
   <div class="wrap">
     <p class="kicker">About</p>
-    <h2 class="h2" id="a-h">Built by biopharma strategists, for the teams who make the calls.</h2>
-    <p class="lead">Bionocular is oncology intelligence for research and medical teams. We take one cancer at a time and keep every number traceable to its source.</p>
-    <ul class="principles">
-      <li><b>One disease at a time</b><span>Each cancer gets its own dimensions, endpoints and review, instead of one flat schema for every indication.</span></li>
-      <li><b>A source on every number</b><span>Every value links back to the trial record, abstract or publication it came from.</span></li>
-      <li><b>An expert in the loop</b><span>An LLM judge checks each cell, backed by expert review from an MD or PhD.</span></li>
+    <h2 class="h2" id="a-h">Built by biopharma strategists, for the people who shape treatment decisions.</h2>
+    <p class="lead">Bionocular is oncology intelligence for strategy, deal and clinical teams. We take one cancer at a time and keep every number traceable to its source.</p>
+    <ul class="aud" aria-label="Who bionocular is for">
+      <li><b>Strategic Intelligence</b><span>Daily power users tracking landscape shifts</span></li>
+      <li><b>BD&amp;L</b><span>Asset diligence and deal evaluation</span></li>
+      <li><b>Clinical Development</b><span>Trial design and control-arm assumptions</span></li>
+      <li><b>Consultants</b><span>Client deliverables and strategic advisory</span></li>
+      <li><b>Investment Banks</b><span>Valuations and fairness opinions</span></li>
+      <li><b>Oncologists &amp; Cancer Centers</b><span>Tumor boards, formulary, and investigator-initiated trials</span></li>
     </ul>
+
+    <div class="ab-block">
+      <h3 class="ab-h3">The evidence is exploding. <em>Your tools can't keep up.</em></h3>
+      <figure class="ev">
+        <ul>
+          <li><span class="num">~9,000</span><span>Oncology programs in development, about 39% of the pharma pipeline</span></li>
+          <li><span class="num">2,100+</span><span>New oncology trials started in 2024, up 58% in a decade</span></li>
+          <li><span class="num">117+</span><span>AI-enabled drug assets already in clinical trials</span></li>
+          <li><span class="num">68%</span><span>Of top-10 pharma targets pursued by more than five assets</span></li>
+        </ul>
+      </figure>
+      <p class="ev-close">Stop comparing headlines. <em>Start comparing evidence.</em></p>
+    </div>
+
+    <div class="ab-block">
+      <h3 class="ab-h3">AI speed. <em>Human rigor.</em></h3>
+      <ul class="principles">
+        <li><b>One disease at a time</b><span>Each cancer gets its own dimensions, endpoints and review, instead of one flat schema for every indication.</span></li>
+        <li><b>A source on every number</b><span>Every value links back to the trial record, abstract or publication it came from.</span></li>
+        <li><b>An expert in the loop</b><span>An LLM judge checks each cell, backed by expert review from an MD or PhD.</span></li>
+      </ul>
+    </div>
   </div>
 </section>
 </main>
