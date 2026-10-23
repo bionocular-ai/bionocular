@@ -43,6 +43,112 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }, 6000);
 })();
 
+// ── Hero background: a heatmap band along the base, its cells drifting through the brand ramp ──
+(() => {
+  const hero = document.getElementById('hero'), cv = document.getElementById('heroBg'), ctx = cv.getContext('2d');
+  const TEAL = '27,79,101', GOLD = '201,162,39';
+  const RAMP = [[218,240,230], [122,193,162], [47,138,102], [27,79,101], [14,53,71]];
+  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+  const ease = x => { x = clamp(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+  const rng = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const ramp = v => { v = clamp(v) * (RAMP.length - 1); const i = Math.min(RAMP.length - 2, v | 0), f = v - i; return RAMP[i].map((a, k) => a + (RAMP[i + 1][k] - a) * f); };
+  // Cursor focus: the pointer is followed with an eased approach, never snapped to.
+  const ptr = { x: 0, y: 0, tx: 0, ty: 0, on: 0, ton: 0 };
+  let W = 0, H = 0, c = 32, u = 64, x0 = 0, rows = 7, cells = [], zones = [], slot = -1, pick = null;
+
+  function size() {
+    const dpr = Math.min(2, devicePixelRatio || 1), r = hero.getBoundingClientRect();
+    W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // One grid unit is two band cells: the band is drawn in cells, the field above it in units.
+    c = W < 768 ? 24 : 32; u = 2 * c; x0 = (W % u) / 2 - u; rows = W < 768 ? 6 : 7;
+    // A few 2x2 merged cells on the unit grid, like a heatmap's aggregated bins.
+    const R = rng(9), taken = new Set(), nx = Math.ceil((W - x0) / c); cells = [];
+    for (let r = 0; r < rows; r++) for (let i = 0; i < nx; i++) {
+      if (taken.has(r * nx + i)) continue;
+      const big = !(i % 2) && !(r % 2) && r + 1 < rows && R() < .13;
+      if (big) [r * nx + i + 1, (r + 1) * nx + i, (r + 1) * nx + i + 1].forEach(n => taken.add(n));
+      cells.push({ x: x0 + i * c, y: H - (r + 1 + big) * c, r, n: big ? 2 : 1, p: R() * 6.3, q: R() * 6.3 });
+    }
+    // Each text column's own extent (its grid cell is wider than the text), so the band can fade behind it.
+    zones = [...hero.querySelectorAll('.hero-copy')].map(e => {
+      const kids = [...e.children].map(k => k.getBoundingClientRect());
+      const L = Math.min(...kids.map(b => b.left)), Rt = Math.max(...kids.map(b => b.left + Math.min(b.width, 560))), T = Math.min(...kids.map(b => b.top)), B = Math.max(...kids.map(b => b.bottom));
+      return { x: (L + Rt) / 2 - r.left, y: (T + B) / 2 - r.top, rx: (Rt - L) * .68, ry: (B - T) * .72 };
+    });
+    slot = -1;
+  }
+
+  function draw(t) {
+    const top = H - rows * c;
+    for (const k of ['x', 'y', 'on']) ptr[k] += (ptr['t' + k] - ptr[k]) * .14;
+    ctx.clearRect(0, 0, W, H); ctx.lineWidth = 1;
+    // Above the band, tracks alternate one unit and two units wide in both directions (lines at 0, 1, 3, 4, 6, 7 ...),
+    // with an open stretch of three units over the band where the copy ends.
+    ctx.beginPath();
+    for (let k = 0, x = x0; x <= W; k++, x += u) if (k % 3 !== 2) { ctx.moveTo(Math.round(x) + .5, 0); ctx.lineTo(Math.round(x) + .5, top); }
+    for (let k = 3, y = top - 3 * u; y >= 0; k++, y -= u) if (k % 3 !== 2) { ctx.moveTo(0, Math.round(y) - .5); ctx.lineTo(W, Math.round(y) - .5); }
+    ctx.strokeStyle = `rgba(${TEAL},.075)`; ctx.stroke();
+    ctx.beginPath();
+    for (let x = x0; x <= W; x += c) { ctx.moveTo(Math.round(x) + .5, top); ctx.lineTo(Math.round(x) + .5, H); }
+    for (let y = H; y >= top - 1; y -= c) { ctx.moveTo(0, Math.round(y) - .5); ctx.lineTo(W, Math.round(y) - .5); }
+    ctx.strokeStyle = `rgba(${TEAL},.09)`; ctx.stroke();
+    for (const k of cells) {
+      const h = k.r / (rows - 1), cx = k.x + c * k.n / 2, cy = k.y + c * k.n / 2;
+      const f = ptr.on * Math.exp(-((cx - ptr.x) ** 2 + (cy - ptr.y) ** 2) / (2 * 120 * 120));
+      // Occupancy: a slow field, a little denser at the base, so cells come and go as it drifts.
+      const o = .5 * Math.sin(k.x * .009 + t * .35 + k.p * .4) + .35 * Math.sin(k.x * .0031 - t * .22 + k.r * .7) + .2 * Math.sin(t * .5 + k.p) + .3 - h * .55 + f * .6;
+      k.a = clamp(o / .35) * (.78 - h * .2 + f * .2);
+      if (k.a < .02) continue;
+      // Colour: a wave travelling along the band. Capped by opacity, so a faint cell is always a pale tint, never a greyed dark;
+      // merged cells stay pale, and the band cools to grey toward the right edge.
+      let v = Math.min(k.a + .08, .74, clamp(.36 + .32 * Math.sin(k.x * .006 - t * .6 + k.r * .5) + .2 * Math.sin(t * .4 + k.q) + (1 - h) * .1 + f * .05) ** 1.6);
+      if (k.n > 1) v *= .45;
+      const rgb = ramp(v), gr = .3 * rgb[0] + .59 * rgb[1] + .11 * rgb[2], d = .85 * clamp((cx / W - .62) / .3);
+      // Square and flush on the grid: inset or rounded cells open gutters that pull the eye to the corners.
+      ctx.fillStyle = `rgba(${rgb.map(x => Math.round(x + (gr - x) * d))},${k.a})`;
+      ctx.fillRect(Math.round(k.x) + 1, Math.round(k.y), c * k.n - 1, c * k.n - 1);
+    }
+    // Fade the band behind each text column so the copy never competes with it.
+    ctx.save(); ctx.globalCompositeOperation = 'destination-out';
+    for (const z of zones) {
+      ctx.save(); ctx.translate(z.x, z.y); ctx.scale(z.rx, z.ry);
+      const g = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      g.addColorStop(0, 'rgba(0,0,0,.55)'); g.addColorStop(.55, 'rgba(0,0,0,.47)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 1, 0, 7); ctx.fill(); ctx.restore();
+    }
+    ctx.restore();
+    // The one accent: every few seconds a settled cell clear of the copy turns gold, then fades.
+    const s = Math.floor(t / 3), ph = (t / 3) % 1;
+    if (s !== slot) {
+      slot = s;
+      const cand = cells.filter(k => k.n === 1 && k.r >= 2 && k.r <= rows - 2 && k.a > .35 && k.x > 40 && k.x < W - 140
+        && !zones.some(z => ((k.x - z.x) / z.rx) ** 2 + ((k.y - z.y) / z.ry) ** 2 < 1));
+      pick = cand.length ? cand[Math.floor(rng(s)() * cand.length)] : null;
+    }
+    if (!pick) return;
+    const a = Math.min(ease(ph * 5), ease((1 - ph) * 5)), sz = (c - 1) * (.86 + .14 * a), o2 = (c - 1 - sz) / 2;
+    ctx.beginPath(); ctx.rect(Math.round(pick.x) + 1 + o2, Math.round(pick.y) + o2, sz, sz);
+    ctx.fillStyle = `rgba(247,250,249,${a})`; ctx.fill(); ctx.fillStyle = `rgba(${GOLD},${.8 * a})`; ctx.fill();
+  }
+
+  // Reduced motion gets one still frame, redrawn only when the hero resizes.
+  let t = 6, last = performance.now(), visible = true;
+  const redraw = () => { size(); draw(t); };
+  new ResizeObserver(redraw).observe(hero);
+  document.fonts.ready.then(redraw); // the text extents change once the webfonts swap in
+  if (still) return;
+  new IntersectionObserver(([e]) => visible = e.isIntersecting).observe(hero);
+  const local = e => { const r = hero.getBoundingClientRect(); ptr.tx = e.clientX - r.left; ptr.ty = e.clientY - r.top; };
+  hero.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; local(e); if (ptr.on < .05) { ptr.x = ptr.tx; ptr.y = ptr.ty; } ptr.ton = 1; });
+  hero.addEventListener('pointerleave', () => ptr.ton = 0);
+  const frame = now => {
+    t += Math.min(.05, (now - last) / 1000) * .5; last = now;
+    if (visible) draw(t); // off-screen the clock still runs, so the band picks up where it would be
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+})();
+
 // ── Product: shared data, drawn as an SVG diagram (≥768px) or a stacked list (<768px) ──
 const SOURCES = ['Clinical Trials', 'Conference Abstracts', 'Publications', 'Press Releases', 'Live News', 'Standard of Care'];
 const DIMS = ['Indication & Subtype', 'Clinical Setting', 'Disease Stage', 'Line of Therapy', 'Biomarker', 'Modality', 'Target', 'Efficacy Endpoints', 'Safety Endpoints'];
