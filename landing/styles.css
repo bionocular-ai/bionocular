@@ -44,7 +44,9 @@ a { color: inherit; }
 /* ── Header: a full-width sticky glass bar. Links only change colour: no moving parts. ── */
 .site-header { position: fixed; inset: 0 0 auto; z-index: 50; height: var(--header-h);
   background: rgba(255,255,255,.94); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
-  box-shadow: 0 1px 0 rgba(16,43,54,.08); }
+  box-shadow: 0 1px 0 rgba(16,43,54,0); transition: box-shadow .3s; }
+/* The divider shows only once content scrolls under the header, so the top of the page opens clean. */
+.site-header[data-scrolled] { box-shadow: 0 1px 0 rgba(16,43,54,.08); }
 .bar { height: 100%; display: grid; grid-template-columns: auto 1fr; align-items: center; color: var(--text); }
 /* The brand lockup: the mark stands 1.05em tall, its foot 0.12em below the baseline, and "bio" is the 800 weight in the same colour. */
 .brand { justify-self: start; display: inline-block; white-space: nowrap; line-height: 1; color: #1A1A1A; text-decoration: none; font: 500 22px/1 'Plus Jakarta Sans', sans-serif; letter-spacing: .004em; }
@@ -105,10 +107,16 @@ a { color: inherit; }
 /* ── Hero ── */
 .hero { position: relative; color: var(--text); background:
     /* One soft mint wash behind the right column, so the headline sits on a clean ground. */
-    radial-gradient(ellipse 50% 60% at 72% 45%, rgba(218,240,230,.55), transparent 70%), var(--bg);
+    radial-gradient(ellipse 50% 60% at 72% 45%, rgba(218,240,230,.55), transparent 70%),
+    /* The page tint fades to white across the heatmap band, so the hero meets the white section below without a seam. */
+    linear-gradient(var(--bg) calc(100% - 260px), var(--surface));
   /* The bottom padding makes room for the heatmap band (script.js); its top rows sit under the end of the copy. */
   padding: calc(var(--header-h) + clamp(2rem, 5vw, 4.5rem)) 0 110px; overflow: hidden; }
-@media (min-width: 768px) { .hero { padding-bottom: 180px; } }
+@media (min-width: 768px) { .hero { padding-bottom: 240px; } }
+/* The heatmap frame's left and right edges run on below the hero and fade out, so the band hands over to the page. */
+main { position: relative; }
+main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--grid-l, 0); right: var(--grid-r, 0); height: 72px; pointer-events: none;
+  border-inline: 1px solid rgba(27,79,101,.09); -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
 .hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .hero > .wrap { position: relative; }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(2.5rem, 5vw, 4rem); align-items: center; }
@@ -135,12 +143,128 @@ a { color: inherit; }
 .cta { display: inline-flex; align-items: center; gap: .55rem; padding: .8rem 1.3rem; border-radius: 999px; background: var(--primary); color: #fff; font-weight: 500; font-size: .9375rem; letter-spacing: -0.01em; text-decoration: none; transition: transform .1s ease-out, background .2s; }
 .cta:hover { background: var(--ink); }
 .cta:active { transform: scale(.97); }
+.cta:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
 .cta svg { transition: transform .3s var(--settle); }
 .cta:hover svg { transform: translateX(3px); }
 
 .chip { font: 500 .6875rem/1 var(--mono); padding: .35rem .6rem; border-radius: 999px; background: var(--tint); color: var(--primary); }
 .chip.g { background: var(--gold-tint); color: var(--gold-ink); }
 
+
+/* ── OS stack: six glass layers drop onto one stack, bottom to top, then fuse into one frosted block ── */
+.os { padding-top: clamp(4.5rem, 9vw, 7.5rem); }
+.os-head { text-align: center; padding-bottom: clamp(2.5rem, 5vw, 4rem); }
+.os-head .h2 { margin-bottom: .75rem; font-weight: 500; }
+.os-head .lead { margin-inline: auto; color: var(--text); font-weight: 400; }
+.os-head sup, .case-lid sup, .os-note sup { font-size: .55em; vertical-align: .7em; color: var(--gold); font-weight: 700; }
+.os-note sup { color: var(--gold-ink); }
+.os-head .wm { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: .004em; }
+.os-head .wm b, .case-lid .bio { font-weight: 800; }
+
+/* Full-bleed stage on a neutral studio wash: darker at the top, fading into the page. */
+.os-stage { position: relative; overflow: clip; display: grid; gap: 1.5rem; padding: 1.5rem 1rem 2rem;
+  background: radial-gradient(120% 70% at 62% 58%, rgba(255,255,255,.75), rgba(255,255,255,0) 70%), linear-gradient(180deg, #E6EFEC 0%, #EEF5F2 55%, var(--bg) 100%); }
+.os-scroll[data-mode="pinned"] { --per-step: 42vh; height: calc(7.5 * var(--per-step) + 100vh - var(--header-h)); }
+.os-scroll[data-mode="pinned"] .os-stage { position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); padding: 0; display: block; }
+
+/* Glass pills: neutral smoke, white text; the active one opens into a card with its name as a small label. */
+.os-pills { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; justify-items: start; position: relative; z-index: 2; }
+.os-scroll[data-mode="pinned"] .os-pills { position: absolute; top: 2.1rem; left: 1.5rem; width: min(30rem, calc(100% - 3rem)); }
+.osp { all: unset; position: relative; box-sizing: border-box; cursor: pointer; display: grid; grid-template-columns: auto auto; align-items: center; gap: 0 .65rem; padding: .55rem .6rem .55rem .95rem; border-radius: 22px;
+  background: rgba(27,79,101,.84); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); color: #fff; font: 500 .9375rem/1.3 var(--text-font); letter-spacing: .01em;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 1px 2px rgba(16,43,54,.12);
+  transition: padding .5s var(--settle), border-radius .5s, background .3s, box-shadow .5s var(--settle), transform .1s ease-out; }
+.osp:hover { background: rgba(27,79,101,.94); }
+.osp:active { transform: scale(.98); }
+.osp:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+.osp .plus { position: relative; width: 20px; height: 20px; border-radius: 50%; background: rgba(255,255,255,.2); font-size: 0; transition: transform .5s var(--settle), opacity .3s; }
+.osp .plus::before, .osp .plus::after { content: ""; position: absolute; left: 50%; top: 50%; width: 8px; height: 1.5px; margin: -.75px 0 0 -4px; border-radius: 1px; background: #fff; }
+.osp .plus::after { transform: rotate(90deg); }
+.osp .d { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .55s var(--settle); }
+.osp .d > span { overflow: hidden; display: none; font-size: 1.0625rem; line-height: 1.4; opacity: 0; transition: opacity .3s, display 0s .55s; transition-behavior: allow-discrete; }
+.osp[aria-current="step"] { width: 100%; padding: 1.1rem 1.5rem 1.35rem; border-radius: 24px; cursor: default;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 14px 34px -8px rgba(16,43,54,.32); }
+.osp[aria-current="step"] .t { font-size: .875rem; opacity: .7; }
+.osp[aria-current="step"] .plus { opacity: 0; transform: rotate(45deg); position: absolute; top: 1.1rem; right: 1.25rem; }
+.osp[aria-current="step"] .d { grid-template-rows: 1fr; }
+.osp[aria-current="step"] .d > span { font-weight: 400; letter-spacing: 0; display: block; opacity: 1; padding-top: .55rem; transition: opacity .35s .15s, display 0s; transition-behavior: allow-discrete; }
+@starting-style { .osp[aria-current="step"] .d > span { opacity: 0; } }
+.os-scroll:not([data-mode="pinned"]) .osp { width: 100%; cursor: default; border-radius: 20px; padding: 1rem 1.25rem; }
+.os-scroll:not([data-mode="pinned"]) .osp .plus { display: none; }
+.os-scroll:not([data-mode="pinned"]) .osp .t { font-size: .875rem; opacity: .7; }
+.os-scroll:not([data-mode="pinned"]) .osp .d { grid-template-rows: 1fr; }
+.os-scroll:not([data-mode="pinned"]) .osp .d > span { display: block; opacity: 1; padding-top: .4rem; }
+
+/* Capsule progress, bottom-left. */
+.os-progress { display: none; }
+.os-scroll[data-mode="pinned"] .os-progress { display: block; position: absolute; left: 1.5rem; bottom: 1.75rem; z-index: 2; width: 110px; height: 30px; padding: 13px 15px; border-radius: 15px;
+  background: rgba(27,79,101,.84); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+@media (prefers-reduced-transparency: reduce) { .osp, .os-scroll[data-mode="pinned"] .os-progress { background: var(--primary); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+.os-progress i { display: block; height: 4px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; }
+.os-progress i span { display: block; height: 100%; background: #fff; transform-origin: left; transform: scaleX(0); }
+
+/* The scene: an isometric camera on one square, right of the pills. */
+.os-scene { position: relative; display: grid; place-items: center; min-height: 26rem; perspective: 3200px; }
+.os-scroll[data-mode="pinned"] .os-scene { position: absolute; inset: 0; min-height: 0; }
+.os-stack { --s: clamp(14rem, 28vw, 25rem); --pk: 0; width: var(--s); height: var(--s); position: relative; transform-style: preserve-3d;
+  transform: translateY(22%) rotateX(66.3deg) rotateZ(45deg); }
+.os-floor { position: absolute; inset: -6%; border-radius: 12%; transform: translateZ(-1px); filter: blur(18px); background: rgba(16,43,54,.26); }
+.slab, .tile { position: absolute; inset: 0; transform-style: preserve-3d; transform: translateZ(var(--z, 0px)); will-change: transform; }
+/* Opacity on the slab itself would flatten its 3D children into one plane, so each face fades instead. */
+.slab > * { opacity: var(--o, 1); }
+.slab > i, .slab > .top, .tile > i, .tile > b { position: absolute; inset: 0; border-radius: 6%; }
+/* Glass edge: eight stacked rims, dark at the foot and bright at the lip, so the edge catches light like thick glass. */
+.slab > i { transform: translateZ(calc(var(--k) * 1.75px)); background: color-mix(in srgb, #F3F8F6 calc(var(--pk) * 100%), var(--c)); }
+.slab > i:nth-child(1) { --k: 0; --c: rgba(12,40,52,.85); }
+.slab > i:nth-child(2) { --k: 1; --c: rgba(22,60,74,.7); }
+.slab > i:nth-child(3) { --k: 2; --c: rgba(70,112,122,.6); }
+.slab > i:nth-child(4) { --k: 3; --c: rgba(138,176,170,.45); }
+.slab > i:nth-child(5) { --k: 4; --c: rgba(200,224,216,.42); }
+.slab > i:nth-child(6) { --k: 5; --c: rgba(227,238,234,.5); }
+.slab > i:nth-child(7) { --k: 6; --c: rgba(240,247,244,.7); }
+.slab > i:nth-child(8) { --k: 7; --c: rgba(255,255,255,.92); }
+/* Frosted face with a soft light sweep; fusing turns every face milk-white. */
+.slab > .top { transform: translateZ(12.5px); display: grid; place-items: center;
+  background: linear-gradient(150deg, rgba(234,245,240,.6) 0%, rgba(176,206,198,.5) 45%, rgba(130,166,162,.55) 100%);
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.75), inset 0 0 40px rgba(255,255,255,.28); }
+.slab > .top::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: rgba(248,252,250,.94); opacity: var(--pk); }
+/* The label sits centred like a printed plate. Covered layers blur, as if seen through the frosted glass above. */
+.lbl { font: 400 calc(var(--s) * .074)/1 var(--text-font); letter-spacing: -0.02em; color: var(--text); white-space: nowrap;
+  text-shadow: calc(var(--s) * .01) calc(var(--s) * .016) calc(var(--s) * .022) rgba(16,43,54,.2);
+  filter: blur(calc(var(--cov, 0) * 2.2px)); opacity: calc((1 - var(--cov, 0) * .55) * (1 - var(--hid, 0))); }
+/* Modality's keys: small glass tiles that rise off the plate. */
+.tiles { position: absolute; inset: 3%; transform-style: preserve-3d; transform: translateZ(12.5px); }
+.tile { inset: auto; width: 32%; height: 49%; }
+/* Faces fade, not the tile: opacity on the tile itself would flatten its glass edge. */
+.tile > * { opacity: var(--to, 0); }
+.tile > i { background: rgba(16,43,54,.55); }
+.tile > i + i { transform: translateZ(3px); background: rgba(218,236,229,.7); }
+.tile > b { transform: translateZ(6px); display: grid; place-items: center; background: linear-gradient(150deg, #fff, #E2F2EA);
+  box-shadow: inset 0 0 0 1px #fff; font: 500 calc(var(--s) * .042)/1.15 var(--text-font); letter-spacing: -0.02em; color: rgba(16,43,54,calc(1 - var(--hid, 0))); text-align: center; padding: 0 3%; }
+.tile > b::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: #8DB0A7; opacity: calc(var(--pk, 0) * .9); }
+/* The case: a frosted lid lands on the stack, then a skin of thin rounded layers runs down from it, hugging every layer like draped cloth. */
+.case { position: absolute; inset: -2.5%; transform-style: preserve-3d; transform: translateZ(var(--cz, 0px)); }
+.case-lid, .skin { position: absolute; inset: 0; border-radius: 6%; }
+.case-lid { opacity: var(--o, 0); }
+/* Each skin layer is a hollow ring, not a filled face: filled faces pile up into milk. Stacked rings read as a clear glass wall. */
+/* Colours are fixed at full frost; JS fades each ring by opacity alone, so the frost costs no repaint. */
+.skin { border: 3px solid rgba(236,245,241,.42); background: rgba(222,239,232,.14); opacity: 0; }
+/* Glass edges catch light: a bright lip under the lid. The base has no stroke: it curves softly into the floor. */
+.skin.lip { border-color: rgba(255,255,255,.95); background: none; }
+/* The frost glow: a fixed blurred light under the lid, faded in by opacity. */
+.case-glow { position: absolute; inset: -8%; border-radius: 14%; background: radial-gradient(closest-side, #fff 60%, rgba(122,193,162,.45)); filter: blur(28px); opacity: calc(var(--fr, 0) * .85); transform: translateZ(-1px); }
+.case-lid { display: grid; place-items: center; background: linear-gradient(150deg, rgba(244,251,248,.34), rgba(206,229,221,.2));
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.95), inset 0 0 0 5px rgba(122,193,162,.16), inset 0 0 40px rgba(255,255,255,.35), 0 0 0 1px rgba(16,43,54,.12); }
+/* A specular sweep across the lid, as on polished glass. */
+.case-lid::after { content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: linear-gradient(115deg, rgba(255,255,255,0) 28%, rgba(255,255,255,.5) 44%, rgba(255,255,255,0) 58%, rgba(255,255,255,0) 70%, rgba(255,255,255,.25) 78%, rgba(255,255,255,0) 86%); }
+.case-lid::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: #fff; opacity: calc(var(--fr, 0) * .6); }
+.case-lid b { position: relative; }
+.case-lid b { font: 500 calc(var(--s) * .1)/1 'Plus Jakarta Sans', sans-serif; letter-spacing: .004em; color: rgba(16,43,54,.9); white-space: nowrap; }
+
+.os-note { position: absolute; left: 0; right: 0; bottom: 1.9rem; margin: 0; text-align: center; opacity: var(--pk, 0); transform: translateY(calc((1 - var(--pk, 0)) * 8px));
+  font: 400 .9375rem/1.4 var(--text-font); color: var(--muted); }
+.os-scroll:not([data-mode="pinned"]) .os-note { position: static; opacity: 1; transform: none; margin-top: .5rem; }
 
 /* ── Product ── */
 .product { position: relative; background: var(--deep); color: #EAF4F0; padding: clamp(4.5rem, 9vw, 7.5rem) 0; overflow: hidden; }
@@ -210,11 +334,14 @@ a { color: inherit; }
 .pill:active { transform: scale(.98); }
 .pill:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
 .pill .n { font: 500 .6875rem/1 var(--mono); letter-spacing: .06em; color: var(--accent-text); }
-.pill .plus { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--tint); color: var(--primary); font-size: 15px; line-height: 1; transition: transform .45s var(--settle), opacity .3s; }
+.pill .plus { position: relative; width: 22px; height: 22px; border-radius: 50%; background: var(--tint); font-size: 0; transition: transform .45s var(--settle), opacity .3s; }
+/* The + is two hairline bars, so it sits on the circle's exact centre (a font glyph rides high). */
+.pill .plus::before, .pill .plus::after { content: ""; position: absolute; left: 50%; top: 50%; width: 9px; height: 1.5px; margin: -.75px 0 0 -4.5px; border-radius: 1px; background: var(--primary); }
+.pill .plus::after { transform: rotate(90deg); }
 .pill .d { contain: inline-size; grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .5s var(--settle); }
 /* A closed pill's description leaves layout (display: none) once the fold finishes, so it is removed rather than clipped. */
 .pill .d > span { overflow: hidden; display: none; font-size: .9375rem; font-weight: 400; line-height: 1.5; opacity: 0; transition: opacity .3s, display 0s .5s; transition-behavior: allow-discrete; }
-.pill[aria-current="step"] { width: 100%; padding: 1rem 1.1rem 1.1rem; border-radius: 18px; background: var(--primary); color: #fff; box-shadow: none; }
+.pill[aria-current="step"] { width: 100%; padding: 1rem 1.1rem 1.1rem; border-radius: 18px; background: var(--primary); color: #fff; box-shadow: 0 14px 30px -10px rgba(16,43,54,.35); }
 .pill[aria-current="step"] .n { color: var(--accent); }
 .pill[aria-current="step"] .plus { opacity: 0; transform: rotate(45deg); }
 .pill[aria-current="step"] .d { grid-template-rows: 1fr; }
@@ -297,6 +424,28 @@ a { color: inherit; }
 .principles li { padding-top: 1.25rem; border-top: 1.5px solid var(--accent); }
 .principles b { display: block; margin-bottom: .5rem; font: 600 1.25rem/1.25 var(--display); letter-spacing: -0.03em; }
 .principles span { color: var(--muted); }
+/* Who it is for, why now, how we work. */
+.ab-h3 { margin: 0 0 1.5rem; font: 600 clamp(1.5rem, 2.6vw, 2rem)/1.1 var(--display); letter-spacing: -0.04em; color: var(--text); text-wrap: balance; }
+.ab-h3 em { font-style: normal; color: var(--primary); }
+.ab-block { margin-top: clamp(3.5rem, 7vw, 5.5rem); }
+/* Audiences: six named seats, hairline-ruled like the principles. */
+.aud { list-style: none; margin: clamp(2.5rem, 5vw, 3.5rem) 0 0; padding: 0; display: grid; gap: 0 2.5rem; }
+@media (min-width: 640px) { .aud { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .aud { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.aud li { padding: 1.25rem 0 1.5rem; border-top: 1px solid var(--hair); }
+.aud b { display: block; margin-bottom: .35rem; font: 600 1.125rem/1.25 var(--display); letter-spacing: -0.03em; }
+.aud span { color: var(--muted); font-size: .9375rem; line-height: 1.5; }
+/* The evidence band: four numbers in mono on the page tint, one rule between them. */
+.ev { margin: 0; padding: clamp(1.75rem, 4vw, 2.5rem); border-radius: 22px; background: var(--bg); box-shadow: 0 0 0 1px var(--hair); }
+.ev ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.75rem 2rem; }
+@media (min-width: 640px) { .ev ul { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .ev ul { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .ev li + li { padding-left: 2rem; border-left: 1px solid var(--border); } }
+.ev .num { display: block; margin-bottom: .5rem; font: 500 clamp(2.25rem, 3.6vw, 3rem)/1 var(--mono); letter-spacing: -0.03em; color: var(--primary); }
+.ev li span:last-child { color: var(--muted); font-size: .9375rem; line-height: 1.5; }
+.ev-close { margin: clamp(1.75rem, 3.5vw, 2.25rem) 0 0; font: 600 clamp(1.125rem, 2vw, 1.375rem)/1.3 var(--display); letter-spacing: -0.03em; color: var(--text); }
+.ev-close em { font-style: normal; color: var(--primary); }
+.about .principles { margin-top: 0; }
 
 /* ── Accessibility preferences: gentler, not absent ── */
 @media (prefers-reduced-motion: reduce) {
@@ -310,6 +459,7 @@ a { color: inherit; }
 @media (prefers-contrast: more) {
   .chart { box-shadow: 0 0 0 1.5px var(--text); }
   .hero .lead, .caps { color: var(--text); }
+  .site-header[data-scrolled] { box-shadow: 0 1px 0 var(--border); }
 }
 
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }

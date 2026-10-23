@@ -14,11 +14,11 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const atBottom = () => innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
   let inBand = 'hero';
   const setActive = id => links.forEach(a => a.getAttribute('href') === '#' + id ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'));
-  const sync = () => setActive(atBottom() ? 'contact' : inBand);
+  const sync = () => { setActive(atBottom() ? 'contact' : inBand); hdr.toggleAttribute('data-scrolled', scrollY > 0); };
   addEventListener('scroll', sync, { passive: true });
-  // The diagram after the comparison is part of Product too, so it keeps the Product link lit.
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = e.target.id === 'how-it-works' ? 'product' : e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
-  ['hero', 'product', 'how-it-works', 'survival', 'about', 'contact'].forEach(id => io.observe(document.getElementById(id)));
+  // The OS stack and the diagram after the comparison are part of Product too, so they keep the Product link lit.
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = ['platform', 'how-it-works'].includes(e.target.id) ? 'product' : e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
+  ['hero', 'platform', 'product', 'how-it-works', 'survival', 'about', 'contact'].forEach(id => io.observe(document.getElementById(id)));
   const toggle = open => { hdr.toggleAttribute('data-open', open); btn.setAttribute('aria-expanded', open); };
   btn.addEventListener('click', () => toggle(!hdr.hasAttribute('data-open')));
   sheet.querySelectorAll('a').forEach(a => a.addEventListener('click', () => toggle(false)));
@@ -54,20 +54,25 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const ramp = v => { v = clamp(v) * (RAMP.length - 1); const i = Math.min(RAMP.length - 2, v | 0), f = v - i; return RAMP[i].map((a, k) => a + (RAMP[i + 1][k] - a) * f); };
   // Cursor focus: the pointer is followed with an eased approach, never snapped to.
   const ptr = { x: 0, y: 0, tx: 0, ty: 0, on: 0, ton: 0 };
-  let W = 0, H = 0, c = 32, u = 64, x0 = 0, rows = 7, cells = [], zones = [], slot = -1, pick = null;
+  const hh = document.getElementById('hdr').offsetHeight;
+  let W = 0, H = 0, c = 32, u = 64, x0 = 0, L = 0, R = 0, rows = 7, cells = [], zones = [], slot = -1, pick = null;
 
   function size() {
     const dpr = Math.min(2, devicePixelRatio || 1), r = hero.getBoundingClientRect();
     W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // One grid unit is two band cells: the band is drawn in cells, the field above it in units.
     c = W < 768 ? 24 : 32; u = 2 * c; x0 = (W % u) / 2 - u; rows = W < 768 ? 6 : 7;
+    // The grid is framed: its outer edges sit on cell lines a margin in from each side, and nothing is drawn beyond them.
+    const m = W < 768 ? 16 : 40; L = x0 + c * Math.ceil((m - x0) / c); R = x0 + c * Math.floor((W - m - x0) / c);
+    // The frame's two edges carry on a little past the hero (main::before in styles.css).
+    document.documentElement.style.setProperty('--grid-l', `${Math.round(L)}px`); document.documentElement.style.setProperty('--grid-r', `${W - Math.round(R) - 1}px`);
     // A few 2x2 merged cells on the unit grid, like a heatmap's aggregated bins.
-    const R = rng(9), taken = new Set(), nx = Math.ceil((W - x0) / c); cells = [];
+    const rnd = rng(9), taken = new Set(), nx = Math.round((R - L) / c); cells = [];
     for (let r = 0; r < rows; r++) for (let i = 0; i < nx; i++) {
       if (taken.has(r * nx + i)) continue;
-      const big = !(i % 2) && !(r % 2) && r + 1 < rows && R() < .13;
+      const big = !(i % 2) && !(r % 2) && r + 1 < rows && i + 1 < nx && rnd() < .13;
       if (big) [r * nx + i + 1, (r + 1) * nx + i, (r + 1) * nx + i + 1].forEach(n => taken.add(n));
-      cells.push({ x: x0 + i * c, y: H - (r + 1 + big) * c, r, n: big ? 2 : 1, p: R() * 6.3, q: R() * 6.3 });
+      cells.push({ x: L + i * c, y: H - (r + 1 + big) * c, r, n: big ? 2 : 1, p: rnd() * 6.3, q: rnd() * 6.3 });
     }
     // Each text column's own extent (its grid cell is wider than the text), so the band can fade behind it.
     zones = [...hero.querySelectorAll('.hero-copy')].map(e => {
@@ -80,17 +85,21 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function draw(t) {
     const top = H - rows * c;
-    for (const k of ['x', 'y', 'on']) ptr[k] += (ptr['t' + k] - ptr[k]) * .14;
+    // Time-based easing (about .11 s), so the focus follows at the same speed on 60 and 120 Hz screens.
+    const ease1 = 1 - Math.exp(-dt / .11);
+    for (const k of ['x', 'y', 'on']) ptr[k] += (ptr['t' + k] - ptr[k]) * ease1;
     ctx.clearRect(0, 0, W, H); ctx.lineWidth = 1;
     // Above the band, tracks alternate one unit and two units wide in both directions (lines at 0, 1, 3, 4, 6, 7 ...),
     // with an open stretch of three units over the band where the copy ends.
     ctx.beginPath();
-    for (let k = 0, x = x0; x <= W; k++, x += u) if (k % 3 !== 2) { ctx.moveTo(Math.round(x) + .5, 0); ctx.lineTo(Math.round(x) + .5, top); }
-    for (let k = 3, y = top - 3 * u; y >= 0; k++, y -= u) if (k % 3 !== 2) { ctx.moveTo(0, Math.round(y) - .5); ctx.lineTo(W, Math.round(y) - .5); }
+    for (let k = 0, x = x0; x <= W; k++, x += u) if (k % 3 !== 2 && x > L && x < R) { ctx.moveTo(Math.round(x) + .5, 0); ctx.lineTo(Math.round(x) + .5, top); }
+    for (const x of [L, R]) { ctx.moveTo(Math.round(x) + .5, 0); ctx.lineTo(Math.round(x) + .5, top); }
+    // The top of the hero is open: horizontal tracks stop two units below the header, so only the verticals run up to it.
+    for (let k = 3, y = top - 3 * u; y >= hh + 2 * u; k++, y -= u) if (k % 3 !== 2) { ctx.moveTo(L, Math.round(y) - .5); ctx.lineTo(R + 1, Math.round(y) - .5); }
     ctx.strokeStyle = `rgba(${TEAL},.075)`; ctx.stroke();
     ctx.beginPath();
-    for (let x = x0; x <= W; x += c) { ctx.moveTo(Math.round(x) + .5, top); ctx.lineTo(Math.round(x) + .5, H); }
-    for (let y = H; y >= top - 1; y -= c) { ctx.moveTo(0, Math.round(y) - .5); ctx.lineTo(W, Math.round(y) - .5); }
+    for (let x = L; x <= R + 1; x += c) { ctx.moveTo(Math.round(x) + .5, top); ctx.lineTo(Math.round(x) + .5, H); }
+    for (let y = H; y >= top - 1; y -= c) { ctx.moveTo(L, Math.round(y) - .5); ctx.lineTo(R + 1, Math.round(y) - .5); }
     ctx.strokeStyle = `rgba(${TEAL},.09)`; ctx.stroke();
     for (const k of cells) {
       const h = k.r / (rows - 1), cx = k.x + c * k.n / 2, cy = k.y + c * k.n / 2;
@@ -132,7 +141,7 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   }
 
   // Reduced motion gets one still frame, redrawn only when the hero resizes.
-  let t = 6, last = performance.now(), visible = true;
+  let t = 6, last = performance.now(), visible = true, dt = 1 / 60;
   const redraw = () => { size(); draw(t); };
   new ResizeObserver(redraw).observe(hero);
   document.fonts.ready.then(redraw); // the text extents change once the webfonts swap in
@@ -142,11 +151,120 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   hero.addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; local(e); if (ptr.on < .05) { ptr.x = ptr.tx; ptr.y = ptr.ty; } ptr.ton = 1; });
   hero.addEventListener('pointerleave', () => ptr.ton = 0);
   const frame = now => {
-    t += Math.min(.05, (now - last) / 1000) * .5; last = now;
+    dt = Math.min(.05, (now - last) / 1000); t += dt * .5; last = now;
     if (visible) draw(t); // off-screen the clock still runs, so the band picks up where it would be
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
+})();
+
+// ── OS stack: scroll inside the pinned run drops one layer per step, then the last step fuses them ──
+(() => {
+  const sc = document.getElementById('osScroll'), stage = sc.firstElementChild, bar = document.getElementById('osBar'), stack = document.getElementById('osStack');
+  const slabs = [...stack.querySelectorAll('.slab')], pills = [...sc.querySelectorAll('.osp')], box = document.getElementById('osCase'), note = document.getElementById('osNote');
+  const floor = stack.querySelector('.os-floor'), tileBox = document.getElementById('osTiles');
+  // Pinned only where the stage has room for the open pill card and the stack; shorter screens get the static layout.
+  const hdr = document.getElementById('hdr'), wide = matchMedia('(min-width: 1024px) and (min-height: 560px)');
+  const N = slabs.length + 1, HOLD = .5, GAP = 30, CASED = 26, DROP = 620, RISE = 8;
+  const clamp = x => Math.min(1, Math.max(0, x)), out = t => 1 - (1 - t) ** 3, inOut = t => t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
+  // Modality keys, 3 x 2 on the plate: the most common novel modalities in the melanoma landscape, plus TIL and oncolytic virus.
+  tileBox.innerHTML = ['Monoclonal Antibody', 'Small Molecule', 'Cytokine', 'Vaccine', 'TIL Therapy', 'Oncolytic Virus'].map((t, k) =>
+    `<div class="tile" style="left:${(k % 3) * 34}%;top:${Math.floor(k / 3) * 51}%"><i></i><i></i><b>${t}</b></div>`).join('');
+  const tiles = [...tileBox.children];
+  // The case skin: thin rounded layers laid down one by one as the case drapes. Layers near the lid and the floor
+  // are drawn slightly smaller, along a quarter circle, so both edges round off like moulded glass.
+  const SKIN = 90, FILLET = 12, FOOT = 18;
+  box.insertAdjacentHTML('afterbegin', Array.from({ length: SKIN }, (_, k) =>
+    `<i class="skin${k < 2 ? ' lip' : ''}"></i>`).join(''));
+  const skins = [...box.querySelectorAll('.skin')];
+  // Ring depths and fillet scales depend only on the case height, so they are set when it changes, not every frame.
+  let shapedFor = -1;
+  const shape = h => {
+    if (Math.abs(h - shapedFor) < .01) return;
+    shapedFor = h;
+    const step = h / SKIN, w = box.offsetWidth, curve = (d, r) => d < r ? r - Math.sqrt(r * r - (r - d) ** 2) : 0;
+    skins.forEach((f, k) => {
+      const d = (k + 1) * step, inset = Math.max(curve(d, FILLET), curve(h - d, FOOT));
+      f.style.transform = `translateZ(${-d}px) scale(${1 - 2 * inset / w})`;
+    });
+  };
+
+  // p runs 0..N: layer i falls during [i, i + .75] and settles. In the last unit the case lid drops onto the keys,
+  // then its walls drape down as milky frost, each layer whitening as the walls pass it; last, the frost clears to glass.
+  const paint = p => {
+    const L = slabs.length, lidIn = out(clamp((p - L) / .25)), drape = inOut(clamp((p - L - .2) / .3));
+    // The frost eases back to a translucent rest by .75 of the last step, and holds there before the pin releases.
+    const frost = Math.min(1, drape * 1.6) * (1 - .6 * inOut(clamp((p - L - .5) / .25)));
+    const gap = GAP - (GAP - CASED) * lidIn, rise = clamp((p - L + .32) / .3);
+    // As the lid lands, the stack lifts off the floor and the lid sits higher, so the case has clear glass above and below the layers.
+    const lift = 14 * lidIn, top = lift + (L - 1) * gap + 12.5 + RISE + 11 + 14 * lidIn, front = top - drape * (top + 2);
+    slabs.forEach((s, i) => {
+      s.style.setProperty('--z', `${lift + i * gap + (1 - out(clamp((p - i) / .75))) * DROP}px`);
+      s.style.setProperty('--o', clamp((p - i) * 3.5));
+      s.style.setProperty('--cov', i < L - 1 ? out(clamp((p - i - 1) / .75)) : rise);
+      // --hid: covered by the case. Anything under the glass stays a shape, never readable text.
+      const hid = drape && clamp((lift + i * gap + 12.5 - front) / 20);
+      s.style.setProperty('--hid', hid);
+      s.style.setProperty('--pk', (.12 + .68 * frost) * hid);
+    });
+    // The keys appear only once the Modality plate has landed, so its label reads while it falls.
+    // Each key eases up in turn over the last third of the step, fading in as it lifts.
+    tiles.forEach((t, k) => {
+      const r = inOut(clamp((rise - k * .06) / .7));
+      t.style.setProperty('--z', `${r * RISE}px`);
+      t.style.setProperty('--to', r);
+    });
+    box.style.setProperty('--cz', `${top + (1 - lidIn) * DROP}px`);
+    box.style.setProperty('--o', clamp((p - L) * 4));
+    const h = top + 2, step = h / SKIN, reach = drape * h, body = .2 + .8 * frost;
+    shape(h);
+    skins.forEach((f, k) => {
+      const shown = clamp((reach - k * step) / step), o = f.classList.length > 1 ? shown : shown * body;
+      if (f._o !== o) f.style.opacity = f._o = o;
+    });
+    note.style.setProperty('--pk', drape);
+    box.style.setProperty('--fr', frost);
+    floor.style.opacity = clamp(p * 2);
+  };
+  // The drawn position follows the scroll position on a critically damped spring (response .45 s): it starts with
+  // no jolt, carries its velocity when the scroll reverses, and settles without overshoot at any refresh rate.
+  const W0 = 2 * Math.PI / .45;
+  let cur = -1, raf = 0, pinned = false, target = 0, shown = 0, vel = 0, last = 0;
+  const setStep = n => { if (n === cur) return; cur = n; pills.forEach(b => +b.dataset.step === n ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')); };
+  const range = () => [sc.getBoundingClientRect().top + scrollY - hdr.offsetHeight, Math.max(1, sc.offsetHeight - stage.offsetHeight)];
+  // The pills and the progress bar read the drawn position, so they change on the same frame as the stack.
+  const draw = () => {
+    const q = Math.min(N, shown * (N + HOLD));
+    paint(q); bar.style.transform = `scaleX(${shown})`; setStep(Math.min(N, Math.floor(q) + 1));
+  };
+  const frame = now => {
+    const dt = Math.min(.05, last ? (now - last) / 1000 : 1 / 60); last = now;
+    vel += (W0 * W0 * (target - shown) - 2 * W0 * vel) * dt; shown += vel * dt;
+    if (Math.abs(target - shown) < .0003 && Math.abs(vel) < .002) { shown = target; vel = 0; }
+    draw();
+    raf = shown === target ? 0 : requestAnimationFrame(frame);
+    if (!raf) last = 0;
+  };
+  const pick = () => {
+    const [top, len] = range();
+    target = clamp((scrollY - top) / len);
+    if (!raf) raf = requestAnimationFrame(frame);
+  };
+  pills.forEach((b, i) => b.addEventListener('click', () => {
+    if (!pinned) return;
+    const [top, len] = range();
+    scrollTo({ top: top + (i + .8) / (N + HOLD) * len, behavior: 'smooth' });
+  }));
+  const mode = () => {
+    removeEventListener('scroll', pick); cur = -1;
+    pinned = wide.matches && !still;
+    sc.dataset.mode = pinned ? 'pinned' : 'static';
+    if (pinned) { addEventListener('scroll', pick, { passive: true }); pick(); shown = target; vel = 0; draw(); }
+    else { pills.forEach(b => b.removeAttribute('aria-current')); paint(N); }
+  };
+  wide.addEventListener('change', mode);
+  addEventListener('resize', () => { shapedFor = -1; if (pinned) pick(); else paint(N); });
+  mode();
 })();
 
 // ── Product: shared data, drawn as an SVG diagram (≥768px) or a stacked list (<768px) ──
@@ -250,7 +368,8 @@ coreCanvas(document.querySelector('#coreM canvas'));
 (() => {
   document.getElementById('kmStored').textContent = `${KM.stored} twin points stored`;
   const s = document.getElementById('km'), chart = document.getElementById('chart');
-  const wide = matchMedia('(min-width: 1024px)');
+  // Pinned only where the stage has room for the open step card and the chart; shorter screens get the static layout.
+  const wide = matchMedia('(min-width: 1024px) and (min-height: 560px)');
   const x0 = 52, y0 = 14; let x1 = 620, y1 = 322;
   const X = m => x0 + m / 60 * (x1 - x0), Y = p => y1 - p / 100 * (y1 - y0);
   const step = pts => pts.reduce((d, [t, p], i) => i ? d + ` H${X(t).toFixed(1)} V${Y(p).toFixed(1)}` : `M${X(t)},${Y(p)}`, '') + ` H${X(Math.min(60, pts.at(-1)[0] + 1.5))}`;
@@ -313,7 +432,9 @@ coreCanvas(document.querySelector('#coreM canvas'));
     raf = 0;
     const [top, len] = range(), p = Math.min(1, Math.max(0, (scrollY - top) / len));
     bar.style.transform = `scaleX(${p})`;
-    setStep(Math.min(N, Math.floor(p * N) + 1));
+    // Hysteresis: the step changes only once the scroll is a little past a boundary, so resting on one never flickers.
+    const at = p * N, n = Math.min(N, Math.floor(at) + 1);
+    if (n !== cur && (!cur || Math.abs(at - (n > cur ? n - 1 : n)) > .06)) setStep(n);
   };
   const onScroll = () => { if (!raf) raf = requestAnimationFrame(pick); };
   pills.forEach((p, i) => p.addEventListener('click', () => {
