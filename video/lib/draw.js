@@ -2,7 +2,8 @@
 import { clamp } from './motion.js';
 
 // Registered in index.html from assets/fonts (the product's own faces).
-const FAMILY = { display: 'FilmDisplay', sans: 'FilmSans', mono: 'FilmMono' };
+// 'brand' is Plus Jakarta Sans, for the bionocular wordmark only.
+const FAMILY = { display: 'FilmDisplay', sans: 'FilmSans', mono: 'FilmMono', brand: 'FilmBrand' };
 export const font = (weight, size, family = 'sans') => `${weight} ${size}px ${FAMILY[family]}`;
 
 export function rrect(g, x, y, w, h, r) {

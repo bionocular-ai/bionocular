@@ -106,7 +106,11 @@ a { color: inherit; }
 .hero { position: relative; color: var(--text); background:
     /* One soft mint wash behind the right column, so the headline sits on a clean ground. */
     radial-gradient(ellipse 50% 60% at 72% 45%, rgba(218,240,230,.55), transparent 70%), var(--bg);
-  padding: calc(var(--header-h) + clamp(2rem, 5vw, 4.5rem)) 0 clamp(3rem, 6vw, 5rem); overflow: hidden; }
+  /* The bottom padding makes room for the heatmap band (script.js); its top rows sit under the end of the copy. */
+  padding: calc(var(--header-h) + clamp(2rem, 5vw, 4.5rem)) 0 110px; overflow: hidden; }
+@media (min-width: 768px) { .hero { padding-bottom: 180px; } }
+.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.hero > .wrap { position: relative; }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(2.5rem, 5vw, 4rem); align-items: center; }
 @media (min-width: 1024px) { .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .hero-copy { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.35rem; justify-items: start; }

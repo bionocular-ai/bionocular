@@ -1,12 +1,12 @@
-// Synthesises the soundtrack in code from out/cues.json (written by render.mjs).
+// Synthesises the soundtrack in code from out/q2/cues.json (written by render.mjs).
 // Deterministic: same cues in, same audio out.
 //
-//   node sound/score.mjs                         music bed + sound effects -> out/audio.wav
+//   node sound/score.mjs                         music bed + sound effects -> out/q2/audio.wav
 //   node sound/score.mjs --no-music              sound effects only
 //   node sound/score.mjs --no-sfx                music bed only
 //   node sound/score.mjs --track audio/song.wav  skip the bed, mix SFX over your own track (via ffmpeg)
 //
-// Don't like the sound? Use out/silent.mp4. The picture never depends on the audio.
+// Don't like the sound? Use out/q2/silent.mp4. The picture never depends on the audio.
 
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -15,8 +15,8 @@ const argv = process.argv.slice(2);
 const has = (k) => argv.includes('--' + k);
 const arg = (k, d) => { const i = argv.indexOf('--' + k); return i >= 0 ? argv[i + 1] : d; };
 
-const { dur, bpm, cues } = JSON.parse(readFileSync(arg('cues', 'out/cues.json'), 'utf8'));
-const OUT = arg('out', 'out/audio.wav');
+const { dur, bpm, cues } = JSON.parse(readFileSync(arg('cues', 'out/q2/cues.json'), 'utf8'));
+const OUT = arg('out', 'out/q2/audio.wav');
 const TRACK = arg('track', null);
 const MUSIC = !has('no-music') && !TRACK;
 const SFX = !has('no-sfx');
