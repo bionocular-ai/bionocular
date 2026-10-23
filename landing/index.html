@@ -23,9 +23,9 @@
   <link rel="preload" href="fonts/onest-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/poppins-latin-300.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/poppins-latin-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=20261023j">
+  <link rel="stylesheet" href="styles.css?v=20261024o">
   <script src="data/km-checkmate067-pfs.js?v=20261015" defer></script>
-  <script src="script.js?v=20261023j" defer></script>
+  <script src="script.js?v=20261024o" defer></script>
 </head>
 <body>
 
@@ -49,7 +49,6 @@
     <div class="hero-copy">
       <div class="rotator"><h1 class="h1" id="h1" data-on><span>Next-gen AI and Machine learning</span><span class="soft"> for Oncology insights.</span></h1><p class="h1" aria-hidden="true"><span>Cutting the noise</span><span class="soft"> and only focusing on the key elements.</span></p></div>
       <p class="lead">Human-verified oncology intelligence for research and medical teams&nbsp;- from raw data noise to clinical clarity, instantly.</p>
-      <a class="cta" href="#how-it-works">See How It Works <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></a>
     </div>
     <div class="hero-copy">
       <div class="ai-line"><span style="white-space:nowrap">bionocular AI</span> <s>Artificial</s> <b>Authenticated</b> Intelligence</div>
@@ -73,26 +72,30 @@
     <p class="lead">The outcome suite for comparing oncology evidence.</p>
   </div>
 
-  <div class="os-scroll" id="osScroll">
+  <div class="wrap os-scroll" id="osScroll">
     <div class="os-stage">
       <ol class="os-pills" aria-label="bionocular OS layers, bottom to top">
-        <li><button class="osp" data-step="1"><span class="t">Efficacy</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>ORR, PFS and OS for every arm, with digitized survival curves you can overlay across trials.</span></span></button></li>
-        <li><button class="osp" data-step="2"><span class="t">Safety</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Adverse events by grade and class, AE, TEAE or TRAE, as each source reports them, ready to weigh against benefit.</span></span></button></li>
+        <li><button class="osp" data-step="1"><span class="t">Efficacy</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>50+ efficacy endpoints for every arm, ORR, PFS and OS among them, with digitized survival curves you can overlay across trials.</span></span></button></li>
+        <li><button class="osp" data-step="2"><span class="t">Safety</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>50+ safety endpoints: adverse events by grade and class, AE, TEAE or TRAE, as each source reports them, ready to weigh against benefit.</span></span></button></li>
         <li><button class="osp" data-step="3"><span class="t">Clinical Trials</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>The trial landscape for one cancer: phase, status, line of therapy and sponsor, from registry to readout.</span></span></button></li>
         <li><button class="osp" data-step="4"><span class="t">Treatments</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Approved, investigational and standard-of-care regimens, each linked to its trials and readouts.</span></span></button></li>
         <li><button class="osp" data-step="5"><span class="t">Biomarkers</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>The populations each trial selects, such as BRAF V600 or PD-L1, so you compare like with like.</span></span></button></li>
         <li><button class="osp" data-step="6"><span class="t">Modality</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>What each treatment is: monoclonal antibody, small molecule, cytokine, vaccine, TIL therapy, oncolytic virus and more.</span></span></button></li>
+        <li><button class="osp" data-step="7"><span class="t">Expert Review</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>Reviewed by biopharma experts, MD or PhD, who check sampled trials against the source.</span></span></button></li>
+        <li><button class="osp" data-step="8"><span class="t">AI Agent</span><span class="plus" aria-hidden="true">+</span><span class="d"><span>A disease-specific agent that reasons across every layer below and cites the source for each number.</span></span></button></li>
       </ol>
 
       <div class="os-scene" aria-hidden="true">
         <div class="os-stack" id="osStack">
           <div class="os-floor"></div>
-          <div class="slab"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><div class="top"><span class="lbl">Efficacy</span></div></div>
-          <div class="slab"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><div class="top"><span class="lbl">Safety</span></div></div>
-          <div class="slab"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><div class="top"><span class="lbl">Clinical Trials</span></div></div>
-          <div class="slab"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><div class="top"><span class="lbl">Treatments</span></div></div>
-          <div class="slab"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><div class="top"><span class="lbl">Biomarkers</span></div></div>
-          <div class="slab"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><div class="top"><span class="lbl">Modality</span></div><div class="tiles" id="osTiles"></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Efficacy</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Safety</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Clinical Trials</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Treatments</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Biomarkers</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Modality</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">Expert Review</span></div></div>
+          <div class="slab"><i></i><div class="top"><span class="lbl">AI Agent</span></div></div>
           <div class="case" id="osCase">
             <div class="case-glow"></div><div class="case-lid"><b><span class="bio">bio</span>nocular OS<sup>*</sup></b></div></div>
         </div>

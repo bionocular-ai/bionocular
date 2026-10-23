@@ -4,6 +4,47 @@ const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS,
 const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, ...attrs }, parent); t.textContent = s; return t; };
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+// Step pills (OS and Survival) open into a card, and the last one closes, on an underdamped spring (about 1% overshoot)
+// rather than a snap. Each card's size is its own spring: a change mid-flight retargets it from where it is drawn,
+// keeping its velocity, so fast scrolling through the steps never jolts. A card that starts opening while another closes
+// waits a beat, so the hand-off reads as one motion. morph(apply) runs apply (the aria-current change) and springs every
+// card from its old size to its new one; without animate it just applies.
+const pillSprings = pills => {
+  const Z = .82, W = 2 * Math.PI / .42, springs = pills.map(() => null);
+  let raf = 0;
+  const unsize = b => { b.style.width = b.style.height = ''; };
+  const settle = () => { cancelAnimationFrame(raf); raf = 0; springs.fill(null); pills.forEach(unsize); };
+  const tick = now => {
+    let busy = false;
+    springs.forEach((s, i) => {
+      if (!s) return;
+      const dt = Math.min(.05, s.last ? (now - s.last) / 1000 : 1 / 60); s.last = now; busy = true;
+      if (now < s.start) return;
+      for (const k of ['w', 'h']) { s['v' + k] += (W * W * (s['t' + k] - s[k]) - 2 * Z * W * s['v' + k]) * dt; s[k] += s['v' + k] * dt; }
+      if (Math.abs(s.tw - s.w) + Math.abs(s.th - s.h) < .4 && Math.abs(s.vw) + Math.abs(s.vh) < 4) { springs[i] = null; unsize(pills[i]); }
+      else { pills[i].style.width = `${s.w}px`; pills[i].style.height = `${s.h}px`; }
+    });
+    raf = busy ? requestAnimationFrame(tick) : 0;
+  };
+  const morph = (apply, animate) => {
+    const from = pills.map(b => b.getBoundingClientRect());
+    apply();
+    if (!animate) return settle();
+    pills.forEach(unsize);
+    const to = pills.map(b => b.getBoundingClientRect()), now = performance.now();
+    const closing = from.some((f, j) => f.height - to[j].height > 1);
+    pills.forEach((b, i) => {
+      const f = from[i], t = to[i], s = springs[i];
+      if (!s && Math.abs(f.width - t.width) < .5 && Math.abs(f.height - t.height) < .5) return;
+      springs[i] = { w: f.width, h: f.height, vw: s ? s.vw : 0, vh: s ? s.vh : 0, tw: t.width, th: t.height, last: 0,
+        start: !s && closing && t.height > f.height ? now + 140 : 0 };
+      b.style.width = `${f.width}px`; b.style.height = `${f.height}px`;
+    });
+    if (!raf) raf = requestAnimationFrame(tick);
+  };
+  return { morph, settle };
+};
+
 // ── Header: the link for the section in view takes the accent colour ──
 (() => {
   const hdr = document.getElementById('hdr'), nav = document.getElementById('nav');
@@ -162,65 +203,82 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 (() => {
   const sc = document.getElementById('osScroll'), stage = sc.firstElementChild, bar = document.getElementById('osBar'), stack = document.getElementById('osStack');
   const slabs = [...stack.querySelectorAll('.slab')], pills = [...sc.querySelectorAll('.osp')], box = document.getElementById('osCase'), note = document.getElementById('osNote');
-  const floor = stack.querySelector('.os-floor'), tileBox = document.getElementById('osTiles');
+  const floor = stack.querySelector('.os-floor');
   // Pinned only where the stage has room for the open pill card and the stack; shorter screens get the static layout.
   const hdr = document.getElementById('hdr'), wide = matchMedia('(min-width: 1024px) and (min-height: 560px)');
-  const N = slabs.length + 1, HOLD = .5, GAP = 30, CASED = 26, DROP = 620, RISE = 8;
+  // HEAD: clear glass between the top layer's face and the lid.
+  const N = slabs.length + 1, HOLD = .5, GAP = 30, CASED = 26, DROP = 620, HEAD = 19;
   const clamp = x => Math.min(1, Math.max(0, x)), out = t => 1 - (1 - t) ** 3, inOut = t => t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
-  // Modality keys, 3 x 2 on the plate: the most common novel modalities in the melanoma landscape, plus TIL and oncolytic virus.
-  tileBox.innerHTML = ['Monoclonal Antibody', 'Small Molecule', 'Cytokine', 'Vaccine', 'TIL Therapy', 'Oncolytic Virus'].map((t, k) =>
-    `<div class="tile" style="left:${(k % 3) * 34}%;top:${Math.floor(k / 3) * 51}%"><i></i><i></i><b>${t}</b></div>`).join('');
-  const tiles = [...tileBox.children];
-  // The case skin: thin rounded layers laid down one by one as the case drapes. Layers near the lid and the floor
+  // The case skin: thin rounded rings laid down one by one as the case drapes. Rings near the lid and the floor
   // are drawn slightly smaller, along a quarter circle, so both edges round off like moulded glass.
-  const SKIN = 90, FILLET = 12, FOOT = 18;
-  box.insertAdjacentHTML('afterbegin', Array.from({ length: SKIN }, (_, k) =>
-    `<i class="skin${k < 2 ? ' lip' : ''}"></i>`).join(''));
-  const skins = [...box.querySelectorAll('.skin')];
-  // Ring depths and fillet scales depend only on the case height, so they are set when it changes, not every frame.
-  let shapedFor = -1;
+  // A ring is not a layer of its own. Rings are flat shadows on a few wall planes, each cast along the plane diagonal by
+  // as far as its depth moves it on screen (PLANE px per px of depth). Planes keep the draw order of the rings they
+  // stand for: one per gap between slabs, and one per slab between its edge and its face for the rings beside its rim,
+  // which frost over that rim, plus one for the bright lip under the lid. So the case costs two layers per slab, not one
+  // per ring. Shadow colours are fixed at full frost and each plane fades by opacity, so the frost costs no repaint.
+  const SKIN = 90, FILLET = 12, FOOT = 18, PLANE = Math.tan(66.3 * Math.PI / 180) / Math.SQRT2;
+  // Ring colours at full frost: the lip, the wall band, and the frost a gap's rings lay over the slab inside.
+  const LIP = '255,255,255', RING = '229,242,237', FROST = '222,239,232', BAND = .3, FILL = .14;
+  box.insertAdjacentHTML('afterbegin', '<i class="wall" hidden></i>'.repeat(2 * slabs.length + 2));
+  const walls = [...box.querySelectorAll('.wall')];
+  // Ring depths and fillet insets depend only on the case height, so they are set when it changes, not every frame.
+  let shapedFor = -1, w = 0, depth = [], inset = [];
   const shape = h => {
     if (Math.abs(h - shapedFor) < .01) return;
-    shapedFor = h;
-    const step = h / SKIN, w = box.offsetWidth, curve = (d, r) => d < r ? r - Math.sqrt(r * r - (r - d) ** 2) : 0;
-    skins.forEach((f, k) => {
-      const d = (k + 1) * step, inset = Math.max(curve(d, FILLET), curve(h - d, FOOT));
-      f.style.transform = `translateZ(${-d}px) scale(${1 - 2 * inset / w})`;
-    });
+    shapedFor = h; w = box.offsetWidth;
+    const step = h / SKIN, curve = (d, r) => d < r ? r - Math.sqrt(r * r - (r - d) ** 2) : 0;
+    depth = Array.from({ length: SKIN }, (_, k) => (k + 1) * step);
+    inset = depth.map(d => Math.max(curve(d, FILLET), curve(h - d, FOOT)));
   };
 
-  // p runs 0..N: layer i falls during [i, i + .75] and settles. In the last unit the case lid drops onto the keys,
+  // p runs 0..N: layer i falls during [i, i + .75] and settles. In the last unit the case lid drops onto the stack,
   // then its walls drape down as milky frost, each layer whitening as the walls pass it; last, the frost clears to glass.
   const paint = p => {
     const L = slabs.length, lidIn = out(clamp((p - L) / .25)), drape = inOut(clamp((p - L - .2) / .3));
     // The frost eases back to a translucent rest by .75 of the last step, and holds there before the pin releases.
     const frost = Math.min(1, drape * 1.6) * (1 - .6 * inOut(clamp((p - L - .5) / .25)));
-    const gap = GAP - (GAP - CASED) * lidIn, rise = clamp((p - L + .32) / .3);
+    const gap = GAP - (GAP - CASED) * lidIn, capped = clamp((p - L + .32) / .3);
     // As the lid lands, the stack lifts off the floor and the lid sits higher, so the case has clear glass above and below the layers.
-    const lift = 14 * lidIn, top = lift + (L - 1) * gap + 12.5 + RISE + 11 + 14 * lidIn, front = top - drape * (top + 2);
+    const lift = 14 * lidIn, top = lift + (L - 1) * gap + 12.5 + HEAD + 14 * lidIn, front = top - drape * (top + 2);
     slabs.forEach((s, i) => {
       s.style.setProperty('--z', `${lift + i * gap + (1 - out(clamp((p - i) / .75))) * DROP}px`);
       s.style.setProperty('--o', clamp((p - i) * 3.5));
-      s.style.setProperty('--cov', i < L - 1 ? out(clamp((p - i - 1) / .75)) : rise);
+      s.style.setProperty('--cov', i < L - 1 ? out(clamp((p - i - 1) / .75)) : capped);
       // --hid: covered by the case. Anything under the glass stays a shape, never readable text.
       const hid = drape && clamp((lift + i * gap + 12.5 - front) / 20);
       s.style.setProperty('--hid', hid);
       s.style.setProperty('--pk', (.12 + .68 * frost) * hid);
     });
-    // The keys appear only once the Modality plate has landed, so its label reads while it falls.
-    // Each key eases up in turn over the last third of the step, fading in as it lifts.
-    tiles.forEach((t, k) => {
-      const r = inOut(clamp((rise - k * .06) / .7));
-      t.style.setProperty('--z', `${r * RISE}px`);
-      t.style.setProperty('--to', r);
-    });
-    box.style.setProperty('--cz', `${top + (1 - lidIn) * DROP}px`);
+    const cz = top + (1 - lidIn) * DROP;
+    box.style.setProperty('--cz', `${cz}px`);
     box.style.setProperty('--o', clamp((p - L) * 4));
     const h = top + 2, step = h / SKIN, reach = drape * h, body = .2 + .8 * frost;
     shape(h);
-    skins.forEach((f, k) => {
-      const shown = clamp((reach - k * step) / step), o = f.classList.length > 1 ? shown : shown * body;
-      if (f._o !== o) f.style.opacity = f._o = o;
+    // Rings are revealed top down. Wall 0 is under the stack; wall 2i + 1 is beside slab i's rim, 2i + 2 the gap above
+    // it; the last wall is the lip.
+    const groups = walls.map(() => []);
+    for (let k = 0; k < SKIN && reach > k * step; k++) {
+      const z = cz - depth[k];
+      let i = -1;
+      while (i + 1 < L && lift + (i + 1) * gap <= z) i++;
+      groups[k < 2 ? walls.length - 1 : i < 0 ? 0 : z <= lift + i * gap + 12.25 ? 2 * i + 1 : 2 * i + 2].push(k);
+    }
+    // A rim wall sits just above its slab's edge plane, a gap wall at its highest ring; each takes the size of its
+    // smallest ring, so every ring's shadow clears it.
+    walls.forEach((el, g) => {
+      const ks = groups[g];
+      el.hidden = !ks.length;
+      if (!ks.length) return;
+      const lip = g === walls.length - 1, d0 = g % 2 && !lip ? cz - (lift + (g - 1) / 2 * gap + 12.3) : depth[ks[0]], s = 1 - 2 * Math.max(...ks.map(k => inset[k])) / w;
+      let clear = 1;
+      const shadow = ks.map(k => {
+        const o = clamp((reach - k * step) / step);
+        clear *= 1 - FILL * o;
+        const off = (PLANE * (depth[k] - d0) / s).toFixed(2), spread = (((w - 2 * inset[k]) / s - w) / 2).toFixed(2);
+        return `${off}px ${off}px 0 ${spread}px rgba(${lip ? LIP : RING},${((lip ? .95 : BAND) * o).toFixed(3)})`;
+      }).join();
+      const css = `transform:translateZ(${(-d0).toFixed(2)}px) scale(${s.toFixed(4)});background:rgba(${FROST},${lip ? 0 : (1 - clear).toFixed(3)});box-shadow:${shadow};opacity:${lip ? 1 : body.toFixed(3)}`;
+      if (el._css !== css) el.style.cssText = el._css = css;
     });
     note.style.setProperty('--pk', drape);
     box.style.setProperty('--fr', frost);
@@ -230,7 +288,12 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // no jolt, carries its velocity when the scroll reverses, and settles without overshoot at any refresh rate.
   const W0 = 2 * Math.PI / .45;
   let cur = -1, raf = 0, pinned = false, target = 0, shown = 0, vel = 0, last = 0;
-  const setStep = n => { if (n === cur) return; cur = n; pills.forEach(b => +b.dataset.step === n ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')); };
+  const cards = pillSprings(pills), settle = cards.settle;
+  const setStep = n => {
+    if (n === cur) return;
+    const was = cur; cur = n;
+    cards.morph(() => pills.forEach(b => +b.dataset.step === n ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')), pinned && was >= 0);
+  };
   const range = () => [sc.getBoundingClientRect().top + scrollY - hdr.offsetHeight, Math.max(1, sc.offsetHeight - stage.offsetHeight)];
   // The pills and the progress bar read the drawn position, so they change on the same frame as the stack.
   const draw = () => {
@@ -255,15 +318,19 @@ const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const [top, len] = range();
     scrollTo({ top: top + (i + .8) / (N + HOLD) * len, behavior: 'smooth' });
   }));
+  // The scene is drawn for a 1248 x 836 stage (a 1440 x 900 window). Larger stages scale all of it, depths included,
+  // by height, as far as the width leaves the stack clear of the pills.
+  const fit = () => stack.style.setProperty('--k', pinned ? Math.max(1, Math.min(stage.clientHeight / 836, stage.clientWidth / 840)) : 1);
   const mode = () => {
-    removeEventListener('scroll', pick); cur = -1;
+    removeEventListener('scroll', pick); cur = -1; settle();
     pinned = wide.matches && !still;
     sc.dataset.mode = pinned ? 'pinned' : 'static';
+    fit();
     if (pinned) { addEventListener('scroll', pick, { passive: true }); pick(); shown = target; vel = 0; draw(); }
     else { pills.forEach(b => b.removeAttribute('aria-current')); paint(N); }
   };
   wide.addEventListener('change', mode);
-  addEventListener('resize', () => { shapedFor = -1; if (pinned) pick(); else paint(N); });
+  addEventListener('resize', () => { shapedFor = -1; settle(); fit(); if (pinned) pick(); else paint(N); });
   mode();
 })();
 
@@ -425,7 +492,13 @@ coreCanvas(document.querySelector('#coreM canvas'));
   const scroller = document.getElementById('svScroll'), stage = scroller.firstElementChild, bar = document.getElementById('svBar');
   const pills = [...document.querySelectorAll('#steps .pill')], N = pills.length, hdrEl = document.getElementById('hdr');
   let cur = 0, raf = 0, pinned = false;
-  const setStep = n => { if (n === cur) return; cur = n; pills.forEach(p => +p.dataset.step === n ? p.setAttribute('aria-current', 'step') : p.removeAttribute('aria-current')); show(n); };
+  const cards = pillSprings(pills);
+  const setStep = n => {
+    if (n === cur) return;
+    const was = cur; cur = n;
+    cards.morph(() => pills.forEach(p => +p.dataset.step === n ? p.setAttribute('aria-current', 'step') : p.removeAttribute('aria-current')), pinned && was > 0);
+    show(n);
+  };
   // Scroll position inside the pinned run maps straight to a step, so no step can be skipped and the chart is always in view.
   const range = () => [scroller.getBoundingClientRect().top + scrollY - hdrEl.offsetHeight, Math.max(1, scroller.offsetHeight - stage.offsetHeight)];
   const pick = () => {
@@ -443,7 +516,7 @@ coreCanvas(document.querySelector('#coreM canvas'));
     scrollTo({ top: top + (i + .5) / N * len, behavior: still ? 'auto' : 'smooth' });
   }));
   const mode = () => {
-    removeEventListener('scroll', onScroll); cur = 0;
+    removeEventListener('scroll', onScroll); cur = 0; cards.settle();
     pinned = wide.matches && !still;
     scroller.dataset.mode = pinned ? 'pinned' : 'static';
     draw();
@@ -451,7 +524,7 @@ coreCanvas(document.querySelector('#coreM canvas'));
     else { pills.forEach(p => p.removeAttribute('aria-current')); cur = N; show(N); }
   };
   wide.addEventListener('change', mode);
-  addEventListener('resize', () => { draw(); if (pinned) pick(); });
+  addEventListener('resize', () => { cards.settle(); draw(); if (pinned) pick(); });
   mode();
 })();
 
