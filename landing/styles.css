@@ -111,18 +111,24 @@ a { color: inherit; }
     radial-gradient(ellipse 50% 60% at 72% 45%, rgba(218,240,230,.55), transparent 70%),
     /* The page tint fades to white toward the foot, so the hero meets the white section below without a seam. */
     linear-gradient(var(--bg) calc(100% - 260px), var(--surface));
-  /* The heatmap (script.js) runs behind the copy, so the hero needs no room of its own for it.
+  /* The background charts (script.js) run behind the copy, so the hero needs no room of its own for them.
      It fills the first screen less 9rem, capped at 60rem, the copy centred in it. The 9rem is the OS section's top
      padding plus a sliver: only the top of the next heading peeks in, a cue that the page goes on without a second
      headline competing with this one. Where the copy is taller, the hero grows to fit. */
   padding: calc(var(--header-h) + clamp(2rem, 5vw, 4.5rem)) 0 clamp(3.5rem, 8vw, 6.5rem); overflow: hidden;
-  min-height: min(100svh - 9rem, 60rem); display: grid; align-content: center; }
-/* The heatmap frame's left and right edges run on below the hero and fade out, so the band hands over to the page. */
+  min-height: min(100svh - 9rem, 60rem); display: grid; align-content: center; isolation: isolate; }
+/* One soft light from the top left, under the charts. */
+.hero::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 55% 70% at 18% 20%, rgba(255,255,255,.9), transparent 70%); }
+/* Grain: a 4.5% film of fractal noise over everything, so the flat tint reads as paper rather than a screen fill. */
+.hero::after { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: .045; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.06 0 0 0 0 0.17 0 0 0 0 0.21 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+/* The chart frame's left and right edges run on below the hero and fade out, so the band hands over to the page. */
 main { position: relative; }
 main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--grid-l, 0); right: var(--grid-r, 0); height: 72px; pointer-events: none;
   border-inline: 1px solid rgba(27,79,101,.09); -webkit-mask-image: linear-gradient(#000, transparent); mask-image: linear-gradient(#000, transparent); }
-.hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.hero > .wrap { position: relative; }
+.hero-bg { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
+.hero > .wrap { position: relative; z-index: 3; }
 /* The copy sits inside the heatmap frame (the .wrap gutters), 1rem in on phones and 1.5rem from tablets up, as the OS
    cards sit inside their stage. */
 .hero > .wrap { width: min(1632px, 100% - 4rem); }
