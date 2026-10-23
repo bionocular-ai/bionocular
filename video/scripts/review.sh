@@ -2,7 +2,7 @@
 # Review images for the critique loop. Claude opens these and scores the film.
 #   bash scripts/review.sh [video] [fast-action-second]
 set -euo pipefail
-VIDEO="${1:-out/silent.mp4}"
+VIDEO="${1:-out/q2/silent.mp4}"
 AT="${2:-}"
 mkdir -p out/review
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$VIDEO")

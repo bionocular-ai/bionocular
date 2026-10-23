@@ -2,9 +2,14 @@
 
 The Bionocular product film, rendered from code: an HTML canvas draws every frame, Playwright captures
 them, ffmpeg encodes. Read this file before every task here. The film is a set of chapters (one per
-question or feature). Chapters: `film.js` (Question 2, `docs/storyboard.md`) and `km.js` (KM Curves
-Intelligence, `docs/storyboard-km.md`). Pass `--film km` to `render.mjs` (or `?film=km` to the preview) for a
-chapter other than `film.js`.
+question or feature). Chapters: `film.js` (Question 2, `docs/storyboard.md`), `km.js` (KM Curves
+Intelligence, `docs/storyboard-km.md`) and `q3.js` (Question 3, `docs/storyboard-q3.md`). Pass `--film km` to
+`render.mjs` (or `?film=km` to the preview) for a chapter other than `film.js`. Each chapter renders into its own
+folder, `out/<chapter>/` (`film.js` into `out/q2/`), with its `cues.json` next to the video.
+`master.js` is the packaged demo (50 s): brand card, Question 1 (Simple, Q2), Question 2 (Complex, Q3),
+Survival Intelligence (KM), end card (tagline, bionocular.ai). It
+draws each chapter at its own local time, so chapter edits flow into it;
+`npm run master` renders it with the music bed into `out/master/`. Chapters on their own stay effects-only.
 
 ## How a film is made
 
@@ -28,9 +33,9 @@ chapter other than `film.js`.
    Show it to me. **Stop.**
 3. **Stills.** Build the scenes, then `node render.mjs --stills <one time per scene>`. Open
    `out/stills/sheet.png`, critique it (below), fix, then show me the sheet. **Stop.**
-4. **Draft.** `npm run draft`, then `bash scripts/review.sh out/draft.mp4 <time of fastest action>`.
+4. **Draft.** `npm run draft`, then `bash scripts/review.sh out/q2/draft.mp4 <time of fastest action>`.
    Critique loop until every score is 8+.
-5. **Final.** `npm run final` → `out/silent.mp4` (picture only) and `out/final.mp4` (with sound).
+5. **Final.** `npm run final` → `out/q2/silent.mp4` (picture only) and `out/q2/final.mp4` (with sound).
    Always deliver both.
 
 ## Critique loop (run it yourself before showing me anything)
@@ -63,7 +68,7 @@ blurry scaled text, dead beats where nothing happens, elements touching the fram
   Name them in text in our type as vendor + model ("Google Gemini 3.1 Pro", "Anthropic Claude Opus 5.5"), the
   vendor word and their bars in an identification colour only (Google Blue #4285F4, Claude orange #D97757;
   text shades #1A73E8, #C96442). No capture month, no competitor logos, no redrawn competitor UI. A comparison
-  film's description or credits carry "Not affiliated with or endorsed by Google or Anthropic." Our teal stays the hero colour.
+  film's description (never the picture) carries "Not affiliated with or endorsed by Google or Anthropic." Our teal stays the hero colour.
   Every on-screen tally is counted from the screenshot it sits beside.
 - Never show accuracy, sensitivity, outcome or performance claims unless `docs/BRIEF.md` provides them
   with a source. Any illustrative number must carry an on-screen "Example data" label.
@@ -74,7 +79,7 @@ blurry scaled text, dead beats where nothing happens, elements touching the fram
 
 - Cues are declared in `film.js` with `cue(time, type, gain)`, next to the motion they belong to.
   Types: `click`, `tick`, `pop`, `whoosh`, `thump`, `chime`.
-- `npm run sound` synthesises music + effects into `out/audio.wav`; `npm run sound:sfx-only` for effects only;
+- `npm run sound` synthesises music + effects into `out/q2/audio.wav`; `npm run sound:sfx-only` for effects only;
   `node sound/score.mjs --track audio/<file>.wav` to put the effects over a supplied track.
 - Place big moments (scene changes, logo) on beats: `beats(FILM.bpm).at(n)`.
 
@@ -84,9 +89,10 @@ blurry scaled text, dead beats where nothing happens, elements touching the fram
 |---|---|
 | `npm run preview` | live preview with scrubber at http://127.0.0.1:8080 |
 | `node render.mjs --stills 1,3.5,6` | `out/stills/sheet.png` |
-| `npm run draft` | `out/draft.mp4` (30 fps, half size, fast) |
-| `npm run render` | `out/silent.mp4` (60 fps, motion blur) |
-| `npm run final` | `out/silent.mp4` + `out/audio.wav` + `out/final.mp4` |
+| `npm run draft` | `out/q2/draft.mp4` (30 fps, half size, fast) |
+| `npm run render` | `out/q2/silent.mp4` (60 fps, motion blur) |
+| `npm run final` | `out/q2/silent.mp4` + `out/q2/audio.wav` + `out/q2/final.mp4` |
+| `npm run master` | `out/master/silent.mp4` + `out/master/final.mp4` (whole demo, music + effects) |
 | `bash scripts/review.sh <video> [second]` | `out/review/*.png` |
 
 Effort: use high effort for new films, medium for small fixes and re-renders.

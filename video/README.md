@@ -12,7 +12,8 @@ Requirements: Node 22+, ffmpeg (`brew install ffmpeg` / `sudo apt install ffmpeg
 npm install
 npx playwright install chromium
 npm run preview          # open http://127.0.0.1:8080 to see the demo film
-npm run final            # out/silent.mp4 + out/final.mp4 (with sound)
+npm run final            # out/q2/silent.mp4 + out/q2/final.mp4 (with sound)
+npm run master           # the whole demo: out/master/silent.mp4 + out/master/final.mp4
 ```
 
 ## Making your video with Claude Code
@@ -33,8 +34,8 @@ so you don't have to repeat them in prompts.
 
 | You want | Use |
 |---|---|
-| Music + effects | `out/final.mp4` |
-| No sound at all | `out/silent.mp4` |
+| Music + effects | `out/q2/final.mp4` |
+| No sound at all | `out/q2/silent.mp4` |
 | Effects only | `npm run sound:sfx-only && npm run mux` |
 | Your own track + effects | `node sound/score.mjs --track audio/song.wav && npm run mux` |
 | Quieter music | `node sound/score.mjs --music-gain 0.5 && npm run mux` |
@@ -44,11 +45,12 @@ so you don't have to repeat them in prompts.
 | Path | What it is |
 |---|---|
 | `film.js` | The film: timeline, scenes, sound cues. The file Claude edits. |
+| `master.js` | The packaged demo: brand card, every chapter in order, end card |
 | `lib/motion.js` | Springs, `track()`, seeded random, beat helpers |
 | `lib/draw.js` | Masked text, cursor, rounded rects, colour mixing |
 | `index.html` | Loads fonts and the film; preview player with scrubber |
 | `render.mjs` | Renderer: stills, draft, final (motion blur), preview server |
-| `sound/score.mjs` | Synthesised music bed and effects from `out/cues.json` |
+| `sound/score.mjs` | Synthesised music bed and effects from `out/q2/cues.json` |
 | `scripts/review.sh` | Contact sheet, phone test, frame strip for the critique loop |
 | `docs/BRIEF.md` | What you fill in |
 | `docs/storyboard.md` | What Claude writes and you approve |

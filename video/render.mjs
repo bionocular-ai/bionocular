@@ -1,19 +1,20 @@
 // Renders film.js to video, frame by frame, with optional motion blur.
 //
-//   node render.mjs                      final: 60 fps, 4 subframes (motion blur) -> out/silent.mp4
-//   node render.mjs --draft              fast: 30 fps, no blur, half size        -> out/draft.mp4
+//   node render.mjs                      final: 60 fps, 4 subframes (motion blur) -> out/q2/silent.mp4
+//   node render.mjs --draft              fast: 30 fps, no blur, half size        -> out/q2/draft.mp4
 //   node render.mjs --stills 1,3.5,6     key frames only                         -> out/stills/
 //   node render.mjs --from 4 --to 6      render only part of the film
 //   node render.mjs --serve              live preview in your browser (http://127.0.0.1:8080)
-//   node render.mjs --film km ...        render another chapter (km.js) instead of film.js
+//   node render.mjs --film km ...        render another chapter (km.js) instead of film.js -> out/km/
 //
-// Always writes out/cues.json (sound cues in the rendered range) for sound/score.mjs.
+// Each chapter renders into its own folder (film.js is Question 2: out/q2/). Always writes
+// cues.json (sound cues in the rendered range) next to the video, for sound/score.mjs.
 
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { readFile, mkdir, writeFile, rm } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
+import { dirname, extname, join, normalize } from 'node:path';
 
 const argv = process.argv.slice(2);
 const has = (k) => argv.includes('--' + k);
@@ -23,7 +24,8 @@ const DRAFT = has('draft');
 const FPS = Number(arg('fps', DRAFT ? 30 : 60));
 const SUB = Number(arg('sub', DRAFT ? 1 : 4));
 const SCALE = Number(arg('scale', DRAFT ? 0.5 : 1));
-const OUT = arg('out', DRAFT ? 'out/draft.mp4' : 'out/silent.mp4');
+const FILM_ARG = arg('film', null);
+const OUT = arg('out', `out/${FILM_ARG ?? 'q2'}/${DRAFT ? 'draft' : 'silent'}.mp4`);
 const STILLS = arg('stills', null);
 
 // --- tiny static server (ES modules and fonts don't load from file://)
@@ -47,7 +49,6 @@ if (has('serve')) {
   await new Promise(() => {});
 }
 await new Promise((r) => server.listen(0, '127.0.0.1', r));
-const FILM_ARG = arg('film', null);
 const url = `http://127.0.0.1:${server.address().port}/index.html?render${FILM_ARG ? `&film=${FILM_ARG}` : ''}`;
 
 const browser = await chromium.launch();
@@ -62,13 +63,13 @@ const FILM = await page.evaluate(() => window.FILM);
 
 const FROM = Number(arg('from', 0));
 const TO = Number(arg('to', FILM.dur));
-await mkdir('out', { recursive: true });
+await mkdir(dirname(OUT), { recursive: true });
 
 // Cues for the rendered range, shifted so the clip starts at 0
 const cues = (await page.evaluate(() => window.CUES))
   .filter((c) => c.t >= FROM && c.t < TO)
   .map((c) => ({ ...c, t: +(c.t - FROM).toFixed(3) }));
-await writeFile('out/cues.json', JSON.stringify({ dur: TO - FROM, bpm: FILM.bpm, cues }, null, 1));
+await writeFile(join(dirname(OUT), 'cues.json'), JSON.stringify({ dur: TO - FROM, bpm: FILM.bpm, cues }, null, 1));
 
 const grab = async (t) => {
   await page.evaluate((t) => window.seek(t), t);

@@ -12,6 +12,7 @@
   @font-face { font-family: FilmMono; font-weight: 400; src: url(assets/fonts/ibm-plex-mono-latin-400.woff2) format('woff2'); }
   @font-face { font-family: FilmMono; font-weight: 500; src: url(assets/fonts/ibm-plex-mono-latin-500.woff2) format('woff2'); }
   @font-face { font-family: FilmMono; font-weight: 600; src: url(assets/fonts/ibm-plex-mono-latin-600.woff2) format('woff2'); }
+  @font-face { font-family: FilmBrand; font-weight: 200 800; src: url(assets/fonts/plus-jakarta-sans-latin.woff2) format('woff2'); }
   html, body { margin: 0; background: #F7FAF9; color: #102B36; font: 14px system-ui, sans-serif; }
   canvas { display: block; }
   body:not(.render) { display: grid; place-items: center; min-height: 100vh; gap: 12px; }
@@ -43,8 +44,11 @@
   // Fonts must be loaded before any frame is drawn, or canvas falls back silently.
   // Every face the film draws with. Canvas falls back silently, so a missing one is reported.
   const faces = ['400 48px FilmDisplay', '600 48px FilmDisplay', '400 48px FilmSans', '500 48px FilmSans', '600 48px FilmSans',
-    '400 48px FilmMono', '500 48px FilmMono', '600 48px FilmMono'];
-  window.ready = Promise.all([...faces.map((f) => document.fonts.load(f)), ...IMAGES.map((img) => img.decode())])
+    '400 48px FilmMono', '500 48px FilmMono', '600 48px FilmMono', '500 48px FilmBrand', '800 48px FilmBrand'];
+  // Past a memory budget (the master film's few dozen 2x captures) Chromium refuses decode() on images
+  // that did load; drawImage decodes those on demand, so only a failed load is an error.
+  const decoded = IMAGES.map((img) => img.decode().catch((e) => { if (!img.naturalWidth) throw e; }));
+  window.ready = Promise.all([...faces.map((f) => document.fonts.load(f)), ...decoded])
     .then((loaded) => {
       const missing = faces.filter((_, i) => loaded[i].length === 0);
       if (missing.length) console.warn('Fonts failed to load for weights', missing);
