@@ -63,11 +63,15 @@ a { color: inherit; }
 .menu-btn { all: unset; justify-self: end; display: none; cursor: pointer; width: 42px; height: 42px; border-radius: 50%; place-items: center; }
 .menu-btn:active { transform: scale(.94); }
 .menu-btn:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
-.menu-btn span, .menu-btn span::before { display: block; width: 18px; height: 1.75px; border-radius: 2px; background: currentColor; transition: transform .35s var(--settle); }
-.menu-btn span { position: relative; transform: translateY(-3px); }
-.menu-btn span::before { content: ""; position: absolute; top: 6px; }
-.menu-btn[aria-expanded="true"] span { transform: translateY(0) rotate(45deg); }
-.menu-btn[aria-expanded="true"] span::before { transform: translateY(-6px) rotate(-90deg); }
+.menu-btn span, .menu-btn span::before, .menu-btn span::after { display: block; width: 18px; height: 1.75px; border-radius: 2px; background: currentColor; transition: transform .35s var(--settle); }
+/* Three lines; opening fades the middle one and turns the outer two into an X about the centre. */
+.menu-btn span { position: relative; transition: background-color .2s; }
+.menu-btn span::before, .menu-btn span::after { content: ""; position: absolute; }
+.menu-btn span::before { top: -6px; }
+.menu-btn span::after { top: 6px; }
+.menu-btn[aria-expanded="true"] span { background-color: transparent; }
+.menu-btn[aria-expanded="true"] span::before { transform: translateY(6px) rotate(45deg); }
+.menu-btn[aria-expanded="true"] span::after { transform: translateY(-6px) rotate(-45deg); }
 .sheet { display: none; }
 @media (max-width: 899px) {
   .bar > .nav { display: none; }
@@ -173,8 +177,8 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 /* Stage on a neutral studio wash: darker at the top, fading into the page. */
 .os-stage { position: relative; overflow: clip; display: grid; gap: 1.5rem; padding: 1.5rem 1rem 2rem;
   background: radial-gradient(120% 70% at 62% 58%, rgba(255,255,255,.75), rgba(255,255,255,0) 70%), linear-gradient(180deg, #E6EFEC 0%, #EEF5F2 55%, var(--bg) 100%); }
-.os-scroll[data-mode="pinned"] { --per-step: 42vh; height: calc(9.5 * var(--per-step) + 100vh - var(--header-h)); }
-.os-scroll[data-mode="pinned"] .os-stage { position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); padding: 0; display: block; }
+.os-scroll[data-mode="pinned"] { --per-step: 42vh; height: calc(9.5 * var(--per-step) + 100svh - var(--header-h)); }
+.os-scroll[data-mode="pinned"] .os-stage { position: sticky; top: var(--header-h); height: calc(100svh - var(--header-h)); padding: 0; display: block; }
 
 /* Glass pills: neutral smoke, white text; the active one opens into a card with its name as a small label. */
 .os-pills { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem; justify-items: start; position: relative; z-index: 2; }
@@ -224,8 +228,8 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .os-scroll[data-mode="pinned"] .os-scene { position: absolute; inset: 0; min-height: 0; }
 /* Static: the eight-layer stack rises above its centre, so it sits lower in the same height to clear the last card. */
 .os-scroll:not([data-mode="pinned"]) .os-scene { padding-top: 4rem; }
-.os-stack { --s: clamp(14rem, 28vw, 25rem); --pk: 0; width: var(--s); height: var(--s); position: relative; transform-style: preserve-3d;
-  transform: scale3d(var(--k, 1), var(--k, 1), var(--k, 1)) translateY(22%) rotateX(66.3deg) rotateZ(45deg); }
+.os-stack { --s: clamp(14rem, 28vw, 25rem); --pk: 0; --drop: 22%; width: var(--s); height: var(--s); position: relative; transform-style: preserve-3d;
+  transform: scale3d(var(--k, 1), var(--k, 1), var(--k, 1)) translateY(var(--drop)) rotateX(66.3deg) rotateZ(45deg); }
 .os-floor { position: absolute; inset: -6%; border-radius: 12%; transform: translateZ(-1px); filter: blur(18px); background: rgba(16,43,54,.26); }
 .slab { position: absolute; inset: 0; transform-style: preserve-3d; transform: translateZ(var(--z, 0px)); will-change: transform; }
 /* Opacity on the slab itself would flatten its 3D children into one plane, so each face fades instead. */
@@ -273,6 +277,27 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
   font: 400 .9375rem/1.4 var(--text-font); color: var(--muted); }
 .os-scroll:not([data-mode="pinned"]) .os-note { position: static; opacity: 1; transform: none; margin-top: .5rem; }
 
+/* Below 1024px the pinned stage fills the screen: the capsule sits top centre, and the cards run as one row along the
+   foot, the open one centred and each neighbour peeking in from the screen edge as an arrow. --i (script.js) is the
+   open card's index; the row slides by one card per step. */
+@media (max-width: 1023px) {
+  .os-scroll[data-mode="pinned"] { width: 100%; }
+  .os-scroll[data-mode="pinned"] .os-pills { --card: min(18rem, 100vw - 6.5rem); top: auto; bottom: 1.875rem; left: 50%; width: max-content; display: flex; align-items: center; gap: 10px; container-type: normal;
+    transform: translateX(calc(var(--i, 0) * -1 * (var(--card) + 10px) - var(--card) / 2)); transition: transform .6s var(--settle); }
+  .os-scroll[data-mode="pinned"] .osp, .os-scroll[data-mode="pinned"] .osp[aria-current="step"] { width: var(--card); }
+  .os-scroll[data-mode="pinned"] .osp .d > span { width: calc(var(--card) - 1.9rem); font-size: .9375rem; }
+  .os-scroll[data-mode="pinned"] .osp:not([aria-current]) :is(.t, .plus) { opacity: 0; }
+  .os-scroll[data-mode="pinned"] .osp::after { content: ""; position: absolute; top: 50%; right: .75rem; width: 20px; height: 20px; margin-top: -10px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='10' fill='%23fff' fill-opacity='.2'/%3E%3Cpath d='M6 10h8M10.5 6.5 14 10l-3.5 3.5' fill='none' stroke='%23fff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; transform: scaleX(-1); opacity: 0; transition: opacity .25s; }
+  .os-scroll[data-mode="pinned"] li:has(> [aria-current]) ~ li > .osp::after { right: auto; left: .75rem; transform: none; }
+  .os-scroll[data-mode="pinned"] .osp:not([aria-current])::after { opacity: 1; transition-delay: .15s; }
+  .os-scroll[data-mode="pinned"] .os-progress { left: 50%; bottom: auto; top: .5rem; transform: translateX(-50%); }
+  /* The scene runs from under the footnote to the card row. The finished stack rises well above its square, so it sits
+     lower in the square to centre in the scene. */
+  .os-scroll[data-mode="pinned"] .os-scene { inset: 5rem 0 11rem; }
+  .os-scroll[data-mode="pinned"] .os-stack { --drop: 38%; }
+  .os-scroll[data-mode="pinned"] .os-note { top: 3rem; bottom: auto; }
+}
+
 /* ── Product ── */
 .product { position: relative; background: var(--deep); color: #EAF4F0; padding: clamp(4.5rem, 9vw, 7.5rem) 0; overflow: hidden; }
 .product::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse 55% 45% at 33% 58%, rgba(122,193,162,.14), transparent 70%), radial-gradient(ellipse 45% 55% at 88% 40%, rgba(10,40,54,.55), transparent 70%); }
@@ -286,31 +311,22 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 @keyframes flow { to { stroke-dashoffset: -18; } }
 .dotted { fill: none; stroke: var(--gold); stroke-width: 2.4; stroke-linecap: round; stroke-dasharray: .1 9; animation: dots 1.2s linear infinite; }
 @keyframes dots { to { stroke-dashoffset: -9.1; } }
-.stack { display: none; }
-@media (max-width: 767px) { .diagram { display: none; } .stack { display: grid; } }
-.stack { gap: 0; margin-top: 2.5rem; }
-.stack h3 { margin: 0 0 .75rem; font: 600 1.25rem/1.2 var(--display); letter-spacing: -0.03em; display: flex; align-items: center; gap: .5rem; }
-.stack .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
-.pillbox { padding: .7rem .8rem; border-radius: 12px; font-size: .875rem; line-height: 1.25; text-align: center; }
-.pillbox.raw { background: rgba(201,162,39,.12); box-shadow: 0 0 0 1px rgba(201,162,39,.45) inset; color: #F3EBD3; }
-.pillbox.dim { background: rgba(10,40,54,.45); box-shadow: 0 0 0 1px rgba(122,193,162,.4) inset; color: #E4F3EC; }
-.vlink { height: 40px; width: 2px; margin: .5rem auto; background: repeating-linear-gradient(to bottom, var(--accent) 0 5px, transparent 5px 14px); background-size: 2px 14px; animation: dash .9s linear infinite; }
-.vlink.raw { background-image: repeating-linear-gradient(to bottom, var(--gold) 0 5px, transparent 5px 14px); }
-@keyframes dash { to { background-position: 0 14px; } }
-#coreM { width: min(260px, 70vw); aspect-ratio: 1; margin: 0 auto; position: relative; }
-#coreM canvas { width: 100%; height: 100%; }
-#coreM span { position: absolute; inset: 0; display: grid; place-items: center; font: 400 1rem/1 'Plus Jakarta Sans', sans-serif; letter-spacing: .16em; text-shadow: 0 0 10px rgba(6,26,36,.8); }
-.mod { padding: 1rem 1.1rem; border-radius: 12px; background: rgba(10,40,54,.5); box-shadow: 0 0 0 1px rgba(122,193,162,.55) inset; }
-.mod b { display: block; font-size: .9375rem; letter-spacing: .03em; }
-.mod span { font-size: .875rem; color: rgba(218,240,230,.8); }
-.mod.ag { box-shadow: 0 0 0 1.5px var(--gold) inset; background: rgba(201,162,39,.1); }
-.mods { display: grid; gap: .6rem; }
 .expert { margin-top: clamp(2rem, 4vw, 3rem); display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2rem; padding: 1.15rem 1.4rem; border-radius: 18px; background: rgba(255,255,255,.05); box-shadow: 0 0 0 1px rgba(122,193,162,.32) inset; }
 .expert .seal { display: flex; align-items: center; gap: .75rem; font: 600 1.0625rem/1.25 var(--text-font); color: #fff; }
 .expert ol { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; margin: 0; padding: 0; font-size: .875rem; color: rgba(218,240,230,.82); }
 .expert li { display: flex; gap: .5rem; align-items: baseline; }
 .expert li + li::before { content: "→"; color: var(--accent); margin-right: .5rem; }
 .expert li span { font: 400 .75rem/1 var(--mono); color: var(--accent); }
+.expert .seal svg { flex: none; }
+/* Below 1024px the three steps can't share a line, and a wrapped arrow starts a ragged second line. They stack as one
+   numbered column under the title text instead, the numbers alone carrying the order. */
+@media (max-width: 1023px) {
+  .expert { gap: .75rem; padding: 1rem 1.125rem 1.1rem; border-radius: 16px; }
+  .expert .seal { gap: .6rem; font-size: .9375rem; text-wrap: balance; }
+  .expert .seal svg { width: 24px; height: 24px; }
+  .expert ol { flex-direction: column; gap: .35rem; padding-left: calc(24px + .6rem); font-size: .8125rem; }
+  .expert li + li::before { content: none; }
+}
 
 /* ── Survival Intelligence ── */
 .survival { padding: clamp(4.5rem, 9vw, 7.5rem) 0; }
@@ -321,8 +337,8 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .sv-stage { display: grid; gap: 1.5rem; }
 .sv-scroll:not([data-mode="pinned"]) .chart-wrap { order: -1; }
 /* 32vh of scroll per step: about 3 wheel notches, so each layer has time to land without the run dragging (2.2 viewports in all). */
-.sv-scroll[data-mode="pinned"] { container-type: inline-size; --per-step: 32vh; height: calc(7 * var(--per-step) + 100vh - var(--header-h)); }
-.sv-scroll[data-mode="pinned"] .sv-stage { position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); padding: 1.5rem 0;
+.sv-scroll[data-mode="pinned"] { container-type: inline-size; --per-step: 32vh; height: calc(7 * var(--per-step) + 100svh - var(--header-h)); }
+.sv-scroll[data-mode="pinned"] .sv-stage { position: sticky; top: var(--header-h); height: calc(100svh - var(--header-h)); padding: 1.5rem 0;
   /* The plot keeps the 3:2 of a published KM figure on every screen. The card is the plot plus 134px across (padding and
      the y axis) and 218px down (title, legend, x axis, chips), so a 3:2 plot needs a card height of (width + 193px) / 1.5.
      The row asks for that at the column's full width, at most 56rem; when the stage or the cap makes it shorter, the card
@@ -366,9 +382,43 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .sv-scroll:not([data-mode="pinned"]) .pill .plus { display: none; }
 .sv-scroll:not([data-mode="pinned"]) .pill .t { font-size: .875rem; opacity: .7; }
 .sv-scroll:not([data-mode="pinned"]) .pill .d > span { position: static; opacity: 1; visibility: visible; padding: .35rem 0 0; }
+/* Card rows on screens wider than a phone: the screen edge no longer trims the neighbours, so each is clipped to the
+   nub a phone would show, and cards further out stay hidden. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  /* The open card's clip reaches past it so its shadow shows; the clip springs between card and nub as the row moves. */
+  :is(.os-scroll, .sv-scroll)[data-mode="pinned"] :is(.os-pills, .pills) li { clip-path: inset(-3rem); opacity: 0; visibility: hidden; transition: clip-path .5s var(--settle), opacity .3s, visibility 0s .3s; }
+  :is(.os-scroll, .sv-scroll)[data-mode="pinned"] :is(.os-pills, .pills) li:is(:has(> [aria-current]), :has(+ li > [aria-current])),
+  :is(.os-scroll, .sv-scroll)[data-mode="pinned"] :is(.os-pills, .pills) li:has(> [aria-current]) + li { opacity: 1; visibility: visible; transition: clip-path .5s var(--settle), opacity .3s .1s; }
+  :is(.os-scroll, .sv-scroll)[data-mode="pinned"] :is(.os-pills, .pills) li:has(+ li > [aria-current]) { clip-path: inset(0 0 0 calc(100% - 2.6rem) round 22px); }
+  :is(.os-scroll, .sv-scroll)[data-mode="pinned"] :is(.os-pills, .pills) li:has(> [aria-current]) + li { clip-path: inset(0 calc(100% - 2.6rem) 0 0 round 22px); }
+}
+/* Below 1024px, as the OS stage: progress top centre, the chart in the middle, the steps as one row along the foot. */
+@media (max-width: 1023px) {
+  /* The card row runs past the column to the screen edges. */
+  .survival { overflow-x: clip; }
+  .sv-scroll[data-mode="pinned"] .sv-stage { display: flex; flex-direction: column; gap: 1rem; padding: .75rem 0 9.25rem; }
+  .sv-scroll[data-mode="pinned"] .sv-progress { order: -1; flex: none; align-self: center; }
+  .sv-scroll[data-mode="pinned"] .chart-wrap { flex: 1 1 0; align-items: center; }
+  .sv-scroll[data-mode="pinned"] .chart { width: 100%; height: auto; max-height: 100%; }
+  /* On a short stage only the plot gives up height; the title, legend and chips keep theirs. */
+  .sv-scroll[data-mode="pinned"] .chart > * { flex: none; }
+  .sv-scroll[data-mode="pinned"] .chart #km { flex: 0 1 auto; aspect-ratio: 640 / 380; }
+  /* The agent chip wraps to two lines on a phone, so it reads as a tag, not a squashed pill. */
+  .meta span.g { line-height: 1.35; border-radius: 12px; }
+  .sv-scroll[data-mode="pinned"] .pills { --card: min(18rem, 100vw - 6.5rem); position: absolute; bottom: 1.875rem; left: 50%; display: flex; align-items: center; gap: 10px; container-type: normal;
+    transform: translateX(calc(var(--i, 0) * -1 * (var(--card) + 10px) - var(--card) / 2)); transition: transform .6s var(--settle); }
+  .sv-scroll[data-mode="pinned"] .pills li { width: auto; flex: none; }
+  .sv-scroll[data-mode="pinned"] .pill { width: var(--card); }
+  .sv-scroll[data-mode="pinned"] .pill .d > span { width: calc(var(--card) - 2rem); font-size: .9375rem; }
+  .sv-scroll[data-mode="pinned"] .pill .n { transition: opacity .3s; }
+  .sv-scroll[data-mode="pinned"] .pill:not([aria-current]) :is(.n, .t, .plus) { opacity: 0; }
+  .sv-scroll[data-mode="pinned"] .pill::after { content: ""; position: absolute; top: 50%; right: .65rem; width: 22px; height: 22px; margin-top: -11px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'%3E%3Ccircle cx='11' cy='11' r='11' fill='%23DAF0E6'/%3E%3Cpath d='M6.5 11h9M11.5 7l4 4-4 4' fill='none' stroke='%231B4F65' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat; transform: scaleX(-1); opacity: 0; transition: opacity .25s; }
+  .sv-scroll[data-mode="pinned"] li:has(> [aria-current]) ~ li > .pill::after { right: auto; left: .65rem; transform: none; }
+  .sv-scroll[data-mode="pinned"] .pill:not([aria-current])::after { opacity: 1; transition-delay: .15s; }
+}
 .chart { background: var(--surface); border-radius: 22px; box-shadow: 0 0 0 1px var(--hair), 0 30px 60px -36px rgba(16,43,54,.35); padding: 1.25rem 1.25rem 1rem; }
 .chart header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
-.chart header b { font-size: 1rem; }
+.chart header b { font-size: 1rem; text-wrap: balance; }
 .chart svg text { font-family: var(--mono); font-size: 11px; fill: var(--muted); }
 .legend { display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; font-size: .8125rem; color: var(--muted); margin-top: .25rem; }
 .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: .4rem; }
@@ -417,17 +467,29 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .cmp tbody tr { transition: background .25s var(--settle); }
 .cmp tbody tr:hover > th, .cmp tbody tr:hover > td.them { background: var(--bg); }
 @media (max-width: 899px) {
-  .cmp, .cmp tbody, .cmp tr, .cmp th, .cmp td { display: block; width: auto !important; }
+  .cmp, .cmp tbody, .cmp th, .cmp td { display: block; width: auto !important; }
   .cmp thead { display: none; }
-  .cmp tbody { display: grid; gap: 1rem; }
-  .cmp tbody tr { border-radius: 18px; overflow: hidden; box-shadow: 0 0 0 1px var(--hair); background: var(--bg); }
+  .cmp tbody { display: grid; gap: .75rem; }
+  /* One card per question: the question, the two alternatives side by side as one quiet pair, then bionocular's answer
+     on a dark panel inset 6px, its corners concentric with the card's (20 - 6 = 14). Every text edge sits 20px in. */
+  .cmp tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 0 .375rem .375rem; border-radius: 20px; background: var(--bg); box-shadow: 0 0 0 1px var(--hair); }
   .cmp tbody tr > * { border: 0 !important; }
-  .cmp tbody th { padding: 1.1rem 1.1rem .9rem; }
-  .cmp td.us { border-radius: 0 !important; padding: 1.1rem; }
-  .cmp td.them { padding: .7rem 1.1rem 0; font-size: .9375rem; }
-  .cmp td.them + td.them { padding-bottom: 1.1rem; }
-  .cmp td.us::before { content: "bionocular AI"; display: block; margin: 0 0 .45rem; font: 700 .6875rem/1 var(--text-font); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
-  .cmp td.them::before { content: attr(data-label); display: block; margin: 0 0 .2rem; font: 700 .6875rem/1 var(--text-font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .cmp tbody th { grid-column: 1 / -1; padding: 1.15rem .875rem .9rem; font-size: 1.1875rem; text-wrap: balance; }
+  .cmp td.them { padding: 0 .875rem 1.15rem; font-size: .875rem; line-height: 1.45; }
+  .cmp td.them + td.them { box-shadow: inset 1px 0 var(--hair); }
+  .cmp td.them::before { content: attr(data-label); display: block; margin: 0 0 .3rem; font: 500 .75rem/1.3 var(--text-font); letter-spacing: 0; color: var(--text); }
+  .cmp tbody tr > td.us, .cmp tbody tr:last-child > td.us { grid-column: 1 / -1; border-radius: 14px; padding: 1rem .875rem 1.1rem; }
+  .cmp td.us p { margin-bottom: .75rem; }
+  .cmp td.us::before { content: "bionocular"; display: block; margin: 0 0 .55rem; padding-left: 1.3rem; background: url("logo.svg?v=20261012") 0 50% / auto 1rem no-repeat;
+    font: 600 .875rem/1.2 'Plus Jakarta Sans', sans-serif; letter-spacing: .004em; color: #fff; }
+}
+/* Tablets: two question cards per row. Each card spans four rows of the list and shares them (subgrid), so the questions,
+   the two alternatives (stacked now) and the answer panels line up across the pair. */
+@media (min-width: 640px) and (max-width: 899px) {
+  .cmp tbody { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cmp tbody tr { grid-row: span 4; grid-template-columns: minmax(0, 1fr); grid-template-rows: subgrid; row-gap: 0; }
+  .cmp td.them:first-of-type { padding-bottom: .9rem; }
+  .cmp td.them + td.them { box-shadow: inset 0 1px var(--hair); padding-top: .9rem; }
 }
 
 
