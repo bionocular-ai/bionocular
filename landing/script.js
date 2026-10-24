@@ -362,9 +362,11 @@ const pillSprings = pills => {
     const h = top + 2, step = h / SKIN, reach = drape * h, body = .2 + .8 * frost;
     shape(h);
     // Rings are revealed top down. Wall 0 is under the stack; wall 2i + 1 is beside slab i's rim, 2i + 2 the gap above
-    // it; the last wall is the lip.
+    // it; the last wall is the lip. The card-row layout draws no skin: on phone GPUs the 18 wall planes made every
+    // viewport resize (the toolbar hiding or showing) stall for up to 2 s and mis-sorted against the slabs, so there the
+    // frosted slabs and lid carry the case alone, and every wall stays hidden.
     const groups = walls.map(() => []);
-    for (let k = 0; k < SKIN && reach > k * step; k++) {
+    for (let k = 0; !narrow.matches && k < SKIN && reach > k * step; k++) {
       const z = cz - depth[k];
       let i = -1;
       while (i + 1 < L && lift + (i + 1) * gap <= z) i++;
