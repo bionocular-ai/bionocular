@@ -309,9 +309,12 @@ const pillSprings = pills => {
   // Pinned only where the stage has room for the open pill card and the stack; shorter screens get the static layout.
   const hdr = document.getElementById('hdr'), row = pills[0].closest('ol'), wide = matchMedia('(min-width: 1024px) and (min-height: 560px), (max-width: 1023px) and (min-height: 480px)');
   // GAP: layer spacing, closing to CASED under the lid. HEAD: clear glass between the top layer's face and the lid, on
-  // top of the 14px the lid lifts as it lands. Set per layout in mode().
-  const N = slabs.length + 1, HOLD = .5, DROP = 620;
-  let GAP, CASED, HEAD;
+  // top of the 14px the lid lifts as it lands. DROP: how far each layer and the lid fall. CASE: how many steps of scroll
+  // the casing step takes. Set per layout in mode().
+  const N = slabs.length + 1, HOLD = .5;
+  let GAP, CASED, HEAD, DROP, CASE, U;
+  // Scroll position in steps (0..U) to the drawn step (0..N): one step each for the layers, CASE for the casing.
+  const toQ = u => u < N - 1 ? u : Math.min(N, N - 1 + (u - N + 1) / CASE);
   const clamp = x => Math.min(1, Math.max(0, x)), out = t => 1 - (1 - t) ** 3, inOut = t => t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
   // The case skin: thin rounded rings laid down one by one as the case drapes. Rings near the lid and the floor
   // are drawn slightly smaller, along a quarter circle, so both edges round off like moulded glass.
@@ -404,7 +407,7 @@ const pillSprings = pills => {
   const range = () => [sc.getBoundingClientRect().top + scrollY - hdr.offsetHeight, Math.max(1, sc.offsetHeight - stage.offsetHeight)];
   // The pills and the progress bar read the drawn position, so they change on the same frame as the stack.
   const draw = () => {
-    const q = Math.min(N, shown * (N + HOLD));
+    const q = toQ(shown * U);
     paint(q); bar.style.transform = `scaleX(${shown})`; setStep(Math.min(N, Math.floor(q) + 1));
   };
   const frame = now => {
@@ -423,7 +426,7 @@ const pillSprings = pills => {
   pills.forEach((b, i) => b.addEventListener('click', () => {
     if (!pinned) return;
     const [top, len] = range();
-    scrollTo({ top: top + (i + .8) / (N + HOLD) * len, behavior: 'smooth' });
+    scrollTo({ top: top + (i + .8) / U * len, behavior: 'smooth' });
   }));
   // The scene is drawn for a 1248 x 836 stage (a 1440 x 900 window). Larger stages scale all of it, depths included,
   // by height, as far as the width leaves the stack clear of the pills. Under 1024px the scene is the stage between
@@ -434,7 +437,11 @@ const pillSprings = pills => {
     removeEventListener('scroll', pick); cur = -1; settle();
     // A portrait screen packs the layers closer, so the stack is not a tower, and the lid lands as near the top layer
     // as the layers sit to each other (HEAD + 14 = CASED - 12.5, the slab's thickness).
-    [GAP, CASED, HEAD] = narrow.matches ? [22, 19, -7.5] : [30, 26, 19]; shapedFor = -1;
+    // A phone gives each step less scroll and is flicked faster. The casing step plays three things in turn (the lid
+    // drops, the frost drapes, the frost clears), each in a fraction of a step, so there it gets three steps of scroll,
+    // or each would pop in two or three frames. Its layers also fall from just above the scene, not a stage height.
+    [GAP, CASED, HEAD, DROP, CASE] = narrow.matches ? [22, 19, -7.5, 300, 3] : [30, 26, 19, 620, 1]; shapedFor = -1;
+    U = N - 1 + CASE + HOLD; sc.style.setProperty('--units', U);
     pinned = wide.matches && !still;
     sc.dataset.mode = pinned ? 'pinned' : 'static';
     fit();

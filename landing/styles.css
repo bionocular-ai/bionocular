@@ -177,7 +177,8 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 /* Stage on a neutral studio wash: darker at the top, fading into the page. */
 .os-stage { position: relative; overflow: clip; display: grid; gap: 1.5rem; padding: 1.5rem 1rem 2rem;
   background: radial-gradient(120% 70% at 62% 58%, rgba(255,255,255,.75), rgba(255,255,255,0) 70%), linear-gradient(180deg, #E6EFEC 0%, #EEF5F2 55%, var(--bg) 100%); }
-.os-scroll[data-mode="pinned"] { --per-step: 42vh; height: calc(9.5 * var(--per-step) + 100svh - var(--header-h)); }
+/* --units (script.js): the run's length in steps, the casing step and the closing hold included. */
+.os-scroll[data-mode="pinned"] { --per-step: 42vh; height: calc(var(--units) * var(--per-step) + 100svh - var(--header-h)); }
 .os-scroll[data-mode="pinned"] .os-stage { position: sticky; top: var(--header-h); height: calc(100svh - var(--header-h)); padding: 0; display: block; }
 
 /* Glass pills: neutral smoke, white text; the active one opens into a card with its name as a small label. */
