@@ -5,7 +5,6 @@ const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, ...a
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 // Under 1024px a pinned run puts its step cards in one row below the scene instead of beside it.
 const narrow = matchMedia('(max-width: 1023px)');
-const touch = matchMedia('(pointer: coarse)');
 
 // Step pills (OS and Survival) open into a card, and the last one closes, on an underdamped spring (about 1% overshoot)
 // rather than a snap. Each card's size is its own spring: a change mid-flight retargets it from where it is drawn,
@@ -419,12 +418,14 @@ const pillSprings = pills => {
     raf = shown === target ? 0 : requestAnimationFrame(frame);
     if (!raf) last = 0;
   };
-  // Touch scrolling is already smooth and carries its own momentum, so there the stack tracks the scroll 1:1, as content
-  // under a finger should. The spring would only add lag: on a fast flick the stage left with the casing half played.
+  // Touch scrolling is already smooth and carries its own momentum, so on touch screens and in the card-row layout the
+  // stack tracks the scroll 1:1, as content under a finger should. There the spring would only add lag: on a fast flick
+  // the stage left with the casing half played.
+  const direct = matchMedia('(pointer: coarse), (max-width: 1023px)');
   const pick = () => {
     const [top, len] = range();
     target = clamp((scrollY - top) / len);
-    if (touch.matches) { cancelAnimationFrame(raf); raf = 0; shown = target; vel = 0; draw(); return; }
+    if (direct.matches) { cancelAnimationFrame(raf); raf = 0; shown = target; vel = 0; draw(); return; }
     if (!raf) raf = requestAnimationFrame(frame);
   };
   pills.forEach((b, i) => b.addEventListener('click', () => {
