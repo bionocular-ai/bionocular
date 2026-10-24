@@ -98,8 +98,8 @@ const pillSprings = pills => {
   // HEAT scales every mark's opacity: a quarter of full strength keeps the charts behind the copy, never competing with it.
   // The heatmap band sits clear of the copy, so it runs a little hotter (HEAT_MAP).
   // Each chart holds for DUR seconds of the clock (which runs at .75x real time), the next crossfades in over FADE and draws
-  // itself in over BUILD. The heatmap's gold cell steps every STEP seconds.
-  const HEAT = .25, HEAT_MAP = .3, DUR = 9, FADE = 1.6, BUILD = 3, STEP = .8;
+  // itself in over BUILD. The heatmap's gold cell jumps every STEP seconds.
+  const HEAT = .25, HEAT_MAP = .3, DUR = 9, FADE = 1.6, BUILD = 3, STEP = 2.4;
   let W = 0, H = 0, L = 0, R = 0, S = {};
   const hh = () => hdr.offsetHeight;
 
@@ -170,16 +170,14 @@ const pillSprings = pills => {
         const x1 = Math.round(k.x), y1 = Math.round(k.y);
         ctx.fillRect(x1 + 1, y1, Math.round(k.x + c) - x1 - 1, Math.round(k.y + c) - y1 - 1);
       }
-      // The one accent, the signal cutting through the noise: a gold cell crosses the band left to right, one cell every STEP
-      // seconds, crossfading as it goes. About one step in four it shifts a row instead (never twice running, so it never
-      // steps straight back), keeping off the thinned outer rows. Past the right edge it carries on from the left.
-      const s = Math.floor(t / STEP), ph = (t / STEP) % 1, inner = k => k.r >= 1 && k.r <= rows - 2;
+      // The one accent, the signal cutting through the noise: a gold cell lights up somewhere in the band, holds for STEP
+      // seconds, then crossfades to a random cell at least a third of the band away, so it reads as a jump, never a walk.
+      // It keeps off the thinned outer rows.
+      const s = Math.floor(t / STEP), ph = (t / STEP) % 1;
       if (s !== S.slot) {
-        S.slot = s;
-        const p = S.pick, at = (r, i) => cells[r * S.nx + i % S.nx];
-        const turn = p && S.prev && S.prev.r === p.r && Math.random() < .25 ? [at(p.r - 1, p.i), at(p.r + 1, p.i)].filter(inner) : [];
-        S.prev = p;
-        S.pick = !p ? at(1 + Math.floor(Math.random() * (rows - 2)), 0) : turn.length ? turn[Math.floor(Math.random() * turn.length)] : at(p.r, p.i + 1);
+        S.slot = s; S.prev = S.pick;
+        const p = S.prev, far = cells.filter(k => k.r >= 1 && k.r <= rows - 2 && (!p || Math.abs(k.i - p.i) >= S.nx / 3));
+        S.pick = far[Math.floor(Math.random() * far.length)];
       }
       const into = ease(ph * 3);
       for (const [p, a] of [[S.prev, (1 - into) * b], [S.pick, into * b]]) {
