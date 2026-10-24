@@ -84,7 +84,7 @@ const pillSprings = pills => {
   }, 6000);
 })();
 
-// ── Hero background: four oncology charts take turns behind the copy (heatmap, efficacy vs safety, KM curves, forest plot) ──
+// ── Hero background: three oncology charts take turns (a heatmap band below the copy, efficacy vs safety, forest plot) ──
 (() => {
   const hero = document.getElementById('hero'), cv = document.getElementById('heroBg'), ctx = cv.getContext('2d'), hdr = document.getElementById('hdr');
   const TEAL = '27,79,101', SEA = '47,138,102', GOLD = '201,162,39';
@@ -94,9 +94,10 @@ const pillSprings = pills => {
   const rng = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const ramp = v => { v = clamp(v) * (RAMP.length - 1); const i = Math.min(RAMP.length - 2, v | 0), f = v - i; return RAMP[i].map((a, k) => a + (RAMP[i + 1][k] - a) * f); };
   // HEAT scales every mark's opacity: a quarter of full strength keeps the charts behind the copy, never competing with it.
-  // The heatmap band fills FILL of the hero below the header. Each chart holds for DUR seconds of the clock (which runs at
-  // .75x real time), the next crossfades in over FADE and draws itself in over BUILD.
-  const HEAT = .25, FILL = .6, DUR = 9, FADE = 1.6, BUILD = 3;
+  // The heatmap band sits clear of the copy, so it runs a little hotter (HEAT_MAP).
+  // Each chart holds for DUR seconds of the clock (which runs at .75x real time), the next crossfades in over FADE and draws
+  // itself in over BUILD. The heatmap's gold cell steps every STEP seconds.
+  const HEAT = .25, HEAT_MAP = .3, DUR = 9, FADE = 1.6, BUILD = 3, STEP = .8;
   let W = 0, H = 0, L = 0, R = 0, S = {};
   const hh = () => hdr.offsetHeight;
 
@@ -119,14 +120,17 @@ const pillSprings = pills => {
     document.documentElement.style.setProperty('--grid-l', `${L}px`); document.documentElement.style.setProperty('--grid-r', `${W - R - 1}px`);
     // Heatmap cells are 48px (32px on phones), stretched by a fraction of a pixel so a whole number spans the frame; the other
     // charts space their margins on a finer 32px (24px) unit.
-    const u = W < 768 ? 24 : 32, base = W < 768 ? 32 : 48, c = (R - L) / Math.round((R - L) / base), rows = Math.max(4, Math.round((H - hh()) * FILL / c));
-    const rnd = rng(9), nx = Math.round((R - L) / c), cells = [], bandTop = Math.round(hh() + (H - hh() - rows * c) / 2);
-    for (let r = 0; r < rows; r++) for (let i = 0; i < nx; i++) cells.push({ x: L + i * c, y: bandTop + (rows - 1 - r) * c, r, p: rnd() * 6.3, q: rnd() * 6.3 });
+    // The heatmap band sits below the copy, in the room the hero's bottom padding keeps (styles.css). Its thinned top row
+    // reaches a unit up under the copy's last line, so the gold cell's rows still start clear of the text.
+    const u = W < 768 ? 24 : 32, base = W < 768 ? 32 : 48, c = (R - L) / Math.round((R - L) / base), zs = zones();
+    const bandTop = Math.round(Math.max(...zs.map(z => z.box[1] + z.box[3])) - u), rows = Math.max(3, Math.floor((H - bandTop) / c));
+    const rnd = rng(9), nx = Math.round((R - L) / c), cells = [];
+    for (let r = 0; r < rows; r++) for (let i = 0; i < nx; i++) cells.push({ x: L + i * c, y: bandTop + (rows - 1 - r) * c, r, i, p: rnd() * 6.3, q: rnd() * 6.3 });
     // Illustrative, unlabelled points: bubbles as a share of each axis, forest rows as hazard ratios with 95% CIs.
     const bubbles = Array.from({ length: 16 }, () => ({ sx: rnd(), sy: clamp(.15 + rnd() * .75), r: u * (.3 + rnd() ** 1.6 * 1.05), v: rnd(), p: rnd() * 6.3, q: rnd() * 6.3 }));
     const forest = Array.from({ length: W < 768 ? 6 : 8 }, () => { const hr = Math.exp(-.35 + (rnd() - .5) * .7), w = .45 + rnd() * .55; return { hr, lo: hr * Math.exp(-(.12 + (1 - w) * .45)), hi: hr * Math.exp(.12 + (1 - w) * .45), w }; });
     const lhr = forest.reduce((s, r) => s + Math.log(r.hr), 0) / forest.length, pooled = { hr: Math.exp(lhr), lo: Math.exp(lhr - .1), hi: Math.exp(lhr + .1) };
-    S = { c, u, rows, cells, bandTop, bubbles, forest, pooled, zs: zones(), slot: -1, pick: null };
+    S = { c, u, rows, nx, cells, bandTop, bubbles, forest, pooled, zs, slot: -1, pick: null, prev: null };
   }
 
   // Build-in wipes from the left: each mark grows once the build passes its x.
@@ -160,23 +164,27 @@ const pillSprings = pills => {
         k.a = (.3 + .7 * clamp(o / .6)) * (.85 - h * .3);
         // Colour never drops to the palest mint, which vanishes into the page tint and reads as a hole.
         const v = Math.min(k.a + .08, .54, .14 + .86 * clamp(.36 + .32 * Math.sin(k.x * .006 - t * .6 + k.r * .5) + .2 * Math.sin(t * .4 + k.q) + (1 - h) * .1) ** 1.6);
-        ctx.fillStyle = `rgba(${ramp(v).map(Math.round)},${clamp(k.a * .42 * clamp((1 - h) * 1.6 + .15) * HEAT * grow(b, k.x))})`;
+        ctx.fillStyle = `rgba(${ramp(v).map(Math.round)},${clamp(k.a * .42 * clamp((1 - h) * 1.6 + .15) * HEAT_MAP * grow(b, k.x))})`;
         const x1 = Math.round(k.x), y1 = Math.round(k.y);
         ctx.fillRect(x1 + 1, y1, Math.round(k.x + c) - x1 - 1, Math.round(k.y + c) - y1 - 1);
       }
-      // The one accent: every few seconds a random settled cell turns gold, then fades. Any cell outside the thinned outer two
-      // rows qualifies, under the copy too (the text sits over it, as over the charts), and never the last one, so the accent
-      // wanders across the whole band rather than cycling through the few cells clear of the copy.
-      const s = Math.floor(t / 3), ph = (t / 3) % 1;
+      // The one accent, the signal cutting through the noise: a gold cell crosses the band left to right, one cell every STEP
+      // seconds, crossfading as it goes. About one step in four it shifts a row instead (never twice running, so it never
+      // steps straight back), keeping off the thinned outer rows. Past the right edge it carries on from the left.
+      const s = Math.floor(t / STEP), ph = (t / STEP) % 1, inner = k => k.r >= 1 && k.r <= rows - 2;
       if (s !== S.slot) {
         S.slot = s;
-        const cand = cells.filter(k => k !== S.pick && k.r >= 1 && k.r <= rows - 2 && k.a > .3);
-        S.pick = cand.length ? cand[Math.floor(Math.random() * cand.length)] : null;
+        const p = S.pick, at = (r, i) => cells[r * S.nx + i % S.nx];
+        const turn = p && S.prev && S.prev.r === p.r && Math.random() < .25 ? [at(p.r - 1, p.i), at(p.r + 1, p.i)].filter(inner) : [];
+        S.prev = p;
+        S.pick = !p ? at(1 + Math.floor(Math.random() * (rows - 2)), 0) : turn.length ? turn[Math.floor(Math.random() * turn.length)] : at(p.r, p.i + 1);
       }
-      const p = S.pick; if (!p) return;
-      const a = Math.min(ease(ph * 5), ease((1 - ph) * 5)) * b;
-      ctx.fillStyle = `rgba(247,250,249,${a})`; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y), c - 1, c - 1);
-      ctx.fillStyle = `rgba(${GOLD},${.26 * a})`; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y), c - 1, c - 1);
+      const into = ease(ph * 3);
+      for (const [p, a] of [[S.prev, (1 - into) * b], [S.pick, into * b]]) {
+        if (!p || a <= 0) continue;
+        ctx.fillStyle = `rgba(247,250,249,${a})`; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y), c - 1, c - 1);
+        ctx.fillStyle = `rgba(${GOLD},${.26 * a})`; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y), c - 1, c - 1);
+      }
     } },
 
     // Efficacy against safety: x is the grade 3+ adverse event rate, y the median PFS, size the trial's enrolment.
@@ -206,43 +214,6 @@ const pillSprings = pills => {
         ctx.lineWidth = 1.25; ctx.strokeStyle = `rgba(${GOLD},${ink(.9 * g)})`; ctx.beginPath(); ctx.arc(x, y, r + 3, 0, 7); ctx.stroke();
         ctx.lineWidth = 1; ctx.strokeStyle = `rgba(${GOLD},${ink(.5 * (1 - ph) * g)})`; ctx.beginPath(); ctx.arc(x, y, r + 3 + ph * 14, 0, 7); ctx.stroke();
       }
-    } },
-
-    // The three real CheckMate 067 PFS arms (data/km-checkmate067-pfs.js); a cursor reads across them.
-    { h: .84, draw(t, b, top, bot) {
-      const P = plot(top, bot, true), X = m => P.x0 + m / 60 * (P.x1 - P.x0), Y = p => P.y1 - p / 100 * (P.y1 - P.y0);
-      const curves = [KM.main.ipilimumab, KM.main.nivolumab, KM.main.nivolumab_plus_ipilimumab];
-      hline(P.x0, P.x1, P.y1, .2);
-      for (const m of [0, 12, 24, 36, 48, 60]) { vline(X(m), P.y1, P.y1 + 4, .2); label(m === 60 ? '60 mo' : String(m), X(m), P.y1 + 14, m === 0 ? 'left' : m === 60 ? 'right' : 'center', .5); }
-      // The curves draw themselves from month 0 as the chart builds.
-      ctx.save(); ctx.beginPath(); ctx.rect(P.x0 - 2, top, (P.x1 - P.x0) * ease(b) + 4, bot - top); ctx.clip();
-      curves.forEach((pts, i) => {
-        const front = i === curves.length - 1, end = Math.min(60, pts.at(-1)[0] + 1.5);
-        const path = new Path2D(); let py = Y(pts[0][1]); path.moveTo(X(0), py);
-        for (const [tm, p] of pts.slice(1)) { path.lineTo(X(tm), py); py = Y(p); path.lineTo(X(tm), py); }
-        path.lineTo(X(end), py);
-        if (front) {
-          // The front arm carries a soft fill down to the axis.
-          const area = new Path2D(path); area.lineTo(X(end), P.y1); area.lineTo(X(0), P.y1); area.closePath();
-          const g = ctx.createLinearGradient(0, P.y0, 0, P.y1); g.addColorStop(0, `rgba(${SEA},${.1 * HEAT})`); g.addColorStop(1, `rgba(${SEA},0)`);
-          ctx.fillStyle = g; ctx.fill(area);
-        }
-        ctx.lineWidth = front ? 1.6 : 1; ctx.strokeStyle = front ? `rgba(${TEAL},${ink(.55)})` : `rgba(${SEA},${ink(.32)})`; ctx.stroke(path);
-        // A censored tail ends in a small tick rather than an invented line to 60 months.
-        ctx.beginPath(); ctx.moveTo(X(end), py - 3); ctx.lineTo(X(end), py + 3); ctx.stroke();
-      });
-      ctx.restore();
-      // The one accent: the front arm's median, where it crosses 50%.
-      const front = curves[2], tm = front[front.findIndex(([, p]) => p < 50)][0], mx = X(tm), a = clamp((ease(b) - (mx - P.x0) / (P.x1 - P.x0)) * 5);
-      ctx.setLineDash([2, 4]); ctx.lineWidth = 1; ctx.strokeStyle = `rgba(${GOLD},${ink(.6 * a)})`; ctx.beginPath(); ctx.moveTo(Math.round(mx) + .5, Y(50)); ctx.lineTo(Math.round(mx) + .5, P.y1); ctx.stroke(); ctx.setLineDash([]);
-      ctx.beginPath(); ctx.arc(mx, Y(50), 3.5, 0, 7); ctx.fillStyle = `rgba(247,250,249,${a})`; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = `rgba(${GOLD},${ink(a)})`; ctx.stroke();
-      label(`mPFS ${tm.toFixed(1)} mo`, mx + 9, Y(50) - 10, 'left', .6 * a);
-      // Once the curves are drawn, a reading cursor sweeps across, marking where each arm sits.
-      if (b < 1) return;
-      const at = (pts, m) => { let p = pts[0][1]; for (const [tm, v] of pts) { if (tm > m) break; p = v; } return p; };
-      const ph = (t * .05) % 1, m = 3 + ph * 52, ca = Math.sin(Math.PI * ph) ** .6, cx = X(m);
-      vline(cx, P.y0, P.y1, .3 * ca);
-      curves.forEach((pts, i) => { ctx.beginPath(); ctx.arc(cx, Y(at(pts, m)), i === 2 ? 3 : 2.5, 0, 7); ctx.fillStyle = `rgba(${i === 2 ? TEAL : SEA},${ink(.55 * ca)})`; ctx.fill(); });
     } },
 
     // Hazard ratios across subgroups around the no-difference line, with the pooled estimate as a gold diamond.
