@@ -3,6 +3,8 @@ const NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
 const txt = (parent, x, y, s, attrs = {}) => { const t = el('text', { x, y, ...attrs }, parent); t.textContent = s; return t; };
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Under 1024px a pinned run puts its step cards in one row below the scene instead of beside it.
+const narrow = matchMedia('(max-width: 1023px)');
 
 // Step pills (OS and Survival) open into a card, and the last one closes, on an underdamped spring (about 1% overshoot)
 // rather than a snap. Each card's size is its own spring: a change mid-flight retargets it from where it is drawn,
@@ -301,10 +303,15 @@ const pillSprings = pills => {
   const sc = document.getElementById('osScroll'), stage = sc.firstElementChild, bar = document.getElementById('osBar'), stack = document.getElementById('osStack');
   const slabs = [...stack.querySelectorAll('.slab')], pills = [...sc.querySelectorAll('.osp')], box = document.getElementById('osCase'), note = document.getElementById('osNote');
   const floor = stack.querySelector('.os-floor');
+  // SCENE_H x SCENE_W: the screen box the finished stack takes at --k 1, lid included, plus room to clear the capsule,
+  // the cards and the screen edges.
+  const scene = stack.parentElement, SCENE_H = 302, SCENE_W = 400;
   // Pinned only where the stage has room for the open pill card and the stack; shorter screens get the static layout.
-  const hdr = document.getElementById('hdr'), wide = matchMedia('(min-width: 1024px) and (min-height: 560px)');
-  // HEAD: clear glass between the top layer's face and the lid.
-  const N = slabs.length + 1, HOLD = .5, GAP = 30, CASED = 26, DROP = 620, HEAD = 19;
+  const hdr = document.getElementById('hdr'), row = pills[0].closest('ol'), wide = matchMedia('(min-width: 1024px) and (min-height: 560px), (max-width: 1023px) and (min-height: 480px)');
+  // GAP: layer spacing, closing to CASED under the lid. HEAD: clear glass between the top layer's face and the lid, on
+  // top of the 14px the lid lifts as it lands. Set per layout in mode().
+  const N = slabs.length + 1, HOLD = .5, DROP = 620;
+  let GAP, CASED, HEAD;
   const clamp = x => Math.min(1, Math.max(0, x)), out = t => 1 - (1 - t) ** 3, inOut = t => t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
   // The case skin: thin rounded rings laid down one by one as the case drapes. Rings near the lid and the floor
   // are drawn slightly smaller, along a quarter circle, so both edges round off like moulded glass.
@@ -389,7 +396,10 @@ const pillSprings = pills => {
   const setStep = n => {
     if (n === cur) return;
     const was = cur; cur = n;
-    cards.morph(() => pills.forEach(b => +b.dataset.step === n ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')), pinned && was >= 0);
+    // The fusing step has no card of its own. Wide screens close every card for it; the card row keeps the last one open.
+    const k = narrow.matches ? Math.min(n, pills.length) : n;
+    cards.morph(() => pills.forEach(b => +b.dataset.step === k ? b.setAttribute('aria-current', 'step') : b.removeAttribute('aria-current')), pinned && was >= 0);
+    row.style.setProperty('--i', k - 1);
   };
   const range = () => [sc.getBoundingClientRect().top + scrollY - hdr.offsetHeight, Math.max(1, sc.offsetHeight - stage.offsetHeight)];
   // The pills and the progress bar read the drawn position, so they change on the same frame as the stack.
@@ -416,22 +426,27 @@ const pillSprings = pills => {
     scrollTo({ top: top + (i + .8) / (N + HOLD) * len, behavior: 'smooth' });
   }));
   // The scene is drawn for a 1248 x 836 stage (a 1440 x 900 window). Larger stages scale all of it, depths included,
-  // by height, as far as the width leaves the stack clear of the pills.
-  const fit = () => stack.style.setProperty('--k', pinned ? Math.max(1, Math.min(stage.clientHeight / 836, stage.clientWidth / 840)) : 1);
+  // by height, as far as the width leaves the stack clear of the pills. Under 1024px the scene is the stage between
+  // the progress capsule and the card row, and the stack takes as much of it as fits, up to its 400px laptop size.
+  const fit = () => stack.style.setProperty('--k', !pinned ? 1 : narrow.matches ? Math.min(scene.clientHeight / SCENE_H, scene.clientWidth / SCENE_W, 400 / stack.offsetWidth)
+    : Math.max(1, Math.min(stage.clientHeight / 836, stage.clientWidth / 840)));
   const mode = () => {
     removeEventListener('scroll', pick); cur = -1; settle();
+    // A portrait screen packs the layers closer, so the stack is not a tower, and the lid lands as near the top layer
+    // as the layers sit to each other (HEAD + 14 = CASED - 12.5, the slab's thickness).
+    [GAP, CASED, HEAD] = narrow.matches ? [22, 19, -7.5] : [30, 26, 19]; shapedFor = -1;
     pinned = wide.matches && !still;
     sc.dataset.mode = pinned ? 'pinned' : 'static';
     fit();
     if (pinned) { addEventListener('scroll', pick, { passive: true }); pick(); shown = target; vel = 0; draw(); }
     else { pills.forEach(b => b.removeAttribute('aria-current')); paint(N); }
   };
-  wide.addEventListener('change', mode);
+  wide.addEventListener('change', mode); narrow.addEventListener('change', mode);
   addEventListener('resize', () => { shapedFor = -1; settle(); fit(); if (pinned) pick(); else paint(N); });
   mode();
 })();
 
-// ── Product: shared data, drawn as an SVG diagram (≥768px) or a stacked list (<768px) ──
+// ── Product: shared data, drawn as one SVG diagram that scales to every width ──
 const SOURCES = ['Clinical Trials', 'Conference Abstracts', 'Publications', 'Press Releases', 'Live News', 'Standard of Care'];
 const DIMS = ['Indication & Subtype', 'Clinical Setting', 'Disease Stage', 'Line of Therapy', 'Biomarker', 'Modality', 'Target', 'Efficacy Endpoints', 'Safety Endpoints'];
 const MODS = [['CORE', 'Clinical Landscape and Trial Data'], ['OUTCOME INTELLIGENCE HUB', 'Efficacy, Safety and Efficacy vs Safety'], ['SURVIVAL INTELLIGENCE', 'KM-Curve Digitized Twin']];
@@ -487,10 +502,6 @@ const MODS = [['CORE', 'Clinical Landscape and Trial Data'], ['OUTCOME INTELLIGE
   el('path', { d: 'M1080,470 V420', class: 'dotted' }, s); el('path', { d: 'M1110,420 V470', class: 'dotted' }, s);
   txt(s, 1122, 450, 'Opens In', { fill: 'rgba(243,235,211,.75)', 'font-size': 11, 'font-family': 'IBM Plex Mono' });
 
-  // Mobile stack from the same arrays
-  const fill = (id, items, cls) => document.getElementById(id).innerHTML = items.map(n => `<div class="pillbox ${cls}">${n.replace('&', '&amp;')}</div>`).join('');
-  fill('mSources', SOURCES, 'raw'); fill('mDims', DIMS, 'dim');
-  document.getElementById('mMods').innerHTML = MODS.map(([h, d]) => `<div class="mod"><b>${h}</b><span>${d}</span></div>`).join('');
 })();
 
 // ── Core canvas: noise to structure. Runs only while visible; one still frame under reduced motion ──
@@ -501,10 +512,16 @@ function coreCanvas(cv) {
   const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
   const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
   const hash = i => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
-  const ROWS = 9, PER = 64, pts = [];
-  for (let k = 0; k < ROWS; k++) for (let i = 0; i < PER; i++) pts.push({ k, ph: i / PER, ro: hash(k * PER + i) * 2 - 1, ro2: hash(k * PER + i + 999) });
+  // Dots keep the spacing they have on a 354px laptop canvas: a smaller canvas draws fewer per row, or the structured
+  // rows close up into solid bars of light. Never more than 64, so big screens keep the laptop look.
+  const ROWS = 9, pts = [];
   let size = 0;
-  const resize = () => { const d = devicePixelRatio || 1; size = cv.clientWidth * d; cv.width = cv.height = size; };
+  const resize = () => {
+    const d = devicePixelRatio || 1, per = Math.max(8, Math.min(64, Math.round(64 * cv.clientWidth / 354)));
+    size = cv.clientWidth * d; cv.width = cv.height = size;
+    pts.length = 0;
+    for (let k = 0; k < ROWS; k++) for (let i = 0; i < per; i++) pts.push({ k, ph: i / per, ro: hash(k * per + i) * 2 - 1, ro2: hash(k * per + i + 999) });
+  };
   // Resizing resets the canvas; under reduced motion there is no loop to repaint it, so redraw the still frame.
   addEventListener('resize', () => { resize(); if (still) frame(4000); }); resize();
   const frame = t => {
@@ -526,14 +543,14 @@ function coreCanvas(cv) {
   new IntersectionObserver(([e]) => { on = e.isIntersecting && cv.clientWidth > 0; if (on && !raf) raf = requestAnimationFrame(loop); }).observe(cv);
 }
 coreCanvas(document.getElementById('core'));
-coreCanvas(document.querySelector('#coreM canvas'));
 
 // ── Survival: real digitized twins (km_curves, NCT01844505, NEJM 2019, ITT PFS) layered by step ──
 (() => {
   document.getElementById('kmStored').textContent = `${KM.stored} twin points stored`;
   const s = document.getElementById('km'), chart = document.getElementById('chart');
   // Pinned only where the stage has room for the open step card and the chart; shorter screens get the static layout.
-  const wide = matchMedia('(min-width: 1024px) and (min-height: 560px)');
+  // Under 1024px the chart sits above the card row, so it needs a taller screen to keep a readable plot.
+  const wide = matchMedia('(min-width: 1024px) and (min-height: 560px), (max-width: 1023px) and (min-height: 640px)');
   const x0 = 52, y0 = 14; let x1 = 620, y1 = 322;
   const X = m => x0 + m / 60 * (x1 - x0), Y = p => y1 - p / 100 * (y1 - y0);
   const step = pts => pts.reduce((d, [t, p], i) => i ? d + ` H${X(t).toFixed(1)} V${Y(p).toFixed(1)}` : `M${X(t)},${Y(p)}`, '') + ` H${X(Math.min(60, pts.at(-1)[0] + 1.5))}`;
@@ -587,13 +604,14 @@ coreCanvas(document.querySelector('#coreM canvas'));
     meta.forEach(m => m.classList.toggle('on', n >= +m.dataset.from));
   };
   const scroller = document.getElementById('svScroll'), stage = scroller.firstElementChild, bar = document.getElementById('svBar');
-  const pills = [...document.querySelectorAll('#steps .pill')], N = pills.length, hdrEl = document.getElementById('hdr');
+  const row = document.getElementById('steps'), pills = [...row.querySelectorAll('.pill')], N = pills.length, hdrEl = document.getElementById('hdr');
   let cur = 0, raf = 0, pinned = false;
   const cards = pillSprings(pills);
   const setStep = n => {
     if (n === cur) return;
     const was = cur; cur = n;
     cards.morph(() => pills.forEach(p => +p.dataset.step === n ? p.setAttribute('aria-current', 'step') : p.removeAttribute('aria-current')), pinned && was > 0);
+    row.style.setProperty('--i', n - 1);
     show(n);
   };
   // Scroll position inside the pinned run maps straight to a step, so no step can be skipped and the chart is always in view.
