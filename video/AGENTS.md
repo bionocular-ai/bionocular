@@ -3,10 +3,11 @@
 The Bionocular product film, rendered from code: an HTML canvas draws every frame, Playwright captures
 them, ffmpeg encodes. Read this file before every task here. The film is a set of chapters (one per
 question or feature). Chapters: `film.js` (Question 2, `docs/storyboard.md`), `km.js` (KM Curves
-Intelligence, `docs/storyboard-km.md`) and `q3.js` (Question 3, `docs/storyboard-q3.md`). Pass `--film km` to
+Intelligence, `docs/storyboard-km.md`), `q3.js` (Question 3, `docs/storyboard-q3.md`) and `intro.js` (product
+intro slides on white, `docs/storyboard-intro.md`). Pass `--film km` to
 `render.mjs` (or `?film=km` to the preview) for a chapter other than `film.js`. Each chapter renders into its own
 folder, `out/<chapter>/` (`film.js` into `out/q2/`), with its `cues.json` next to the video.
-`master.js` is the packaged demo (50 s): brand card, Question 1 (Simple, Q2), Question 2 (Complex, Q3),
+`master.js` is the packaged demo (77 s): product intro, brand card, Question 1 (Simple, Q2), Question 2 (Complex, Q3),
 Survival Intelligence (KM), end card (tagline, bionocular.ai). It
 draws each chapter at its own local time, so chapter edits flow into it;
 `npm run master` renders it with the music bed into `out/master/`. Chapters on their own stay effects-only.
@@ -55,7 +56,8 @@ blurry scaled text, dead beats where nothing happens, elements touching the fram
 - Bionocular tokens only (`C` in `film.js`, from `web/src/app/globals.css`): page #F7FAF9, ink #102B36,
   muted #4A6B77, border #C8E0D8, deep teal #1B4F65 as the one strong colour, seafoam #7AC1A2 / #DAF0E6 to
   mark what the viewer should look at. Light canvas; real UI sits on it as a white sheet with one soft shadow.
-- Onest only for the few words of display type, Poppins for UI text, Plex Mono for every number.
+- Onest only for the few words of display type and headline stats (Onest 600, tight tracking), Poppins for UI text,
+  Plex Mono for every other number (data, tallies, table values).
 - Left-aligned editorial layout on a consistent grid (x = 160 margin) unless the brief says otherwise.
 - Elements enter with springs or masks, not opacity fades. Opacity is for exits and secondary details only.
 - Something new must happen on screen every 2–4 seconds. The last 1.5–2 s may hold on the end card.
