@@ -461,7 +461,7 @@ const pillSprings = pills => {
 // ── Product: shared data, drawn as one SVG diagram that scales to every width ──
 const SOURCES = ['Clinical Trials', 'Conference Abstracts', 'Publications', 'Press Releases', 'Live News', 'Standard of Care'];
 const DIMS = ['Indication & Subtype', 'Clinical Setting', 'Disease Stage', 'Line of Therapy', 'Biomarker', 'Modality', 'Target', 'Efficacy Endpoints', 'Safety Endpoints'];
-const MODS = [['CORE', 'Clinical Landscape and Trial Data'], ['OUTCOME INTELLIGENCE HUB', 'Efficacy, Safety and Efficacy vs Safety'], ['SURVIVAL INTELLIGENCE', 'KM-Curve Digitized Twin']];
+const MODS = [['LANDSCAPE INTELLIGENCE', 'Clinical Landscape and Trial Data'], ['OUTCOME INTELLIGENCE HUB', 'Efficacy, Safety and Efficacy vs Safety'], ['SURVIVAL INTELLIGENCE', 'KM-Curve Digitized Twin']];
 (() => {
   const s = document.getElementById('flowSvg');
   const line = (d, color = 'rgba(122,193,162,.8)', delay = 0) => {
