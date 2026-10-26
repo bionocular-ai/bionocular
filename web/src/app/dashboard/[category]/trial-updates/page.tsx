@@ -79,8 +79,8 @@ export default function TrialUpdatesPage() {
               </div>
               <div className="min-w-0">
                 <div
-                  className="text-2xl font-bold leading-none tracking-tight text-(--brand-text)"
-                  style={{ fontFamily: 'var(--font-mono)' }}
+                  className="text-2xl font-semibold leading-none tracking-[-0.04em] text-(--brand-text)"
+                  style={{ fontFamily: 'var(--font-display)' }}
                 >
                   {updatesCount == null
                     ? <span className="text-(--brand-border)">—</span>
@@ -100,8 +100,8 @@ export default function TrialUpdatesPage() {
               </div>
               <div className="min-w-0">
                 <div
-                  className="text-2xl font-bold leading-none tracking-tight text-(--brand-text)"
-                  style={{ fontFamily: 'var(--font-mono)' }}
+                  className="text-2xl font-semibold leading-none tracking-[-0.04em] text-(--brand-text)"
+                  style={{ fontFamily: 'var(--font-display)' }}
                 >
                   {updatesCount == null
                     ? <span className="text-(--brand-border)">—</span>
@@ -121,8 +121,8 @@ export default function TrialUpdatesPage() {
               </div>
               <div className="min-w-0">
                 <div
-                  className="text-2xl font-bold leading-none tracking-tight text-(--brand-text)"
-                  style={{ fontFamily: 'var(--font-mono)' }}
+                  className="text-2xl font-semibold leading-none tracking-[-0.04em] text-(--brand-text)"
+                  style={{ fontFamily: 'var(--font-display)' }}
                 >
                   {totalTrialsExamined == null
                     ? <span className="text-(--brand-border)">—</span>
