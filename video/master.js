@@ -1,5 +1,5 @@
-// The master film: brand card, the three chapters back to back, end card.
-// Order: Question 1 (simple, film.js), Question 2 (complex, q3.js), then
+// The master film: the product intro (intro.js), brand card, the three chapters
+// back to back, end card. Order: Question 1 (simple, film.js), Question 2 (complex, q3.js), then
 // Survival Intelligence (km.js). A label names each one above where it starts.
 // The cards are centred. Each chapter draws itself at its own local time and
 // starts and ends on the bare canvas, so the joins need no transition.
@@ -8,11 +8,14 @@
 
 import { clamp, sp } from './lib/motion.js';
 import { font } from './lib/draw.js';
+import * as product from './intro.js';
 import * as q2 from './film.js';
 import * as q3 from './q3.js';
 import * as km from './km.js';
 
 const C = q2.C;
+// The intro runs first, on its own white canvas; everything below is timed from its end.
+const PRE = product.FILM.dur;
 const INTRO = 1.8, OUTRO = 2.1;
 const CHAPTERS = [q2, q3, km];
 // Bare canvas before a chapter. KM opens on a full-frame sheet, so its label
@@ -29,15 +32,15 @@ const T_OUTRO = STARTS.at(-1) + DURS.at(-1);
 // Demo time since the chapter's start -> the chapter's own time.
 const local = (i, u) => CUTS[i].reduce((t, [at, len]) => (t >= at ? t + len : t), u);
 
-export const FILM = { title: 'master', w: 1920, h: 1080, dur: +(T_OUTRO + OUTRO).toFixed(3), bpm: 120 };
+export const FILM = { title: 'master', w: 1920, h: 1080, dur: +(PRE + T_OUTRO + OUTRO).toFixed(3), bpm: 120 };
 const { w: W, h: H } = FILM;
 
 const logo = Object.assign(new Image(), { src: 'assets/logo.svg' });
 const LOGO_ASPECT = 127.35 / 148.3; // logo.svg viewBox width / height
-export const IMAGES = [...q2.IMAGES, ...q3.IMAGES, ...km.IMAGES, logo];
+export const IMAGES = [...product.IMAGES, ...q2.IMAGES, ...q3.IMAGES, ...km.IMAGES, logo];
 
-export const CUES = [];
-const cue = (t, type, gain = 1) => CUES.push({ t: +t.toFixed(3), type, gain });
+export const CUES = [...product.CUES];
+const cue = (t, type, gain = 1) => CUES.push({ t: +(PRE + t).toFixed(3), type, gain });
 // A chapter's cues move back by the cuts before them; none fall inside a cut.
 CHAPTERS.forEach((c, i) => c.CUES.forEach((x) => {
   const before = CUTS[i].filter(([at]) => x.t >= at).reduce((s, [, len]) => s + len, 0);
@@ -150,6 +153,8 @@ function labels(g, T) {
 }
 
 export function draw(g, T) {
+  if (T < PRE) return product.draw(g, T);
+  T -= PRE;
   const i = STARTS.findIndex((s, k) => T >= s && T < s + DURS[k]);
   if (i >= 0) CHAPTERS[i].draw(g, local(i, T - STARTS[i]));
   g.setTransform(1, 0, 0, 1, 0, 0);
