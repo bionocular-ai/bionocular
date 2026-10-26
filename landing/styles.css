@@ -115,13 +115,12 @@ a { color: inherit; }
     radial-gradient(ellipse 50% 60% at 72% 45%, rgba(218,240,230,.55), transparent 70%),
     /* The page tint fades to white toward the foot, so the hero meets the white section below without a seam. */
     linear-gradient(var(--bg) calc(100% - 260px), var(--surface));
-  /* The background charts (script.js) run behind the copy, except the heatmap band, which takes the room the bottom
-     padding keeps below it. The hero fills the first screen less 9rem, capped at 60rem, the copy centred in what is left.
-     The 9rem is the OS section's top padding plus a sliver: only the top of the next heading peeks in, a cue that the page
+  /* The heatmap band (script.js) takes the room the bottom padding keeps below the copy. The hero fills the first screen
+     less 9rem, capped at 60rem, the copy centred in what is left. The 9rem is the OS section's top padding plus a sliver: only the top of the next heading peeks in, a cue that the page
      goes on without a second headline competing with this one. Where the copy is taller, the hero grows to fit. */
   padding: calc(var(--header-h) + clamp(2rem, 5vw, 4.5rem)) 0 clamp(9rem, 14vw, 13rem); overflow: hidden;
   min-height: min(100svh - 9rem, 60rem); display: grid; align-content: center; isolation: isolate; }
-/* One soft light from the top left, under the charts. */
+/* One soft light from the top left, under the heatmap. */
 .hero::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background: radial-gradient(ellipse 55% 70% at 18% 20%, rgba(255,255,255,.9), transparent 70%); }
 /* Grain: a 4.5% film of fractal noise over everything, so the flat tint reads as paper rather than a screen fill. */
