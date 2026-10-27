@@ -1,5 +1,5 @@
 // Small canvas drawing helpers shared by every film.
-import { clamp } from './motion.js';
+import { clamp, lerp } from './motion.js';
 
 // Registered in index.html from assets/fonts (the product's own faces).
 // 'brand' is Plus Jakarta Sans, for the bionocular wordmark only.
@@ -74,4 +74,44 @@ export function mixColor(a, b, p) {
   const ch = (v, s) => (v >> s) & 255;
   const c = (s) => Math.round(ch(pa, s) + (ch(pb, s) - ch(pa, s)) * p);
   return `rgb(${c(16)},${c(8)},${c(0)})`;
+}
+
+// A region of a capture lifted out of its sheet over a veil, larger, with a ring.
+// src is in image px; from/to are { f: screen px per image px, cx, cy }; veil is
+// the sheet's screen rect; p comes from lift().
+export function liftOut(g, img, src, from, to, p, ring, veil, radius = 10) {
+  if (p <= 0.001) return;
+  const [vx, vy, vw, vh] = veil;
+  g.save();
+  rrect(g, vx, vy, vw, vh, 18);
+  g.clip();
+  g.fillStyle = `rgba(247, 250, 249, ${0.85 * clamp(p)})`;
+  g.fillRect(vx, vy, vw, vh);
+  g.restore();
+  const [sx, sy, sw, sh] = src;
+  const f = lerp(from.f, to.f, p);
+  const [w, h] = [sw * f, sh * f];
+  const x = lerp(from.cx, to.cx, p) - w / 2;
+  const y = lerp(from.cy, to.cy, p) - h / 2;
+  g.save();
+  g.shadowColor = `rgba(16, 43, 54, ${0.2 * clamp(p)})`;
+  g.shadowBlur = 60 * clamp(p);
+  g.shadowOffsetY = 22 * clamp(p);
+  g.fillStyle = '#FFFFFF';
+  const r = radius === 'pill' ? h / 2 : radius;
+  rrect(g, x, y, w, h, r);
+  g.fill();
+  g.restore();
+  g.save();
+  rrect(g, x, y, w, h, r);
+  g.clip();
+  g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+  g.restore();
+  g.save();
+  g.globalAlpha = clamp(p);
+  g.strokeStyle = ring;
+  g.lineWidth = 3;
+  rrect(g, x - 10, y - 10, w + 20, h + 20, r + 6);
+  g.stroke();
+  g.restore();
 }

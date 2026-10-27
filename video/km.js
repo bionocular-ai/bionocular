@@ -7,8 +7,8 @@
 // page at 1440x900 CSS px; all coordinates below are those CSS px, measured
 // from the live DOM.
 
-import { clamp, sp, track, track2, window01, easeInOutCubic, easeOutCubic } from './lib/motion.js';
-import { rrect, risingText, drawCursor, font } from './lib/draw.js';
+import { clamp, sp, track, track2, window01, easeInOutCubic, easeOutCubic, lift } from './lib/motion.js';
+import { rrect, risingText, drawCursor, font, liftOut } from './lib/draw.js';
 
 export const FILM = { title: 'km-chapter', w: 1920, h: 1080, dur: 17.2, bpm: 120 };
 const { w: W, h: H } = FILM;
@@ -105,7 +105,8 @@ const T_HR = [6.6, 6.73];
 const T_POINT = 6.98; // the pointer enters the plot and glides to 12 months
 const T_TIP = 7.42; // it lands: guide line, dots and the tooltip
 const T_TABLE = 8.68; // the page scrolls to the table
-const T_COLS = [9.23, 9.67];
+const T_MEDIAN = 9.23; // the Median group is ringed
+const T_POP = [9.67, 10.55]; // the Digitized Twin Status column lifts out, settles back
 const T_BACK = 10.97; // scroll back up, 1 s after the match % ring lands
 const T_FAB_HOVER = 11.28;
 const T_FAB_CLICK = 11.47;
@@ -130,7 +131,7 @@ const cam = (T) => {
     [T_HR_LEAN, [895, 420, 1.6]], // the right-most centre that keeps the sheet's edge out of frame
     [T_POINT - 0.1, [860, 545, 1.8]], // down to the tooltip, still holding the pointer and the chips
     [T_TABLE, [720, 450, 1.08]],
-    [T_COLS[0] - 0.2, [800, 460, 1.6]], // Treatment Arm through Reference
+    [T_MEDIAN - 0.2, [800, 460, 1.6]], // Treatment Arm through Reference
     [T_BACK, [720, 450, 1]],
     [T_COMPOSER, [1061, 470, 1.9]],
     [T_DRAWER_OUT, [1061, 300, 1.9]],
@@ -164,7 +165,9 @@ cue(T_CHART, 'whoosh', 0.35);
 T_HR.forEach((t) => cue(t, 'pop', 0.45));
 cue(T_TIP, 'tick', 0.4);
 cue(T_TABLE, 'whoosh', 0.35);
-T_COLS.forEach((t) => cue(t, 'tick', 0.45));
+cue(T_MEDIAN, 'tick', 0.45);
+cue(T_POP[0], 'pop', 0.7);
+cue(T_POP[1], 'tick', 0.35);
 cue(T_BACK, 'whoosh', 0.3);
 cue(T_FAB_HOVER, 'tick', 0.35);
 cue(T_FAB_CLICK, 'click', 0.8);
@@ -450,8 +453,9 @@ function page(g, T, px) {
   // The twin hazard ratios, the hover at 12 months, then the published-vs-twin columns.
   R.hr.forEach((r, i) => ring(g, r, window01(T, T_HR[i], T_POINT, 0.01, 0.15) * sp(T - T_HR[i], 'snappy'), px, 4, 18));
   hover(g, T);
-  [R.medians, R.twinStatus].forEach(([x, y, w, h], i) =>
-    ring(g, [x, y - s, w, h], window01(T, T_COLS[i], T_BACK, 0.01, 0.15) * sp(T - T_COLS[i], 'snappy'), px, 2, 10));
+  // The Median ring hands over to the status column as it pops out.
+  const [mx, my, mw, mh] = R.medians;
+  ring(g, [mx, my - s, mw, mh], window01(T, T_MEDIAN, T_POP[0] + 0.15, 0.01, 0.15) * sp(T - T_MEDIAN, 'snappy'), px, 2, 10);
 
   fab(g, T);
   drawer(g, T, px);
@@ -487,6 +491,13 @@ export function draw(g, T) {
   page(g, T, px);
   g.restore();
   g.restore();
+
+  // The Digitized Twin Status column lifts out of the table, as the Q3 rows and chips do.
+  const [x, y, w, h] = R.twinStatus;
+  const [cx, cy] = toScreen(T, [x + w / 2, y - scrollY(T) + h / 2]);
+  const [vx, vy] = toScreen(T, [0, 0]);
+  liftOut(g, IMG.full, [x * 2, y * 2, w * 2, h * 2], { f: (B * c.z) / 2, cx, cy }, { f: 1.25, cx: W / 2, cy: H / 2 },
+    lift(T, T_POP), C.accent, [vx, vy, VIEW.w * B * c.z, VIEW.h * B * c.z]);
 
   caption(g, T);
   cursor(g, T);

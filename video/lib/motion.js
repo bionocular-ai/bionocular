@@ -42,6 +42,9 @@ export function track(t, keys, preset = 'ui') {
   return v;
 }
 
+// How far a lift is out: up with a little overshoot at t0, back without at t1.
+export const lift = (T, [t0, t1]) => sp(T - t0, 'snappy') - sp(T - t1, 'ui');
+
 // Same as track() for [x, y] points (cursor paths, camera targets).
 export function track2(t, keys, preset = 'ui') {
   return [

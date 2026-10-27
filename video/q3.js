@@ -7,8 +7,8 @@
 // screenshots (1x); the Bionocular answer is a 2x capture of a Q3 run on
 // 2026-10-20. Every coordinate below is measured from their pixels.
 
-import { clamp, lerp, sp, track, track2, window01, easeOutCubic, easeInOutCubic } from './lib/motion.js';
-import { rrect, risingText, font, drawCursor } from './lib/draw.js';
+import { clamp, lerp, sp, track, track2, window01, easeOutCubic, easeInOutCubic, lift } from './lib/motion.js';
+import { rrect, risingText, font, drawCursor, liftOut } from './lib/draw.js';
 
 export const FILM = { title: 'q3-chapter', w: 1920, h: 1080, dur: 20.95, bpm: 120 };
 const { w: W, h: H } = FILM;
@@ -206,47 +206,6 @@ function armsTally(g, n, x, y, t0, T) {
   const tx = x + g.measureText(s).width + 10;
   g.font = font(500, 20);
   risingText(g, 'treatment arms', tx, y - 2, pIn, 0, 20, C.ink);
-}
-
-// How far a lift is out: up with a little overshoot at t0, back without at t1.
-const lift = (T, [t0, t1]) => sp(T - t0, 'snappy') - sp(T - t1, 'ui');
-
-// A row or note lifted out of its sheet over a veil, larger, with a ring.
-function liftOut(g, img, src, from, to, p, ring, veil, radius = 10) {
-  if (p <= 0.001) return;
-  const [vx, vy, vw, vh] = veil;
-  g.save();
-  rrect(g, vx, vy, vw, vh, 18);
-  g.clip();
-  g.fillStyle = `rgba(247, 250, 249, ${0.85 * clamp(p)})`;
-  g.fillRect(vx, vy, vw, vh);
-  g.restore();
-  const [sx, sy, sw, sh] = src;
-  const f = lerp(from.f, to.f, p);
-  const [w, h] = [sw * f, sh * f];
-  const x = lerp(from.cx, to.cx, p) - w / 2;
-  const y = lerp(from.cy, to.cy, p) - h / 2;
-  g.save();
-  g.shadowColor = `rgba(16, 43, 54, ${0.2 * clamp(p)})`;
-  g.shadowBlur = 60 * clamp(p);
-  g.shadowOffsetY = 22 * clamp(p);
-  g.fillStyle = C.sheet;
-  const r = radius === 'pill' ? h / 2 : radius;
-  rrect(g, x, y, w, h, r);
-  g.fill();
-  g.restore();
-  g.save();
-  rrect(g, x, y, w, h, r);
-  g.clip();
-  g.drawImage(img, sx, sy, sw, sh, x, y, w, h);
-  g.restore();
-  g.save();
-  g.globalAlpha = clamp(p);
-  g.strokeStyle = ring;
-  g.lineWidth = 3;
-  rrect(g, x - 10, y - 10, w + 20, h + 20, r + 6);
-  g.stroke();
-  g.restore();
 }
 
 // ---------------------------------------------------------------- scene 1: the question
