@@ -33,7 +33,7 @@ import { cn } from '@/lib/utils';
 import { kmCurvesApi, type KmCurveRow, type KmPoint } from '@/lib/api';
 import { describeKmSelection } from '@/lib/km-agent';
 import { formatArmName } from '@/lib/utils/arm-name';
-import KaplanMeierChart from '@/components/charts/KaplanMeierChart';
+import KaplanMeierChart, { armColors, SERIES_DASH, Swatch } from '@/components/charts/KaplanMeierChart';
 import { SurvivalCurveIcon } from '@/components/icons/SurvivalCurveIcon';
 
 function fmt(n: number | null | undefined, suffix = ''): string {
@@ -372,15 +372,26 @@ function KmFilters({ panel, endpoints, taken }: { panel: KmPanel; endpoints: str
   );
 }
 
+const HEAD = 'text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)';
+// A group header sits centred over its two columns, its rule under them only.
+const PAIR = 'h-8 border-b border-(--brand-border) pb-1 text-center';
+
 /** Every panel's curves on one KM chart, and one published-vs-twin table. */
 function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolean }) {
-  const rows = panels.flatMap((p) => p.visibleCurves.map((c) => ({ endpoint: p.endpoint, c })));
+  const rows = panels.flatMap((p, i) => p.visibleCurves.map((c) => ({ endpoint: p.endpoint, c, dash: SERIES_DASH[i] })));
+  // The chart has no legend: each arm's row carries its line, so the table is the key.
+  const colors = armColors(panels.map((p) => p.visibleCurves));
 
   // Rate timepoint can differ per arm. When selected arms agree, name it in the
   // column header; when they mix, keep the header generic and annotate each cell.
   const tps = [...new Set(rows.map(({ c }) => c.rate_timepoint).filter((t) => t != null))];
   const rateLabel = tps.length === 1 ? `Rate @ ${tps[0]}m` : 'Rate';
   const rateMixed = tps.length > 1;
+  // Columns no selected arm reports are left out rather than shown as dashes.
+  const hasRate = rows.some(({ c }) => c.published_rate != null || c.twin_rate != null);
+  const hasFollowUp = rows.some(({ c }) => c.median_follow_up != null);
+  // The twin's match to the published curve is the column to read: tinted, and set a weight up.
+  const status = 'bg-(--brand-accent-light)/60';
 
   // Rate value with a per-arm timepoint suffix when the selection mixes timepoints.
   const fmtRate = (value: number | null | undefined, tp: number | null | undefined) =>
@@ -391,7 +402,10 @@ function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolea
       {/* Chart */}
       <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
         <CardHeader className="relative items-center pb-0 sm:block">
-          <CardTitle className="text-center text-base font-semibold text-(--brand-text)">
+          <CardTitle
+            className="text-center text-xl font-semibold leading-tight tracking-[-0.01em] text-(--brand-text)"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
             Survival Curves
           </CardTitle>
           {/* Placeholder until users can upload their own curves. aria-disabled, not
@@ -407,8 +421,7 @@ function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolea
             Upload curves
             <Badge
               variant="secondary"
-              className="bg-(--brand-accent-light) px-1.5 py-0 text-[10px] uppercase tracking-[0.08em] text-(--brand-primary) hover:bg-(--brand-accent-light)"
-              style={{ fontFamily: 'var(--font-mono)' }}
+              className="bg-(--brand-accent-light) px-1.5 py-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--brand-primary) hover:bg-(--brand-accent-light)"
             >
               Upcoming
             </Badge>
@@ -431,32 +444,41 @@ function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolea
       <Card className="mt-6 border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
         <CardContent className="overflow-x-auto pt-6">
           <Table>
-            <TableHeader>
-              <TableRow className="border-b border-(--brand-border) bg-(--brand-bg) hover:bg-(--brand-bg)">
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Endpoint</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Treatment Arm</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (published)</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Median (twin)</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">{rateLabel} (published)</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">{rateLabel} (twin)</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Med. Follow-up</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Digitized Twin Status</TableHead>
-                <TableHead className="text-xs font-semibold uppercase tracking-[0.08em] text-(--brand-text-muted)">Reference</TableHead>
+            {/* Published-vs-twin pairs share one group header (Median, Rate) over
+                Published | Twin sub-headers; every other column spans both header rows. */}
+            <TableHeader className="bg-(--brand-bg)">
+              <TableRow className="border-0 hover:bg-transparent">
+                <TableHead rowSpan={2} className={HEAD}>Endpoint</TableHead>
+                <TableHead rowSpan={2} className={HEAD}>Treatment Arm</TableHead>
+                <TableHead colSpan={2} className={cn(HEAD, PAIR)}>Median</TableHead>
+                {hasRate && <TableHead colSpan={2} className={cn(HEAD, PAIR)}>{rateLabel}</TableHead>}
+                {hasFollowUp && <TableHead rowSpan={2} className={HEAD}>Med. Follow-up</TableHead>}
+                <TableHead rowSpan={2} className={cn(HEAD, 'text-(--brand-primary)', status)}>Digitized Twin Status</TableHead>
+                <TableHead rowSpan={2} className={HEAD}>Reference</TableHead>
+              </TableRow>
+              <TableRow className="border-b border-(--brand-border) hover:bg-transparent">
+                <TableHead className={cn(HEAD, 'h-8')}>Published</TableHead>
+                <TableHead className={cn(HEAD, 'h-8')}>Twin</TableHead>
+                {hasRate && <TableHead className={cn(HEAD, 'h-8')}>Published</TableHead>}
+                {hasRate && <TableHead className={cn(HEAD, 'h-8')}>Twin</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map(({ endpoint, c }) => (
+              {rows.map(({ endpoint, c, dash }) => (
                 <TableRow key={c.id} className="border-(--brand-border)">
-                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{endpoint}</TableCell>
+                  <TableCell className="tabular-nums">{endpoint}</TableCell>
                   <TableCell className="font-medium text-(--brand-text)">
-                    {formatArmName(c.arm_name)}
+                    <span className="inline-flex items-center gap-2.5">
+                      <Swatch color={colors.get(c.id)!} dash={dash} />
+                      {formatArmName(c.arm_name)}
+                    </span>
                   </TableCell>
-                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.published_median, 'm')}</TableCell>
-                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.twin_median, 'm')}</TableCell>
-                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.published_rate, c.rate_timepoint)}</TableCell>
-                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmtRate(c.twin_rate, c.rate_timepoint)}</TableCell>
-                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>{fmt(c.median_follow_up, 'm')}</TableCell>
-                  <TableCell style={{ fontFamily: 'var(--font-mono)' }}>
+                  <TableCell className="tabular-nums">{fmt(c.published_median, 'm')}</TableCell>
+                  <TableCell className="tabular-nums">{fmt(c.twin_median, 'm')}</TableCell>
+                  {hasRate && <TableCell className="tabular-nums">{fmtRate(c.published_rate, c.rate_timepoint)}</TableCell>}
+                  {hasRate && <TableCell className="tabular-nums">{fmtRate(c.twin_rate, c.rate_timepoint)}</TableCell>}
+                  {hasFollowUp && <TableCell className="tabular-nums">{fmt(c.median_follow_up, 'm')}</TableCell>}
+                  <TableCell className={cn('font-medium tabular-nums text-(--brand-primary)', status)}>
                     {c.match_pct == null
                       ? '—'
                       : `${c.match_pct}% Match${c.n_points != null ? ` (${c.n_points} pts)` : ''}`}
