@@ -86,20 +86,18 @@ const pillSprings = pills => {
   }, 6000);
 })();
 
-// ── Hero background: three oncology charts take turns (a heatmap band below the copy, efficacy vs safety, forest plot) ──
+// ── Hero background: a heatmap band below the copy ──
 (() => {
   const hero = document.getElementById('hero'), cv = document.getElementById('heroBg'), ctx = cv.getContext('2d'), hdr = document.getElementById('hdr');
-  const TEAL = '27,79,101', SEA = '47,138,102', GOLD = '201,162,39';
+  const TEAL = '27,79,101', GOLD = '201,162,39';
   const RAMP = [[218,240,230], [122,193,162], [47,138,102], [27,79,101], [14,53,71]];
   const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
   const ease = x => 1 - Math.pow(1 - clamp(x), 3);
   const rng = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
   const ramp = v => { v = clamp(v) * (RAMP.length - 1); const i = Math.min(RAMP.length - 2, v | 0), f = v - i; return RAMP[i].map((a, k) => a + (RAMP[i + 1][k] - a) * f); };
-  // HEAT scales every mark's opacity: a quarter of full strength keeps the charts behind the copy, never competing with it.
-  // The heatmap band sits clear of the copy, so it runs a little hotter (HEAT_MAP).
-  // Each chart holds for DUR seconds of the clock (which runs at .75x real time), the next crossfades in over FADE and draws
-  // itself in over BUILD. The heatmap's gold cell jumps every STEP seconds.
-  const HEAT = .25, HEAT_MAP = .3, DUR = 9, FADE = 1.6, BUILD = 3, STEP = 2.4;
+  // HEAT_MAP scales every cell's opacity, keeping the band quiet beside the copy. It fades in over FADE seconds of the
+  // clock (which runs at .75x real time) and draws itself in over BUILD. The gold cell jumps every STEP seconds.
+  const HEAT_MAP = .3, FADE = 1.6, BUILD = 3, STEP = 2.4;
   let W = 0, H = 0, L = 0, R = 0, S = {};
   const hh = () => hdr.offsetHeight;
 
@@ -110,7 +108,6 @@ const pillSprings = pills => {
     const X1 = Math.max(...b.map(q => q.right));
     return { x: (x0 + x1) / 2 - r.left, y: (y0 + y1) / 2 - r.top, rx: (x1 - x0) * .7, ry: (y1 - y0) * .75, box: [(x0 + X1) / 2 - r.left, (y0 + y1) / 2 - r.top, (X1 - x0) / 2, (y1 - y0) / 2] };
   });
-  const inCopy = (x, y, pad) => S.zs.some(({ box: [cx, cy, w2, h2] }) => Math.abs(x - cx) < w2 + pad && Math.abs(y - cy) < h2 + pad);
 
   function size() {
     const dpr = Math.min(2, devicePixelRatio || 1), r = hero.getBoundingClientRect();
@@ -120,135 +117,54 @@ const pillSprings = pills => {
     const m = Math.round(W < 768 ? 16 : W < 1200 ? 40 : Math.max(96, (W - 1680) / 2));
     L = m; R = W - m;
     document.documentElement.style.setProperty('--grid-l', `${L}px`); document.documentElement.style.setProperty('--grid-r', `${W - R - 1}px`);
-    // Heatmap cells are 48px (32px on phones), stretched by a fraction of a pixel so a whole number spans the frame; the other
-    // charts space their margins on a finer 32px (24px) unit.
+    // Heatmap cells are 48px (32px on phones), stretched by a fraction of a pixel so a whole number spans the frame.
     // The heatmap band sits below the copy, in the room the hero's bottom padding keeps (styles.css). Its thinned top row
     // reaches a unit up under the copy's last line, so the gold cell's rows still start clear of the text.
     const u = W < 768 ? 24 : 32, base = W < 768 ? 32 : 48, c = (R - L) / Math.round((R - L) / base), zs = zones();
     const bandTop = Math.round(Math.max(...zs.map(z => z.box[1] + z.box[3])) - u), rows = Math.max(3, Math.floor((H - bandTop) / c));
     const rnd = rng(9), nx = Math.round((R - L) / c), cells = [];
     for (let r = 0; r < rows; r++) for (let i = 0; i < nx; i++) cells.push({ x: L + i * c, y: bandTop + (rows - 1 - r) * c, r, i, p: rnd() * 6.3, q: rnd() * 6.3 });
-    // Illustrative, unlabelled points: bubbles as a share of each axis, forest rows as hazard ratios with 95% CIs.
-    const bubbles = Array.from({ length: 16 }, () => ({ sx: rnd(), sy: clamp(.15 + rnd() * .75), r: u * (.3 + rnd() ** 1.6 * 1.05), v: rnd(), p: rnd() * 6.3, q: rnd() * 6.3 }));
-    const forest = Array.from({ length: W < 768 ? 6 : 8 }, () => { const hr = Math.exp(-.35 + (rnd() - .5) * .7), w = .45 + rnd() * .55; return { hr, lo: hr * Math.exp(-(.12 + (1 - w) * .45)), hi: hr * Math.exp(.12 + (1 - w) * .45), w }; });
-    const lhr = forest.reduce((s, r) => s + Math.log(r.hr), 0) / forest.length, pooled = { hr: Math.exp(lhr), lo: Math.exp(lhr - .1), hi: Math.exp(lhr + .1) };
-    S = { c, u, rows, nx, cells, bandTop, bubbles, forest, pooled, zs, slot: -1, pick: null, prev: null };
+    S = { c, rows, nx, cells, bandTop, slot: -1, pick: null, prev: null };
   }
 
-  // Build-in wipes from the left: each mark grows once the build passes its x.
+  // Build-in wipes from the left: each cell grows once the build passes its x.
   const grow = (b, x) => ease(b * 1.5 - (x - L) / (R - L) * .5);
-  // Marks thin out within three units of their chart's top and bottom.
-  const edge = (y, top, bot) => .25 + .75 * clamp(Math.min(y - top, bot - y) / (3 * S.u));
-  // Lines and labels need more ink than fills to read at the same strength.
-  const ink = k => k * Math.min(1, HEAT * 2);
-  // Labels are skipped where they would land on the copy (on phones the copy covers most of the hero): text over text is noise.
-  const label = (text, x, y, align = 'left', a = .55) => {
-    ctx.font = '500 10.5px "IBM Plex Mono", monospace'; ctx.letterSpacing = '.04em';
-    const w = ctx.measureText(text).width, x0 = align === 'right' ? x - w : align === 'center' ? x - w / 2 : x;
-    if (inCopy(x0, y, 4) || inCopy(x0 + w, y, 4)) return;
-    ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillStyle = `rgba(${TEAL},${ink(a)})`; ctx.fillText(text, x, y);
-  };
-  const hline = (x0, x1, y, a) => { ctx.fillStyle = `rgba(${TEAL},${ink(a)})`; ctx.fillRect(Math.round(x0), Math.round(y), Math.round(x1 - x0), 1); };
-  const vline = (x, y0, y1, a) => { ctx.fillStyle = `rgba(${TEAL},${ink(a)})`; ctx.fillRect(Math.round(x), Math.round(y0), 1, Math.round(y1 - y0)); };
-  // The plot area sits one unit in from the frame and a unit and a half from its chart's top and bottom. With `onText`, its
-  // left edge (the y-axis) moves onto the hero text's left edge, so the axis and the headline share one line.
-  const plot = (top, bot, onText) => ({ x0: onText ? Math.round(Math.min(...S.zs.map(z => z.box[0] - z.box[2]))) : L + S.u, x1: R - S.u, y0: top + S.u * 1.5, y1: bot - S.u * 1.5 });
 
-  // Each chart takes the height that suits it (h, a share of the hero below the header, centred); the heatmap keeps the band.
-  const CHARTS = [
-    { draw(t, b) {
-      const { c, rows, cells } = S;
-      for (const k of cells) {
-        // Edge weight: the top and bottom two rows thin out, so the band has no hard edge at either end.
-        const h = 1 - clamp((rows - 1 - k.r + .5) / 2) * clamp((k.r + .5) / 2);
-        // Every cell keeps a 30% floor and the slow wave only shades the field, so the band never opens empty patches.
-        const o = .45 * Math.sin(k.x * .009 + t * .35 + k.p * .4) + .2 * Math.sin(k.x * .0031 - t * .22 + k.r * .7) + .2 * Math.sin(t * .5 + k.p) + .45 - h * .5;
-        k.a = (.3 + .7 * clamp(o / .6)) * (.85 - h * .3);
-        // Colour never drops to the palest mint, which vanishes into the page tint and reads as a hole.
-        const v = Math.min(k.a + .08, .54, .14 + .86 * clamp(.36 + .32 * Math.sin(k.x * .006 - t * .6 + k.r * .5) + .2 * Math.sin(t * .4 + k.q) + (1 - h) * .1) ** 1.6);
-        ctx.fillStyle = `rgba(${ramp(v).map(Math.round)},${clamp(k.a * .42 * clamp((1 - h) * 1.6 + .15) * HEAT_MAP * grow(b, k.x))})`;
-        const x1 = Math.round(k.x), y1 = Math.round(k.y);
-        ctx.fillRect(x1 + 1, y1, Math.round(k.x + c) - x1 - 1, Math.round(k.y + c) - y1 - 1);
-      }
-      // The one accent, the signal cutting through the noise: a gold cell lights up somewhere in the band, holds for STEP
-      // seconds, then crossfades to a random cell at least a third of the band away, so it reads as a jump, never a walk.
-      // It keeps off the thinned outer rows.
-      const s = Math.floor(t / STEP), ph = (t / STEP) % 1;
-      if (s !== S.slot) {
-        S.slot = s; S.prev = S.pick;
-        const p = S.prev, far = cells.filter(k => k.r >= 1 && k.r <= rows - 2 && (!p || Math.abs(k.i - p.i) >= S.nx / 3));
-        S.pick = far[Math.floor(Math.random() * far.length)];
-      }
-      const into = ease(ph * 3);
-      for (const [p, a] of [[S.prev, (1 - into) * b], [S.pick, into * b]]) {
-        if (!p || a <= 0) continue;
-        ctx.fillStyle = `rgba(247,250,249,${a})`; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y), c - 1, c - 1);
-        ctx.fillStyle = `rgba(${GOLD},${.26 * a})`; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y), c - 1, c - 1);
-      }
-    } },
-
-    // Efficacy against safety: x is the grade 3+ adverse event rate, y the median PFS, size the trial's enrolment.
-    { h: .8, draw(t, b, top, bot) {
-      const P = plot(top, bot, true), X = v => P.x0 + (.06 + v * .88) * (P.x1 - P.x0), Y = v => P.y1 - (.08 + v * .84) * (P.y1 - P.y0);
-      // Axes, and a dashed median crosshair that splits the field into quadrants.
-      hline(P.x0, P.x0 + (P.x1 - P.x0) * ease(b * 2), P.y1, .2); vline(P.x0, P.y1 - (P.y1 - P.y0) * ease(b * 2), P.y1, .2);
-      ctx.setLineDash([2, 5]); ctx.lineWidth = 1; ctx.strokeStyle = `rgba(${TEAL},${ink(.15 * b)})`; ctx.beginPath();
-      ctx.moveTo(Math.round(X(.5)) + .5, P.y0); ctx.lineTo(Math.round(X(.5)) + .5, P.y1); ctx.moveTo(P.x0, Math.round(Y(.5)) + .5); ctx.lineTo(P.x1, Math.round(Y(.5)) + .5); ctx.stroke(); ctx.setLineDash([]);
-      label('Grade 3+ AEs →', P.x1, P.y1 + 14, 'right', .5 * b); label('↑ Median PFS', P.x0 + 8, P.y0 + 4, 'left', .5 * b);
-      // The gold bubble is the best balance (high PFS, low toxicity) among those clear of the copy, so it is always seen.
-      const best = S.bubbles.filter(k => !inCopy(X(k.sx), Y(k.sy), k.r + 40)).reduce((m, k) => !m || k.sy - k.sx > m.sy - m.sx ? k : m, null);
-      for (const k of S.bubbles) {
-        const g = grow(b, X(k.sx)); if (g <= 0) continue;
-        // A spring-like overshoot as each bubble arrives, then a slow drift.
-        const pop = g < 1 ? g * (1 + .12 * Math.sin(g * Math.PI)) : 1;
-        const x = X(k.sx) + 6 * Math.sin(t * .2 + k.p), y = Y(k.sy) + 4 * Math.cos(t * .17 + k.q), r = k.r * pop, e = edge(y, top, bot);
-        const col = ramp(.2 + k.v * .55).map(Math.round), lit = ramp(.05 + k.v * .3).map(Math.round);
-        // A soft sheen from the top left gives each bubble a little volume.
-        const f = ctx.createRadialGradient(x - r * .35, y - r * .35, 0, x, y, r);
-        f.addColorStop(0, `rgba(${lit},${.15 * HEAT * e})`); f.addColorStop(1, `rgba(${col},${.26 * HEAT * e})`);
-        ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fillStyle = f; ctx.fill();
-        ctx.lineWidth = 1; ctx.strokeStyle = `rgba(${col},${ink(.35 * e)})`; ctx.stroke();
-        if (k !== best) continue;
-        // The one accent: ringed in gold with a slow pulse.
-        const ph = (t * .4) % 1;
-        ctx.lineWidth = 1.25; ctx.strokeStyle = `rgba(${GOLD},${ink(.9 * g)})`; ctx.beginPath(); ctx.arc(x, y, r + 3, 0, 7); ctx.stroke();
-        ctx.lineWidth = 1; ctx.strokeStyle = `rgba(${GOLD},${ink(.5 * (1 - ph) * g)})`; ctx.beginPath(); ctx.arc(x, y, r + 3 + ph * 14, 0, 7); ctx.stroke();
-      }
-    } },
-
-    // Hazard ratios across subgroups around the no-difference line, with the pooled estimate as a gold diamond.
-    { h: .8, draw(t, b, top, bot) {
-      const P = plot(top, bot), mid = Math.round(L + (R - L) / 2), sc = (R - L) * .26, X = hr => mid + Math.log(hr) * sc;
-      const rows = S.forest, n = rows.length, rowH = (P.y1 - P.y0 - S.u * 1.2) / n, yd = P.y1 - S.u * .35;
-      vline(mid, P.y0 - S.u * .6, P.y1 + 4, .25 * ease(b * 2));
-      label('HR 1.0', mid + 6, P.y0 - S.u * .6 + 6, 'left', .5 * b);
-      label('← favours treatment', mid - 10, P.y1 + 14, 'right', .45 * b); label('favours control →', mid + 10, P.y1 + 14, 'left', .45 * b);
-      // One row at a time lifts, as if read by a pointer.
-      const hot = Math.floor(t * .5) % n, hp = (t * .5) % 1, hotA = Math.min(ease(hp * 4), ease((1 - hp) * 4));
-      rows.forEach((r, i) => {
-        const y = Math.round(P.y0 + (i + .5) * rowH) + .5, g = ease(b * 1.6 - i / n * .6); if (g <= 0) return;
-        const lift = i === hot ? hotA : 0, e = edge(y, top, bot);
-        if (lift) { ctx.fillStyle = `rgba(${SEA},${.12 * HEAT * lift})`; ctx.fillRect(P.x0, y - rowH / 2, P.x1 - P.x0, rowH); }
-        // Whiskers grow outward from the estimate, then the box lands.
-        const x = X(r.hr), lo = x + (X(r.lo) - x) * g, hi = x + (X(r.hi) - x) * g;
-        ctx.lineWidth = 1; ctx.strokeStyle = `rgba(${TEAL},${ink((.25 + .3 * lift) * e)})`; ctx.beginPath(); ctx.moveTo(lo, y); ctx.lineTo(hi, y);
-        ctx.moveTo(Math.round(lo) + .5, y - 3); ctx.lineTo(Math.round(lo) + .5, y + 3); ctx.moveTo(Math.round(hi) + .5, y - 3); ctx.lineTo(Math.round(hi) + .5, y + 3); ctx.stroke();
-        const s = r.w * Math.min(rowH * .55, 11) * ease(g * 1.4 - .4);
-        ctx.fillStyle = `rgba(${ramp(.55 + .3 * lift).map(Math.round)},${ink((.35 + .3 * lift) * e)})`; ctx.fillRect(Math.round(x - s / 2), Math.round(y - s / 2), Math.round(s), Math.round(s));
-      });
-      // The one accent: the pooled estimate.
-      const { hr, lo, hi } = S.pooled, a = ease(b * 2 - 1), h = Math.min(rowH * .4, 7);
-      ctx.setLineDash([2, 4]); ctx.strokeStyle = `rgba(${GOLD},${ink(.35 * a)})`; ctx.beginPath(); ctx.moveTo(Math.round(X(hr)) + .5, P.y0); ctx.lineTo(Math.round(X(hr)) + .5, yd); ctx.stroke(); ctx.setLineDash([]);
-      ctx.beginPath(); ctx.moveTo(X(lo), yd); ctx.lineTo(X(hr), yd - h); ctx.lineTo(X(hi), yd); ctx.lineTo(X(hr), yd + h); ctx.closePath();
-      ctx.fillStyle = `rgba(${GOLD},${ink(.3 * a)})`; ctx.fill(); ctx.lineWidth = 1.25; ctx.strokeStyle = `rgba(${GOLD},${ink(.9 * a)})`; ctx.stroke();
-    } },
-  ];
+  function heatmap(t, b) {
+    const { c, rows, cells } = S;
+    for (const k of cells) {
+      // Edge weight: the top and bottom two rows thin out, so the band has no hard edge at either end.
+      const h = 1 - clamp((rows - 1 - k.r + .5) / 2) * clamp((k.r + .5) / 2);
+      // Every cell keeps a 30% floor and the slow wave only shades the field, so the band never opens empty patches.
+      const o = .45 * Math.sin(k.x * .009 + t * .35 + k.p * .4) + .2 * Math.sin(k.x * .0031 - t * .22 + k.r * .7) + .2 * Math.sin(t * .5 + k.p) + .45 - h * .5;
+      k.a = (.3 + .7 * clamp(o / .6)) * (.85 - h * .3);
+      // Colour never drops to the palest mint, which vanishes into the page tint and reads as a hole.
+      const v = Math.min(k.a + .08, .54, .14 + .86 * clamp(.36 + .32 * Math.sin(k.x * .006 - t * .6 + k.r * .5) + .2 * Math.sin(t * .4 + k.q) + (1 - h) * .1) ** 1.6);
+      ctx.fillStyle = `rgba(${ramp(v).map(Math.round)},${clamp(k.a * .42 * clamp((1 - h) * 1.6 + .15) * HEAT_MAP * grow(b, k.x))})`;
+      const x1 = Math.round(k.x), y1 = Math.round(k.y);
+      ctx.fillRect(x1 + 1, y1, Math.round(k.x + c) - x1 - 1, Math.round(k.y + c) - y1 - 1);
+    }
+    // The one accent, the signal cutting through the noise: a gold cell lights up somewhere in the band, holds for STEP
+    // seconds, then crossfades to a random cell at least a third of the band away, so it reads as a jump, never a walk.
+    // It keeps off the thinned outer rows.
+    const s = Math.floor(t / STEP), ph = (t / STEP) % 1;
+    if (s !== S.slot) {
+      S.slot = s; S.prev = S.pick;
+      const p = S.prev, far = cells.filter(k => k.r >= 1 && k.r <= rows - 2 && (!p || Math.abs(k.i - p.i) >= S.nx / 3));
+      S.pick = far[Math.floor(Math.random() * far.length)];
+    }
+    const into = ease(ph * 3);
+    for (const [p, a] of [[S.prev, (1 - into) * b], [S.pick, into * b]]) {
+      if (!p || a <= 0) continue;
+      ctx.fillStyle = `rgba(247,250,249,${a})`; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y), c - 1, c - 1);
+      ctx.fillStyle = `rgba(${GOLD},${.26 * a})`; ctx.fillRect(Math.round(p.x) + 1, Math.round(p.y), c - 1, c - 1);
+    }
+  }
 
   function draw(t) {
     const { c, rows } = S, u = 2 * c, top = S.bandTop, bot = top + rows * c, x0 = L - u * Math.ceil(L / u);
-    const n = Math.floor(t / DUR), f = t - n * DUR, len = CHARTS.length;
-    // The grid belongs to the heatmap alone; the other charts sit on clean light. hm is how much heatmap is on screen.
-    const hm = (n % len === 0 ? clamp(f / FADE) : 0) + (n > 0 && f < FADE && (n - 1) % len === 0 ? 1 - f / FADE : 0);
+    // The grid and the band fade in together on load.
+    const a = clamp(t / FADE);
     ctx.clearRect(0, 0, W, H); ctx.lineWidth = 1;
     // The column edges, as every section has.
     ctx.beginPath(); for (const x of [L, R]) { ctx.moveTo(Math.round(x) + .5, 0); ctx.lineTo(Math.round(x) + .5, H); }
@@ -259,7 +175,7 @@ const pillSprings = pills => {
     for (let k = 0, x = x0; x <= W; k++, x += u) if (k % 3 !== 2 && x > L && x < R) { ctx.moveTo(Math.round(x) + .5, hh()); ctx.lineTo(Math.round(x) + .5, H); }
     for (let k = 3, y = top - 3 * u; y >= hh() + u; k++, y -= u) if (k % 3 !== 2) { ctx.moveTo(L, Math.round(y) - .5); ctx.lineTo(R + 1, Math.round(y) - .5); }
     for (let k = 3, y = bot + 3 * u; y <= H - u; k++, y += u) if (k % 3 !== 2) { ctx.moveTo(L, Math.round(y) - .5); ctx.lineTo(R + 1, Math.round(y) - .5); }
-    ctx.globalAlpha = hm; ctx.strokeStyle = `rgba(${TEAL},.07)`; ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.globalAlpha = a; ctx.strokeStyle = `rgba(${TEAL},.07)`; ctx.stroke(); ctx.globalAlpha = 1;
     ctx.save(); ctx.globalCompositeOperation = 'destination-out';
     const fade = ctx.createLinearGradient(0, hh(), 0, H), mid = ((top + bot) / 2 - hh()) / (H - hh());
     fade.addColorStop(0, 'rgba(0,0,0,.9)'); fade.addColorStop(mid, 'rgba(0,0,0,0)'); fade.addColorStop(1, 'rgba(0,0,0,.9)');
@@ -270,15 +186,7 @@ const pillSprings = pills => {
     for (let y = top; y <= bot + 1; y += c) { ctx.moveTo(L, Math.round(y) + .5); ctx.lineTo(R + 1, Math.round(y) + .5); }
     const hair = ctx.createLinearGradient(0, top, 0, bot);
     hair.addColorStop(0, `rgba(${TEAL},0)`); hair.addColorStop(.25, `rgba(${TEAL},.07)`); hair.addColorStop(.75, `rgba(${TEAL},.07)`); hair.addColorStop(1, `rgba(${TEAL},0)`);
-    ctx.globalAlpha = hm; ctx.strokeStyle = hair; ctx.stroke(); ctx.globalAlpha = 1;
-    // The charts run straight under the copy; the text sits over them rather than the art stepping back around it.
-    const run = (k, a, b) => {
-      const h = k.h ? (H - hh()) * k.h : bot - top, y0 = k.h ? Math.round(hh() + (H - hh() - h) / 2) : top, y1 = Math.round(y0 + h);
-      ctx.save(); ctx.globalAlpha = a; ctx.beginPath(); ctx.rect(L, y0, R - L, y1 - y0); ctx.clip(); k.draw(t, b, y0, y1); ctx.restore();
-    };
-    // The outgoing chart only fades; the incoming one fades in and builds itself.
-    if (n > 0 && f < FADE) run(CHARTS[(n - 1) % len], 1 - f / FADE, 1);
-    run(CHARTS[n % len], clamp(f / FADE), clamp(f / BUILD));
+    ctx.globalAlpha = a; ctx.strokeStyle = hair; ctx.stroke(); heatmap(t, clamp(t / BUILD)); ctx.globalAlpha = 1;
   }
 
   // Reduced motion gets one still frame of the settled heatmap, redrawn only when the hero resizes.
