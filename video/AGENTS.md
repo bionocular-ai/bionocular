@@ -7,7 +7,7 @@ Intelligence, `docs/storyboard-km.md`), `q3.js` (Question 3, `docs/storyboard-q3
 intro slides on white, `docs/storyboard-intro.md`). Pass `--film km` to
 `render.mjs` (or `?film=km` to the preview) for a chapter other than `film.js`. Each chapter renders into its own
 folder, `out/<chapter>/` (`film.js` into `out/q2/`), with its `cues.json` next to the video.
-`master.js` is the packaged demo (78 s): product intro, brand card, Question 1 (Simple, Q2), Question 2 (Complex, Q3),
+`master.js` is the packaged demo (75 s): product intro, brand card, Question 1 (Simple, Q2), Question 2 (Complex, Q3),
 Survival Intelligence (KM), end card (tagline, bionocular.ai). It
 draws each chapter at its own local time, so chapter edits flow into it;
 `npm run master` renders it with the music bed into `out/master/`. Chapters on their own stay effects-only.
