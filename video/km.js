@@ -1,6 +1,6 @@
-// KM Curves Intelligence chapter: every feature of the page in 16 s. The curves
-// draw in, the endpoint and arm filters are used, the chart and the
-// published-vs-twin table are read, the floating agent opens and two
+// KM Curves Intelligence chapter: every feature of the page in 17.2 s. The curves
+// draw in, the endpoint and arm filters are used, the chart is read (hazard
+// ratios, then a hover at 12 months) and the published-vs-twin table, the floating agent opens and two
 // prompts are typed (never sent), and the upload button closes it.
 // Everything is a pure function of global time T (seconds). No timers, no state.
 // Storyboard: docs/storyboard-km.md. Every screen is a real 2x capture of the
@@ -10,7 +10,7 @@
 import { clamp, sp, track, track2, window01, easeInOutCubic, easeOutCubic } from './lib/motion.js';
 import { rrect, risingText, drawCursor, font } from './lib/draw.js';
 
-export const FILM = { title: 'km-chapter', w: 1920, h: 1080, dur: 16, bpm: 120 };
+export const FILM = { title: 'km-chapter', w: 1920, h: 1080, dur: 17.2, bpm: 120 };
 const { w: W, h: H } = FILM;
 
 // Bionocular tokens (web/src/app/globals.css).
@@ -40,6 +40,7 @@ const IMG = {
   arms1Open: image('km-arms1-open2'),
   arms2Open: image('km-arms2-open2'),
   fabHover: image('km-fab-hover'),
+  hover: image('km-hover'), // pointer at 12 months: guide line, active dots, tooltip
   // The drawer captures are cropped to the drawer itself (R.drawer): 21 full
   // frames at 2x are more than headless Chromium will decode at once.
   drawer: image('km-drawer-panel'),
@@ -47,7 +48,7 @@ const IMG = {
   prompts: PROMPT_LINES.map((lines, i) => lines.map((_, k) => image(`km-prompt${i + 1}-${k + 1}-panel`))),
 };
 export const IMAGES = [IMG.full, IMG.rest, IMG.endpointHover, IMG.endpointOpen, IMG.arms1Hover, IMG.arms1Open,
-  IMG.arms2Open, IMG.fabHover, IMG.drawer, ...IMG.prompts.flat()];
+  IMG.arms2Open, IMG.fabHover, IMG.hover, IMG.drawer, ...IMG.prompts.flat()];
 
 export const CUES = [];
 const cue = (t, type, gain = 1) => CUES.push({ t: +t.toFixed(3), type, gain });
@@ -67,23 +68,24 @@ const R = {
   arms1Items: [[1065, 228, 298, 52], [1065, 280, 298, 32]],
   arms2Menu: [1064, 198, 300, 399],
   arms2Items: [[1065, 272, 298, 52], [1065, 324, 298, 32]],
-  grid: [225, 291, 1090, 394],
-  legend: [440, 740, 760, 88],
-  legendRows: [747, 767, 787, 807], // OS/PFS heading, two arms, HR
-  hr: [[489, 807, 26, 16], [797, 807, 24, 16]],
-  medians: [443, 899, 228, 268], // Median (published) + Median (twin), header to last row
-  twinStatus: [981, 899, 138, 268],
+  grid: [229, 292, 1066, 490],
+  hr: [[1080, 300, 95, 29], [1183, 300, 96, 29]], // HR OS / HR PFS chips, the plot's top-right corner
+  hoverAt: [656, 520], // the pointer in the hover capture (12.1 mo)
+  hoverPlot: [223, 286, 1078, 502], // guide line and active dots: the plot, plus the dots' overhang
+  tip: [663, 514, 406, 160], // the tooltip with its shadow (cut 6 px short on the left, where the guide line runs)
+  medians: [659, 918, 196, 226], // the Median group (Published | Twin), header to last row
+  twinStatus: [854, 918, 215, 226],
   fab: [1308, 810, 76, 46],
   fabHover: [1264, 810, 120, 46],
   drawer: [1020, 56, 420, 844],
-  upload: [1128, 247, 211, 36],
+  upload: [1120, 247, 219, 36],
 };
 // The composer grows by one 20 px line at a time, centred: its top rises 10 px per line.
 const COMPOSER = { x: 1074, top1: 484, pad: 8, lh: 20, w: 283 };
 
 // ---------------------------------------------------------------- timeline
 const T_WIPE = [0.2, 1.05]; // curves draw along the time axis
-const T_LEGEND = 0.94;
+const T_CHIPS = 0.94; // the HR chips pop in once the curves are drawn
 const T_FILTERS = 1.32; // camera leans into the filter cluster
 const T_EP_HOVER = 1.7;
 const T_EP_OPEN = 1.98;
@@ -97,20 +99,22 @@ const T_A1_CLOSE = 4.68;
 const T_A2_OPEN = 5.0;
 const T_A2_TICKS = [5.28, 5.48];
 const T_A2_CLOSE = 5.74;
-const T_CHART = 5.94; // camera pulls out to the chart, then leans to the legend
-const T_LEGEND_LEAN = 6.33;
+const T_CHART = 5.94; // camera pulls out to the chart, then leans to the HR chips
+const T_HR_LEAN = 6.33; // camera leans to the HR chips
 const T_HR = [6.6, 6.73];
-const T_TABLE = 7.48; // the page scrolls to the table
-const T_COLS = [8.03, 8.47];
-const T_BACK = 9.77; // scroll back up, 1 s after the match % ring lands
-const T_FAB_HOVER = 10.08;
-const T_FAB_CLICK = 10.27;
-const T_COMPOSER = 10.76;
-const SLOTS = [[10.93, 1.49], [12.47, 1.49]]; // [start, length] per prompt
-const T_DRAWER_OUT = 13.96;
-const T_UPLOAD = 14.4;
-const T_CAPTION = 14.53;
-const T_END = 15.5;
+const T_POINT = 6.98; // the pointer enters the plot and glides to 12 months
+const T_TIP = 7.42; // it lands: guide line, dots and the tooltip
+const T_TABLE = 8.68; // the page scrolls to the table
+const T_COLS = [9.23, 9.67];
+const T_BACK = 10.97; // scroll back up, 1 s after the match % ring lands
+const T_FAB_HOVER = 11.28;
+const T_FAB_CLICK = 11.47;
+const T_COMPOSER = 11.96;
+const SLOTS = [[12.13, 1.49], [13.67, 1.49]]; // [start, length] per prompt
+const T_DRAWER_OUT = 15.16;
+const T_UPLOAD = 15.6;
+const T_CAPTION = 15.73;
+const T_END = 16.7;
 
 // ---------------------------------------------------------------- camera
 // The page sits in a 1600 px wide sheet at x = 160. The camera is the page point
@@ -123,9 +127,10 @@ const cam = (T) => {
     [T_FILTERS, [1061, 300, 1.9]],
     [T_A2_OPEN - 0.2, [1061, 330, 1.9]],
     [T_CHART, [720, 450, 1]],
-    [T_LEGEND_LEAN, [700, 615, 1.6]], // the lowest centre that keeps the sheet's edge out of frame
+    [T_HR_LEAN, [895, 420, 1.6]], // the right-most centre that keeps the sheet's edge out of frame
+    [T_POINT - 0.1, [860, 545, 1.8]], // down to the tooltip, still holding the pointer and the chips
     [T_TABLE, [720, 450, 1.08]],
-    [T_COLS[0] - 0.2, [780, 470, 1.6]],
+    [T_COLS[0] - 0.2, [800, 460, 1.6]], // Treatment Arm through Reference
     [T_BACK, [720, 450, 1]],
     [T_COMPOSER, [1061, 470, 1.9]],
     [T_DRAWER_OUT, [1061, 300, 1.9]],
@@ -133,7 +138,7 @@ const cam = (T) => {
   const v = (i) => track(T, keys.map(([t, p]) => [t, p[i]]), 'heavy');
   return { cx: v(0), cy: v(1), z: v(2) };
 };
-const scrollY = (T) => track(T, [[0, 0], [T_TABLE, 560], [T_BACK, 0]], 'ui');
+const scrollY = (T) => track(T, [[0, 0], [T_TABLE, 579], [T_BACK, 0]], 'ui');
 // The sheet rises in from below at the start.
 const enter = (T) => (1 - sp(T, 'ui')) * H;
 const toScreen = (T, [x, y]) => {
@@ -157,6 +162,7 @@ cue(T_A2_OPEN, 'click', 0.8);
 T_A2_TICKS.forEach((t) => cue(t, 'click', 0.6));
 cue(T_CHART, 'whoosh', 0.35);
 T_HR.forEach((t) => cue(t, 'pop', 0.45));
+cue(T_TIP, 'tick', 0.4);
 cue(T_TABLE, 'whoosh', 0.35);
 T_COLS.forEach((t) => cue(t, 'tick', 0.45));
 cue(T_BACK, 'whoosh', 0.3);
@@ -245,6 +251,9 @@ function bareGrid() {
     if (Math.max(r, gg, bb) - Math.min(r, gg, bb) > 24) d.data[i] = d.data[i + 1] = d.data[i + 2] = 255;
   }
   b.putImageData(d, 0, 0);
+  // The HR chips are keyed only in part (teal text, near-grey tint); chips() draws them.
+  b.fillStyle = C.sheet;
+  R.hr.forEach(([cx, cy, cw, ch]) => b.fillRect((cx - x - 2) * 2, (cy - y - 2) * 2, (cw + 4) * 2, (ch + 4) * 2));
   bare.rect = [x, y, w, h];
   return bare;
 }
@@ -263,21 +272,42 @@ function curvesDraw(g, T) {
   g.restore();
 }
 
-// The legend rows rise into place once the curves are drawn.
-function legend(g, T) {
-  const [x, y, w, h] = R.legend;
-  g.fillStyle = C.sheet;
-  g.fillRect(x, y, w, h);
-  R.legendRows.forEach((ry, i) => {
-    const p = sp(T - T_LEGEND - i * 0.05, 'snappy');
+// The HR chips pop in, each from its own centre, once the curves are drawn.
+function chips(g, T) {
+  R.hr.forEach(([x, y, w, h], i) => {
+    g.fillStyle = C.sheet;
+    g.fillRect(x - 2, y - 2, w + 4, h + 4);
+    const p = sp(T - T_CHIPS - i * 0.06, 'snappy');
     if (p <= 0) return;
     g.save();
-    g.beginPath();
-    g.rect(x, ry - 2, w, 20);
-    g.clip();
-    g.drawImage(IMG.full, x * 2, (ry - 2) * 2, w * 2, 40, x, ry - 2 + (1 - p) * 18, w, 20);
+    g.globalAlpha *= clamp(p * 3);
+    const s = 0.85 + 0.15 * p;
+    g.translate(x + w / 2, y + h / 2);
+    g.scale(s, s);
+    g.translate(-x - w / 2, -y - h / 2);
+    blit(g, IMG.full, [x - 2, y - 2, w + 4, h + 4]);
     g.restore();
   });
+}
+
+// Hovering the plot at 12 months: the guide line and the active dots show on
+// landing, as in the product; the tooltip springs in beside them. All of it
+// leaves as the page starts to scroll.
+function hover(g, T) {
+  if (T < T_TIP || T >= T_TABLE) return;
+  g.save();
+  g.globalAlpha *= 1 - clamp((T - (T_TABLE - 0.12)) / 0.12);
+  blit(g, IMG.hover, R.hoverPlot);
+  blit(g, IMG.full, R.tip); // the plot as it is under the tooltip, until the tooltip arrives
+  const p = sp(T - T_TIP - 0.04, 'snappy');
+  const [x, y, w, h] = R.tip;
+  g.globalAlpha *= clamp(p * 3);
+  const s = 0.94 + 0.06 * p;
+  g.translate(x, y + h / 2); // grows out from the guide line
+  g.scale(s, s);
+  g.translate(-x, -y - h / 2);
+  blit(g, IMG.hover, R.tip);
+  g.restore();
 }
 
 // The floating agent button is fixed to the viewport, so it is drawn on its own.
@@ -351,10 +381,11 @@ function drawer(g, T, px) {
 function caption(g, T) {
   const p = sp(T - T_CAPTION, 'snappy');
   if (p <= 0) return;
-  const [x, y, w, h] = R.upload;
-  const [rx, by] = toScreen(T, [x + w, y + h]);
+  const [x, y, w] = R.upload;
+  // Below the HR chips, which sit just under the button.
+  const [rx, by] = toScreen(T, [x + w, R.hr[0][1] + R.hr[0][3]]);
   g.font = font(600, 40, 'display');
-  risingText(g, 'Upload your own curves - coming soon', rx, by + 78, p, 0, 40, C.ink, 'right');
+  risingText(g, 'Upload your own curves - coming soon', rx, by + 72, p, 0, 40, C.ink, 'right');
 }
 
 function cursor(g, T) {
@@ -371,6 +402,9 @@ function cursor(g, T) {
     [T_A2_TICKS[0] - 0.15, c(R.arms2Items[0], 0.4)],
     [T_A2_TICKS[1] - 0.15, c(R.arms2Items[1], 0.4)],
     [T_CHART, [1180, 560]],
+    [T_POINT - 0.3, [930, 640]],
+    [T_POINT, R.hoverAt],
+    [T_TABLE, [1180, 560]],
     [T_BACK, [1180, 620]],
     [T_FAB_HOVER - 0.2, c(R.fab)],
     [T_DRAWER_OUT, [1250, 420]],
@@ -379,6 +413,7 @@ function cursor(g, T) {
   const presses = [T_EP_OPEN, T_EP_PICK, T_A1_OPEN, ...T_A1_TICKS, T_A2_OPEN, ...T_A2_TICKS, T_FAB_CLICK];
   const press = Math.max(0, ...presses.map((t0) => (T > t0 - 0.05 && T < t0 + 0.3 ? clamp((T - t0 + 0.05) / 0.35) : 0)));
   const alpha = Math.max(window01(T, T_FILTERS + 0.05, T_CHART + 0.15, 0.12, 0.15),
+    window01(T, T_POINT, T_TABLE, 0.1, 0.12),
     window01(T, T_BACK + 0.05, T_FAB_CLICK + 0.25, 0.12, 0.15),
     window01(T, T_DRAWER_OUT + 0.05, T_END + 0.1, 0.12, 0.15));
   const [sx, sy] = toScreen(T, [x, y]);
@@ -390,7 +425,7 @@ function page(g, T, px) {
   const s = scrollY(T);
   g.drawImage(IMG.full, 0, s * 2, VIEW.w * 2, VIEW.h * 2, 0, 0, VIEW.w, VIEW.h);
   if (T < T_WIPE[1]) curvesDraw(g, T);
-  if (T < T_LEGEND + 0.6) legend(g, T);
+  if (T < T_CHIPS + 0.6) chips(g, T);
 
   // Endpoint filter: hover border, then the menu with Progression-free survival "In use".
   if (T >= T_EP_HOVER && T < T_EP_OPEN) blit(g, IMG.endpointHover, R.endpoint1);
@@ -412,8 +447,9 @@ function page(g, T, px) {
     menu(g, IMG.arms2Open, R.arms2Menu, T_A2_OPEN, T_A2_CLOSE, T, () => ticks(g, IMG.arms2Open, R.arms2Items, T_A2_TICKS, T));
   }
 
-  // The legend's twin hazard ratios, then the published-vs-twin columns.
-  R.hr.forEach((r, i) => ring(g, r, window01(T, T_HR[i], T_TABLE, 0.01, 0.15) * sp(T - T_HR[i], 'snappy'), px, 5, 6));
+  // The twin hazard ratios, the hover at 12 months, then the published-vs-twin columns.
+  R.hr.forEach((r, i) => ring(g, r, window01(T, T_HR[i], T_POINT, 0.01, 0.15) * sp(T - T_HR[i], 'snappy'), px, 4, 18));
+  hover(g, T);
   [R.medians, R.twinStatus].forEach(([x, y, w, h], i) =>
     ring(g, [x, y - s, w, h], window01(T, T_COLS[i], T_BACK, 0.01, 0.15) * sp(T - T_COLS[i], 'snappy'), px, 2, 10));
 
