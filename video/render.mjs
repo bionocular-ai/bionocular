@@ -37,8 +37,9 @@ const server = createServer(async (req, res) => {
     const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname)).replace(/^([/\\])+/, '');
     const file = join(ROOT, path || 'index.html');
     if (!file.startsWith(ROOT)) throw new Error('outside root');
+    const body = await readFile(file); // read first: a missing file must 404, not throw after the 200
     res.writeHead(200, { 'content-type': MIME[extname(file)] || 'application/octet-stream' });
-    res.end(await readFile(file));
+    res.end(body);
   } catch { res.writeHead(404); res.end(); }
 });
 if (has('serve')) {
