@@ -390,8 +390,7 @@ function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolea
   // Columns no selected arm reports are left out rather than shown as dashes.
   const hasRate = rows.some(({ c }) => c.published_rate != null || c.twin_rate != null);
   const hasFollowUp = rows.some(({ c }) => c.median_follow_up != null);
-  // The twin's match to the published curve is the column to read: tinted, and set a weight up.
-  const status = 'bg-(--brand-accent-light)/60';
+  // The twin's match to the published curve is the column to read: set a weight up in teal.
 
   // Rate value with a per-arm timepoint suffix when the selection mixes timepoints.
   const fmtRate = (value: number | null | undefined, tp: number | null | undefined) =>
@@ -453,7 +452,7 @@ function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolea
                 <TableHead colSpan={2} className={cn(HEAD, PAIR)}>Median</TableHead>
                 {hasRate && <TableHead colSpan={2} className={cn(HEAD, PAIR)}>{rateLabel}</TableHead>}
                 {hasFollowUp && <TableHead rowSpan={2} className={HEAD}>Med. Follow-up</TableHead>}
-                <TableHead rowSpan={2} className={cn(HEAD, 'text-(--brand-primary)', status)}>Digitized Twin Status</TableHead>
+                <TableHead rowSpan={2} className={cn(HEAD, 'text-(--brand-primary)')}>Digitized Twin Status</TableHead>
                 <TableHead rowSpan={2} className={HEAD}>Reference</TableHead>
               </TableRow>
               <TableRow className="border-b border-(--brand-border) hover:bg-transparent">
@@ -478,7 +477,7 @@ function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolea
                   {hasRate && <TableCell className="tabular-nums">{fmtRate(c.published_rate, c.rate_timepoint)}</TableCell>}
                   {hasRate && <TableCell className="tabular-nums">{fmtRate(c.twin_rate, c.rate_timepoint)}</TableCell>}
                   {hasFollowUp && <TableCell className="tabular-nums">{fmt(c.median_follow_up, 'm')}</TableCell>}
-                  <TableCell className={cn('font-medium tabular-nums text-(--brand-primary)', status)}>
+                  <TableCell className="font-medium tabular-nums text-(--brand-primary)">
                     {c.match_pct == null
                       ? '—'
                       : `${c.match_pct}% Match${c.n_points != null ? ` (${c.n_points} pts)` : ''}`}
