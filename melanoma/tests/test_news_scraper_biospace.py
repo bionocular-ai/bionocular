@@ -57,6 +57,24 @@ class TestBioSpaceScraper:
         urls = [a.url for a in articles]
         assert len(urls) == len(set(urls))
 
+    def test_skips_other_biospace_subdomains(self):
+        # `site:biospace.com` also matches the jobs board, whose listings embed
+        # article titles and flooded the feed with near-duplicate job pages.
+        xml = (FIXTURES / "targetedonc_gnews.xml").read_text()
+        scraper = BioSpaceScraper()
+
+        with (
+            patch.object(scraper, "_fetch_gnews_text", return_value=xml),
+            patch.object(
+                scraper,
+                "_resolve_url",
+                return_value="https://jobs.biospace.com/clinical/article-releases-x",
+            ),
+        ):
+            articles = scraper.fetch_articles(since=date(2026, 4, 1))
+
+        assert articles == []
+
     def test_raises_when_every_fetch_fails(self):
         scraper = BioSpaceScraper()
         with (

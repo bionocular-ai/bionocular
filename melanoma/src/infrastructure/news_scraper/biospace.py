@@ -1,5 +1,6 @@
 import logging
 from datetime import date, datetime
+from urllib.parse import urlparse
 
 import feedparser
 import requests
@@ -26,6 +27,16 @@ _GNEWS_URL = (
     "https://news.google.com/rss/search"
     "?q=site:biospace.com+{keyword}&hl=en-US&gl=US&ceid=US:en"
 )
+
+
+def _is_other_subdomain(url: str) -> bool:
+    """True for biospace.com subdomains other than www, e.g. the jobs board.
+
+    `site:biospace.com` matches them too, and a job listing embeds the title of
+    the article it sits next to, so each one reads as a duplicate news item.
+    """
+    host = urlparse(url).hostname or ""
+    return host.endswith(".biospace.com") and host != "www.biospace.com"
 
 
 def _parse_feed_date(entry: object) -> date | None:
@@ -85,7 +96,7 @@ class BioSpaceScraper(NewsSourceBase):
                     logger.warning("URL decode failed for %s: %s", google_url, exc)
                     resolved_url = google_url
 
-                if resolved_url in seen_urls:
+                if resolved_url in seen_urls or _is_other_subdomain(resolved_url):
                     continue
                 seen_urls.add(resolved_url)
 
