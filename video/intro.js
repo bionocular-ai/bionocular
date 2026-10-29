@@ -8,7 +8,7 @@
 import { clamp, sp, easeOutCubic } from './lib/motion.js';
 import { rrect, risingText, font } from './lib/draw.js';
 
-export const FILM = { title: 'intro-chapter', w: 1920, h: 1080, dur: 26.8, bpm: 120 };
+export const FILM = { title: 'intro-chapter', w: 1920, h: 1080, dur: 23.8, bpm: 120 };
 const { w: W, h: H } = FILM;
 
 // Bionocular tokens (web/src/app/globals.css), on white.
@@ -33,7 +33,8 @@ const cue = (t, type, gain = 1) => CUES.push({ t: +t.toFixed(3), type, gain });
 const X = 160; // left margin of the grid
 const CW = W - 2 * X; // content width
 // Scene spans in seconds.
-const S = { stats: [0, 5.2], drown: [5.2, 11.4], built: [11.4, 15.4], rigor: [15.4, 21.8], diagram: [21.8, 26.4] };
+// Each scene's pieces land in reading order, and it leaves about 1.5 s after the last one.
+const S = { stats: [0, 5.0], drown: [5.0, 10.2], built: [10.2, 13.6], rigor: [13.6, 19.2], diagram: [19.2, 23.4] };
 // Every scene leaves together, just before its end.
 const leave = (T, end) => sp(T - (end - 0.38), 'snappy');
 
@@ -123,16 +124,16 @@ const STATS = [
   [117, (v) => `${Math.round(v)}+`, 'AI-enabled drug assets already in clinical trials'],
   [68, (v) => `${Math.round(v)}%`, 'Of top-10 pharma targets pursued by more than five assets'],
 ];
-const STAT_IN = (i) => 0.95 + i * 0.16;
+const STAT_IN = (i) => 1.2 + i * 0.45;
 cue(0.1, 'whoosh', 0.35);
 cue(0.22, 'thump', 0.6);
 STATS.forEach((_, i) => cue(STAT_IN(i) + 0.05, 'tick', 0.45));
-cue(2.45, 'whoosh', 0.3);
+cue(3.15, 'whoosh', 0.3);
 
 function stats(g, T) {
   const t = T - S.stats[0], out = leave(T, S.stats[1]);
   head(g, 'The evidence is exploding.', 300, 112, C.ink, sp(t - 0.1, 'heavy'), out);
-  head(g, "Your tools can't keep up.", 424, 112, C.primary, sp(t - 0.32, 'heavy'), out);
+  head(g, "Your tools can't keep up.", 424, 112, C.primary, sp(t - 0.55, 'heavy'), out);
   const w = (CW - 3 * 32) / 4, top = 500, h = 330;
   STATS.forEach(([n, fmt, label], i) => {
     const d = STAT_IN(i);
@@ -146,7 +147,7 @@ function stats(g, T) {
     });
   });
   // A hairline, then the line that hands over to the next slide.
-  const rule = clamp(sp(t - 2.3, 'ui'));
+  const rule = clamp(sp(t - 3.0, 'ui'));
   if (rule > 0 && out < 0.99) {
     g.save();
     g.globalAlpha = 1 - out;
@@ -154,7 +155,7 @@ function stats(g, T) {
     g.fillRect(X, 868, CW * rule, 2);
     g.restore();
   }
-  masked(g, 950, 50, sp(t - 2.45, 'ui'), out, () => {
+  masked(g, 950, 50, sp(t - 3.15, 'ui'), out, () => {
     type(g, 600, 50, 'sans', -0.02);
     const a = 'Stop comparing headlines.';
     g.fillStyle = C.ink;
@@ -175,7 +176,7 @@ const PROBLEMS = [
   ["Numbers that can't be compared", 'Median PFS of 11.2 vs. 8.4 months means nothing without matching line of therapy, biomarker, prior treatment, assessment method, and data maturity.', 'scales'],
   ['Headlines miss the curve shape', 'A median PFS hides crossing curves, late separations, and tail plateaus - exactly the patterns that matter for IO and ADC combinations.', 'curves'],
 ];
-const PROB_IN = (i) => 1.15 + i * 0.16;
+const PROB_IN = (i) => 1.4 + i * 0.55;
 cue(S.drown[0] + 0.05, 'whoosh', 0.35);
 PROBLEMS.forEach((_, i) => cue(S.drown[0] + PROB_IN(i) + 0.05, 'tick', 0.45));
 cue(S.drown[0] + PROB_IN(2) + 1.35, 'pop', 0.5);
@@ -253,7 +254,7 @@ const AUDIENCES = [
   ['Investment Banks', 'Valuations and fairness opinions'],
   ['Oncologists & Cancer Centers', 'Tumor boards, formulary, and investigator-initiated trials'],
 ];
-const AUD_IN = (i) => 0.6 + i * 0.09;
+const AUD_IN = (i) => 0.6 + i * 0.12;
 cue(S.built[0] + 0.05, 'whoosh', 0.35);
 AUDIENCES.forEach((_, i) => cue(S.built[0] + AUD_IN(i) + 0.05, 'tick', 0.32));
 
@@ -289,7 +290,7 @@ const PILLARS = [
   ['04', 'Data-Cut Lineage', "Track how a trial's results evolve from abstract to presentation to publication to label update. See when a benefit grows or shrinks across data cuts."],
 ];
 // Two pairs share one row: 01-02, then 03-04 take their place.
-const PAIR_IN = [0.75, 3.35], PAIR_OUT = 3.1;
+const PAIR_IN = [0.9, 2.95], PAIR_OUT = 2.7;
 cue(S.rigor[0] + 0.05, 'whoosh', 0.35);
 cue(S.rigor[0] + 0.18, 'thump', 0.55);
 PAIR_IN.forEach((d) => { cue(S.rigor[0] + d + 0.05, 'tick', 0.45); cue(S.rigor[0] + d + 0.2, 'tick', 0.4); });
