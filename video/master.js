@@ -1,6 +1,7 @@
-// The master film: the product intro (intro.js), brand card, the three chapters
-// back to back, end card. Order: Question 1 (simple, film.js), Question 2 (complex, q3.js), then
-// Survival Intelligence (km.js). A label names each one above where it starts.
+// The master film: brand card, the product intro (intro.js), the dashboard tour
+// (pages.js), the three chapters back to back, end card. Order: Question 1 (simple, film.js),
+// Question 2 (complex, q3.js), then Survival Intelligence (km.js). A label names each
+// question chapter above where it starts; the tour needs none, its pages carry their titles.
 // The cards are centred. Each chapter draws itself at its own local time and
 // starts and ends on the bare canvas, so the joins need no transition.
 // The cards reuse the landing page's lockup (logo + "bio" 800 / "nocular" 500
@@ -9,25 +10,28 @@
 import { clamp, sp } from './lib/motion.js';
 import { font } from './lib/draw.js';
 import * as product from './intro.js';
+import * as pages from './pages.js';
 import * as q2 from './film.js';
 import * as q3 from './q3.js';
 import * as km from './km.js';
 
 const C = q2.C;
-// The intro runs first, on its own white canvas; everything below is timed from its end.
-const PRE = product.FILM.dur;
-const INTRO = 1.8, OUTRO = 2.1;
-const CHAPTERS = [q2, q3, km];
+// The brand card opens the film, then the product intro runs on its own white canvas;
+// the chapters and the end card are timed from the intro's end (demo time).
+// The card's tagline clears at 1.56 s (exit at 1.3 + 0.26 s snappy settle), so the intro cuts in on a bare canvas.
+const INTRO = 1.56, OUTRO = 2.1;
+const PRE = INTRO + product.FILM.dur;
+const CHAPTERS = [pages, q2, q3, km];
 // Bare canvas before a chapter. KM opens on a full-frame sheet, so its label
 // needs a beat of its own; the questions' labels ride on their question bar.
-const GAPS = [0, 0, 0.7];
+const GAPS = [0, 0, 0, 0.7];
 // Spans skipped inside a chapter, [local start, length] in seconds, so the demo
 // runs 50 s. A skip must sit in a truly static hold (identical frames at both
 // ends), or it shows as a jump: only Q3's final pill hold qualifies.
-const CUTS = [[], [[19.5, 0.55]], []];
+const CUTS = [[], [], [[19.5, 0.55]], []];
 const cutTotal = (i) => CUTS[i].reduce((s, [, len]) => s + len, 0);
 const DURS = CHAPTERS.map((c, i) => c.FILM.dur - cutTotal(i));
-const STARTS = DURS.map((_, i) => INTRO + GAPS[i] + DURS.slice(0, i).reduce((s, d, k) => s + d + GAPS[k], 0));
+const STARTS = DURS.map((_, i) => GAPS[i] + DURS.slice(0, i).reduce((s, d, k) => s + d + GAPS[k], 0));
 const T_OUTRO = STARTS.at(-1) + DURS.at(-1);
 // Demo time since the chapter's start -> the chapter's own time.
 const local = (i, u) => CUTS[i].reduce((t, [at, len]) => (t >= at ? t + len : t), u);
@@ -37,10 +41,13 @@ const { w: W, h: H } = FILM;
 
 const logo = Object.assign(new Image(), { src: 'assets/logo.svg' });
 const LOGO_ASPECT = 127.35 / 148.3; // logo.svg viewBox width / height
-export const IMAGES = [...product.IMAGES, ...q2.IMAGES, ...q3.IMAGES, ...km.IMAGES, logo];
+export const IMAGES = [...product.IMAGES, ...pages.IMAGES, ...q2.IMAGES, ...q3.IMAGES, ...km.IMAGES, logo];
 
-export const CUES = [...product.CUES];
-const cue = (t, type, gain = 1) => CUES.push({ t: +(PRE + t).toFixed(3), type, gain });
+export const CUES = [];
+// `at` takes film time, `cue` demo time.
+const at = (t, type, gain = 1) => CUES.push({ t: +t.toFixed(3), type, gain });
+const cue = (t, type, gain = 1) => at(PRE + t, type, gain);
+product.CUES.forEach((x) => at(INTRO + x.t, x.type, x.gain));
 // A chapter's cues move back by the cuts before them; none fall inside a cut.
 CHAPTERS.forEach((c, i) => c.CUES.forEach((x) => {
   const before = CUTS[i].filter(([at]) => x.t >= at).reduce((s, [, len]) => s + len, 0);
@@ -49,15 +56,15 @@ CHAPTERS.forEach((c, i) => c.CUES.forEach((x) => {
 
 // ---------------------------------------------------------------- cards
 const S = 120; // wordmark size; the logo is 1.05em tall, as on the landing page
-const TAGLINE = ['Human-verified oncology intelligence', 'for research and medical teams.'];
+const TAGLINE = 'Human-verified oncology intelligence';
 const URL = 'bionocular.ai';
 
-cue(0.08, 'whoosh', 0.35);
-cue(0.2, 'thump', 0.6);
-cue(0.62, 'tick', 0.5);
-cue(1.25, 'whoosh', 0.35);
+at(0.08, 'whoosh', 0.35);
+at(0.2, 'thump', 0.6);
+at(0.62, 'tick', 0.5);
+at(1.25, 'whoosh', 0.35);
 cue(T_OUTRO + 0.2, 'thump', 0.6);
-cue(T_OUTRO + 0.52, 'tick', 0.5);
+cue(T_OUTRO + 0.45, 'tick', 0.5);
 cue(T_OUTRO + 0.85, 'chime', 0.7);
 
 // Draws inside a mask band around baseline `base`, offset by the rise/exit progress.
@@ -105,13 +112,12 @@ function line(g, text, base, size, weight, color, pIn, pOut) {
 function intro(g, t) {
   const out = (d) => sp(t - 1.25 - d, 'snappy');
   lockup(g, 520, sp(t - 0.1, 'heavy'), out(0));
-  line(g, TAGLINE[0], 616, 44, 500, C.ink, sp(t - 0.4, 'ui'), out(0.05));
+  line(g, TAGLINE, 616, 44, 500, C.ink, sp(t - 0.4, 'ui'), out(0.05));
 }
 
 function outro(g, t) {
-  lockup(g, 430, sp(t - 0.1, 'heavy'), 0);
-  line(g, TAGLINE[0], 532, 44, 500, C.ink, sp(t - 0.45, 'ui'), 0);
-  line(g, TAGLINE[1], 592, 44, 500, C.muted, sp(t - 0.52, 'ui'), 0);
+  lockup(g, 490, sp(t - 0.1, 'heavy'), 0);
+  line(g, TAGLINE, 592, 44, 500, C.ink, sp(t - 0.45, 'ui'), 0);
   line(g, URL, 700, 44, 600, C.primary, sp(t - 0.8, 'ui'), 0);
   // Seafoam underline under the URL, drawn left to right.
   const u = clamp(sp(t - 0.95, 'ui'));
@@ -129,23 +135,23 @@ function outro(g, t) {
 // bare canvas: it rises as Q3's card finishes clearing and leaves just before
 // KM's sheet rises through the frame.
 const LABELS = [
-  ['Question 1', '(Simple)', STARTS[0] + 0.05, STARTS[0] + 0.85, 336],
-  ['Question 2', '(Complex)', STARTS[1] + 0.05, STARTS[1] + 0.95, 336],
-  ['Survival Intelligence', '', STARTS[2] - GAPS[2] - 0.08, STARTS[2] - 0.05, 554],
+  ['Question 1', '(Simple)', STARTS[1] + 0.05, STARTS[1] + 0.85, 336, 48],
+  ['Question 2', '(Complex)', STARTS[2] + 0.05, STARTS[2] + 0.95, 336, 48],
+  ['Survival Intelligence', '', STARTS[3] - GAPS[3] - 0.08, STARTS[3] - 0.05, 554, 48],
 ];
 cue(LABELS[2][2], 'tick', 0.5);
 
 function labels(g, T) {
-  for (const [title, aside, tIn, tOut, y] of LABELS) {
-    masked(g, y, 40, sp(T - tIn, 'ui'), sp(T - tOut, 'snappy'), () => {
+  for (const [title, aside, tIn, tOut, y, size] of LABELS) {
+    masked(g, y, size, sp(T - tIn, 'ui'), sp(T - tOut, 'snappy'), () => {
       g.textAlign = 'left';
       g.textBaseline = 'alphabetic';
-      g.font = font(600, 40, 'display');
+      g.font = font(600, size, 'display');
       g.fillStyle = C.primary;
       const x0 = aside ? 160 : (W - g.measureText(title).width) / 2;
       g.fillText(title, x0, y);
       const x = x0 + g.measureText(title + ' ').width;
-      g.font = font(400, 40, 'display');
+      g.font = font(400, size, 'display');
       g.fillStyle = C.muted;
       g.fillText(aside, x, y);
     });
@@ -153,10 +159,11 @@ function labels(g, T) {
 }
 
 export function draw(g, T) {
-  if (T < PRE) return product.draw(g, T);
-  T -= PRE;
-  const i = STARTS.findIndex((s, k) => T >= s && T < s + DURS[k]);
-  if (i >= 0) CHAPTERS[i].draw(g, local(i, T - STARTS[i]));
+  g.mac = true; // the macOS pointer in every chapter
+  if (T >= INTRO && T < PRE) return product.draw(g, T - INTRO);
+  const D = T - PRE; // demo time, negative during the brand card
+  const i = STARTS.findIndex((s, k) => D >= s && D < s + DURS[k]);
+  if (i >= 0) CHAPTERS[i].draw(g, local(i, D - STARTS[i]));
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalAlpha = 1;
   g.filter = 'none';
@@ -164,7 +171,7 @@ export function draw(g, T) {
     g.fillStyle = C.bg;
     g.fillRect(0, 0, W, H);
     if (T < INTRO) intro(g, T);
-    else if (T >= T_OUTRO) outro(g, T - T_OUTRO);
+    else if (D >= T_OUTRO) outro(g, D - T_OUTRO);
   }
-  labels(g, T);
+  labels(g, D);
 }
