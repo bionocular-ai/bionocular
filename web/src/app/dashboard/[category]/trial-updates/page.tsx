@@ -1,18 +1,28 @@
 'use client';
 
 import * as React from 'react';
+import { Suspense } from 'react';
 import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { trialsApi, type LatestTrialUpdateItem } from '@/lib/api';
-import { Loader2, Zap, Lightbulb, FlaskConical } from 'lucide-react';
+import { ChevronRight, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/dashboard/PageHeader';
 import { FilterChips } from '@/components/dashboard/FilterChips';
 import { slugToCategory } from '@/lib/dashboard-constants';
+import { trialRoute } from '@/lib/constants';
+import { dayLabel } from '@/lib/day-label';
 import { cn } from '@/lib/utils';
+import { useQueryParam } from '@/hooks/useQueryParam';
 
 type TimeWindow = '7' | '30' | '60' | '90';
+type Kind = 'all' | 'new' | 'updated';
+
+const WINDOWS: readonly TimeWindow[] = ['7', '30', '60', '90'];
+const KINDS: readonly Kind[] = ['all', 'new', 'updated'];
+const isWindow = (v: string): v is TimeWindow => (WINDOWS as readonly string[]).includes(v);
+const isKind = (v: string): v is Kind => (KINDS as readonly string[]).includes(v);
 
 const WINDOW_OPTIONS: { value: TimeWindow; label: string }[] = [
   { value: '7', label: '7d' },
@@ -21,37 +31,125 @@ const WINDOW_OPTIONS: { value: TimeWindow; label: string }[] = [
   { value: '90', label: '90d' },
 ];
 
-export default function TrialUpdatesPage() {
+// ponytail: counts come from the fetched list; past this many changes in one window
+// they would undercount, so the page says so (a count query is the upgrade path).
+const MAX_ROWS = 1000;
+
+function UpdateRow({ item, categorySlug }: { item: LatestTrialUpdateItem; categorySlug: string }) {
+  const isNew = item.update_type === 'new';
+  return (
+    <li>
+      <Link
+        href={trialRoute(item.nct_id, categorySlug)}
+        className="group -mx-4 flex items-start gap-4 rounded-2xl px-4 py-4 transition-colors duration-100 hover:bg-(--brand-surface) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) active:bg-(--brand-accent-light)"
+      >
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-2 text-[15px] font-semibold leading-snug tracking-[-0.005em] text-(--brand-text)">
+            {item.title || item.nct_id}
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-(--brand-text-muted)">
+            {isNew && (
+              <span
+                className="rounded-full bg-(--brand-accent-light) px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-primary)"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                New
+              </span>
+            )}
+            <span style={{ fontFamily: 'var(--font-mono)' }}>{item.nct_id}</span>
+            {item.sponsor_name && (
+              <>
+                <span aria-hidden className="text-(--brand-border)">
+                  ·
+                </span>
+                <span className="min-w-0 truncate">{item.sponsor_name}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <ChevronRight
+          className="mt-0.5 h-4 w-4 shrink-0 text-(--brand-primary) opacity-0 transition-opacity duration-100 group-hover:opacity-100 group-focus-visible:opacity-100"
+          aria-hidden
+        />
+      </Link>
+    </li>
+  );
+}
+
+/** Placeholder rows in the list's own layout, so nothing jumps when the trials arrive. */
+function ListSkeleton() {
+  const bar = 'rounded bg-(--brand-border)/60 motion-safe:animate-pulse';
+  return (
+    <div aria-busy="true" className="divide-y divide-(--brand-border)">
+      <span className="sr-only" role="status">
+        Loading trial updates…
+      </span>
+      {[3, 2].map((rows, g) => (
+        <div key={g} aria-hidden className="grid grid-cols-1 gap-x-12 py-4 first:pt-0 md:grid-cols-[140px_minmax(0,1fr)]">
+          <div className="pt-4">
+            <div className={cn(bar, 'h-5 w-20')} />
+            <div className={cn(bar, 'mt-2 h-3 w-24')} />
+          </div>
+          <div className="max-w-[880px]">
+            {Array.from({ length: rows }, (_, i) => (
+              <div key={i} className="py-4">
+                <div className={cn(bar, 'h-4 w-10/12')} />
+                <div className={cn(bar, 'mt-2.5 h-3 w-64')} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrialUpdatesContent() {
   const params = useParams();
   const categorySlug = params?.category as string;
   const categoryName = slugToCategory(categorySlug);
 
-  const [timeRange, setTimeRange] = React.useState<TimeWindow>('90');
+  const [timeRange, setTimeRange] = useQueryParam('window', '90', isWindow);
+  const [kind, setKind] = useQueryParam('show', 'all', isKind);
 
   const { data: landscapeStats } = useQuery({
     queryKey: ['disease-stats', categorySlug],
     queryFn: () => trialsApi.getDiseaseLandscapeStats(categorySlug),
     staleTime: 5 * 60 * 1000,
   });
-
-  const totalTrialsExamined = landscapeStats?.status?.["Overall Status"] ?? null;
+  const totalTrials = landscapeStats?.status?.['Overall Status'] ?? null;
 
   const days = Number(timeRange);
-  const { data: updatesCount } = useQuery({
-    queryKey: ['trial-updates-count', categorySlug, days],
-    queryFn: () => trialsApi.getTrialUpdatesCount(categorySlug!, days),
+  const { data: updatesData, isLoading, isPlaceholderData, error, refetch } = useQuery({
+    queryKey: ['latest-trial-updates', categorySlug, MAX_ROWS, days],
+    queryFn: () => trialsApi.getLatestTrialUpdates(categorySlug, MAX_ROWS, days),
     enabled: Boolean(categorySlug),
     staleTime: 5 * 60 * 1000,
+    // Keep the current list on screen while another window loads, instead of blanking it.
+    placeholderData: keepPreviousData,
   });
 
-  const { data: updatesData, isLoading, error, refetch } = useQuery({
-    queryKey: ['latest-trial-updates', categorySlug, 200, days],
-    queryFn: () => trialsApi.getLatestTrialUpdates(categorySlug, 200, days),
-    enabled: Boolean(categorySlug),
-    staleTime: 5 * 60 * 1000,
-  });
+  const updates = React.useMemo(() => updatesData?.trials ?? [], [updatesData]);
+  const newCount = updates.filter((u) => u.update_type === 'new').length;
+  const counts: Record<Kind, number> = { all: updates.length, new: newCount, updated: updates.length - newCount };
 
-  const updates = updatesData?.trials ?? [];
+  const kindOptions: { value: Kind; label: string }[] = [
+    { value: 'all', label: `All ${counts.all}` },
+    { value: 'new', label: `New ${counts.new}` },
+    { value: 'updated', label: `Updated ${counts.updated}` },
+  ];
+
+  const daysGrouped = React.useMemo(() => {
+    const byDay = new Map<string, LatestTrialUpdateItem[]>();
+    for (const item of updates) {
+      if (kind !== 'all' && item.update_type !== kind) continue;
+      const key = item.date_iso.slice(0, 10);
+      byDay.set(key, [...(byDay.get(key) ?? []), item]);
+    }
+    return [...byDay.entries()];
+  }, [updates, kind]);
+
+  const mono = { fontFamily: 'var(--font-mono)' };
 
   return (
     <div className="min-h-screen bg-(--brand-bg)">
@@ -60,177 +158,89 @@ export default function TrialUpdatesPage() {
           category={categoryName}
           title="Trial Updates"
           description="Newly registered trials and recent record changes, ordered by the most recent activity."
-          right={
-            <FilterChips
-              label="WINDOW"
-              options={WINDOW_OPTIONS}
-              value={timeRange}
-              onChange={setTimeRange}
-            />
-          }
+          right={<FilterChips label="WINDOW" options={WINDOW_OPTIONS} value={timeRange} onChange={setTimeRange} />}
         />
 
-        {/* KPI summary */}
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-(--brand-border) bg-(--brand-surface) p-5 shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50">
-                <Zap className="h-5 w-5 text-amber-500" aria-hidden />
-              </div>
-              <div className="min-w-0">
-                <div
-                  className="text-2xl font-semibold leading-none tracking-[-0.04em] text-(--brand-text)"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {updatesCount == null
-                    ? <span className="text-(--brand-border)">—</span>
-                    : updatesCount.new_records_added.toLocaleString()}
-                </div>
-                <span className="mt-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">
-                  New Records
-                </span>
-              </div>
-            </div>
+        {updatesData && (
+          <div className="mt-8 flex flex-col items-start gap-3">
+            <p className="text-[15px] leading-relaxed text-(--brand-text-muted) tabular-nums">
+              <span className="font-semibold text-(--brand-text)">{counts.all.toLocaleString()}</span>
+              {totalTrials != null && ` of ${totalTrials.toLocaleString()}`}{' '}
+              trials changed in the last {days} days
+              {counts.all >= MAX_ROWS && ' (showing the most recent ' + MAX_ROWS.toLocaleString() + ')'}
+            </p>
+            <FilterChips label="SHOW" options={kindOptions} value={kind} onChange={setKind} />
           </div>
+        )}
 
-          <div className="rounded-2xl border border-(--brand-border) bg-(--brand-surface) p-5 shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-                <Lightbulb className="h-5 w-5 text-blue-500" aria-hidden />
-              </div>
-              <div className="min-w-0">
-                <div
-                  className="text-2xl font-semibold leading-none tracking-[-0.04em] text-(--brand-text)"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {updatesCount == null
-                    ? <span className="text-(--brand-border)">—</span>
-                    : updatesCount.updates.toLocaleString()}
-                </div>
-                <span className="mt-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">
-                  Updates
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-(--brand-border) bg-(--brand-surface) p-5 shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--brand-accent-light)">
-                <FlaskConical className="h-5 w-5 text-(--brand-primary)" aria-hidden />
-              </div>
-              <div className="min-w-0">
-                <div
-                  className="text-2xl font-semibold leading-none tracking-[-0.04em] text-(--brand-text)"
-                  style={{ fontFamily: 'var(--font-display)' }}
-                >
-                  {totalTrialsExamined == null
-                    ? <span className="text-(--brand-border)">—</span>
-                    : totalTrialsExamined.toLocaleString()}
-                </div>
-                <span className="mt-1.5 block text-[11px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">
-                  Total Examined
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Updates table */}
-        <div className="mt-6 overflow-hidden rounded-2xl border border-(--brand-border) bg-(--brand-surface) shadow-[0_1px_2px_rgba(16,43,54,0.04)]">
+        <div
+          className={cn('mt-8 transition-opacity duration-150', isPlaceholderData && 'opacity-60')}
+          aria-busy={isPlaceholderData || undefined}
+        >
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16">
-              <Loader2 className="h-10 w-10 animate-spin text-(--brand-text-muted)" aria-hidden />
-              <p className="mt-4 text-sm text-(--brand-text-muted)">Loading trial updates…</p>
-            </div>
+            <ListSkeleton />
           ) : error ? (
-            <div className="p-8 text-center">
+            <div className="rounded-2xl border border-(--brand-border) bg-(--brand-surface) p-8 text-center">
               <p className="text-(--brand-text-muted)">Could not load trial updates. Please try again.</p>
               <Button variant="outline" size="sm" className="mt-4" onClick={() => refetch()}>
                 Retry
               </Button>
             </div>
-          ) : updates.length === 0 ? (
-            <div className="p-12 text-center">
+          ) : daysGrouped.length === 0 ? (
+            <div className="rounded-2xl border border-(--brand-border) bg-(--brand-surface) p-12 text-center">
               <Zap className="mx-auto h-12 w-12 text-(--brand-border)" aria-hidden />
-              <p className="mt-4 font-medium text-(--brand-text)">No trial updates yet</p>
+              <p className="mt-4 font-medium text-(--brand-text)">
+                {updates.length === 0 ? 'No trial updates in this window' : `No ${kind} trials in this window`}
+              </p>
               <p className="mt-1 text-sm text-(--brand-text-muted)">
-                New records and updates for {categoryName} will appear here.
+                Try a longer window. New records and updates for {categoryName} appear here.
               </p>
             </div>
           ) : (
-            <>
-              <div className="sticky top-0 z-10 grid grid-cols-[1fr_auto] items-center gap-3 border-b border-(--brand-border) bg-(--brand-surface) px-4 py-2.5 sm:grid-cols-[110px_1fr_96px] sm:gap-4 sm:px-5">
-                <span className="hidden text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted) sm:block">Date</span>
-                <span className="min-w-0 text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Record</span>
-                <span className="shrink-0 text-[10px] font-medium uppercase tracking-[0.12em] text-(--brand-text-muted)">Type</span>
-              </div>
-              <ul className="divide-y divide-(--brand-border)">
-                {updates.map((item: LatestTrialUpdateItem) => {
-                  const date = item.date_iso
-                    ? new Date(item.date_iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                    : 'Unknown';
-                  return (
-                    <li key={item.nct_id} className="group">
-                      <Link
-                        href={`/trial/nct/${item.nct_id}?category=${categorySlug}`}
-                        className="grid grid-cols-[1fr_auto] items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-(--brand-accent-light) sm:grid-cols-[110px_1fr_96px] sm:gap-4 sm:px-5"
+            <div className="divide-y divide-(--brand-border)">
+              {daysGrouped.map(([date, items]) => {
+                const { day, weekday } = dayLabel(date);
+                return (
+                  <section
+                    key={date}
+                    aria-label={`${weekday} ${day}`}
+                    className="grid grid-cols-1 gap-x-12 py-4 first:pt-0 md:grid-cols-[140px_minmax(0,1fr)]"
+                  >
+                    <div className="pt-4 md:sticky md:top-20 md:self-start">
+                      <p
+                        className="text-[22px] font-semibold leading-none tracking-[-0.02em] text-(--brand-text)"
+                        style={{ fontFamily: 'var(--font-display)' }}
                       >
-                        <span
-                          className="hidden shrink-0 text-xs font-medium text-(--brand-text-muted) sm:block"
-                          style={{ fontFamily: 'var(--font-mono)' }}
-                        >
-                          {date}
+                        {day}
+                      </p>
+                      <p className="mt-1.5 text-xs text-(--brand-text-muted)">
+                        {weekday}
+                        <span className="mx-1.5 text-(--brand-border)" aria-hidden>
+                          ·
                         </span>
-                        <div className="min-w-0">
-                          <span className="line-clamp-2 text-sm font-semibold leading-snug text-(--brand-text) transition-colors group-hover:text-(--brand-primary) sm:line-clamp-1">
-                            {item.title || item.nct_id}
-                          </span>
-                          <div className="mt-0.5 flex items-center gap-2">
-                            <span
-                              className="shrink-0 text-[10px] text-(--brand-text-muted) sm:hidden"
-                              style={{ fontFamily: 'var(--font-mono)' }}
-                            >
-                              {date}
-                            </span>
-                            <span className="text-[10px] text-(--brand-border) sm:hidden">·</span>
-                            {item.nct_id && (
-                              <span
-                                className="shrink-0 text-[10px] text-(--brand-text-muted)"
-                                style={{ fontFamily: 'var(--font-mono)' }}
-                              >
-                                {item.nct_id}
-                              </span>
-                            )}
-                            {item.sponsor_name && (
-                              <>
-                                <span className="text-[10px] text-(--brand-border)">·</span>
-                                <span className="truncate text-[10px] text-(--brand-text-muted)">{item.sponsor_name}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <span className={cn(
-                            'h-1.5 w-1.5 shrink-0 rounded-full',
-                            item.update_type === 'new' ? 'bg-amber-400' : 'bg-(--brand-primary)'
-                          )} />
-                          <span className={cn(
-                            'text-xs font-medium',
-                            item.update_type === 'new' ? 'text-amber-700' : 'text-(--brand-primary)'
-                          )}>
-                            {item.update_type === 'new' ? 'New' : 'Updated'}
-                          </span>
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
+                        <span style={mono}>{items.length}</span>
+                      </p>
+                    </div>
+                    <ul className="max-w-[880px]">
+                      {items.map((item) => (
+                        <UpdateRow key={item.nct_id} item={item} categorySlug={categorySlug} />
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TrialUpdatesPage() {
+  return (
+    <Suspense fallback={null}>
+      <TrialUpdatesContent />
+    </Suspense>
   );
 }
