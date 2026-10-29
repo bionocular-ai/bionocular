@@ -273,41 +273,6 @@ export const trialsApi = {
     return { landscape: landscapeStats, selected_type_stats: { clinical_trials: exactCount || 0, pipeline_drugs: null, drug_targets: null, biomarkers: null } };
   },
 
-  getTrialUpdatesCount: async (
-    cancerType: string,
-    days: number = 30
-  ): Promise<TrialUpdatesCountResponse> => {
-    const supabase = createClient();
-    const since = new Date();
-    since.setDate(since.getDate() - days);
-    const sinceIso = since.toISOString().split('T')[0]; // YYYY-MM-DD
-    const dbCancerType = getDbCancerType(cancerType);
-
-    // Use actual ClinicalTrials.gov dates from the clinical_trials table:
-    //   new_records_added → first_posted_date (trial first appeared on CT.gov)
-    //   updates           → last_update_posted_date (trial data was last changed on CT.gov)
-    // Both queries filter by cancer_type via trial_landscape join.
-    const [newResult, updatedResult] = await Promise.all([
-      supabase
-        .from('clinical_trials')
-        .select('nct_id', { count: 'exact', head: true })
-        .contains('cancer_type', [dbCancerType])
-        .gte('first_posted_date', sinceIso),
-      supabase
-        .from('clinical_trials')
-        .select('nct_id', { count: 'exact', head: true })
-        .contains('cancer_type', [dbCancerType])
-        .gte('last_update_posted_date', sinceIso),
-    ]);
-
-    return {
-      new_records_added: newResult.count || 0,
-      updates: updatedResult.count || 0,
-      window_end_iso: new Date().toISOString(),
-      window_start_iso: since.toISOString(),
-    };
-  },
-
   getLatestTrialUpdates: async (
     cancerType: string,
     limit: number = 5,
@@ -327,10 +292,11 @@ export const trialsApi = {
       `)
       .contains('cancer_type', [getDbCancerType(cancerType)]);
 
+    let sinceIso: string | null = null;
     if (days) {
       const since = new Date();
       since.setDate(since.getDate() - days);
-      const sinceIso = since.toISOString().split('T')[0];
+      sinceIso = since.toISOString().split('T')[0];
       query = query.gte('last_update_posted_date', sinceIso);
     }
 
@@ -341,8 +307,11 @@ export const trialsApi = {
     if (error) throw error;
     
     const trials = data.map(d => {
-      // If the trial was just posted, first == last update date
-      const isNew = d.first_posted_date && d.last_update_posted_date && d.first_posted_date === d.last_update_posted_date;
+      // New = first posted inside the window, even if edited again since; with no
+      // window, a trial whose only post is its first.
+      const isNew = sinceIso
+        ? Boolean(d.first_posted_date && d.first_posted_date >= sinceIso)
+        : Boolean(d.first_posted_date && d.first_posted_date === d.last_update_posted_date);
       
       return {
         nct_id: d.nct_id || '',
@@ -960,13 +929,6 @@ export interface SelectedTypeStats {
 export interface LandscapeStatsResponse {
   landscape: LandscapeStat[];
   selected_type_stats?: SelectedTypeStats;
-}
-
-export interface TrialUpdatesCountResponse {
-  new_records_added: number;
-  updates: number;
-  window_end_iso: string | null;
-  window_start_iso: string | null;
 }
 
 export interface LatestTrialUpdateItem {
