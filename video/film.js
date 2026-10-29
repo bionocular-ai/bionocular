@@ -243,21 +243,23 @@ function modelName(g, r, x, y, pIn, size) {
 
 // ---------------------------------------------------------------- scene 1: the question
 const QUESTION = [
-  'show me all published efficacy parameters (ORR, DCR and CR)',
+  'Show me all published efficacy parameters (ORR, DCR and CR)',
   'in metastatic /cutaneous melanoma for active treatments.',
   'strict rule: only treatments which are in phase 1 trial.',
 ];
 const MARKS = [[0, 'ORR'], [0, 'DCR'], [0, 'CR)'], [2, 'phase 1']];
-const CHIP_TEXT = 'show me all published efficacy parameters (ORR, DCR and CR)…';
+export const CHIP_TEXT = 'Show me all published efficacy parameters (ORR, DCR and CR)…';
 const BAR = { x: 160, y: 372, w: 1600, h: 268, r: 30 };
 
-function question(g, T) {
-  const enter = sp(T, 'ui');
+// `settled`: the bar is already a chip (the master film types the question in its own composer).
+function question(g, T, settled = false) {
+  const tq = settled ? 99 : T;
+  const enter = sp(tq, 'ui');
   if (enter <= 0) return;
   // The chip leaves upward when the answer makes room for the heatmap.
   const leave = sp(T - T_SHIFT, 'snappy');
   if (leave >= 0.999) return;
-  const p = sp(T - Q.shrink, 'ui');
+  const p = sp(tq - Q.shrink, 'ui');
   g.save();
   g.translate(0, -140 * leave);
   g.font = font(400, 18);
@@ -267,7 +269,7 @@ function question(g, T) {
     w: lerp(BAR.w, chip.w, p), h: lerp(BAR.h, chip.h, p), r: lerp(BAR.r, chip.r, p),
   };
   g.save();
-  g.globalAlpha = clamp(T / 0.12);
+  g.globalAlpha = clamp(tq / 0.12);
   g.shadowColor = 'rgba(16, 43, 54, 0.06)';
   g.shadowBlur = 30;
   g.shadowOffsetY = 8;
@@ -281,7 +283,7 @@ function question(g, T) {
   g.stroke();
 
   // The full question rises in line by line and leaves as the bar shrinks.
-  const out = clamp((T - Q.shrink) / 0.1);
+  const out = clamp((tq - Q.shrink) / 0.1);
   if (out < 1) {
     g.save();
     g.globalAlpha = 1 - out;
@@ -302,7 +304,7 @@ function question(g, T) {
     g.restore();
   }
   g.font = font(400, 18);
-  risingText(g, CHIP_TEXT, chip.x + 24, chip.y + 32, sp(T - Q.shrink - 0.12, 'snappy'), 0, 18, C.ink);
+  risingText(g, CHIP_TEXT, chip.x + 24, chip.y + 32, sp(tq - Q.shrink - 0.12, 'snappy'), 0, 18, C.ink);
   g.restore();
 }
 
@@ -627,7 +629,8 @@ function tallies(g, T) {
 }
 
 // ---------------------------------------------------------------- frame
-export function draw(g, T) {
+// opts.bar false: the question starts as its chip; opts.rivals false: no Gemini / Opus sheets.
+export function draw(g, T, opts = {}) {
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalAlpha = 1;
   g.filter = 'none';
@@ -638,11 +641,11 @@ export function draw(g, T) {
   g.translate(W / 2, H / 2);
   g.scale(c.z, c.z);
   g.translate(-c.cx, -c.cy);
-  RIVALS.forEach((r, i) => rival(g, T, r, i));
+  if (opts.rivals !== false) RIVALS.forEach((r, i) => rival(g, T, r, i));
   bioSheet(g, T);
   expert(g, T);
   rightColumn(g, T);
-  question(g, T);
+  question(g, T, opts.bar === false);
   g.restore();
   cursor(g, T);
   const d = dim(T);
