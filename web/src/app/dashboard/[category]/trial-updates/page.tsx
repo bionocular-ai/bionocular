@@ -133,10 +133,10 @@ function TrialUpdatesContent() {
   const newCount = updates.filter((u) => u.update_type === 'new').length;
   const counts: Record<Kind, number> = { all: updates.length, new: newCount, updated: updates.length - newCount };
 
-  const kindOptions: { value: Kind; label: string }[] = [
-    { value: 'all', label: `All ${counts.all}` },
-    { value: 'new', label: `New ${counts.new}` },
-    { value: 'updated', label: `Updated ${counts.updated}` },
+  const kindOptions: { value: Kind; label: string; count: number }[] = [
+    { value: 'all', label: 'All', count: counts.all },
+    { value: 'new', label: 'New', count: counts.new },
+    { value: 'updated', label: 'Updated', count: counts.updated },
   ];
 
   const daysGrouped = React.useMemo(() => {
@@ -148,8 +148,6 @@ function TrialUpdatesContent() {
     }
     return [...byDay.entries()];
   }, [updates, kind]);
-
-  const mono = { fontFamily: 'var(--font-mono)' };
 
   return (
     <div className="min-h-screen bg-(--brand-bg)">
@@ -213,12 +211,10 @@ function TrialUpdatesContent() {
                       >
                         {day}
                       </p>
-                      <p className="mt-1.5 text-xs text-(--brand-text-muted)">
-                        {weekday}
-                        <span className="mx-1.5 text-(--brand-border)" aria-hidden>
-                          ·
-                        </span>
-                        <span style={mono}>{items.length}</span>
+                      <p className="mt-1.5 text-xs text-(--brand-text-muted)">{weekday}</p>
+                      <p className="mt-2 text-xs text-(--brand-text-muted)">
+                        <span className="font-medium text-(--brand-text)">{items.length}</span>{' '}
+                        {items.length === 1 ? 'trial' : 'trials'}
                       </p>
                     </div>
                     <ul className="max-w-[880px]">
