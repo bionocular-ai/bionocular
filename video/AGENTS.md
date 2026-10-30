@@ -8,10 +8,12 @@ intro slides on white, `docs/storyboard-intro.md`) and `pages.js` (dashboard tou
 captures from `scripts/capture-pages.sh`). Pass `--film km` to
 `render.mjs` (or `?film=km` to the preview) for a chapter other than `film.js`. Each chapter renders into its own
 folder, `out/<chapter>/` (`film.js` into `out/q2/`), with its `cues.json` next to the video.
-`master.js` is the packaged demo (96 s): brand card, product intro, dashboard tour (pages), Question 1 (Simple, Q2), Question 2 (Complex, Q3),
-Survival Intelligence (KM), end card (tagline, bionocular.ai). It
-draws each chapter at its own local time, so chapter edits flow into it;
-`npm run master` renders it with the music bed into `out/master/`. Chapters on their own stay effects-only.
+`master.js` is the packaged demo (104.25 s, `docs/storyboard-master.md`): brand card, product intro, sign-in, dashboard tour (pages),
+Question 1 (Simple, Q2), Question 2 (Complex, Q3), KM Curves Intelligence, end card (tagline, bionocular.ai). One app window
+runs from sign-in to the last chapter: `joins.js` holds the joins (the login card growing into the app, the rail clicks, both
+questions typed into the real composer, captured by `scripts/capture-agent.sh`). It draws each chapter at its own local time,
+so chapter edits flow into it; `npm run master` renders it at `--sub 12` (fast camera moves strobe at 4) with the music bed
+into `out/master/`. Chapters on their own stay effects-only. The KM captures come from `scripts/capture-km.sh`.
 
 ## How a film is made
 

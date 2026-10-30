@@ -25,10 +25,11 @@ shot() {
   ab screenshot "$OUT/$1@2x.png"
   echo "$OUT/$1@2x.png"
 }
-# The same frame with the pointer over the next page's rail icon.
+# The same frame with the pointer over the next page's rail icon, once the rail has
+# expanded (it waits 300 ms for hover intent, then widens over 200 ms).
 rail_hover() {
   ab find role link hover --name "$2" --exact
-  ab wait 400
+  ab wait 1000
   ab screenshot "$OUT/$1-hover@2x.png"
   echo "$OUT/$1-hover@2x.png"
 }

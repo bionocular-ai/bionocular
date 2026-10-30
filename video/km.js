@@ -124,24 +124,25 @@ const B = 1600 / VIEW.w;
 const cam = (T) => {
   const keys = [
     [0, [720, 500, 1.15]], // open on the chart, so the curves read at phone size
-    // 1.9 with the right edge on the sheet's: the description's last word stays out of shot.
-    [T_FILTERS, [1061, 300, 1.9]],
-    [T_A2_OPEN - 0.2, [1061, 330, 1.9]],
+    // 2.0 with the frame's left edge past the description's last word, so no word is cut.
+    [T_FILTERS, [1085, 300, 2.0]],
+    [T_A2_OPEN - 0.2, [1085, 330, 2.0]],
     [T_CHART, [720, 450, 1]],
     [T_HR_LEAN, [895, 420, 1.6]], // the right-most centre that keeps the sheet's edge out of frame
     [T_POINT - 0.1, [860, 545, 1.8]], // down to the tooltip, still holding the pointer and the chips
     [T_TABLE, [720, 450, 1.08]],
     [T_MEDIAN - 0.2, [800, 460, 1.6]], // Treatment Arm through Reference
     [T_BACK, [720, 450, 1]],
-    [T_COMPOSER, [1061, 470, 1.9]],
-    [T_DRAWER_OUT, [1061, 300, 1.9]],
+    [T_COMPOSER, [1085, 470, 2.0]],
+    [T_DRAWER_OUT, [1085, 300, 2.0]],
   ];
   const v = (i) => track(T, keys.map(([t, p]) => [t, p[i]]), 'heavy');
   return { cx: v(0), cy: v(1), z: v(2) };
 };
 const scrollY = (T) => track(T, [[0, 0], [T_TABLE, 579], [T_BACK, 0]], 'ui');
 // The sheet rises in from below at the start.
-const enter = (T) => (1 - sp(T, 'ui')) * H;
+let rise = true; // set per frame from draw()'s opts, never carried between frames
+const enter = (T) => (rise ? (1 - sp(T, 'ui')) * H : 0);
 const toScreen = (T, [x, y]) => {
   const c = cam(T);
   return [W / 2 + (x - c.cx) * B * c.z, H / 2 + (y - c.cy) * B * c.z + enter(T)];
@@ -463,7 +464,9 @@ function page(g, T, px) {
 }
 
 // ---------------------------------------------------------------- frame
-export function draw(g, T) {
+// opts.rise false: the sheet starts in place (the master wipes it in from a rail click).
+export function draw(g, T, opts = {}) {
+  rise = opts.rise !== false;
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalAlpha = 1;
   g.imageSmoothingQuality = 'high';

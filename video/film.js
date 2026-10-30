@@ -139,7 +139,8 @@ const toScreen = (v, x, y) => [v.x + (x - v.px) * v.scale, v.top + (y - v.s) * v
 const lift = (T) => sp(T - T_POP, 'snappy') - sp(T - T_BACK, 'ui');
 // The camera leans into the Charts toggle and the tabs, pulls back out, then
 // leans slowly toward the hub link the cursor ends on.
-const FOCUS = [HEAT.x + 220 * HK, HEAT.y - 10 * HK];
+// The frame's left edge falls in the gap left of the panel, so no word of the answer is cut.
+const FOCUS = [HEAT.x + 1000 * HK, HEAT.y - 10 * HK];
 // The link lean scales about the link itself, so it stays where it is on screen.
 const LINK_AT = [HEAT.x + 240 * HK, linkY(1) + 14 * HK];
 const camera = (T) => {

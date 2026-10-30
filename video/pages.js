@@ -1,5 +1,5 @@
 // Product tour chapter: the dashboard pages a user lands on before asking the
-// agent, one filter per page, in sidebar order. Trial Updates (New 34), Live
+// agent, one filter per page, in sidebar order. Trial Updates (New 33), Live
 // News (Efficacy & Safety, then All 10 values), Trial Landscape (Group by Line of
 // therapy), Outcome Intelligence Hub (Phase 3, two readouts ticked, the agent opens on them),
 // Efficacy Intelligence Hub (Phase 3, the bars rebuild). Each page change is a
@@ -21,6 +21,7 @@ const C = {
   bg: '#F7FAF9',
   sheet: '#FFFFFF',
   accent: '#7AC1A2',
+  line: '#C8E0D8',
 };
 
 const image = (name) => Object.assign(new Image(), { src: `assets/screens/pages/${name}@2x.png` });
@@ -53,15 +54,15 @@ const cue = (t, type, gain = 1) => CUES.push({ t: +t.toFixed(3), type, gain });
 // ---------------------------------------------------------------- layout (page CSS px)
 const VIEW = { w: 1440, h: 900 };
 const CONTENT = [56, 56, 1384, 844]; // right of the rail, below the top bar
-const RAIL = { ln: [27, 116], ls: [27, 151], hub: [27, 204], eff: [28, 274] }; // icon centres
+const RAIL = { ln: [28, 116], ls: [28, 151], hub: [28, 204], eff: [29, 274], km: [28, 397], agent: [28, 450] }; // icon centres
 const R = {
-  tuNew: [264, 278, 75, 32],
+  tuNew: [263, 278, 74, 32],
   tuChips: [132, 270, 540, 48],
   tuFeed: 330, // the day groups start here
   lnEff: [1218, 119, 141, 32],
   lnFeed: 230,
-  lnRoundup: [56, 230, 1384, 168], // Yesterday's ESMO roundup, which Efficacy & Safety drops
-  lnRise: 148, // Oct 27 moves from 412 to 264
+  lnRoundup: [56, 230, 1384, 146], // Oct 28's ESMO roundup, which Efficacy & Safety drops
+  lnRise: 132, // Oct 27 moves from 376 to 244
   lnAll10: [320, 405, 105, 28],
   lnButton: [310, 398, 260, 40],
   lnUnfold: 435, // the six more values open below the button...
@@ -88,7 +89,7 @@ const R = {
 
 // ---------------------------------------------------------------- timeline
 const T_TU_LEAN = 0.75;
-const T_TU_CLICK = 2.0; // SHOW New 34
+const T_TU_CLICK = 2.0; // SHOW New 33
 const T_TU_WIPE = 2.05;
 const T_TU_HOVER = 3.55;
 const T_LN = 4.0; // rail click: Live News
@@ -126,18 +127,19 @@ const T_END = 21.2;
 
 // ---------------------------------------------------------------- camera
 // The page sits in a 1600 px wide sheet; the camera is the page point at the frame
-// centre plus a zoom (1.8 is the 2x captures at native sharpness).
+// centre plus a zoom (1.8 is the 2x captures at native sharpness). A lean keeps the
+// sheet's left edge 40+ px inside the frame (cx <= 920 / (B * z)), so the rail is never cut.
 const B = 1600 / VIEW.w;
 const RAIL_SHOT = [560, 420, 1.15]; // wide enough for the rail and the page beside it
 const cam = (T) => {
   const keys = [
     [0, [560, 330, 1.25]],
     [T_TU_LEAN, [400, 300, 1.8]], // the count line and the SHOW chips
-    [T_TU_WIPE + 0.1, [640, 520, 1.15]],
+    [T_TU_WIPE + 0.1, [590, 450, 1.4]], // the new registrations, day by day
     [T_TU_HOVER - 0.4, RAIL_SHOT],
     [T_LN_LEAN, [700, 300, 1.25]], // logo and title through the VIEW chips, nothing cut mid-word
-    [T_LN_RISE + 0.05, [720, 460, 1.1]],
-    [T_LN_OPEN_LEAN, [720, 520, 1.45]], // the day and the metric grid, below the header
+    [T_LN_RISE + 0.05, [590, 440, 1.4]], // the readouts rising into the roundup's place
+    [T_LN_OPEN_LEAN, [610, 520, 1.35]], // the day and the metric grid, below the header
     [T_LN_HOVER - 0.4, RAIL_SHOT],
     [T_LS_LEAN, [420, 340, 1.8]], // Group by and its menu
     [T_LS_COLS - 0.05, [720, 520, 1.12]],
@@ -145,18 +147,20 @@ const cam = (T) => {
     [T_HUB_LEAN, [330, 300, 1.7]], // the Phase filter beside the readout count
     [T_HUB_CARDS, [700, 420, 1.35]], // below the top bar
     [T_HUB_WIDE, [760, 470, 1.05]], // out to the agent button and its badge
-    [T_AGENT_LEAN, [888, 360, 1.56]], // the hub title and ticked cards beside the drawer that names them
+    [T_AGENT_LEAN, [912, 360, 1.5]], // the hub title and ticked cards beside the drawer that names them; the frame's left edge on the filter column's border
     [T_CLOSE + 0.1, [760, 470, 1.05]],
     [T_HUB_HOVER - 0.4, RAIL_SHOT],
-    [T_EFF_LEAN, [515, 300, 1.7]], // logo to the last PHASE chip
-    [T_EFF_SCROLL, [720, 470, 1.05]],
+    [T_EFF_LEAN, [500, 300, 1.65]], // logo to the last PHASE chip
+    [T_EFF_SCROLL, [662, 480, 1.25]], // the chart, every bar in shot
   ];
   const v = (i) => track(T, keys.map(([t, p]) => [t, p[i]]), 'heavy');
   return { cx: v(0), cy: v(1), z: v(2) };
 };
 // Only the Efficacy hub scrolls: down to its chart once Phase 3 is picked.
-const scrollY = (T) => track(T, [[0, 0], [T_EFF_SCROLL, 230]], 'ui');
-const enter = (T) => (1 - sp(T, 'ui')) * H;
+export const EFF_SCROLL = 230;
+const scrollY = (T) => track(T, [[0, 0], [T_EFF_SCROLL, EFF_SCROLL]], 'ui');
+let rise = true; // set per frame from draw()'s opts, never carried between frames
+const enter = (T) => (rise ? (1 - sp(T, 'ui')) * H : 0);
 const toScreen = (T, [x, y]) => {
   const c = cam(T);
   return [W / 2 + (x - c.cx) * B * c.z, H / 2 + (y - c.cy) * B * c.z + enter(T)];
@@ -185,19 +189,19 @@ cue(T_END, 'whoosh', 0.3);
 // ---------------------------------------------------------------- pieces
 // A region of a capture, drawn where it sits on the page. `s` is the capture's
 // scroll (the Efficacy hub only); dy shifts the drawn copy.
-function blit(g, img, [x, y, w, h], dy = 0, s = 0) {
+export function blit(g, img, [x, y, w, h], dy = 0, s = 0) {
   g.drawImage(img, x * 2, (y + s) * 2, w * 2, h * 2, x, y + dy, w, h);
 }
 
 // A whole viewport. The top bar and rail are fixed; only the content scrolls.
-function view(g, img, s = 0) {
+export function view(g, img, s = 0) {
   if (!s) return g.drawImage(img, 0, 0, VIEW.w * 2, VIEW.h * 2, 0, 0, VIEW.w, VIEW.h);
   g.drawImage(img, 0, 0, VIEW.w * 2, 112, 0, 0, VIEW.w, 56);
   g.drawImage(img, 0, 112, 112, 1688, 0, 56, 56, 844);
   blit(g, img, CONTENT, 0, s);
 }
 
-function clipped(g, [x, y, w, h], fn) {
+export function clipped(g, [x, y, w, h], fn) {
   if (w <= 0 || h <= 0) return;
   g.save();
   g.beginPath();
@@ -208,17 +212,30 @@ function clipped(g, [x, y, w, h], fn) {
 }
 
 // A rail click: the rail turns to the new page at once; the page area wipes in
-// from the top over the old one.
-function pageIn(g, from, to, t0, T, fromScroll = 0) {
-  view(g, from, fromScroll);
+// from the top over the old one, behind a hairline edge, the new page settling 6 px
+// as it lands so the swap reads as a page change. `from` is a capture or a painter.
+export function pageIn(g, from, to, t0, T, fromScroll = 0) {
+  if (typeof from === 'function') from(g); else view(g, from, fromScroll);
   blit(g, to, [0, 56, 56, 844]);
   const p = clamp(sp(T - t0, 'ui'));
   const [x, y, w, h] = CONTENT;
-  clipped(g, [x, y, w, h * p], () => view(g, to));
+  clipped(g, [x, y, w, h * p], () => {
+    g.save();
+    g.translate(0, (1 - p) * 6);
+    view(g, to);
+    g.restore();
+  });
+  if (p > 0 && p < 0.995) {
+    g.save();
+    g.globalAlpha = Math.min(1, (1 - p) * 8);
+    g.fillStyle = C.line;
+    g.fillRect(x, y + h * p - 1, w, 1);
+    g.restore();
+  }
 }
 
 // Hovering a rail icon opens the labelled flyout: it slides out from the rail.
-function railHover(g, img, t0, T) {
+export function railHover(g, img, t0, T) {
   if (T < t0) return;
   const p = clamp(sp(T - t0, 'snappy'));
   clipped(g, [0, 0, 56 + (VIEW.w - 56) * p, VIEW.h], () => view(g, img));
@@ -276,7 +293,7 @@ function menu(g, img, rect, tOpen, tClose, T) {
 }
 
 // ---------------------------------------------------------------- pages
-// Trial Updates: SHOW New 34; the day groups re-stack top-down to the new registrations.
+// Trial Updates: SHOW New 33; the day groups re-stack top-down to the new registrations.
 function trialUpdates(g, T) {
   if (T < T_TU_CLICK) return view(g, IMG.tuAll);
   view(g, IMG.tuAll);
@@ -476,6 +493,40 @@ function cursor(g, T) {
 }
 
 // ---------------------------------------------------------------- frame
+// The page as one white sheet with one soft shadow, seen by camera c ({ cx, cy, z });
+// paint(px) draws in page px, px being one screen pixel. dy lifts the sheet (its rise);
+// bare skips the sheet itself, to paint over a sheet already drawn at that camera.
+export function sheet(g, c, paint, dy = 0, bare = false) {
+  g.save();
+  g.translate(W / 2, H / 2 + dy);
+  g.scale(B * c.z, B * c.z);
+  g.translate(-c.cx, -c.cy);
+  if (!bare) {
+    g.save();
+    g.shadowColor = 'rgba(16, 43, 54, 0.10)';
+    g.shadowBlur = 48; // canvas shadows are in screen px, untouched by the transform
+    g.shadowOffsetY = 14;
+    g.fillStyle = C.sheet;
+    rrect(g, 0, 0, VIEW.w, VIEW.h, 14);
+    g.fill();
+    g.restore();
+  }
+  g.save();
+  rrect(g, 0, 0, VIEW.w, VIEW.h, 14);
+  g.clip();
+  paint(1 / (B * c.z));
+  g.restore();
+  g.restore();
+}
+// Page px -> screen px for camera c.
+export const onScreen = (c, [x, y]) => [W / 2 + (x - c.cx) * B * c.z, H / 2 + (y - c.cy) * B * c.z];
+
+// Where the tour leaves off for the master: the Efficacy hub's bars built, the camera settled.
+export const T_DONE = T_EFF_GROW[1] + 0.4;
+export const camAt = (T) => cam(T);
+export const efficacyDone = (g) => efficacy(g, T_DONE);
+export { B, VIEW, CONTENT, RAIL, IMG };
+
 function page(g, T, px) {
   if (T < T_LN) return trialUpdates(g, T);
   if (T < T_LS) return liveNews(g, T);
@@ -484,7 +535,9 @@ function page(g, T, px) {
   efficacy(g, T);
 }
 
-export function draw(g, T) {
+// opts.rise false: the sheet starts in place instead of rising in.
+export function draw(g, T, opts = {}) {
+  rise = opts.rise !== false;
   const mac = g.mac;
   g.mac = true; // the macOS pointer, here and inside any master film
   g.setTransform(1, 0, 0, 1, 0, 0);
@@ -493,27 +546,7 @@ export function draw(g, T) {
   g.fillStyle = C.bg;
   g.fillRect(0, 0, W, H);
 
-  const c = cam(T);
-  const px = 1 / (B * c.z); // one screen pixel in page units
-  g.save();
-  g.translate(W / 2, H / 2 + enter(T));
-  g.scale(B * c.z, B * c.z);
-  g.translate(-c.cx, -c.cy);
-  // The page is one white sheet with one soft shadow.
-  g.save();
-  g.shadowColor = 'rgba(16, 43, 54, 0.10)';
-  g.shadowBlur = 48; // canvas shadows are in screen px, untouched by the transform
-  g.shadowOffsetY = 14;
-  g.fillStyle = C.sheet;
-  rrect(g, 0, 0, VIEW.w, VIEW.h, 14);
-  g.fill();
-  g.restore();
-  g.save();
-  rrect(g, 0, 0, VIEW.w, VIEW.h, 14);
-  g.clip();
-  page(g, T, px);
-  g.restore();
-  g.restore();
+  sheet(g, cam(T), (px) => page(g, T, px), enter(T));
 
   cursor(g, T);
 
