@@ -47,7 +47,7 @@ interface BarShapeProps {
 // ============================================================================
 
 const COLORS = {
-  bar: '#3b82f6',
+  bar: '#1B4F65', // --brand-primary
   dot: {
     fill: '#1f2937',
     stroke: '#9ca3af',
@@ -57,7 +57,7 @@ const COLORS = {
 };
 
 const DARK_COLORS = {
-  bar: '#0ea5e9',
+  bar: '#7AC1A2', // --brand-accent
   dot: {
     fill: '#475569',
     stroke: '#e2e8f0',
