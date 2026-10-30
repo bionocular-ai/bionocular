@@ -365,7 +365,7 @@ function Suggestions({ examples = DEFAULT_SUGGESTIONS, onPick }: { examples?: Su
           className={cn(
             'flex items-center gap-1.5 rounded-full border border-(--brand-border)',
             'px-3 py-1.5 text-[13px] text-(--brand-text-muted) transition',
-            'hover:border-(--brand-primary) hover:bg-(--brand-accent-light) hover:text-(--brand-primary)',
+            'hover:border-(--brand-primary) hover:bg-(--brand-text)/5 hover:text-(--brand-primary)',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
           )}
         >

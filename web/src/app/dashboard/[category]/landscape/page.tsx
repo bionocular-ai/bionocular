@@ -693,7 +693,7 @@ function DashboardContent() {
                                 'flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm transition-colors',
                                 selected
                                   ? 'bg-(--brand-accent-light) text-(--brand-text)'
-                                  : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                  : 'text-(--brand-text-muted) hover:bg-(--brand-text)/5'
                               )}
                             >
                               <span>{opt.label}</span>
@@ -761,7 +761,7 @@ function DashboardContent() {
                                   'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm transition-colors',
                                   selected
                                     ? 'bg-(--brand-accent-light) text-(--brand-text)'
-                                    : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                    : 'text-(--brand-text-muted) hover:bg-(--brand-text)/5'
                                 )}
                               >
                                 <span className="min-w-0 truncate">{value}</span>
@@ -807,7 +807,7 @@ function DashboardContent() {
                                   key={phase}
                                   className={cn(
                                     'flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors',
-                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-text)/5'
                                   )}
                                 >
                                   <input
@@ -839,7 +839,7 @@ function DashboardContent() {
                                   key={status}
                                   className={cn(
                                     'flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors',
-                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-text)/5'
                                   )}
                                 >
                                   <input
@@ -871,7 +871,7 @@ function DashboardContent() {
                                   key={option}
                                   className={cn(
                                     'flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors',
-                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                    checked ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-text)/5'
                                   )}
                                 >
                                   <input
@@ -897,7 +897,7 @@ function DashboardContent() {
                               <label
                                 className={cn(
                                   'flex cursor-pointer items-start gap-2.5 px-3 py-2 text-[13px] leading-snug transition-colors',
-                                  hasAbstractsDraft ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                                  hasAbstractsDraft ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-text)/5'
                                 )}
                               >
                                 <input
@@ -917,7 +917,7 @@ function DashboardContent() {
                         <button
                           type="button"
                           onClick={resetFilterDraft}
-                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-accent-light) hover:text-(--brand-text)"
+                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-text)/5 hover:text-(--brand-text)"
                         >
                           Reset
                         </button>
@@ -937,7 +937,7 @@ function DashboardContent() {
               {/* Export */}
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-accent-light) hover:text-(--brand-primary)"
+                className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-text)/5 hover:text-(--brand-primary)"
                 title="Export Excel (placeholder)"
               >
                 <FileSpreadsheet className="h-4 w-4 shrink-0" />
@@ -945,7 +945,7 @@ function DashboardContent() {
               </button>
               <button
                 type="button"
-                className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-accent-light) hover:text-(--brand-primary)"
+                className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-(--brand-text-muted) transition-colors hover:bg-(--brand-text)/5 hover:text-(--brand-primary)"
                 title="Export PPT (placeholder)"
               >
                 <FileDown className="h-4 w-4 shrink-0" />
@@ -1061,7 +1061,7 @@ function DashboardContent() {
                             aria-busy={isLoadingMore}
                             aria-disabled={isLoadingMore || loadingMoreAll}
                             title={showCountPill ? `${categoryTotal.toLocaleString()} in this category` : undefined}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-(--brand-border) bg-transparent px-3 py-2.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-(--brand-border) bg-transparent px-3 py-2.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-text)/5 hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
                           >
                             {isLoadingMore ? (
                               <>
@@ -1181,7 +1181,7 @@ function DashboardContent() {
                             disabled={isLoadingMore}
                             onClick={handleLoadMore}
                             aria-busy={isLoadingMore}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-(--brand-border) bg-transparent px-3 py-2.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-(--brand-border) bg-transparent px-3 py-2.5 text-sm font-medium text-(--brand-text-muted) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-text)/5 hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
                           >
                             {isLoadingMore ? (
                               <>
@@ -1227,7 +1227,7 @@ function DashboardContent() {
                   disabled={loadingMoreAll}
                   onClick={handleLoadMoreAll}
                   aria-busy={loadingMoreAll}
-                  className="inline-flex items-center gap-2 rounded-full border border-(--brand-border) bg-(--brand-surface) px-4 py-2 text-sm font-medium text-(--brand-text) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
+                  className="inline-flex items-center gap-2 rounded-full border border-(--brand-border) bg-(--brand-surface) px-4 py-2 text-sm font-medium text-(--brand-text) transition-colors hover:border-(--brand-primary) hover:bg-(--brand-text)/5 hover:text-(--brand-primary) focus:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-60"
                 >
                   {loadingMoreAll ? (
                     <>
@@ -1270,7 +1270,7 @@ function DashboardContent() {
                     aria-expanded={pageSizeDropdownOpen}
                     aria-haspopup="listbox"
                     aria-label="Items per page"
-                    className="flex w-14 items-center justify-between rounded-lg border border-(--brand-border) bg-(--brand-surface) px-2.5 py-1.5 text-sm font-medium text-(--brand-text) hover:bg-(--brand-accent-light)"
+                    className="flex w-14 items-center justify-between rounded-lg border border-(--brand-border) bg-(--brand-surface) px-2.5 py-1.5 text-sm font-medium text-(--brand-text) hover:bg-(--brand-text)/5"
                   >
                     {pageSize}
                     <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" />
@@ -1296,7 +1296,7 @@ function DashboardContent() {
                             }}
                             className={cn(
                               'flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm',
-                              pageSize === size ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-accent-light)'
+                              pageSize === size ? 'bg-(--brand-accent-light) font-medium text-(--brand-text)' : 'text-(--brand-text-muted) hover:bg-(--brand-text)/5'
                             )}
                           >
                             {size}
@@ -1316,7 +1316,7 @@ function DashboardContent() {
                 onClick={() => setPage(1)}
                 disabled={page <= 1}
                 aria-label="First page"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-text)/5 hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronsLeft className="h-4 w-4" />
               </button>
@@ -1325,7 +1325,7 @@ function DashboardContent() {
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
                 aria-label="Previous page"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-text)/5 hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -1348,7 +1348,7 @@ function DashboardContent() {
                         'inline-flex h-9 min-w-[2.25rem] items-center justify-center rounded-lg border px-2 text-sm font-medium transition-colors',
                         page === p
                           ? 'border-(--brand-primary) bg-(--brand-primary) text-white'
-                          : 'border-(--brand-border) bg-(--brand-surface) text-(--brand-text) hover:bg-(--brand-accent-light)'
+                          : 'border-(--brand-border) bg-(--brand-surface) text-(--brand-text) hover:bg-(--brand-text)/5'
                       )}
                     >
                       {p}
@@ -1362,7 +1362,7 @@ function DashboardContent() {
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
                 aria-label="Next page"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-text)/5 hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -1371,7 +1371,7 @@ function DashboardContent() {
                 onClick={() => setPage(totalPages)}
                 disabled={page >= totalPages}
                 aria-label="Last page"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-text)/5 hover:text-(--brand-text) disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronsRight className="h-4 w-4" />
               </button>
