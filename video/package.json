@@ -11,8 +11,9 @@
     "sound:sfx-only": "node sound/score.mjs --no-music",
     "mux": "ffmpeg -hide_banner -loglevel error -y -i out/q2/silent.mp4 -i out/q2/audio.wav -map 0:v -map 1:a -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000 -c:a aac -b:a 192k -shortest -movflags +faststart out/q2/final.mp4 && echo \"-> out/q2/final.mp4\"",
     "final": "npm run render && npm run sound && npm run mux",
-    "master": "node render.mjs --film master && node sound/score.mjs --cues out/master/cues.json --out out/master/audio.wav && ffmpeg -hide_banner -loglevel error -y -i out/master/silent.mp4 -i out/master/audio.wav -map 0:v -map 1:a -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000 -c:a aac -b:a 192k -shortest -movflags +faststart out/master/final.mp4 && echo \"-> out/master/final.mp4\"",
-    "review": "bash scripts/review.sh out/q2/silent.mp4"
+    "master": "node render.mjs --film master --sub 12 && node sound/score.mjs --cues out/master/cues.json --out out/master/audio.wav && ffmpeg -hide_banner -loglevel error -y -i out/master/silent.mp4 -i out/master/audio.wav -map 0:v -map 1:a -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000 -c:a aac -b:a 192k -shortest -movflags +faststart out/master/final.mp4 && echo \"-> out/master/final.mp4\"",
+    "review": "bash scripts/review.sh out/q2/silent.mp4",
+    "master:v2": "node render.mjs --film master-v2 && node sound/score.mjs --cues out/master-v2/cues.json --out out/master-v2/audio.wav && ffmpeg -hide_banner -loglevel error -y -i out/master-v2/silent.mp4 -i out/master-v2/audio.wav -map 0:v -map 1:a -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11,aresample=48000 -c:a aac -b:a 192k -shortest -movflags +faststart out/master-v2/final.mp4 && echo \"-> out/master-v2/final.mp4\""
   },
   "license": "ISC",
   "devDependencies": {

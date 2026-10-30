@@ -30,9 +30,40 @@ export function risingText(g, text, x, y, pIn, pOut, size, color, align = 'left'
   g.restore();
 }
 
-// macOS-style arrow pointer. press: 0..1 (1 = fully pressed).
+// The macOS pointer: black arrow, white edge, soft shadow, no click ripple.
+function macCursor(g, x, y, press, alpha) {
+  const s = 2.3 * (1 - 0.12 * clamp(press));
+  g.save();
+  g.globalAlpha = alpha;
+  g.translate(x, y);
+  g.scale(s, s);
+  g.beginPath();
+  g.moveTo(0, 0);
+  g.lineTo(0, 16.6);
+  g.lineTo(3.9, 12.9);
+  g.lineTo(6.5, 18.9);
+  g.lineTo(9.1, 17.8);
+  g.lineTo(6.6, 12);
+  g.lineTo(11.8, 12);
+  g.closePath();
+  g.lineJoin = 'round';
+  g.shadowColor = 'rgba(0, 0, 0, 0.32)';
+  g.shadowBlur = 8;
+  g.shadowOffsetY = 3;
+  g.strokeStyle = '#FFFFFF';
+  g.lineWidth = 2.2;
+  g.stroke();
+  g.shadowColor = 'transparent';
+  g.fillStyle = '#000000';
+  g.fill();
+  g.restore();
+}
+
+// Arrow pointer. press: 0..1 (1 = fully pressed). A film that sets `g.mac = true`
+// for the frame gets the macOS pointer instead, in every chapter it draws.
 export function drawCursor(g, x, y, press = 0, alpha = 1) {
   if (alpha <= 0) return;
+  if (g.mac) return macCursor(g, x, y, press, alpha);
   const s = 1.6 * (1 - 0.14 * clamp(press));
   g.save();
   g.globalAlpha = alpha;

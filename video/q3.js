@@ -210,12 +210,12 @@ function armsTally(g, n, x, y, t0, T) {
 
 // ---------------------------------------------------------------- scene 1: the question
 const QUESTION = [
-  'provide phase 3 active clinical treatments showing median PFS',
+  'Provide phase 3 active clinical treatments showing median PFS',
   'vs grade3+ Treatment emergent adverse events vs treatment',
   'discontinuation due to AEs in metastatic /cutaneous melanoma.',
 ];
 const MARKS = [[0, 'phase 3 active'], [0, 'median PFS'], [1, 'grade3+ Treatment emergent'], [2, 'discontinuation due to AEs']];
-const CHIP_TEXT = 'provide phase 3 active clinical treatments showing median PFS vs grade3+…';
+export const CHIP_TEXT = 'Provide phase 3 active clinical treatments showing median PFS vs grade3+…';
 const BAR = { x: 160, y: 372, w: 1600, h: 268, r: 30 }; // Q2's bar
 
 function question(g, T) {
@@ -774,7 +774,8 @@ function tallies(g, T) {
 }
 
 // ---------------------------------------------------------------- frame
-export function draw(g, T) {
+// opts.bar false: the question starts as its chip (the master film types it in its own composer).
+export function draw(g, T, opts = {}) {
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.globalAlpha = 1;
   g.filter = 'none';
@@ -788,7 +789,7 @@ export function draw(g, T) {
   g.translate(-c.cx, -c.cy);
   rivals(g, T);
   bio(g, T);
-  question(g, T);
+  question(g, opts.bar === false ? 99 : T);
   g.restore();
   cursor(g, T);
   const d = dim(T);
