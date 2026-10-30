@@ -8,11 +8,11 @@ import {
   Scale,
   Workflow,
   Landmark,
-  Sparkles,
   Database,
   ChartColumn,
 } from 'lucide-react';
 import { SurvivalCurveIcon } from '@/components/icons/SurvivalCurveIcon';
+import { AgentAnswerIcon } from '@/components/icons/AgentAnswerIcon';
 
 type NavIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -79,7 +79,7 @@ export const DASHBOARD_NAV_GROUPS: DashboardNavItem[][] = [
     { key: 'survival', label: 'KM Curves Intelligence', icon: SurvivalCurveIcon, section: 'head-to-head-survival', status: 'live' },
   ],
   [
-    { key: 'ai-agent',            label: 'AI Agent',            icon: Sparkles,  section: 'agent', status: 'live' },
+    { key: 'ai-agent',            label: 'AI Agent',            icon: AgentAnswerIcon, section: 'agent', status: 'live' },
     { key: 'treatment-algorithm', label: 'Treatment Algorithm', icon: Workflow,  status: 'upcoming' },
     { key: 'regulatory',          label: 'Regulatory Timeline', icon: Landmark,  status: 'upcoming' },
   ],
