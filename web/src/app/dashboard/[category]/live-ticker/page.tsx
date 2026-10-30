@@ -45,7 +45,7 @@ function MetricGrid({ metrics }: { metrics: NewsMetric[] }) {
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
       {metrics.map((m, i) => {
         const { main, note } = splitValue(m.value);
-        // Numbers read in mono; prose values ("not reached") stay in the UI face.
+        // Numbers read a step larger than prose values ("not reached").
         const numeric = /^[<>≤≥=~.\d-]/.test(main);
         return (
           <div key={i} className="min-w-0">
@@ -53,7 +53,6 @@ function MetricGrid({ metrics }: { metrics: NewsMetric[] }) {
             <dd className="mt-0.5 break-words">
               <span
                 className={cn('font-medium leading-snug text-(--brand-text) tabular-nums', numeric ? 'text-[15px]' : 'text-sm')}
-                style={numeric ? { fontFamily: 'var(--font-mono)' } : undefined}
               >
                 {main}
               </span>
@@ -266,9 +265,7 @@ function LiveTickerContent() {
             <Calendar className="h-4 w-4 shrink-0 text-(--brand-text-muted)" aria-hidden />
             {selectedMonth ? selectedMonth.label : 'All months'}
             {data && (
-              <span className="text-(--brand-text-muted)" style={{ fontFamily: 'var(--font-mono)' }}>
-                {selectedMonth ? selectedMonth.count : viewItems.length}
-              </span>
+              <span className="text-(--brand-text-muted)">{selectedMonth ? selectedMonth.count : viewItems.length}</span>
             )}
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-(--brand-text-muted)" aria-hidden />
@@ -283,9 +280,7 @@ function LiveTickerContent() {
               className="gap-3 rounded-md py-2 pr-3 text-(--brand-text-muted) focus:bg-(--brand-bg) focus:text-(--brand-text) data-[state=checked]:bg-(--brand-accent-light) data-[state=checked]:font-medium data-[state=checked]:text-(--brand-primary)"
             >
               <span className="min-w-0 flex-1">{m.label}</span>
-              <span className="text-xs" style={{ fontFamily: 'var(--font-mono)' }}>
-                {m.count}
-              </span>
+              <span className="text-xs tabular-nums">{m.count}</span>
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

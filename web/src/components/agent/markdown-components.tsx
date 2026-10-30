@@ -109,7 +109,7 @@ function MarkdownTable({ children }: { children?: ReactNode }) {
               className={cn(
                 'block w-full border-t border-(--brand-border) bg-(--brand-bg) px-3.5 py-2',
                 'text-left font-mono text-[10.5px] tracking-[0.05em] text-(--brand-primary)',
-                'hover:bg-(--brand-accent-light) focus-visible:outline-2 focus-visible:-outline-offset-2',
+                'hover:bg-(--brand-text)/5 focus-visible:outline-2 focus-visible:-outline-offset-2',
                 'focus-visible:outline-(--brand-primary)'
               )}
             >

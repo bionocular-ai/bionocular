@@ -18,7 +18,7 @@ export function HomeNavLink({ className }: HomeNavLinkProps) {
         'inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-sm font-medium sm:px-4',
         'border-(--brand-primary) bg-transparent text-(--brand-primary)',
         'transition-all duration-200 ease-out',
-        'hover:bg-(--brand-accent-light)',
+        'hover:bg-(--brand-text)/5',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-2 focus-visible:ring-offset-white',
         'min-h-[34px]',
         'active:scale-[0.98]',

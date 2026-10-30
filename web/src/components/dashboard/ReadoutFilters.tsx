@@ -168,7 +168,7 @@ export function ReadoutFilters({
           title={`${collapsed ? 'Show' : 'Hide'} filters (⌘B)`}
           aria-label={`${collapsed ? 'Show' : 'Hide'} filters`}
           aria-expanded={!collapsed}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-(--brand-text-muted) transition hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-(--brand-text-muted) transition hover:bg-(--brand-text)/5 hover:text-(--brand-primary) focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none"
         >
           <ToggleIcon className="h-4 w-4" aria-hidden />
         </button>

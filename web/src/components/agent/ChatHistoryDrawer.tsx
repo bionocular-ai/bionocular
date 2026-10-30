@@ -73,7 +73,7 @@ export function ChatHistoryDrawer({
           title={`${collapsed ? 'Show' : 'Hide'} chat history (⌘B)`}
           aria-label={`${collapsed ? 'Show' : 'Hide'} chat history`}
           aria-expanded={!collapsed}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-(--brand-text-muted) transition hover:bg-(--brand-accent-light) hover:text-(--brand-primary) focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-(--brand-text-muted) transition hover:bg-(--brand-text)/5 hover:text-(--brand-primary) focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none"
         >
           <ToggleIcon className="h-4 w-4" aria-hidden />
         </button>
@@ -89,7 +89,7 @@ export function ChatHistoryDrawer({
             className={cn(
               'flex h-9 w-full items-center gap-2 rounded-lg border border-(--brand-border) bg-(--brand-surface)',
               'px-3 text-sm font-medium text-(--brand-primary) transition',
-              'hover:border-(--brand-primary) hover:bg-(--brand-accent-light)',
+              'hover:border-(--brand-primary) hover:bg-(--brand-text)/5',
               'focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none'
             )}
           >
@@ -122,7 +122,7 @@ export function ChatHistoryDrawer({
                         'focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:outline-none',
                         active
                           ? 'bg-(--brand-accent-light) text-(--brand-primary)'
-                          : 'text-(--brand-text) hover:bg-(--brand-accent-light)/50'
+                          : 'text-(--brand-text) hover:bg-(--brand-text)/5/50'
                       )}
                     >
                       <MessageSquare
