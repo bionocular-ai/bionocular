@@ -35,7 +35,7 @@ function suggestionsFor(n: number): Suggestion[] {
 }
 
 const PAGE_BUTTON =
-  'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-text) disabled:pointer-events-none disabled:opacity-40';
+  'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-(--brand-border) bg-(--brand-surface) text-(--brand-text-muted) hover:bg-(--brand-text)/5 hover:text-(--brand-text) disabled:pointer-events-none disabled:opacity-40';
 
 /** Every readout for the indication from a trial in Trial Landscape, one card each. */
 export default function IntelligenceHubPage() {

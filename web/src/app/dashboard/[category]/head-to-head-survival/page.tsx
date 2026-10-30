@@ -271,7 +271,7 @@ function useKmPanel(allCurves: KmCurveRow[], endpoints: string[], linkedNctId: s
 type KmPanel = ReturnType<typeof useKmPanel>;
 
 const FILTER_BUTTON =
-  'h-9 gap-2 rounded-full border-(--brand-border) bg-(--brand-surface) pl-3 pr-2.5 text-(--brand-text) shadow-sm hover:border-(--brand-primary) hover:bg-(--brand-accent-light)';
+  'h-9 gap-2 rounded-full border-(--brand-border) bg-(--brand-surface) pl-3 pr-2.5 text-(--brand-text) shadow-sm hover:border-(--brand-primary) hover:bg-(--brand-text)/5';
 
 /** One panel's endpoint and treatment-arm filters. `taken` is the other panel's endpoint, disabled here. */
 function KmFilters({ panel, endpoints, taken }: { panel: KmPanel; endpoints: string[]; taken: string }) {
@@ -331,7 +331,7 @@ function KmFilters({ panel, endpoints, taken }: { panel: KmPanel; endpoints: str
                 type="button"
                 onClick={selectAllArms}
                 disabled={selectedIds.size === armsForEndpoint.length}
-                className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
+                className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-text)/5 hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 All
               </button>
@@ -339,7 +339,7 @@ function KmFilters({ panel, endpoints, taken }: { panel: KmPanel; endpoints: str
                 type="button"
                 onClick={clearArms}
                 disabled={selectedIds.size === 0}
-                className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-accent-light) hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
+                className="rounded px-1.5 py-0.5 text-xs font-medium text-(--brand-text-muted) hover:bg-(--brand-text)/5 hover:text-(--brand-primary) disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 Clear
               </button>
@@ -420,7 +420,7 @@ function KmResults({ panels, isLoading }: { panels: KmPanel[]; isLoading: boolea
             Upload curves
             <Badge
               variant="secondary"
-              className="bg-(--brand-accent-light) px-1.5 py-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--brand-primary) hover:bg-(--brand-accent-light)"
+              className="bg-(--brand-accent-light) px-1.5 py-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-(--brand-primary) hover:bg-(--brand-text)/5"
             >
               Upcoming
             </Badge>
