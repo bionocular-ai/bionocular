@@ -37,6 +37,13 @@ describe('OUTCOME_COL_TO_ATTR', () => {
     expect(missing).toEqual([]);
   });
 
+  it('names a defined metric for every column it maps', () => {
+    const undefinedKeys = Object.entries(OUTCOME_COL_TO_ATTR)
+      .filter(([col, key]) => TRIAL_OUTCOMES_ENDPOINTS.has(col) && !(key in EFFICACY_METRICS) && !(key in SAFETY_METRICS))
+      .map(([col, key]) => `${col} -> ${key}`);
+    expect(undefinedKeys).toEqual([]);
+  });
+
   it('gives every efficacy and safety metric a column', () => {
     const fed = new Set(shown.map(([, key]) => key));
     const unfed = [...Object.keys(EFFICACY_METRICS), ...Object.keys(SAFETY_METRICS)].filter((key) => !fed.has(key));
