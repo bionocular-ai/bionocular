@@ -122,7 +122,8 @@ export const trialsApi = {
     return { trials, total: count || 0, skip, limit };
   },
 
-  getByAbstractId: async (abstractId: string, category?: string | null): Promise<AbstractData> => {
+  // Null when no row matches, so callers can show a not-found state
+  getByAbstractId: async (abstractId: string, category?: string | null): Promise<AbstractData | null> => {
     const supabase = createClient();
     const dbCancerType = category ? getDbCancerType(category) : null;
     const matchesCategory = (cancerTypes: unknown): boolean => {
@@ -185,15 +186,17 @@ export const trialsApi = {
             .select('*')
             .eq('nct_id', abstractId),
         ]);
+        const landscape = ((landscapeRows as TrialLandscapeRow[] | null) ?? [])[0] ?? null;
+        if (!trialRow && !landscape) return null;
         return {
           abstract_id: abstractId,
           title: ((trialRow as ClinicalTrialFlat | null)?.brief_title as string) || '',
           outcome: null,
           trial: (trialRow as ClinicalTrialFlat | null) ?? null,
-          landscape: ((landscapeRows as TrialLandscapeRow[] | null) ?? [])[0] ?? null,
+          landscape,
         };
       }
-      return { abstract_id: abstractId };
+      return null;
     }
 
     const outcome = data as unknown as TrialOutcomeRow;
