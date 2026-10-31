@@ -1075,20 +1075,38 @@ export interface LiveTickerResponse {
 // Maps every flat column in trial_outcomes to its AttributeType.X key so that
 // chart-transformers (which call getAttribute(attributes, 'OBJECTIVE_RESPONSE_RATE') etc.)
 // find values without any JSON parsing.
+// Per-toxicity grade 3+ columns are grade_3_plus_{ae,teae,trae}_<term>; the
+// metric keys spell the same thing GRADE_3_PLUS_{AE,TEAE,TRAE}_<TERM>, except
+// for two terms. Terms with no metric definition yet are left out.
+const GRADE_3_PLUS_TERMS = [
+  'ir_ae', 'crs', 'thrombocytopenia', 'neutropenia', 'leukopenia', 'nausea',
+  'anemia', 'diarrhea', 'colitis', 'hyperglycemia', 'neutrophil_count_decreased',
+  'dyspnea', 'pyrexia', 'bleeding', 'pruritus', 'rash', 'pneumonia',
+  'thyroiditis', 'hypophysitis', 'hepatitis', 'pneumonitis', 'alt_increased',
+  'wbc_decreased',
+];
+const GRADE_3_PLUS_TERM_KEYS: Record<string, string> = { ir_ae: 'IMMUNE_RELATED', alt_increased: 'ALANINE_AMINOTRANSFERASE' };
+const GRADE_3_PLUS_COLUMNS: Record<string, string> = Object.fromEntries(
+  ['ae', 'teae', 'trae'].flatMap((family) => GRADE_3_PLUS_TERMS.map((term) => [
+    `grade_3_plus_${family}_${term}`,
+    `GRADE_3_PLUS_${family.toUpperCase()}_${GRADE_3_PLUS_TERM_KEYS[term] ?? term.toUpperCase()}`,
+  ])),
+);
+
 export const OUTCOME_COL_TO_ATTR: Record<string, string> = {
   // Efficacy
   orr:                          'OBJECTIVE_RESPONSE_RATE',
-  complete_response:            'COMPLETE_RESPONSE',
-  disease_control_rate:         'DISEASE_CONTROL_RATE',
-  clinical_benefit_rate:        'CLINICAL_BENEFIT_RATE',
-  pathological_complete_response: 'PATHOLOGICAL_COMPLETE_RESPONSE',
-  complete_metabolic_response:  'COMPLETE_METABOLIC_RESPONSE',
+  cr:                           'COMPLETE_RESPONSE',
+  dcr:                          'DISEASE_CONTROL_RATE',
+  cbr:                          'CLINICAL_BENEFIT_RATE',
+  pcr:                          'PATHOLOGICAL_COMPLETE_RESPONSE',
+  cmr:                          'COMPLETE_METABOLIC_RESPONSE',
   median_pfs:                   'MEDIAN_PFS',
   median_os:                    'MEDIAN_OS',
   median_dor:                   'MEDIAN_DOR',
   dor_rate:                     'DOR_RATE',
-  median_followup_pfs:          'MEDIAN_FOLLOWUP_PFS',
-  median_followup_os:           'MEDIAN_FOLLOWUP_OS',
+  pfs_followup_months:          'MEDIAN_FOLLOWUP_PFS',
+  os_followup_months:           'MEDIAN_FOLLOWUP_OS',
   hr_pfs:                       'HR_PFS',
   hr_os:                        'HR_OS',
   hr_efs:                       'HR_EFS',
@@ -1100,9 +1118,9 @@ export const OUTCOME_COL_TO_ATTR: Record<string, string> = {
   p_value_rfs:                  'P_VALUE_RFS',
   efs:                          'EFS',
   rfs:                          'RFS',
-  length_rfs:                   'LENGTH_RFS',
+  rfs_followup_months:          'LENGTH_RFS',
   mfs:                          'MFS',
-  length_mfs:                   'LENGTH_MFS',
+  mfs_followup_months:          'LENGTH_MFS',
   ttr:                          'TTR',
   ttp:                          'TTP',
   ttnt:                         'TTNT',
@@ -1126,31 +1144,35 @@ export const OUTCOME_COL_TO_ATTR: Record<string, string> = {
   // Safety — AE
   ae_pct:                       'AE',
   grade_3_plus_ae_pct:          'GRADE_3_PLUS_AE',
-  ae_leading_to_discontinuation:'AE_LEADING_TO_DISCONTINUATION',
-  serious_ae:                   'SERIOUS_AE',
-  immune_related_ae:            'IMMUNE_RELATED_AE',
-  serious_immune_related_ae:    'SERIOUS_IMMUNE_RELATED_AE',
-  ae_leading_to_death:          'AE_LEADING_TO_DEATH',
+  ae_leading_to_discontinuation_pct:'AE_LEADING_TO_DISCONTINUATION',
+  serious_ae_pct:               'SERIOUS_AE',
+  immune_related_ae_pct:        'IMMUNE_RELATED_AE',
+  serious_ir_ae_pct:            'SERIOUS_IMMUNE_RELATED_AE',
+  ae_death_pct:                 'AE_LEADING_TO_DEATH',
   // Safety — TEAE
   teae_pct:                     'TEAE',
   grade_3_plus_teae_pct:        'GRADE_3_PLUS_TEAE',
   grade_3_teae_pct:             'GRADE_3_TEAE',
   grade_4_teae_pct:             'GRADE_4_TEAE',
   grade_5_teae_pct:             'GRADE_5_TEAE',
-  teae_leading_to_discontinuation: 'TEAE_LEADING_TO_DISCONTINUATION',
-  teae_leading_to_death:        'TEAE_LEADING_TO_DEATH',
-  serious_teae:                 'SERIOUS_TEAE',
-  teae_immune_related:          'TEAE_IMMUNE_RELATED',
+  teae_discontinuation_pct:     'TEAE_LEADING_TO_DISCONTINUATION',
+  teae_death_pct:               'TEAE_LEADING_TO_DEATH',
+  serious_teae_pct:             'SERIOUS_TEAE',
+  teae_ir_ae_pct:               'TEAE_IMMUNE_RELATED',
   // Safety — TRAE
   trae_pct:                     'TRAE',
   grade_3_plus_trae_pct:        'GRADE_3_PLUS_TRAE',
   grade_3_trae_pct:             'GRADE_3_TRAE',
   grade_4_trae_pct:             'GRADE_4_TRAE',
   grade_5_trae_pct:             'GRADE_5_TRAE',
-  trae_leading_to_discontinuation: 'TRAE_LEADING_TO_DISCONTINUATION',
-  trae_leading_to_death:        'TRAE_LEADING_TO_DEATH',
-  trae_immune_related:          'TRAE_IMMUNE_RELATED',
-  serious_trae:                 'SERIOUS_TRAE',
+  trae_discontinuation_pct:     'TRAE_LEADING_TO_DISCONTINUATION',
+  trae_death_pct:               'TRAE_LEADING_TO_DEATH',
+  trae_ir_ae_pct:               'TRAE_IMMUNE_RELATED',
+  serious_trae_pct:             'SERIOUS_TRAE',
+  // Standalone toxicities
+  crs_pct:                      'CRS',
+  wbc_decreased_pct:            'WBC_DECREASED',
+  ...GRADE_3_PLUS_COLUMNS,
   // Patient / study metadata
   num_patients:                 'NUMBER_OF_PATIENTS',
   nct_id:                       'NCT_NUMBER',
