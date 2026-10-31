@@ -42,4 +42,15 @@ describe('buildArmTable', () => {
     const rows = ['arm_10', 'arm_2', 'arm_1'].map((arm_id) => arm({ arm_id, arm_name: arm_id }));
     expect(buildArmTable(rows, 'efficacy').arms.map((a) => a.name)).toEqual(['arm_1', 'arm_2', 'arm_10']);
   });
+
+  it('shows a not-reached median as NR, next to an arm that reached it', () => {
+    const reached = arm({ arm_id: 'arm_1', arm_name: 'A', median_os: 19.9 });
+    const notReached = arm({ arm_id: 'arm_2', arm_name: 'B', median_os: null, is_nr: ['median_os'] });
+    expect(buildArmTable([reached, notReached], 'efficacy').rows.find((r) => r.key === 'MEDIAN_OS')?.values).toEqual(['19.9 mo', 'NR']);
+  });
+
+  it('shows a censored value as less-than its stored bound', () => {
+    const censored = arm({ arm_id: 'arm_1', arm_name: 'A', grade_3_plus_trae_pct: 1, is_lt: ['grade_3_plus_trae_pct'] });
+    expect(buildArmTable([censored], 'safety').rows.find((r) => r.key === 'GRADE_3_PLUS_TRAE')?.values).toEqual(['<1.0%']);
+  });
 });

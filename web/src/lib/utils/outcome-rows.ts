@@ -47,10 +47,16 @@ function buildRows(
   const rows: OutcomeRow[] = [];
   const orderedKeys = Object.keys(metricMap);
 
+  // is_nr / is_lt name columns: a not-reached median is stored as null, a "<1%" as the bound 1
+  const flagged = (name: 'is_nr' | 'is_lt') => (Array.isArray(row[name]) ? (row[name] as string[]) : []);
+  const notReached = flagged('is_nr');
+  const lessThan = flagged('is_lt');
+
   for (const [col, attrKey] of Object.entries(OUTCOME_COL_TO_ATTR)) {
     const metric = metricMap[attrKey];
     if (!metric) continue;
-    const value = formatValue((row as Record<string, unknown>)[col], metric);
+    const formatted = formatValue((row as Record<string, unknown>)[col], metric);
+    const value = notReached.includes(col) ? 'NR' : formatted !== null && lessThan.includes(col) ? `<${formatted}` : formatted;
     if (value === null) continue;
     rows.push({
       key: attrKey,
