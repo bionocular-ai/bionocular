@@ -77,5 +77,6 @@ export function buildEfficacyRows(row: TrialOutcomeRow | null | undefined): Outc
 
 export function buildSafetyRows(row: TrialOutcomeRow | null | undefined): OutcomeRow[] {
   if (!row) return [];
-  return buildRows(row, SAFETY_METRICS, SAFETY_SUB_GROUP_ORDER);
+  // N is shown in the efficacy table; the charts still need it in SAFETY_METRICS.
+  return buildRows(row, SAFETY_METRICS, SAFETY_SUB_GROUP_ORDER).filter((r) => r.key !== 'NUMBER_OF_PATIENTS');
 }
