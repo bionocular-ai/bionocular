@@ -32,19 +32,19 @@ export async function proxy(request: NextRequest) {
   // refresh session if expired
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthRoute =
+  // Signed-out-only pages. /auth/callback and /reset-password stay reachable when signed in:
+  // the emailed reset link signs the user in at the callback, then lands on the reset form.
+  const isSignedOutRoute =
     request.nextUrl.pathname.startsWith('/login') ||
     request.nextUrl.pathname.startsWith('/signup') ||
-    request.nextUrl.pathname.startsWith('/forgot-password') ||
-    request.nextUrl.pathname.startsWith('/reset-password') ||
-    request.nextUrl.pathname.startsWith('/auth')
+    request.nextUrl.pathname.startsWith('/forgot-password')
 
-  if (user && isAuthRoute) {
+  if (user && isSignedOutRoute) {
     // Redirect authenticated users away from login
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  if (!user && !isAuthRoute && request.nextUrl.pathname.startsWith('/dashboard')) {
+  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
     // Redirect unauthenticated users away from protected routes
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = '/login'
