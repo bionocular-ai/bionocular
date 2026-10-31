@@ -36,4 +36,16 @@ describe('proxy', () => {
   it('sends signed-out users from the dashboard to login with a callback', async () => {
     expect(await visit('/dashboard/melanoma')).toBe('http://localhost:3000/login?callbackUrl=%2Fdashboard%2Fmelanoma');
   });
+
+  // trial_outcomes is readable only when signed in, so a signed-out trial page would show nothing
+  it('sends signed-out users from trial pages to login, keeping the query', async () => {
+    expect(await visit('/trial/abstract/ASCO_2025_9546?category=melanoma')).toBe(
+      'http://localhost:3000/login?callbackUrl=%2Ftrial%2Fabstract%2FASCO_2025_9546%3Fcategory%3Dmelanoma'
+    );
+  });
+
+  it('lets signed-in users open trial pages', async () => {
+    signedIn = true;
+    expect(await visit('/trial/nct/NCT01234567')).toBeNull();
+  });
 });

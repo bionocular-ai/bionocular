@@ -44,11 +44,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    // Redirect unauthenticated users away from protected routes
-    const redirectUrl = request.nextUrl.clone()
-    redirectUrl.pathname = '/login'
-    redirectUrl.searchParams.set('callbackUrl', request.nextUrl.pathname)
+  const isProtectedRoute =
+    request.nextUrl.pathname.startsWith('/dashboard') ||
+    request.nextUrl.pathname.startsWith('/trial')
+
+  if (!user && isProtectedRoute) {
+    // Redirect unauthenticated users away from protected routes, returning them to the same page and query
+    const redirectUrl = new URL('/login', request.url)
+    redirectUrl.searchParams.set('callbackUrl', request.nextUrl.pathname + request.nextUrl.search)
     return NextResponse.redirect(redirectUrl)
   }
 
