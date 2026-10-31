@@ -12,6 +12,21 @@ describe('conference parsing from abstract ids', () => {
   });
 });
 
+describe('abstract title fallback', () => {
+  it('labels a conference abstract with no title by conference, year and number', () => {
+    expect(extractAbstractDetails({ abstract_id: 'ASCO_2025_9546' })?.title).toBe('ASCO 2025 Abstract 9546');
+    expect(extractAbstractDetails({ abstract_id: 'ESMO_2020_1076O' })?.title).toBe('ESMO 2020 Abstract 1076O');
+  });
+
+  it('prefers a real title', () => {
+    expect(extractAbstractDetails({ abstract_id: 'ASCO_2025_9546', title: 'CheckMate 067' })?.title).toBe('CheckMate 067');
+  });
+
+  it('leaves non-conference ids untitled', () => {
+    expect(extractAbstractDetails({ abstract_id: 'PMID_12345' })?.title).toBe('');
+  });
+});
+
 describe('extractEfficacyAndSafetyMetrics short forms', () => {
   it('gives each result attribute its own label', () => {
     const keys = [

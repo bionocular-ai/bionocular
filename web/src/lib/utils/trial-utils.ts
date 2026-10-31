@@ -452,6 +452,9 @@ export function extractAbstractDetails(abstractData: AbstractDataInput | null) {
                 extractAttributeValue(attributes, 'TRIAL_NAME') ||
                 extractAttributeValue(attributes, 'trial_name') ||
                 abstractData.title || '';
+  // Extraction does not capture abstract titles, and many rows have no NCT id to borrow one from
+  const abstractNumber = abstractId.match(/^(?:ASCO|ESMO|SITC)_\d{4}_(.+)$/)?.[1];
+  const displayTitle = title || (abstractNumber && conference && year ? `${conference} ${year} Abstract ${abstractNumber}` : '');
   const phase = outcomeStr('phase') ||
                 (Array.isArray(trial?.phases) ? (trial!.phases as string[]).join(', ') : '') ||
                 extractAttributeValue(attributes, 'CLINICAL_TRIAL_PHASE') ||
@@ -504,7 +507,7 @@ export function extractAbstractDetails(abstractData: AbstractDataInput | null) {
     conference,
     year,
     nctNumber,
-    title,
+    title: displayTitle,
     phase: cleanPhase,
     sponsor,
     status,
