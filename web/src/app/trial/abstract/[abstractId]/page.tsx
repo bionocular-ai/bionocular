@@ -69,6 +69,9 @@ function ArmValue({ value }: { value: string | null }) {
   if (value === 'ref') {
     return <span className="font-mono text-[11px] font-medium text-gray-500" title="Reference arm for this hazard ratio">ref</span>;
   }
+  if (value === 'NR') {
+    return <abbr title="Not reached" className="font-mono font-bold text-[15px] text-gray-900 no-underline">NR</abbr>;
+  }
   return <span className="font-mono font-bold text-[15px] tabular-nums text-gray-900">{value}</span>;
 }
 
