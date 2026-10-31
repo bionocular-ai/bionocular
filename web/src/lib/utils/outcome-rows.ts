@@ -1,4 +1,4 @@
-import { OUTCOME_COL_TO_ATTR, type TrialOutcomeRow } from '@/lib/api';
+import { CONTROL_ARM_RE, OUTCOME_COL_TO_ATTR, type TrialOutcomeRow } from '@/lib/api';
 import { EFFICACY_METRICS, SAFETY_METRICS, type MetricConfig } from '@/types/analytics';
 
 export interface OutcomeRow {
@@ -31,6 +31,8 @@ function formatValue(raw: unknown, metric: MetricConfig): string | null {
 function formatNumber(value: number, metric: MetricConfig): string {
   if (metric.pValue) return value < 0.001 ? '<0.001' : value.toFixed(3);
   if (metric.integer) return Math.round(value).toString();
+  // HRs live near 1, so one decimal turns 0.55 into 0.6
+  if (metric.key.startsWith('HR_')) return value.toFixed(2);
   const rounded = Math.abs(value) >= 100 ? value.toFixed(0) : value.toFixed(1);
   if (metric.unit === '%') return `${rounded}%`;
   if (metric.unit === 'months') return `${rounded} mo`;
@@ -70,13 +72,55 @@ function buildRows(
   return rows;
 }
 
-export function buildEfficacyRows(row: TrialOutcomeRow | null | undefined): OutcomeRow[] {
-  if (!row) return [];
-  return buildRows(row, EFFICACY_METRICS, EFFICACY_SUB_GROUP_ORDER);
+export interface Arm {
+  name: string;
+  patients: number | null;
+  control: boolean;
 }
 
-export function buildSafetyRows(row: TrialOutcomeRow | null | undefined): OutcomeRow[] {
-  if (!row) return [];
-  // N is shown in the efficacy table; the charts still need it in SAFETY_METRICS.
-  return buildRows(row, SAFETY_METRICS, SAFETY_SUB_GROUP_ORDER).filter((r) => r.key !== 'NUMBER_OF_PATIENTS');
+export interface ArmTableRow extends Omit<OutcomeRow, 'value'> {
+  /** One entry per arm: the formatted value, 'ref' for the control arm of a hazard ratio, or null. */
+  values: (string | null)[];
+}
+
+const isControl = (row: TrialOutcomeRow) => typeof row.arm_name === 'string' && CONTROL_ARM_RE.test(row.arm_name);
+
+/**
+ * One column per arm: experimental arms first in arm_id order, control arms last.
+ * N lives in the arm header, so it is not a row.
+ */
+export function buildArmTable(outcomes: TrialOutcomeRow[], kind: 'efficacy' | 'safety'): { arms: Arm[]; rows: ArmTableRow[] } {
+  const sorted = [...outcomes].sort((a, b) =>
+    Number(isControl(a)) - Number(isControl(b)) ||
+    String(a.arm_id ?? '').localeCompare(String(b.arm_id ?? ''), undefined, { numeric: true }));
+  const arms = sorted.map((row) => ({
+    name: typeof row.arm_name === 'string' && row.arm_name ? row.arm_name : 'Arm',
+    patients: typeof row.num_patients === 'number' ? row.num_patients : null,
+    control: isControl(row),
+  }));
+
+  const [metricMap, order] = kind === 'efficacy'
+    ? [EFFICACY_METRICS, EFFICACY_SUB_GROUP_ORDER]
+    : [SAFETY_METRICS, SAFETY_SUB_GROUP_ORDER];
+  const byKey = new Map<string, ArmTableRow>();
+  sorted.forEach((outcome, i) => {
+    for (const { value, ...meta } of buildRows(outcome, metricMap, order)) {
+      if (meta.key === 'NUMBER_OF_PATIENTS') continue;
+      if (!byKey.has(meta.key)) byKey.set(meta.key, { ...meta, values: sorted.map(() => null) });
+      byKey.get(meta.key)!.values[i] = value;
+    }
+  });
+
+  // A hazard ratio compares against the control arm, which never stores one itself
+  for (const row of byKey.values()) {
+    if (!row.key.startsWith('HR_')) continue;
+    arms.forEach((a, i) => { if (a.control && row.values[i] === null) row.values[i] = 'ref'; });
+  }
+
+  const keys = Object.keys(metricMap);
+  const rank = (r: ArmTableRow) => {
+    const g = order.indexOf(r.subGroup);
+    return (g === -1 ? 999 : g) * 1000 + keys.indexOf(r.key);
+  };
+  return { arms, rows: [...byKey.values()].sort((a, b) => rank(a) - rank(b)) };
 }

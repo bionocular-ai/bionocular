@@ -60,6 +60,7 @@ export function getDbCancerType(slug: string): string {
 import { normalizePhase, normalizeStatus } from './clinical-trials-enums';
 export { PHASE_MAP, STATUS_MAP, normalizePhase, normalizeStatus } from './clinical-trials-enums';
 
+export const CONTROL_ARM_RE = /investigator'?s?\s*choice|control|placebo|standard\s*of\s*care|comparator/i;
 
 export const trialsApi = {
   getAll: async (skip = 0, limit = 100): Promise<TrialsResponse> => {
@@ -132,7 +133,6 @@ export const trialsApi = {
       if (typeof cancerTypes === 'string') return cancerTypes === dbCancerType;
       return false;
     };
-    const CONTROL_ARM_RE = /investigator'?s?\s*choice|control|placebo|standard\s*of\s*care|comparator/i;
     const pickRow = (rows: Record<string, unknown>[]): Record<string, unknown> | null => {
       if (rows.length === 0) return null;
       const sorted = [...rows].sort((a, b) => {
@@ -156,7 +156,9 @@ export const trialsApi = {
       .select('*')
       .eq('abstract_id', abstractId)
       .limit(50);
-    let data: Record<string, unknown> | null = pickRow((byAbstract as Record<string, unknown>[] | null) ?? []);
+    // Every arm of the abstract; pickRow's choice only feeds the header fields
+    let outcomes = ((byAbstract as TrialOutcomeRow[] | null) ?? []);
+    let data: Record<string, unknown> | null = pickRow(outcomes);
 
     // Fallback: abstractId may actually be a NCT id (links can substitute NCT
     // when a row's abstract_id is missing). Try looking up by nct_id and pick
@@ -168,7 +170,10 @@ export const trialsApi = {
         .eq('nct_id', abstractId)
         .limit(50);
       if (nctErr) console.warn('getByAbstractId nct_id lookup error', nctErr);
-      data = pickRow((byNct as Record<string, unknown>[] | null) ?? []);
+      const nctRows = (byNct as TrialOutcomeRow[] | null) ?? [];
+      data = pickRow(nctRows);
+      // These rows can span several abstracts: keep the picked row's arms only
+      outcomes = data?.abstract_id ? nctRows.filter((r) => r.abstract_id === data!.abstract_id) : data ? [data] : [];
     }
 
     // Final fallback: no trial_outcomes row at all. Still try to render a
@@ -242,6 +247,7 @@ export const trialsApi = {
       arm_results: armResults,
       title: (trial?.brief_title as string) || (outcome.trial_name as string) || '',
       outcome,
+      outcomes,
       trial,
       landscape,
     };
@@ -805,6 +811,8 @@ export interface AbstractData {
   source_url?: string; // For web-scraped trials
   arm_results?: Record<string, ArmResult>;
   outcome?: TrialOutcomeRow | null;
+  /** Every arm row of the abstract, unordered. */
+  outcomes?: TrialOutcomeRow[];
   trial?: ClinicalTrialFlat | null;
   landscape?: TrialLandscapeRow | null;
   [key: string]: unknown;

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { UserMenu } from '@/components/user-menu';
 import { trialsApi } from '@/lib/api';
 import { extractAbstractDetails } from '@/lib/utils/trial-utils';
-import { buildEfficacyRows, buildSafetyRows, type OutcomeRow } from '@/lib/utils/outcome-rows';
+import { buildArmTable } from '@/lib/utils/outcome-rows';
 import { Loader2, ExternalLink, Eye, MoreVertical, Users, Activity, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/Logo';
@@ -57,7 +57,50 @@ function MetaCell({ label, value }: { label: string; value: string | null | unde
   );
 }
 
-function OutcomesTable({ rows, emptyLabel }: { rows: OutcomeRow[]; emptyLabel: string }) {
+function ArmValue({ value }: { value: string | null }) {
+  if (value === null) {
+    return (
+      <span className="font-mono text-[15px] text-gray-500" title="Not reported for this arm">
+        <span aria-hidden="true">-</span>
+        <span className="sr-only">Not reported</span>
+      </span>
+    );
+  }
+  if (value === 'ref') {
+    return <span className="font-mono text-[11px] font-medium text-gray-500" title="Reference arm for this hazard ratio">ref</span>;
+  }
+  return <span className="font-mono font-bold text-[15px] tabular-nums text-gray-900">{value}</span>;
+}
+
+function OutcomesTable({ table, label, emptyLabel }: { table: ReturnType<typeof buildArmTable>; label: string; emptyLabel: string }) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  // Which sides have more columns: drives the pinned-column shadow and the right-edge fade
+  const [edges, setEdges] = React.useState({ left: false, right: false });
+
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => setEdges({
+      left: el.scrollLeft > 1,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
+    });
+    el.addEventListener('scroll', update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener('scroll', update);
+      observer.disconnect();
+    };
+  }, []);
+
+  const { arms, rows } = table;
+  // rows arrive sorted by sub-group, so consecutive runs are the groups
+  const groups = rows.reduce<(typeof rows)[]>((acc, row) => {
+    const last = acc[acc.length - 1];
+    if (last && last[0].subGroup === row.subGroup) last.push(row);
+    else acc.push([row]);
+    return acc;
+  }, []);
   if (rows.length === 0) {
     return (
       <div className="rounded-lg border border-gray-200 bg-gray-50 py-8 px-4 text-center">
@@ -66,44 +109,95 @@ function OutcomesTable({ rows, emptyLabel }: { rows: OutcomeRow[]; emptyLabel: s
     );
   }
 
+  const pinned = cn('sticky left-0 transition-shadow', edges.left && 'shadow-[8px_0_10px_-8px_rgba(17,24,39,0.22)]');
+  // A table that scrolls sideways must be reachable by keyboard, so arrow keys can scroll it
+  const scrolls = edges.left || edges.right;
   return (
-    <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-      <table className="w-full border-collapse text-sm">
+    <div
+      ref={scrollRef}
+      tabIndex={scrolls ? 0 : undefined}
+      role={scrolls ? 'region' : undefined}
+      aria-label={scrolls ? `${label}, ${arms.length} arms` : undefined}
+      className={cn(
+        'overflow-x-auto overscroll-x-contain rounded-lg border border-gray-200 bg-white shadow-sm',
+        'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600 focus-visible:[mask-image:none]',
+        edges.right && '[mask-image:linear-gradient(to_right,#000_calc(100%-32px),transparent)]',
+      )}
+    >
+      <table className="w-full border-separate border-spacing-0 text-sm">
         <thead>
-          <tr className="bg-gray-50 border-b border-gray-200">
-            <th className="text-left py-3 px-4 text-xs font-bold text-gray-700 uppercase tracking-wider w-[140px]">Group</th>
-            <th className="text-left py-3 px-4 text-xs font-bold text-gray-700 uppercase tracking-wider">Metric</th>
-            <th className="text-right py-3 px-4 text-xs font-bold text-gray-700 uppercase tracking-wider w-[140px]">Value</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200">
-          {rows.map((row, idx) => {
-            const showGroup = idx === 0 || rows[idx - 1].subGroup !== row.subGroup;
-            return (
-              <tr key={row.key} className="hover:bg-gray-50 transition-colors">
-                <td className="py-2.5 px-4 align-top">
-                  {showGroup && (
-                    <span className="inline-flex items-center text-[11px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 border border-blue-100 rounded px-2 py-0.5">
-                      {row.subGroup}
+          <tr>
+            <th scope="col" className={cn(pinned, 'z-20 sm:w-2/5 bg-gray-50 border-b border-gray-200 py-3 px-2.5 sm:px-4 text-left align-bottom text-xs font-bold text-gray-700 uppercase tracking-wider')}>
+              Metric
+            </th>
+            {arms.map((arm, i) => (
+              <th
+                key={i}
+                scope="col"
+                className={cn(
+                  'w-px sm:w-auto min-w-[72px] sm:min-w-[96px] border-b border-gray-200 py-3 px-2.5 sm:px-4 text-right align-bottom',
+                  arm.control ? 'bg-gray-100' : 'bg-gray-50',
+                )}
+              >
+                <span className="block text-[11px] sm:text-xs font-semibold leading-snug text-gray-900">{arm.name}</span>
+                <span className="mt-1 block font-mono text-[11px] font-medium text-gray-500">
+                  {arm.patients !== null && `n ${arm.patients}`}
+                  {arm.control && (
+                    <span className="ml-1 inline-block rounded-sm border border-gray-200 bg-white px-1 font-sans text-[9px] font-bold uppercase tracking-wider">
+                      Control
                     </span>
                   )}
-                </td>
-                <td className="py-2.5 px-4">
-                  <div className="text-sm font-medium text-gray-900">{row.label}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">{row.description}</div>
-                </td>
-                <td className="py-2.5 px-4 text-right">
-                  <span className="font-mono font-bold text-[15px] tabular-nums text-gray-900">
-                    {row.value}
-                  </span>
-                </td>
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {groups.map((group, g) => (
+          <tbody key={group[0].subGroup}>
+            <tr>
+              <th
+                colSpan={arms.length + 1}
+                scope="rowgroup"
+                className={cn('bg-gray-50/60 px-2.5 sm:px-4 pt-2.5 pb-1.5 text-left', g > 0 && 'border-t border-gray-200')}
+              >
+                <span className="sticky left-2.5 sm:left-4 text-[11px] font-bold uppercase tracking-wider text-blue-700">{group[0].subGroup}</span>
+              </th>
+            </tr>
+            {group.map((row, idx) => (
+              <tr key={row.key} className="group">
+                <th
+                  scope="row"
+                  className={cn(pinned, 'z-10 bg-white group-hover:bg-slate-100 py-2.5 px-2.5 sm:px-4 text-left font-normal', idx > 0 && 'border-t border-gray-100')}
+                >
+                  <div className="text-sm font-medium text-gray-900 whitespace-nowrap">{row.label}</div>
+                  <div className="hidden sm:block text-xs text-gray-500 mt-0.5">{row.description}</div>
+                </th>
+                {row.values.map((value, i) => (
+                  <td
+                    key={i}
+                    className={cn(
+                      'py-2.5 px-2.5 sm:px-4 text-right whitespace-nowrap group-hover:bg-slate-100',
+                      arms[i].control && 'bg-gray-50/70',
+                      idx > 0 && 'border-t border-gray-100',
+                    )}
+                  >
+                    <ArmValue value={value} />
+                  </td>
+                ))}
               </tr>
-            );
-          })}
-        </tbody>
+            ))}
+          </tbody>
+        ))}
       </table>
     </div>
   );
+}
+
+function metricCount(table: ReturnType<typeof buildArmTable>) {
+  const n = table.rows.length;
+  if (n === 0) return 'No reported metrics';
+  const arms = table.arms.length > 1 ? ` · ${table.arms.length} arms` : '';
+  return `${n} reported metric${n === 1 ? '' : 's'}${arms}`;
 }
 
 export default function AbstractDetailPage() {
@@ -196,9 +290,14 @@ export default function AbstractDetailPage() {
     ? `${details.conference} ${details.year}`
     : details.conference || '';
 
-  const enrollment = details.numberOfPatients ? Number(details.numberOfPatients) : null;
-  const efficacyRows = buildEfficacyRows(data.outcome ?? null);
-  const safetyRows = buildSafetyRows(data.outcome ?? null);
+  const outcomes = data.outcomes?.length ? data.outcomes : data.outcome ? [data.outcome] : [];
+  const efficacy = buildArmTable(outcomes, 'efficacy');
+  const safety = buildArmTable(outcomes, 'safety');
+  const armNames = [...new Set(efficacy.arms.map((arm) => arm.name))];
+  const treatment = armNames.length > 1 ? armNames.join(' vs ') : details.treatment;
+  // Registered enrollment when the trial has one, else the abstract's arms added up
+  const armTotal = efficacy.arms.reduce((sum, arm) => sum + (arm.patients ?? 0), 0);
+  const enrollment = typeof data.trial?.enrollment_count === 'number' ? data.trial.enrollment_count : armTotal || null;
 
   return (
     <div className="flex flex-col min-h-screen w-full min-w-0 overflow-x-hidden bg-white">
@@ -229,7 +328,7 @@ export default function AbstractDetailPage() {
                 <CardHeader className="pb-5 pt-6 px-5 sm:px-6">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col-reverse items-start gap-2 sm:flex-row sm:justify-between sm:gap-3">
                         <CardTitle className="text-xl sm:text-2xl font-bold text-gray-900 leading-snug break-words mb-2 flex-1 min-w-0">
                           {details.title || 'Untitled Abstract'}
                         </CardTitle>
@@ -254,7 +353,7 @@ export default function AbstractDetailPage() {
                             Phase {details.phase}
                           </span>
                         )}
-                        {details.status && details.status !== 'Unknown' && (
+                        {details.status && details.status.toLowerCase() !== 'unknown' && (
                           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200 whitespace-nowrap">
                             {details.status}
                           </span>
@@ -295,7 +394,7 @@ export default function AbstractDetailPage() {
                     'pt-5 border-t border-gray-100',
                   )}>
                     <MetaCell label="Company" value={details.sponsor} />
-                    <MetaCell label="Treatment" value={details.treatment} />
+                    <MetaCell label="Treatment" value={treatment} />
                     <MetaCell label="Indication" value={details.indication} />
                     <MetaCell label="Line of Therapy" value={details.lineOfTherapy} />
                     <MetaCell label="Target" value={details.target} />
@@ -318,15 +417,13 @@ export default function AbstractDetailPage() {
                     <div>
                       <CardTitle className="text-base font-bold tracking-wide text-gray-900">Efficacy</CardTitle>
                       <CardDescription className="text-xs text-gray-500 mt-0.5">
-                        {efficacyRows.length > 0
-                          ? `${efficacyRows.length} reported metric${efficacyRows.length === 1 ? '' : 's'}`
-                          : 'No reported metrics'}
+                        {metricCount(efficacy)}
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="px-5 sm:px-6 pt-0 pb-6">
-                  <OutcomesTable rows={efficacyRows} emptyLabel="No efficacy data available" />
+                  <OutcomesTable table={efficacy} label="Efficacy" emptyLabel="No efficacy data available" />
                 </CardContent>
               </Card>
 
@@ -340,15 +437,13 @@ export default function AbstractDetailPage() {
                     <div>
                       <CardTitle className="text-base font-bold tracking-wide text-gray-900">Safety</CardTitle>
                       <CardDescription className="text-xs text-gray-500 mt-0.5">
-                        {safetyRows.length > 0
-                          ? `${safetyRows.length} reported metric${safetyRows.length === 1 ? '' : 's'}`
-                          : 'No reported metrics'}
+                        {metricCount(safety)}
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="px-5 sm:px-6 pt-0 pb-6">
-                  <OutcomesTable rows={safetyRows} emptyLabel="No safety data available" />
+                  <OutcomesTable table={safety} label="Safety" emptyLabel="No safety data available" />
                 </CardContent>
               </Card>
             </div>
