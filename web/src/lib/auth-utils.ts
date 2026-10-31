@@ -13,9 +13,11 @@ export function isValidEmail(email: string): boolean {
   return emailRegex.test(email);
 }
 
+// Production enforces a longer minimum; the signup and reset forms show it as a hint
+export const MIN_PASSWORD_LENGTH = isDevelopment ? 6 : 8;
+
 /**
  * Validate password strength
- * For production, enforce stronger requirements
  */
 export function validatePassword(password: string): {
   valid: boolean;
@@ -25,13 +27,8 @@ export function validatePassword(password: string): {
     return { valid: false, error: 'Password is required' };
   }
 
-  if (password.length < 6) {
-    return { valid: false, error: 'Password must be at least 6 characters' };
-  }
-
-  // In production, add more strict requirements
-  if (!isDevelopment && password.length < 8) {
-    return { valid: false, error: 'Password must be at least 8 characters' };
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return { valid: false, error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` };
   }
 
   return { valid: true };
