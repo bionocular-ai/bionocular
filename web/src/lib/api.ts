@@ -58,6 +58,7 @@ export function getDbCancerType(slug: string): string {
 }
 
 import { normalizePhase, normalizeStatus } from './clinical-trials-enums';
+import { GRADE_3_PLUS_TERMS } from './agent/tools/schema';
 export { PHASE_MAP, STATUS_MAP, normalizePhase, normalizeStatus } from './clinical-trials-enums';
 
 
@@ -1069,15 +1070,12 @@ export interface LiveTickerResponse {
 // find values without any JSON parsing.
 // Per-toxicity grade 3+ columns are grade_3_plus_{ae,teae,trae}_<term>; the
 // metric keys spell the same thing GRADE_3_PLUS_{AE,TEAE,TRAE}_<TERM>, except
-// for two terms. Terms with no metric definition yet are left out.
-const GRADE_3_PLUS_TERMS = [
-  'ir_ae', 'crs', 'thrombocytopenia', 'neutropenia', 'leukopenia', 'nausea',
-  'anemia', 'diarrhea', 'colitis', 'hyperglycemia', 'neutrophil_count_decreased',
-  'dyspnea', 'pyrexia', 'bleeding', 'pruritus', 'rash', 'pneumonia',
-  'thyroiditis', 'hypophysitis', 'hepatitis', 'pneumonitis', 'alt_increased',
-  'wbc_decreased',
-];
-const GRADE_3_PLUS_TERM_KEYS: Record<string, string> = { ir_ae: 'IMMUNE_RELATED', alt_increased: 'ALANINE_AMINOTRANSFERASE' };
+// for three terms.
+const GRADE_3_PLUS_TERM_KEYS: Record<string, string> = {
+  ir_ae: 'IMMUNE_RELATED',
+  alt_increased: 'ALANINE_AMINOTRANSFERASE',
+  ast_increased: 'ASPARTATE_AMINOTRANSFERASE',
+};
 const GRADE_3_PLUS_COLUMNS: Record<string, string> = Object.fromEntries(
   ['ae', 'teae', 'trae'].flatMap((family) => GRADE_3_PLUS_TERMS.map((term) => [
     `grade_3_plus_${family}_${term}`,

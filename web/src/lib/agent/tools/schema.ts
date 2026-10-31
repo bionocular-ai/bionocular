@@ -106,7 +106,7 @@ const RATE_MONTHS = [6, 9, 12, 18, 24, 36, 48] as const;
 
 // Per-toxicity grade-3+ terms. Identical across the ae/trae/teae families, so
 // this list is written once and expanded three ways below.
-const GRADE_3_PLUS_TERMS = [
+export const GRADE_3_PLUS_TERMS = [
   'ir_ae', 'crs', 'thrombocytopenia', 'neutropenia', 'leukopenia', 'nausea',
   'anemia', 'diarrhea', 'colitis', 'hyperglycemia', 'neutrophil_count_decreased',
   'dyspnea', 'pyrexia', 'bleeding', 'pruritus', 'rash', 'pneumonia',

@@ -190,6 +190,12 @@ const SAFETY_OPTIONS = [
   { value: 'GRADE_3_PLUS_AE_PNEUMONITIS', label: 'G3+ Pneumonitis (%)' },
   { value: 'GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE', label: 'G3+ ALT Increased (%)' },
   { value: 'GRADE_3_PLUS_AE_WBC_DECREASED', label: 'G3+ WBC Decreased (%)' },
+  { value: 'GRADE_3_PLUS_AE_ASPARTATE_AMINOTRANSFERASE', label: 'G3+ AST Increased (%)' },
+  { value: 'GRADE_3_PLUS_AE_FATIGUE', label: 'G3+ Fatigue (%)' },
+  { value: 'GRADE_3_PLUS_AE_HYPERTHYROIDISM', label: 'G3+ Hyperthyroidism (%)' },
+  { value: 'GRADE_3_PLUS_AE_HYPOTHYROIDISM', label: 'G3+ Hypothyroidism (%)' },
+  { value: 'GRADE_3_PLUS_AE_IRR', label: 'G3+ Infusion-related Reaction (%)' },
+  { value: 'GRADE_3_PLUS_AE_VOMITING', label: 'G3+ Vomiting (%)' },
   { value: 'GRADE_3_PLUS_AE_IMMUNE_RELATED', label: 'G3+ Immune-related AE (%)' },
   // Grade 3+ TRAE Specific
   { value: 'GRADE_3_PLUS_TRAE_IMMUNE_RELATED', label: 'G3+ TRAE irAE (%)' },
@@ -215,6 +221,12 @@ const SAFETY_OPTIONS = [
   { value: 'GRADE_3_PLUS_TRAE_PNEUMONITIS', label: 'G3+ TRAE Pneumonitis (%)' },
   { value: 'GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE', label: 'G3+ TRAE ALT (%)' },
   { value: 'GRADE_3_PLUS_TRAE_WBC_DECREASED', label: 'G3+ TRAE WBC↓ (%)' },
+  { value: 'GRADE_3_PLUS_TRAE_ASPARTATE_AMINOTRANSFERASE', label: 'G3+ TRAE AST (%)' },
+  { value: 'GRADE_3_PLUS_TRAE_FATIGUE', label: 'G3+ TRAE Fatigue (%)' },
+  { value: 'GRADE_3_PLUS_TRAE_HYPERTHYROIDISM', label: 'G3+ TRAE Hyperthyroidism (%)' },
+  { value: 'GRADE_3_PLUS_TRAE_HYPOTHYROIDISM', label: 'G3+ TRAE Hypothyroidism (%)' },
+  { value: 'GRADE_3_PLUS_TRAE_IRR', label: 'G3+ TRAE IRR (%)' },
+  { value: 'GRADE_3_PLUS_TRAE_VOMITING', label: 'G3+ TRAE Vomiting (%)' },
   // Grade 3+ TEAE Specific
   { value: 'GRADE_3_PLUS_TEAE_IMMUNE_RELATED', label: 'G3+ TEAE irAE (%)' },
   { value: 'GRADE_3_PLUS_TEAE_CRS', label: 'G3+ TEAE CRS (%)' },
@@ -239,6 +251,12 @@ const SAFETY_OPTIONS = [
   { value: 'GRADE_3_PLUS_TEAE_PNEUMONITIS', label: 'G3+ TEAE Pneumonitis (%)' },
   { value: 'GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE', label: 'G3+ TEAE ALT (%)' },
   { value: 'GRADE_3_PLUS_TEAE_WBC_DECREASED', label: 'G3+ TEAE WBC↓ (%)' },
+  { value: 'GRADE_3_PLUS_TEAE_ASPARTATE_AMINOTRANSFERASE', label: 'G3+ TEAE AST (%)' },
+  { value: 'GRADE_3_PLUS_TEAE_FATIGUE', label: 'G3+ TEAE Fatigue (%)' },
+  { value: 'GRADE_3_PLUS_TEAE_HYPERTHYROIDISM', label: 'G3+ TEAE Hyperthyroidism (%)' },
+  { value: 'GRADE_3_PLUS_TEAE_HYPOTHYROIDISM', label: 'G3+ TEAE Hypothyroidism (%)' },
+  { value: 'GRADE_3_PLUS_TEAE_IRR', label: 'G3+ TEAE IRR (%)' },
+  { value: 'GRADE_3_PLUS_TEAE_VOMITING', label: 'G3+ TEAE Vomiting (%)' },
 ];
 
 const Z_AXIS_OPTIONS = [

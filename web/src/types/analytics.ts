@@ -242,6 +242,12 @@ export const SAFETY_METRICS: Record<string, MetricConfig> = {
   GRADE_3_PLUS_AE_PNEUMONITIS: { key: 'GRADE_3_PLUS_AE_PNEUMONITIS', label: 'G3+ Pneumonitis', unit: '%', description: 'Grade 3+ Pneumonitis', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
   GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE: { key: 'GRADE_3_PLUS_AE_ALANINE_AMINOTRANSFERASE', label: 'G3+ ALT', unit: '%', description: 'Grade 3+ Alanine Aminotransferase', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
   GRADE_3_PLUS_AE_WBC_DECREASED: { key: 'GRADE_3_PLUS_AE_WBC_DECREASED', label: 'G3+ WBC↓', unit: '%', description: 'Grade 3+ WBC Decreased', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
+  GRADE_3_PLUS_AE_ASPARTATE_AMINOTRANSFERASE: { key: 'GRADE_3_PLUS_AE_ASPARTATE_AMINOTRANSFERASE', label: 'G3+ AST', unit: '%', description: 'Grade 3+ Aspartate Aminotransferase', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
+  GRADE_3_PLUS_AE_FATIGUE: { key: 'GRADE_3_PLUS_AE_FATIGUE', label: 'G3+ Fatigue', unit: '%', description: 'Grade 3+ Fatigue', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
+  GRADE_3_PLUS_AE_HYPERTHYROIDISM: { key: 'GRADE_3_PLUS_AE_HYPERTHYROIDISM', label: 'G3+ Hyperthyroidism', unit: '%', description: 'Grade 3+ Hyperthyroidism', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
+  GRADE_3_PLUS_AE_HYPOTHYROIDISM: { key: 'GRADE_3_PLUS_AE_HYPOTHYROIDISM', label: 'G3+ Hypothyroidism', unit: '%', description: 'Grade 3+ Hypothyroidism', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
+  GRADE_3_PLUS_AE_IRR: { key: 'GRADE_3_PLUS_AE_IRR', label: 'G3+ IRR', unit: '%', description: 'Grade 3+ Infusion-related Reaction', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
+  GRADE_3_PLUS_AE_VOMITING: { key: 'GRADE_3_PLUS_AE_VOMITING', label: 'G3+ Vomiting', unit: '%', description: 'Grade 3+ Vomiting', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
   GRADE_3_PLUS_AE_IMMUNE_RELATED: { key: 'GRADE_3_PLUS_AE_IMMUNE_RELATED', label: 'G3+ irAE', unit: '%', description: 'Grade 3+ Immune-related AE', lowerIsBetter: true, subGroup: 'Grade 3+ AE' },
   
   // Grade 3+ TRAE Specific
@@ -268,6 +274,12 @@ export const SAFETY_METRICS: Record<string, MetricConfig> = {
   GRADE_3_PLUS_TRAE_PNEUMONITIS: { key: 'GRADE_3_PLUS_TRAE_PNEUMONITIS', label: 'G3+ TRAE Pneumonitis', unit: '%', description: 'Grade 3+ TRAE Pneumonitis', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
   GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE: { key: 'GRADE_3_PLUS_TRAE_ALANINE_AMINOTRANSFERASE', label: 'G3+ TRAE ALT', unit: '%', description: 'Grade 3+ TRAE ALT', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
   GRADE_3_PLUS_TRAE_WBC_DECREASED: { key: 'GRADE_3_PLUS_TRAE_WBC_DECREASED', label: 'G3+ TRAE WBC↓', unit: '%', description: 'Grade 3+ TRAE WBC Decreased', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
+  GRADE_3_PLUS_TRAE_ASPARTATE_AMINOTRANSFERASE: { key: 'GRADE_3_PLUS_TRAE_ASPARTATE_AMINOTRANSFERASE', label: 'G3+ TRAE AST', unit: '%', description: 'Grade 3+ TRAE Aspartate Aminotransferase', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
+  GRADE_3_PLUS_TRAE_FATIGUE: { key: 'GRADE_3_PLUS_TRAE_FATIGUE', label: 'G3+ TRAE Fatigue', unit: '%', description: 'Grade 3+ TRAE Fatigue', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
+  GRADE_3_PLUS_TRAE_HYPERTHYROIDISM: { key: 'GRADE_3_PLUS_TRAE_HYPERTHYROIDISM', label: 'G3+ TRAE Hyperthyroidism', unit: '%', description: 'Grade 3+ TRAE Hyperthyroidism', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
+  GRADE_3_PLUS_TRAE_HYPOTHYROIDISM: { key: 'GRADE_3_PLUS_TRAE_HYPOTHYROIDISM', label: 'G3+ TRAE Hypothyroidism', unit: '%', description: 'Grade 3+ TRAE Hypothyroidism', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
+  GRADE_3_PLUS_TRAE_IRR: { key: 'GRADE_3_PLUS_TRAE_IRR', label: 'G3+ TRAE IRR', unit: '%', description: 'Grade 3+ TRAE Infusion-related Reaction', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
+  GRADE_3_PLUS_TRAE_VOMITING: { key: 'GRADE_3_PLUS_TRAE_VOMITING', label: 'G3+ TRAE Vomiting', unit: '%', description: 'Grade 3+ TRAE Vomiting', lowerIsBetter: true, subGroup: 'Grade 3+ TRAE' },
   
   // Grade 3+ TEAE Specific
   GRADE_3_PLUS_TEAE_IMMUNE_RELATED: { key: 'GRADE_3_PLUS_TEAE_IMMUNE_RELATED', label: 'G3+ TEAE irAE', unit: '%', description: 'Grade 3+ TEAE Immune-related AE', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
@@ -293,6 +305,12 @@ export const SAFETY_METRICS: Record<string, MetricConfig> = {
   GRADE_3_PLUS_TEAE_PNEUMONITIS: { key: 'GRADE_3_PLUS_TEAE_PNEUMONITIS', label: 'G3+ TEAE Pneumonitis', unit: '%', description: 'Grade 3+ TEAE Pneumonitis', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
   GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE: { key: 'GRADE_3_PLUS_TEAE_ALANINE_AMINOTRANSFERASE', label: 'G3+ TEAE ALT', unit: '%', description: 'Grade 3+ TEAE ALT', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
   GRADE_3_PLUS_TEAE_WBC_DECREASED: { key: 'GRADE_3_PLUS_TEAE_WBC_DECREASED', label: 'G3+ TEAE WBC↓', unit: '%', description: 'Grade 3+ TEAE WBC Decreased', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
+  GRADE_3_PLUS_TEAE_ASPARTATE_AMINOTRANSFERASE: { key: 'GRADE_3_PLUS_TEAE_ASPARTATE_AMINOTRANSFERASE', label: 'G3+ TEAE AST', unit: '%', description: 'Grade 3+ TEAE Aspartate Aminotransferase', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
+  GRADE_3_PLUS_TEAE_FATIGUE: { key: 'GRADE_3_PLUS_TEAE_FATIGUE', label: 'G3+ TEAE Fatigue', unit: '%', description: 'Grade 3+ TEAE Fatigue', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
+  GRADE_3_PLUS_TEAE_HYPERTHYROIDISM: { key: 'GRADE_3_PLUS_TEAE_HYPERTHYROIDISM', label: 'G3+ TEAE Hyperthyroidism', unit: '%', description: 'Grade 3+ TEAE Hyperthyroidism', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
+  GRADE_3_PLUS_TEAE_HYPOTHYROIDISM: { key: 'GRADE_3_PLUS_TEAE_HYPOTHYROIDISM', label: 'G3+ TEAE Hypothyroidism', unit: '%', description: 'Grade 3+ TEAE Hypothyroidism', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
+  GRADE_3_PLUS_TEAE_IRR: { key: 'GRADE_3_PLUS_TEAE_IRR', label: 'G3+ TEAE IRR', unit: '%', description: 'Grade 3+ TEAE Infusion-related Reaction', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
+  GRADE_3_PLUS_TEAE_VOMITING: { key: 'GRADE_3_PLUS_TEAE_VOMITING', label: 'G3+ TEAE Vomiting', unit: '%', description: 'Grade 3+ TEAE Vomiting', lowerIsBetter: true, subGroup: 'Grade 3+ TEAE' },
 };
 
 export const ALL_METRICS: Record<string, MetricConfig> = {
