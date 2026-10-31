@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Loader2, Mail } from 'lucide-react';
+import { Mail } from 'lucide-react';
+import { AuthAlert, AuthCard, AuthField, AuthSubmit, authLinkClass } from '@/components/auth/AuthCard';
 import { isValidEmail } from '@/lib/auth-utils';
+import { ROUTES } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 
-function ForgotPasswordForm() {
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -30,7 +29,7 @@ function ForgotPasswordForm() {
     try {
       const supabase = createClient();
       await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${ROUTES.RESET_PASSWORD}`,
       });
       // Always show success — never reveal whether the email exists
       setSubmitted(true);
@@ -41,132 +40,49 @@ function ForgotPasswordForm() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ background: '#0E3547' }}>
-      <div className="absolute inset-0" style={{
-        background: `
-          radial-gradient(ellipse 130% 90% at 15% 50%, rgba(27,79,101,0.92) 0%, transparent 55%),
-          radial-gradient(ellipse 80% 70% at 60% 30%, rgba(122,193,162,0.18) 0%, transparent 50%),
-          radial-gradient(ellipse 100% 100% at 80% 80%, rgba(27,79,101,0.5) 0%, transparent 60%),
-          #0E3547
-        `
-      }} />
-      <div className="absolute inset-0 opacity-20">
-        <svg className="absolute top-0 left-0 w-full h-full" viewBox="0 0 1200 800" preserveAspectRatio="none">
-          <path d="M0,200 Q300,150 600,200 T1200,200 L1200,800 L0,800 Z" fill="url(#wave-gradient)" className="opacity-50" />
-          <path d="M0,300 Q400,250 800,300 T1200,300 L1200,800 L0,800 Z" fill="url(#wave-gradient)" className="opacity-30" />
-          <defs>
-            <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#7AC1A2" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#1B4F65" stopOpacity="0.1" />
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
+  const errorId = error ? 'forgot-error' : undefined;
 
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-white rounded-2xl relative z-10">
-        <CardHeader className="pb-8 pt-10">
-          <div className="flex justify-center mb-4">
-            <div className="relative w-24 h-24">
-              <Image src="/logo.svg" alt="Bionocular Logo" fill sizes="96px" className="object-contain" priority />
-            </div>
+  return (
+    <AuthCard title="Reset password">
+      {submitted ? (
+        <div className="space-y-6 text-center">
+          <AuthAlert tone="success">
+            If an account exists for <strong>{email}</strong>, you will receive a password reset link shortly.
+          </AuthAlert>
+          <Link href={ROUTES.LOGIN} className={cn(authLinkClass, 'font-semibold')}>
+            Back to sign in
+          </Link>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} noValidate className="space-y-5">
+          <p className="text-sm text-gray-600 text-center">
+            Enter your email and we&apos;ll send you a link to reset your password.
+          </p>
+
+          <AuthField
+            id="email"
+            label="Email"
+            icon={Mail}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+            autoComplete="email"
+            errorId={errorId}
+          />
+
+          {error && <AuthAlert id={errorId} tone="error">{error}</AuthAlert>}
+
+          <AuthSubmit loading={isLoading} loadingLabel="Sending…">Send reset link</AuthSubmit>
+
+          <div className="text-center">
+            <Link href={ROUTES.LOGIN} className={authLinkClass}>
+              Back to sign in
+            </Link>
           </div>
-          <h1 className="text-3xl font-bold text-center -mt-1" style={{ color: '#1B4F65' }}>
-            Reset Password
-          </h1>
-        </CardHeader>
-        <CardContent className="px-8 pb-8">
-          {submitted ? (
-            <div className="space-y-6 text-center">
-              <div className="p-3.5 text-sm text-[#1B4F65] bg-[#7AC1A2]/20 border border-[#7AC1A2]/40 rounded-lg">
-                If an account exists for <strong>{email}</strong>, you will receive a password reset link shortly.
-              </div>
-              <Link
-                href="/login"
-                className="text-sm font-semibold hover:underline hover:opacity-80 transition-opacity block"
-                style={{ color: '#1B4F65' }}
-              >
-                Back to Login
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <p className="text-sm text-gray-600 text-center">
-                Enter your email and we&apos;ll send you a link to reset your password.
-              </p>
-
-              {error && (
-                <div className="p-3.5 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
-                  {error}
-                </div>
-              )}
-
-              <div className="relative">
-                <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#1B4F65' }}>
-                  <Mail className="h-5 w-5" />
-                </div>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isLoading}
-                  autoComplete="email"
-                  className="h-12 pl-11 rounded-lg border-gray-300 focus:border-[#1B4F65] focus:ring-[#1B4F65]"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-12 text-base font-semibold rounded-lg text-white shadow-md hover:shadow-lg transition-all"
-                style={{ backgroundColor: '#1B4F65' }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#16404F')}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#1B4F65')}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Sending...
-                  </>
-                ) : (
-                  'Send Reset Link'
-                )}
-              </Button>
-
-              <div className="text-center">
-                <Link
-                  href="/login"
-                  className="text-sm hover:underline hover:opacity-80 transition-opacity"
-                  style={{ color: '#1B4F65' }}
-                >
-                  Back to Login
-                </Link>
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-export default function ForgotPasswordPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0E3547' }}>
-        <Card className="w-full max-w-md shadow-2xl border-0 bg-white rounded-2xl">
-          <CardContent className="p-8">
-            <div className="flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#1B4F65' }} />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    }>
-      <ForgotPasswordForm />
-    </Suspense>
+        </form>
+      )}
+    </AuthCard>
   );
 }
