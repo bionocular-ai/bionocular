@@ -8,7 +8,7 @@
 // from the live DOM.
 
 import { clamp, sp, track, track2, window01, easeInOutCubic, easeOutCubic, lift } from './lib/motion.js';
-import { rrect, risingText, drawCursor, font, liftOut } from './lib/draw.js';
+import { rrect, riseWords, drawCursor, font, liftOut } from './lib/draw.js';
 
 export const FILM = { title: 'km-chapter', w: 1920, h: 1080, dur: 17.2, bpm: 120 };
 const { w: W, h: H } = FILM;
@@ -383,13 +383,12 @@ function drawer(g, T, px) {
 
 // "Upload your own curves - coming soon", the button's own tooltip copy, in our type.
 function caption(g, T) {
-  const p = sp(T - T_CAPTION, 'snappy');
-  if (p <= 0) return;
+  if (T <= T_CAPTION) return;
   const [x, y, w] = R.upload;
   // Below the HR chips, which sit just under the button.
   const [rx, by] = toScreen(T, [x + w, R.hr[0][1] + R.hr[0][3]]);
   g.font = font(600, 40, 'display');
-  risingText(g, 'Upload your own curves - coming soon', rx, by + 72, p, 0, 40, C.ink, 'right');
+  riseWords(g, 'Upload your own curves - coming soon', rx, by + 72, T, T_CAPTION, 0, C.ink, { align: 'right' });
 }
 
 function cursor(g, T) {

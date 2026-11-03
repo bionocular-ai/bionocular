@@ -1,13 +1,13 @@
 // The master film's joins (docs/storyboard-master.md): one app window from sign-in to the
 // last chapter, every jump a click inside it. Sign-in on the real /login page, the card
 // growing into the app sheet; the AI Agent rail click into Question 1, typed into the real
-// composer; Question 2 typed as a follow-up under Question 1's answer; the KM rail click.
-// Every screen is a 2x capture from scripts/capture-agent.sh, all coordinates its CSS px.
+// composer; Question 2 typed into the composer on the bare canvas (master v2's, captures in
+// assets/screens/composer/); the KM rail click. The app screens are 2x captures from
+// scripts/capture-agent.sh, all coordinates their CSS px.
 // Each beat is a pure function of its own local time t; the master places them.
 
 import { clamp, lerp, sp, track, track2, window01, easeInOutCubic } from './lib/motion.js';
-import { rrect, risingText, drawCursor, font } from './lib/draw.js';
-import { focus } from './lib/cards.js';
+import { rrect, risingText, riseWords, drawCursor, font } from './lib/draw.js';
 import { C } from './film.js';
 import * as pages from './pages.js';
 
@@ -27,11 +27,10 @@ const LOGIN = {
 const APP = {
   effHover: image('eff-agent-hover'), // the Efficacy hub at 1440x1500, AI Agent hovered on the rail
   empty: image('agent-empty'),
-  q1Thread: image('q1-thread'), // Question 1's answer (2026-10-08) at its foot
   q2Thread: image('q2-thread'),
   kmHover: image('q2-thread-km-hover'),
 };
-// Typing changes only a band of the frame; q1c/ and q2c/ hold those bands, one per word.
+// Typing changes only a band of the frame; q1c/ holds those bands, one per word.
 const band = (dir, n) => Array.from({ length: n }, (_, i) => image(`${dir}c/${String(i + 1).padStart(2, '0')}`));
 const ASK = {
   q1: {
@@ -39,12 +38,6 @@ const ASK = {
     band: [376, 340, 792, 192],
     pill: [[382, 419, 780, 50], [382, 409, 780, 70]], // one line, then two from word 15 (it grows both ways)
     wrap: 15, send: [[1119, 426, 36, 36], [1119, 436, 36, 36]],
-  },
-  q2: {
-    words: band('q2', 25), hover: image('q2c/hover'), base: APP.q1Thread,
-    band: [224, 770, 1096, 126],
-    pill: [[232, 838, 1080, 50], [232, 818, 1080, 70]], // under the thread it grows upward, from word 19
-    wrap: 19, send: [[1269, 845, 36, 36], [1269, 845, 36, 36]],
   },
 };
 export const IMAGES = [...Object.values(LOGIN).filter((v) => v instanceof Image), ...LOGIN.email, ...LOGIN.pass,
@@ -76,10 +69,10 @@ function blurred(g, b, alpha, paint) {
   g.restore();
 }
 
-// "Question 1 (Simple)": the chapter's name comes into focus top left, as on a title card,
+// "Question 1 (Simple)": the chapter's name rises in word by word top left, as on a title card,
 // over a wash of the canvas so it never sits on the page's own text.
-function label(g, title, aside, p, q) {
-  const a = clamp(p) * (1 - clamp(q));
+function label(g, title, aside, t, tIn, q) {
+  const a = clamp(sp(t - tIn, 'ui')) * (1 - clamp(q));
   if (a > 0) {
     const wash = g.createLinearGradient(0, 0, 0, 300);
     wash.addColorStop(0, 'rgba(247, 250, 249, 0.97)');
@@ -91,19 +84,15 @@ function label(g, title, aside, p, q) {
     g.fillRect(0, 0, W, 300);
     g.restore();
   }
-  focus(g, p, q, () => {
-    g.textAlign = 'left';
-    g.textBaseline = 'alphabetic';
-    g.font = font(600, 48, 'display');
-    g.letterSpacing = '-1.2px';
-    g.fillStyle = C.primary;
-    g.fillText(title, 160, 170);
-    const x = 160 + g.measureText(title + ' ').width;
-    g.font = font(400, 48, 'display');
-    g.fillStyle = C.muted;
-    g.fillText(aside, x, 170);
-    g.letterSpacing = '0px';
-  });
+  g.save();
+  g.letterSpacing = '-1.2px';
+  g.font = font(600, 48, 'display');
+  riseWords(g, title, 160, 170, t, tIn, q, C.primary);
+  const x = 160 + g.measureText(title + ' ').width;
+  g.font = font(400, 48, 'display');
+  riseWords(g, aside, x, 170, t, tIn + 0.06 * title.split(' ').length, q, C.muted);
+  g.letterSpacing = '0px';
+  g.restore();
 }
 
 // The chapters' question chip (film.js / q3.js question()), in screen px.
@@ -238,19 +227,17 @@ function pillOnScreen(c, [x, y, w, h]) {
 
 // A sheet beat's camera, cursor and frame. keys: camera [t, [cx, cy, z]]; the sheet paints
 // itself with paint(px, t); after `send` the pill morphs into the chip over the blurred sheet.
-function askBeat(g, t, { q, keys, paint, tType, tHover, tSend, chip, title, aside, labelIn, path, presses, focusIn }) {
+function askBeat(g, t, { q, keys, paint, tType, tHover, tSend, chip, title, aside, labelIn, path, presses }) {
   const v = (i) => track(t, keys.map(([k, p]) => [k, p[i]]), 'heavy');
   const c = { cx: v(0), cy: v(1), z: v(2) };
   const tm = t - (tSend + 0.15);
   const out = clamp(easeInOutCubic(tm / 0.45));
-  const into = focusIn ? focusIn(t) : 1;
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.fillStyle = C.bg;
   g.fillRect(0, 0, W, H);
-  if (focusIn) focusIn.under?.(g, t);
   const two = twoLines(q, t, tType, tHover);
   const pill = q.pill[two ? 1 : 0];
-  blurred(g, Math.max(out, 1 - into), into * (1 - out), (x) => {
+  blurred(g, out, 1 - out, (x) => {
     x.fillStyle = C.bg;
     x.fillRect(0, 0, W, H);
     pages.sheet(x, c, (px) => {
@@ -264,13 +251,13 @@ function askBeat(g, t, { q, keys, paint, tType, tHover, tSend, chip, title, asid
       }
     });
   });
-  label(g, title, aside, sp(t - labelIn, 'ui') * into, easeInOutCubic((tm + 0.1) / 0.35));
+  label(g, title, aside, t, labelIn, easeInOutCubic((tm + 0.1) / 0.35));
   if (tm >= 0) morph(g, tm, pillOnScreen(c, pill), chip);
 
   const [px, py] = track2(t, path(two), 'snappy');
   const press = Math.max(0, ...presses.map((t0) => 1 - Math.abs(t - t0) / 0.14));
   const [sx, sy] = pages.onScreen(c, [px, py]);
-  drawCursor(g, sx, sy, press, window01(t, 0.05, tSend + 0.25, 0.15, 0.15) * into);
+  drawCursor(g, sx, sy, press, window01(t, 0.05, tSend + 0.25, 0.15, 0.15));
 }
 
 // ---------------------------------------------------------------- Question 1
@@ -318,37 +305,157 @@ export function toQ1(g, t, chipText) {
   });
 }
 
-// ---------------------------------------------------------------- Question 2
-// Question 1's tally card blurs away and Question 1's own answer comes back into focus in
-// the app, at its foot. The camera pushes in on the follow-up composer, Question 2 types in,
-// Send, and the composer shrinks into Question 2's chip.
-const A2 = { field: 0.95, type: 1.15 };
-A2.hoverSend = typeEnd(ASK.q2, A2.type) + 0.3;
-A2.send = A2.hoverSend + 0.22;
-export const TO_Q2_DUR = A2.send + 0.15 + 0.6;
-cue('toQ2', 0.05, 'whoosh', 0.35);
-cue('toQ2', A2.field, 'click', 0.6);
-for (let i = 0; i < ASK.q2.words.length; i += 3) cue('toQ2', A2.type + i * STEP, 'tick', 0.2);
-cue('toQ2', A2.hoverSend, 'tick', 0.35);
-cue('toQ2', A2.send, 'click', 0.9);
-cue('toQ2', A2.send + 0.17, 'whoosh', 0.35);
+// ---------------------------------------------------------------- the composer on the bare canvas
+// Question 2 in this film, and both questions in master v2. The composer captures:
+// Cropped from the AI Agent page at 1440x900 @2x: the pill and its focus ring, 1592x172.
+// The pill is centred on (796, 86) whether it holds one line or two.
+const COMPOSER = { w: 1592, h: 172, cx: 796, cy: 86, x0: 16, x1: 1576, r: 50 };
+const pillRows = (two) => (two ? [16, 156] : [36, 136]);
+const shot = (name) => Object.assign(new Image(), { src: `assets/screens/composer/${name}@2x.png` });
+export const CANVAS_ASK = {
+  q1: {
+    text: 'show me all published efficacy parameters (ORR, DCR and CR) in cutaneous melanoma for active treatments. strict rule: only treatments which are in phase 1 trial.',
+    wrapAt: 16, // the word that wraps the question onto a second line
+  },
+  q3: {
+    text: 'provide phase 3 active clinical treatments showing median PFS vs grade3+ Treatment emergent adverse events vs treatment discontinuation due to AEs in metastatic /cutaneous melanoma.',
+    wrapAt: 14,
+  },
+};
+for (const [key, q] of Object.entries(CANVAS_ASK)) {
+  q.n = q.text.split(' ').length;
+  q.words = Array.from({ length: q.n }, (_, i) => shot(`${key}-${String(i + 1).padStart(2, '0')}`));
+  q.hover = shot(`${key}-hover`);
+}
+const EMPTY = shot('empty');
+const EMPTY_FOCUS = shot('empty-focus');
 
-// prev(g): the chapter frame being left, which blurs out as the app comes into focus.
-const pull = (prev) => Object.assign((t) => easeInOutCubic(t / 0.6), {
-  under: (g, t) => blurred(g, easeInOutCubic(t / 0.6), 1 - easeInOutCubic((t - 0.1) / 0.5), prev),
+// A light line sweeps across the frame and opens into the composer. The pointer
+// clicks in, the question types in word by word (each frame a real capture),
+// the pointer clicks Send, and the composer shrinks into the chapter's question chip.
+export const CANVAS_A = {
+  sweep: [0, 0.5], open: [0.45, 0.9], cursorIn: 0.55, click: 1.1, type: 1.3, step: 0.055,
+  toSend: 2.95, hover: 3.18, send: 3.4, morph: [3.55, 4.1],
+};
+// The camera pushes in on the text as it types, pans with the first line, and
+// pulls back to the whole composer when the question wraps.
+const wrapT = (q) => CANVAS_A.type + (q.wrapAt - 1) * CANVAS_A.step;
+const camera = (t, q) => ({
+  s: track(t, [[0, 1.1], [CANVAS_A.click, 1.33], [wrapT(q), 1.0]], 'soft'),
+  x: track(t, [[0, COMPOSER.cx], [CANVAS_A.click, 640], [CANVAS_A.type, 768], [wrapT(q), COMPOSER.cx]], 'soft'),
 });
+const typed = (q, t) => (t < CANVAS_A.type ? 0 : Math.min(q.n, Math.floor((t - CANVAS_A.type) / CANVAS_A.step) + 1));
+const toScreen = ({ s, x }, ix, iy) => [W / 2 + (ix - x) * s, H / 2 + (iy - COMPOSER.cy) * s];
 
+export function canvasAsk(g, t, q, chipText) {
+  const cam = camera(t, q);
+  const { s } = cam;
+  const k = typed(q, t);
+  const two = t >= CANVAS_A.hover || k >= q.wrapAt;
+  const img = t >= CANVAS_A.hover ? q.hover : k > 0 ? q.words[k - 1] : t >= CANVAS_A.click ? EMPTY_FOCUS : EMPTY;
+  const [r0, r1] = pillRows(two);
+  const [px0, py0] = toScreen(cam, COMPOSER.x0, r0);
+  const [px1, py1] = toScreen(cam, COMPOSER.x1, r1);
+  const pill = { x: px0, y: py0, w: px1 - px0, h: py1 - py0, r: COMPOSER.r * s };
+
+  // The sweep: a teal line drawn left to right with a light at its head.
+  const sw = easeInOutCubic((t - CANVAS_A.sweep[0]) / (CANVAS_A.sweep[1] - CANVAS_A.sweep[0]));
+  const op = easeInOutCubic((t - CANVAS_A.open[0]) / (CANVAS_A.open[1] - CANVAS_A.open[0]));
+  if (sw > 0 && op < 1) {
+    const x = lerp(pill.x, pill.x + pill.w, sw);
+    g.save();
+    g.globalAlpha = 1 - op;
+    g.fillStyle = C.primary;
+    g.fillRect(pill.x, H / 2 - 1, x - pill.x, 2);
+    const head = g.createRadialGradient(x, H / 2, 0, x, H / 2, 90);
+    head.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    head.addColorStop(0.25, 'rgba(122, 193, 162, 0.55)');
+    head.addColorStop(1, 'rgba(122, 193, 162, 0)');
+    g.fillStyle = head;
+    g.fillRect(x - 90, H / 2 - 90, 180, 180);
+    g.restore();
+  }
+  if (op <= 0) return;
+
+  // The line opens top and bottom into the pill; the capture shows through.
+  const m = morphP(t);
+  const chip = chipRect(g, chipText);
+  const oh = pill.h * op;
+  const r = {
+    x: lerp(pill.x, chip.x, m), y: lerp(H / 2 - oh / 2, chip.y, m),
+    w: lerp(pill.w, chip.w, m), h: lerp(oh, chip.h, m), r: lerp(Math.min(pill.r, oh / 2), chip.r, m),
+  };
+  g.save();
+  g.shadowColor = `rgba(16, 43, 54, ${0.06 * op})`;
+  g.shadowBlur = 30;
+  g.shadowOffsetY = 8;
+  g.fillStyle = C.sheet;
+  rrect(g, r.x, r.y, r.w, r.h, r.r);
+  g.fill();
+  g.restore();
+  const content = op * (1 - clamp((t - CANVAS_A.morph[0]) / 0.15));
+  if (content > 0) {
+    g.save();
+    // The capture is clipped to the pill and its focus ring, above the suggestion chips.
+    rrect(g, r.x - 8 * s, r.y - 8 * s, r.w + 16 * s, r.h + 16 * s, r.r + 8 * s);
+    g.clip();
+    g.globalAlpha = content;
+    const [ix, iy] = toScreen(cam, 0, 0);
+    g.drawImage(img, ix, iy + (m * (chip.y - pill.y)), COMPOSER.w * s, COMPOSER.h * s);
+    g.restore();
+  }
+  if (m > 0 || op < 1) {
+    g.strokeStyle = C.line;
+    g.lineWidth = 1.5;
+    rrect(g, r.x, r.y, r.w, r.h, r.r);
+    g.stroke();
+  }
+  if (m > 0.55) {
+    g.font = font(400, 18);
+    risingText(g, chipText, r.x + 24, r.y + 32, sp(t - CANVAS_A.morph[0] - 0.32, 'snappy'), 0, 18, C.ink);
+  }
+
+  // The pointer: in from the lower right, clicks the field, then Send.
+  const field = toScreen(cam, 560, COMPOSER.cy);
+  const send = toScreen(cam, 1526, two ? 106 : COMPOSER.cy);
+  const start = [W / 2 + 560, H / 2 + 380];
+  const below = toScreen(cam, 700, COMPOSER.cy + 150);
+  const [cx, cy] = track2(t, [[0, start], [CANVAS_A.cursorIn, field], [CANVAS_A.click + 0.2, below], [CANVAS_A.toSend, send]], 'ui');
+  const press = Math.max(0, 1 - Math.abs(t - CANVAS_A.click) / 0.12, 1 - Math.abs(t - CANVAS_A.send) / 0.12);
+  drawCursor(g, cx, cy, press, window01(t, CANVAS_A.cursorIn, CANVAS_A.morph[0] + 0.15, 0.15, 0.15));
+}
+// The content fades first (0.15 s), then the pill moves.
+export const CANVAS_IMAGES = [EMPTY, EMPTY_FOCUS, ...Object.values(CANVAS_ASK).flatMap((q) => [...q.words, q.hover])];
+const morphP = (t) => easeInOutCubic((t - CANVAS_A.morph[0] - 0.1) / (CANVAS_A.morph[1] - CANVAS_A.morph[0] - 0.1));
+
+// ---------------------------------------------------------------- Question 2
+// Question 1's tally card blurs away to the bare canvas and Question 2 starts fresh, as in
+// master v2: a light line sweeps open into the composer, the question types in, Send, and
+// the composer shrinks into Question 2's chip. "Question 2 (Complex)" rises in top left.
+const Q2_BLUR = 0.5;
+export const TO_Q2_DUR = Q2_BLUR + CANVAS_A.morph[1];
+{
+  const at = (t, type, gain) => cue('toQ2', Q2_BLUR + t, type, gain);
+  const q = CANVAS_ASK.q3;
+  cue('toQ2', 0.05, 'whoosh', 0.3);
+  at(CANVAS_A.sweep[0] + 0.02, 'whoosh', 0.35);
+  at(CANVAS_A.click, 'click', 0.8);
+  for (let i = 0; i < q.n; i += 3) at(CANVAS_A.type + i * CANVAS_A.step, 'tick', 0.22);
+  at(CANVAS_A.hover, 'tick', 0.35);
+  at(CANVAS_A.send, 'click', 0.9);
+  at(CANVAS_A.morph[0] + 0.02, 'whoosh', 0.35);
+}
+
+// prev(g): Question 1's last frame, which blurs out to the canvas.
 export function toQ2(g, t, chipText, prev) {
-  askBeat(g, t, {
-    q: ASK.q2, chip: chipText, title: 'Question 2', aside: '(Complex)', labelIn: 0.55,
-    tType: A2.type, tHover: A2.hoverSend, tSend: A2.send, focusIn: pull(prev),
-    keys: [[0, [720, 520, 1.12]], [0.35, [772, 700, 1.5]]],
-    paint: (x) => pages.view(x, APP.q1Thread),
-    path: () => [
-      [0, [980, 640]], [A2.field - 0.3, [520, 863]], [A2.type + 0.15, [880, 760]], [A2.hoverSend - 0.25, center(ASK.q2.send[1])],
-    ],
-    presses: [A2.field, A2.send],
-  });
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = C.bg;
+  g.fillRect(0, 0, W, H);
+  const b = easeInOutCubic(t / Q2_BLUR);
+  blurred(g, b, 1 - b, prev);
+  const tc = t - Q2_BLUR;
+  if (tc > 0) canvasAsk(g, tc, CANVAS_ASK.q3, chipText);
+  label(g, 'Question 2', '(Complex)', t, Q2_BLUR + 0.35, easeInOutCubic((tc - CANVAS_A.morph[0]) / 0.35));
 }
 
 // ---------------------------------------------------------------- into KM

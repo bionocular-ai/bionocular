@@ -8,7 +8,7 @@ intro slides on white, `docs/storyboard-intro.md`) and `pages.js` (dashboard tou
 captures from `scripts/capture-pages.sh`). Pass `--film km` to
 `render.mjs` (or `?film=km` to the preview) for a chapter other than `film.js`. Each chapter renders into its own
 folder, `out/<chapter>/` (`film.js` into `out/q2/`), with its `cues.json` next to the video.
-`master.js` is the packaged demo (104.25 s, `docs/storyboard-master.md`): brand card, product intro, sign-in, dashboard tour (pages),
+`master.js` is the packaged demo (105.65 s, `docs/storyboard-master.md`): brand card, product intro, sign-in, dashboard tour (pages),
 Question 1 (Simple, Q2), Question 2 (Complex, Q3), KM Curves Intelligence, end card (tagline, bionocular.ai). One app window
 runs from sign-in to the last chapter: `joins.js` holds the joins (the login card growing into the app, the rail clicks, both
 questions typed into the real composer, captured by `scripts/capture-agent.sh`). It draws each chapter at its own local time,

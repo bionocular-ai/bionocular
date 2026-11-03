@@ -1,14 +1,15 @@
 // Question 2 chapter: one question, two general models side by side, then the
-// Bionocular answer: it scrolls, its expert-review filter lifts out, the
-// heatmap builds beside it, and the three tallies close the chapter.
+// Bionocular answer: it scrolls, its expert-review filter lifts out, Charts
+// opens in place under its table and the heatmap builds there (as in q3.js),
+// and the three tallies close the chapter.
 // Everything is a pure function of global time T (seconds). No timers, no state.
-// Storyboard: docs/storyboard.md. The answer is the original screenshots
-// (bio-part1 and 2, 1x) laid out as one page; the heatmap and the hovered
-// filter chip are the 2x captures of the same answer. Every coordinate below
-// is measured from their pixels.
+// Storyboard: docs/storyboard.md. The answer is its 2x capture (Charts closed),
+// then the same answer with the heatmap open; the heatmap panel and the hovered
+// filter chip are 2x captures of the same answer. Every coordinate below is
+// measured from their pixels.
 
-import { clamp, lerp, sp, track, track2, window01, easeOutCubic, easeInOutCubic } from './lib/motion.js';
-import { rrect, risingText, drawCursor, font } from './lib/draw.js';
+import { clamp, lerp, sp, track, track2, window01, easeOutCubic, easeInOutCubic, lift } from './lib/motion.js';
+import { rrect, risingText, riseWords, drawCursor, font, liftOut } from './lib/draw.js';
 
 export const FILM = { title: 'q2-chapter', w: 1920, h: 1080, dur: 9, bpm: 120 };
 const { w: W, h: H } = FILM;
@@ -30,13 +31,11 @@ const IMG = {
   gemini: image('assets/screens/gemini-3.1-pro.png'),
   opus1: image('assets/screens/opus-5.5-part1.png'),
   opus2: image('assets/screens/opus-5.5-part2.png'),
-  part1: image('assets/screens/bio-part1.png'),
-  part2: image('assets/screens/bio-part2.png'),
-  heat: image('assets/screens/charts-heatmap@2x.png'),
-  reviewed: image('assets/screens/filters-hover-reviewed@2x.png'),
+  heat: image('assets/screens/q1-charts-heatmap@2x.png'),
+  reviewed: image('assets/screens/q1-reviewed-hover@2x.png'),
   // The Charts toggle (closed, then open) and the hub link, from the full 2x captures.
-  answer: image('assets/screens/bio-answer@2x.png'),
-  answerOpen: image('assets/screens/bio-answer-open-heatmap@2x.png'),
+  answer: image('assets/screens/q1-bio-answer@2x.png'),
+  answerOpen: image('assets/screens/q1-bio-answer-heatmap@2x.png'),
   logo: image('assets/logo.svg'),
 };
 const LOGO_ASPECT = 127.35 / 148.3; // logo.svg viewBox width / height
@@ -65,16 +64,15 @@ const T_BIO = 2.4; // the rivals leave, Bionocular arrives
 const T_BIO_WIPE = 2.65;
 const T_SCROLL = [2.95, 3.55]; // down the whole answer
 const T_SCROLL_BACK = 3.58; // back up to the filter row
-const T_POP = 3.9; // "Reviewed by an expert" lifts out of the answer
+const T_POP = 3.9; // "Reviewed by a biopharma expert" lifts out of the answer
 const T_BACK = 4.8; // and settles back
-const T_SHIFT = 4.92; // the answer moves left to make room
-const T_RIGHT = 5.3; // the Charts toggle and the hub link rise on the right
+const T_CH = 4.92; // down to the Charts toggle under the table
 const T_ZOOM_IN = 5.34; // the camera leans into the Charts toggle
 const T_HOVER = 5.52; // the cursor rests on Charts: its border darkens
 const T_OPEN = 5.68; // click: the panel unfolds
 const T_TAB = 5.88; // the cursor rests on Heatmap
 const T_HEAT = 6.02; // click Heatmap
-const T_ZOOM_OUT = 6.08;
+const T_ZOOM_OUT = 6.08; // the camera pulls out until the whole panel fits
 const T_CELLS = 6.1;
 const T_LEGEND = 6.5;
 const T_LINK = 6.62; // the cursor ends on "Open in Efficacy Intelligence Hub"
@@ -86,78 +84,59 @@ const T_END = 8.65; // everything clears to the bare canvas
 // Rivals: two equal sheets across the frame.
 const RIVAL = { y: 240, w: 776, h: 760, x: [160, 984] };
 
-// The answer as one page, in screenshot px: part 2 continues part 1's table.
-const PAGE = { x0: 4, w: 1076, h: 978 + 455, part1Bottom: 978, part2: [15, 978] };
-const CHIP = { page: [480, 247, 239, 33], src: [924, 0, 478, 64] }; // in-page slot, 2x capture
-// The heatmap capture (2x): three columns of 19 cells, legend below.
-// Cropped at the right, past the legend, where the capture is empty.
+// The Bionocular answer, as in q3.js: the 2x capture at its scale, across the
+// full grid. The run of 2026-10-08 reopened from history (scripts/capture-answers.sh),
+// its column widened from 1080 to 1460 px as in q3.js. q1-bio-answer has Charts
+// closed; q1-bio-answer-heatmap is the same answer with the heatmap open, identical
+// above the panel. Capture px, measured from the DOM.
+const BS = { y: 210, h: 800, w: 1600, src: [2920, 3260] };
+BS.x = (W - BS.w) / 2;
+BS.s = BS.w / BS.src[0];
+const CHIP = [995, 830, 638, 64]; // "Reviewed by a biopharma expert (MD or PhD)" in the answer
+const CHIP_SRC = [0, 0, 638, 64]; // the hover capture is that chip alone
+const TOGGLE = [52, 3064, 170, 56];
+const LINK = [52, 3132, 461, 32]; // under the closed toggle
+const LINK_OPEN = 4913; // its row once the panel is open
+// The heatmap panel capture is the open answer's panel, at PANEL. In its own
+// px: three columns of 19 cells (rows vary where a label wraps), the legend, the tab row.
+const PANEL = [52, 3136];
 const HEAT = {
-  y: 176, h: 760, src: [1700, 1760],
-  cells: { x: [673, 903, 1133], w: 224, y: 160, pitch: 80.17, h: 74, rows: 19 },
-  legend: [30, 1692, 1640, 40],
+  src: [2868, 1765],
+  cells: {
+    x: [686, 916, 1146], w: 224,
+    rows: [
+      [159, 74], [240, 74], [320, 74], [400, 74], [481, 74], [561, 74], [642, 74],
+      [722, 74], [802, 77], [885, 74], [965, 74], [1046, 74], [1126, 74], [1207, 70],
+      [1283, 74], [1363, 74], [1444, 74], [1524, 74], [1604, 77],
+    ],
+  },
+  legend: [30, 1693, 1690, 44],
   underline: [132, 72, 145, 4], // under "Heatmap"; the tab row's rule is y 74-75
   body: 80, // everything below the tab row
 };
-const HK = HEAT.h / HEAT.src[1];
-HEAT.w = HEAT.src[0] * HK;
-// The answer and the panel share the frame, centred, 48 px apart.
-const LEFT_W = PAGE.w * (HEAT.h / (PAGE.h + 24));
-HEAT.x = (W - (LEFT_W + 48 + HEAT.w)) / 2 + LEFT_W + 48;
-// The toggle sits 16 px (2x) above the panel; the link 16 px below the toggle
-// while the panel is closed, below the panel once it is open.
-const TOGGLE = [52, 3064, 170, 56];
-const LINK = [50, 3136, 462, 28];
-const toggleY = HEAT.y - (TOGGLE[3] + 16) * HK;
-const linkY = (open) => HEAT.y + open * (HEAT.h + 16 * HK);
+// The page row at the sheet's top while the toggle sits low in the sheet, and
+// the scale and row at which the open panel, toggle to link, fits the sheet.
+const ROW_TOGGLE = TOGGLE[1] - (BS.h * 0.62) / BS.s;
+// 50 px spare, so the link's outline and the pointer stay inside the sheet.
+const FIT = (BS.h - 50) / (LINK_OPEN + LINK[3] - TOGGLE[1]);
+const ROW_FIT = TOGGLE[1] - 6 / FIT;
+const fitPoint = (x, y) => [(W - BS.src[0] * FIT) / 2 + x * FIT, BS.y + 12 + (y - ROW_FIT) * FIT];
+const togglePoint = (x, y) => [BS.x + x * BS.s, BS.y + 12 + (y - ROW_TOGGLE) * BS.s];
 
 // Rivals ride one conveyor in and out; Bionocular comes up behind them.
 const rivalsY = (T) => track(T, [[0, H], [T_RIVALS, 0], [T_BIO, -H]], 'ui');
 const bioY = (T) => track(T, [[0, H], [T_BIO, 0]], 'ui');
 
-// The Bionocular sheet's camera: `s` is the page row at the sheet's top
-// (screenshot px), `scale` the zoom. Centred while it scrolls, then it moves
-// left and shrinks until the whole page fits beside the heatmap.
-const shift = (T) => sp(T - T_SHIFT, 'ui');
-const bioView = (T) => {
-  const k = shift(T);
-  const scale = lerp(0.87, HEAT.h / (PAGE.h + 24), k);
-  const end = PAGE.h - 700 / 0.87;
-  return {
-    s: lerp(52, end, easeInOutCubic((T - T_SCROLL[0]) / (T_SCROLL[1] - T_SCROLL[0])))
-      + (150 - end) * sp(T - T_SCROLL_BACK, 'ui') - 150 * k,
-    px: PAGE.x0,
-    scale,
-    w: PAGE.w * scale,
-    x: lerp((W - PAGE.w * 0.87) / 2, HEAT.x - 48 - LEFT_W, k),
-    h: lerp(700, HEAT.h, k),
-    top: lerp(210, HEAT.y, k) + bioY(T),
-  };
-};
-const toScreen = (v, x, y) => [v.x + (x - v.px) * v.scale, v.top + (y - v.s) * v.scale];
-
-// The chip's lift: out with a little overshoot, back without.
-const lift = (T) => sp(T - T_POP, 'snappy') - sp(T - T_BACK, 'ui');
-// The camera leans into the Charts toggle and the tabs, pulls back out, then
-// leans slowly toward the hub link the cursor ends on.
-// The frame's left edge falls in the gap left of the panel, so no word of the answer is cut.
-const FOCUS = [HEAT.x + 1000 * HK, HEAT.y - 10 * HK];
-// The link lean scales about the link itself, so it stays where it is on screen.
-const LINK_AT = [HEAT.x + 240 * HK, linkY(1) + 14 * HK];
+// The camera leans into the toggle and the tabs, then pulls back out.
+const FOCUS = togglePoint(TOGGLE[0] + 218, TOGGLE[1] + 72);
 const camera = (T) => {
   const k = sp(T - T_ZOOM_IN, 'heavy') - sp(T - T_ZOOM_OUT, 'heavy');
-  const zl = 1 + 0.25 * sp(T - T_LINK + 0.1, 'soft');
-  const lean = (a, mid) => a - (a - mid) / zl - mid;
-  return {
-    z: 1 + 1.1 * k + (zl - 1),
-    cx: W / 2 + (FOCUS[0] - W / 2) * k + lean(LINK_AT[0], W / 2),
-    cy: H / 2 + (FOCUS[1] - H / 2) * k + lean(LINK_AT[1], H / 2),
-  };
+  return { z: 1 + 1.1 * k, cx: W / 2 + (FOCUS[0] - W / 2) * k, cy: H / 2 + (FOCUS[1] - H / 2) * k };
 };
 const project = (T, [x, y]) => {
   const c = camera(T);
   return [W / 2 + (x - c.cx) * c.z, H / 2 + (y - c.cy) * c.z];
 };
-const unfold = (T) => sp(T - T_OPEN - 0.03, 'ui');
 // The grey-out behind the tallies, and the final clear.
 const dim = (T) => easeInOutCubic((T - T_STATS) / 0.4);
 const clear = (T) => easeInOutCubic((T - T_END) / 0.35);
@@ -175,7 +154,7 @@ cue(T_SCROLL[0], 'whoosh', 0.25);
 cue(T_SCROLL_BACK, 'whoosh', 0.2);
 cue(T_POP, 'pop', 0.7);
 cue(T_BACK, 'tick', 0.4);
-cue(T_SHIFT, 'whoosh', 0.35);
+cue(T_CH, 'whoosh', 0.3);
 cue(T_ZOOM_IN, 'whoosh', 0.3);
 cue(T_HOVER, 'tick', 0.4);
 cue(T_OPEN, 'click', 0.9);
@@ -235,11 +214,11 @@ function streamed(g, T, wipe, x, y, w, h, paint) {
 const count = (n, t0, T, d = 0.35) => `${Math.round(n * easeOutCubic((T - t0) / d))}`;
 
 // "Google Gemini 3.1 Pro": vendor in the model's colour, model in ink.
-function modelName(g, r, x, y, pIn, size) {
+function modelName(g, r, x, y, T, tIn, size) {
   g.font = font(600, size);
-  risingText(g, r.vendor, x, y, pIn, 0, size, r.text);
+  riseWords(g, r.vendor, x, y, T, tIn, 0, r.text);
   const vw = g.measureText(`${r.vendor} `).width;
-  risingText(g, r.name, x + vw, y, pIn, 0, size, C.ink);
+  riseWords(g, r.name, x + vw, y, T, tIn + 0.06, 0, C.ink);
 }
 
 // ---------------------------------------------------------------- scene 1: the question
@@ -257,12 +236,8 @@ function question(g, T, settled = false) {
   const tq = settled ? 99 : T;
   const enter = sp(tq, 'ui');
   if (enter <= 0) return;
-  // The chip leaves upward when the answer makes room for the heatmap.
-  const leave = sp(T - T_SHIFT, 'snappy');
-  if (leave >= 0.999) return;
   const p = sp(tq - Q.shrink, 'ui');
   g.save();
-  g.translate(0, -140 * leave);
   g.font = font(400, 18);
   const chip = { x: 120, y: 48, w: g.measureText(CHIP_TEXT).width + 48, h: 52, r: 26 };
   const r = {
@@ -301,7 +276,7 @@ function question(g, T, settled = false) {
       rrect(g, x, ty(line) - 39, w, 53, 9);
       g.fill();
     });
-    QUESTION.forEach((text, i) => risingText(g, text, tx, ty(i), sp(T - Q.lines[i], 'snappy'), 0, 44, C.ink));
+    QUESTION.forEach((text, i) => riseWords(g, text, tx, ty(i), T, Q.lines[i], 0, C.ink, { stagger: 0.02, fade: 0.3 }));
     g.restore();
   }
   g.font = font(400, 18);
@@ -318,7 +293,7 @@ function rival(g, T, r, i) {
   const at = T_RIVALS + i * 0.08;
 
   // Name, and the tally on the line below.
-  modelName(g, r, x, top - 64, sp(T - at - 0.1, 'ui'), 30);
+  modelName(g, r, x, top - 64, T, at + 0.1, 30);
   if (T >= r.counted) {
     const pIn = sp(T - r.counted, 'snappy');
     const n = count(r.treatments, r.counted, T);
@@ -326,7 +301,7 @@ function rival(g, T, r, i) {
     risingText(g, n, x, top - 20, pIn, 0, 26, C.ink);
     let tx = x + g.measureText(n).width + 10;
     g.font = font(500, 20);
-    risingText(g, 'treatments extracted', tx, top - 22, pIn, 0, 20, C.ink);
+    riseWords(g, 'treatments extracted', tx, top - 22, T, r.counted + 0.04, 0, C.ink);
     tx += g.measureText('treatments extracted').width + 12;
     g.font = font(400, 18, 'mono');
     risingText(g, `· ${count(r.readouts, r.counted + 0.08, T)} readouts`, tx, top - 23, sp(T - r.counted - 0.08, 'snappy'), 0, 18, C.muted);
@@ -355,184 +330,135 @@ function rival(g, T, r, i) {
   });
 }
 
-// ---------------------------------------------------------------- scene 3: the Bionocular answer
+// ---------------------------------------------------------------- scenes 3-4: the Bionocular answer
+// One sheet, as in q3.js: it scrolls the whole answer, comes back to the filter
+// row and "Reviewed by a biopharma expert (MD or PhD)" lifts out (the 2x hover capture).
+// Then down to the Charts toggle: hover, click, the panel unfolds in place with
+// no chart drawn, Heatmap is clicked and the real heatmap builds cell by cell,
+// ORR then DCR then CR; the view pulls back until the whole panel fits and the
+// cursor ends on the hub link.
 function bioSheet(g, T) {
-  const v = bioView(T);
-  if (v.top > H + 40) return;
+  const top = BS.y + bioY(T);
+  if (top > H + 40) return;
   const lp = sp(T - T_BIO - 0.05, 'heavy');
   if (lp > 0) {
     const lh = 44;
-    const lw = lh * LOGO_ASPECT;
     g.save();
     g.beginPath();
-    g.rect(v.x - 4, v.top - 78, lw + 8, (lh + 8) * clamp(lp));
+    g.rect(BS.x - 4, top - 78, lh * LOGO_ASPECT + 8, (lh + 8) * clamp(lp));
     g.clip();
-    g.drawImage(IMG.logo, v.x, v.top - 76, lw, lh);
+    g.drawImage(IMG.logo, BS.x, top - 76, lh * LOGO_ASPECT, lh);
     g.restore();
   }
   g.font = font(600, 30);
-  risingText(g, 'Bionocular agent', v.x + 62, v.top - 42, sp(T - T_BIO - 0.1, 'ui'), 0, 30, C.ink);
-
-  sheet(g, v.x, v.top, v.w, v.h);
-  thinking(g, v.x + 44, v.top + 50, T, window01(T, T_BIO + 0.05, T_BIO_WIPE + 0.12, 0.08, 0.1));
-  streamed(g, T, T_BIO_WIPE, v.x, v.top, v.w, v.h, () => {
-    // An image placed at page position (px, py), drawn through the camera.
-    const blit = (img, px, py) => {
-      const [x, y] = toScreen(v, px, py);
-      const sh = img === IMG.part1 ? PAGE.part1Bottom : img.naturalHeight;
-      g.drawImage(img, 0, 0, img.naturalWidth, sh, x, y, img.naturalWidth * v.scale, sh * v.scale);
-    };
-    blit(IMG.part1, 0, 0);
-    blit(IMG.part2, ...PAGE.part2);
-  });
-}
-
-// "Reviewed by an expert (MD or PhD)" lifts out of the filter row, larger and
-// hovered (the real 2x hover capture), over a veiled answer, then settles back.
-function expert(g, T) {
-  const p = lift(T);
-  if (T < T_POP || p <= 0.001) return;
-  const v = bioView(T);
-  const [px, py, pw, ph] = CHIP.page;
-  const [sx, sy] = toScreen(v, px, py);
-  const [cx0, cy0] = [sx + (pw * v.scale) / 2, sy + (ph * v.scale) / 2];
-  g.save();
-  rrect(g, v.x, v.top, v.w, v.h, 18);
-  g.clip();
-  g.fillStyle = `rgba(247, 250, 249, ${0.82 * clamp(p)})`;
-  g.fillRect(v.x, v.top, v.w, v.h);
-  g.restore();
-
-  const [ix, iy, iw, ih] = CHIP.src;
-  const f = lerp((pw * v.scale) / iw, 1.25, p);
-  const [w, h] = [iw * f, ih * f];
-  const x = lerp(cx0, v.x + v.w / 2, p) - w / 2;
-  const y = lerp(cy0, v.top + v.h / 2, p) - h / 2;
-  g.save();
-  g.shadowColor = `rgba(16, 43, 54, ${0.18 * clamp(p)})`;
-  g.shadowBlur = 60 * clamp(p);
-  g.shadowOffsetY = 22 * clamp(p);
-  g.fillStyle = C.sheet;
-  rrect(g, x, y, w, h, h / 2);
-  g.fill();
-  g.restore();
-  g.save();
-  rrect(g, x, y, w, h, h / 2);
-  g.clip();
-  g.drawImage(IMG.reviewed, ix, iy, iw, ih, x, y, w, h);
-  g.restore();
-  // Our seafoam ring marks it, never a UI state.
-  g.save();
-  g.globalAlpha = clamp(p);
-  g.strokeStyle = C.accent;
-  g.lineWidth = 3;
-  rrect(g, x - 8, y - 8, w + 16, h + 16, h / 2 + 8);
-  g.stroke();
-  g.restore();
-}
-
-// ---------------------------------------------------------------- scene 4: Charts, Heatmap, the hub link
-// The real Charts toggle and hub link rise beside the answer. The toggle shows
-// its hover border (border-primary, as TurnCharts styles it), is clicked, and
-// the panel unfolds with no chart drawn; Heatmap is clicked, its underline
-// draws, and the real heatmap builds cell by cell, ORR then DCR then CR.
-function rightColumn(g, T) {
-  const p = sp(T - T_RIGHT, 'ui');
-  if (p <= 0) return;
-  const k = HK;
-  const { x, w, h } = HEAT;
-  const rise = (1 - p) * 80;
-  const u = unfold(T);
-  g.save();
-  g.globalAlpha = clamp(p * 3);
-  if (u > 0) {
-    const top = HEAT.y + rise;
-    const ph = h * u;
-    const at = (cx, cy) => [x + cx * k, top + cy * k];
-    sheet(g, x, top, w, ph);
+  riseWords(g, 'Bionocular agent', BS.x + 62, top - 42, T, T_BIO + 0.1, 0, C.ink);
+  sheet(g, BS.x, top, BS.w, BS.h);
+  thinking(g, BS.x + 44, top + 50, T, window01(T, T_BIO + 0.05, T_BIO_WIPE + 0.12, 0.08, 0.1));
+  const end = BS.src[1] * BS.s - BS.h + 24;
+  const chipAt = CHIP[1] * BS.s - 200;
+  const scroll = end * easeInOutCubic((T - T_SCROLL[0]) / (T_SCROLL[1] - T_SCROLL[0]))
+    + (chipAt - end) * sp(T - T_SCROLL_BACK, 'ui')
+    + (ROW_TOGGLE * BS.s - chipAt) * sp(T - T_CH, 'ui');
+  // Page rows (capture px) map to the sheet at scale `s`, centred.
+  const f = sp(T - T_ZOOM_OUT, 'ui');
+  const s = lerp(BS.s, FIT, f);
+  const row = lerp(scroll / BS.s, ROW_FIT, f);
+  const x0 = (W - BS.src[0] * s) / 2;
+  const y0 = top + 12 - row * s;
+  const blit = (img, [sx, sy, sw, sh], px, py) => g.drawImage(img, sx, sy, sw, sh, x0 + px * s, y0 + py * s, sw * s, sh * s);
+  const u = sp(T - T_OPEN - 0.03, 'ui');
+  streamed(g, T, T_BIO_WIPE, BS.x, top, BS.w, BS.h, () => {
+    g.fillStyle = C.bg;
+    g.fillRect(BS.x, top, BS.w, BS.h);
+    if (T < T_OPEN) {
+      g.drawImage(IMG.answer, x0, y0, BS.src[0] * s, BS.src[1] * s);
+      return;
+    }
+    blit(IMG.answerOpen, [0, 0, BS.src[0], PANEL[1]], 0, 0);
     g.save();
-    rrect(g, x, top, w, ph, 18);
+    g.beginPath();
+    g.rect(BS.x, y0 + PANEL[1] * s, BS.w, HEAT.src[1] * u * s);
     g.clip();
-    g.drawImage(IMG.heat, 0, 0, ...HEAT.src, x, top, w, h);
-    // No tab is underlined until Heatmap is clicked; then its line draws from the centre.
-    const [ux, uy, uw, uh] = HEAT.underline;
-    const [lx0, ly0] = at(ux, uy);
-    g.fillStyle = C.sheet;
-    g.fillRect(lx0, ly0 - 2 * k, uw * k, (uh + 2) * k);
-    g.fillStyle = 'rgb(205, 223, 216)';
-    g.fillRect(lx0, ly0 + 2 * k, uw * k, 2 * k);
-    const up = easeOutCubic((T - T_HEAT) / 0.18);
-    if (up > 0) g.drawImage(IMG.heat, ux + (uw * (1 - up)) / 2, uy, uw * up, uh, lx0 + (uw * (1 - up) * k) / 2, ly0, uw * up * k, uh * k);
-    // The view stays empty until then; the heatmap's labels reveal top-down.
-    const reveal = easeOutCubic((T - T_HEAT - 0.02) / 0.35);
-    const [, by] = at(0, HEAT.body + (HEAT.src[1] - HEAT.body) * reveal);
-    g.fillStyle = C.sheet;
-    g.fillRect(x + 2, by, w - 4, top + h - by - 2);
-    const { x: xs, w: cw, y: y0, pitch, h: ch, rows } = HEAT.cells;
-    xs.forEach((cx, c) => {
-      for (let r = 0; r < rows; r++) {
-        const cy = y0 + r * pitch;
-        const [dx, dy] = at(cx, cy);
-        const [dw, dh] = [cw * k, ch * k];
-        g.fillStyle = C.sheet;
-        g.fillRect(dx - 2, dy - 2, dw + 4, dh + 4);
-        const q = sp(T - (T_CELLS + c * 0.1 + r * 0.008), 'snappy');
-        if (q <= 0) continue;
-        const s = 0.86 + 0.14 * q;
-        g.save();
-        g.globalAlpha *= clamp(q * 2);
-        g.drawImage(IMG.heat, cx, cy, cw, ch, dx + (dw * (1 - s)) / 2, dy + (dh * (1 - s)) / 2, dw * s, dh * s);
-        g.restore();
-      }
-    });
-    const [lx, ly, lw, lh] = HEAT.legend;
-    const lp = easeOutCubic((T - T_LEGEND) / 0.3);
-    const [gx, gy] = at(lx, ly);
-    g.fillStyle = C.sheet;
-    g.fillRect(gx, gy, lw * k, lh * k);
-    if (lp > 0) g.drawImage(IMG.heat, lx, ly, lw * lp, lh, gx, gy, lw * lp * k, lh * k);
+    heatPanel(g, T, { x: x0 + PANEL[0] * s, y: y0 + PANEL[1] * s, s });
     g.restore();
-  }
-
-  // The toggle: closed until the click, open (chevron up) after.
-  const ty = toggleY + rise;
-  const [tx, tsy, tw, th] = TOGGLE;
-  g.drawImage(T < T_OPEN ? IMG.answer : IMG.answerOpen, tx, tsy, tw, th, x, ty, tw * k, th * k);
+    blit(IMG.answer, LINK, LINK[0], lerp(LINK[1], LINK_OPEN, u));
+  });
+  // The toggle's hover border (border-primary, as TurnCharts styles it).
   const hover = window01(T, T_HOVER - 0.04, T_TAB - 0.25, 0.08, 0.12);
   if (hover > 0) {
+    const [tx, ty, tw, th] = TOGGLE;
     g.save();
     g.globalAlpha *= hover;
     g.strokeStyle = C.primary;
-    g.lineWidth = 2 * k;
-    rrect(g, x + k, ty + k, (tw - 2) * k, (th - 2) * k, ((th - 2) * k) / 2);
+    g.lineWidth = 2 * s;
+    rrect(g, x0 + (tx + 1) * s, y0 + (ty + 1) * s, (tw - 2) * s, (th - 2) * s, ((th - 2) * s) / 2);
     g.stroke();
     g.restore();
   }
-
-  const [lx, lsy, lw, lh] = LINK;
-  const ly = linkY(u) + rise;
-  g.drawImage(IMG.answer, lx, lsy, lw, lh, x - 2 * k, ly, lw * k, lh * k);
   // Our seafoam outline marks the link the cursor ends on.
   const mark = window01(T, T_LINK, 99, 0.08, 0.1);
   if (mark > 0) {
+    const [lx, , lw, lh] = LINK;
     g.save();
     g.globalAlpha *= mark;
     g.strokeStyle = C.accent;
     g.lineWidth = 2.5;
-    rrect(g, x - 2 * k - 8, ly - 6, lw * k + 16, lh * k + 12, 8);
+    rrect(g, x0 + lx * s - 8, y0 + LINK_OPEN * s - 6, lw * s + 16, lh * s + 12, 8);
     g.stroke();
     g.restore();
   }
-  g.restore();
+  const [cx, cy, cw, ch] = CHIP;
+  liftOut(g, IMG.reviewed, CHIP_SRC, { f: s, cx: x0 + (cx + cw / 2) * s, cy: y0 + (cy + ch / 2) * s },
+    { f: 1.25, cx: W / 2, cy: top + BS.h / 2 }, lift(T, [T_POP, T_BACK]), C.accent, [BS.x, top, BS.w, BS.h], 'pill');
+}
+
+// The open panel at v (its top-left on screen, scale s): no tab underlined and
+// no chart until Heatmap is clicked; then its underline draws from the centre,
+// the labels reveal top-down and the cells pop in, ORR then DCR then CR.
+function heatPanel(g, T, v) {
+  const X = (x) => v.x + x * v.s;
+  const Y = (y) => v.y + y * v.s;
+  const [pw, ph] = HEAT.src;
+  g.drawImage(IMG.heat, 0, 0, pw, ph, v.x, v.y, pw * v.s, ph * v.s);
+  const [ux, uy, uw, uh] = HEAT.underline;
+  g.fillStyle = C.sheet;
+  g.fillRect(X(ux), Y(uy - 2), uw * v.s, (uh + 2) * v.s);
+  g.fillStyle = 'rgb(205, 223, 216)';
+  g.fillRect(X(ux), Y(uy + 2), uw * v.s, 2 * v.s);
+  const up = easeOutCubic((T - T_HEAT) / 0.18);
+  if (up > 0) g.drawImage(IMG.heat, ux + (uw * (1 - up)) / 2, uy, uw * up, uh, X(ux + (uw * (1 - up)) / 2), Y(uy), uw * up * v.s, uh * v.s);
+  const reveal = easeOutCubic((T - T_HEAT - 0.02) / 0.35);
+  const by = Y(HEAT.body + (ph - HEAT.body) * reveal);
+  g.fillStyle = C.sheet;
+  g.fillRect(X(2), by, (pw - 4) * v.s, Y(ph - 2) - by);
+  const { x: xs, w: cw, rows } = HEAT.cells;
+  xs.forEach((cx, c) => {
+    rows.forEach(([cy, ch], r) => {
+      const [dx, dy, dw, dh] = [X(cx), Y(cy), cw * v.s, ch * v.s];
+      g.fillStyle = C.sheet;
+      g.fillRect(dx - 2, dy - 2, dw + 4, dh + 4);
+      const q = sp(T - (T_CELLS + c * 0.1 + r * 0.008), 'snappy');
+      if (q <= 0) return;
+      const k = 0.86 + 0.14 * q;
+      g.save();
+      g.globalAlpha *= clamp(q * 2);
+      g.drawImage(IMG.heat, cx, cy, cw, ch, dx + (dw * (1 - k)) / 2, dy + (dh * (1 - k)) / 2, dw * k, dh * k);
+      g.restore();
+    });
+  });
+  const [lx, ly, lw, lh] = HEAT.legend;
+  const lp = easeOutCubic((T - T_LEGEND) / 0.3);
+  g.fillStyle = C.sheet;
+  g.fillRect(X(lx), Y(ly), lw * v.s, lh * v.s);
+  if (lp > 0) g.drawImage(IMG.heat, lx, ly, lw * lp, lh, X(lx), Y(ly), lw * lp * v.s, lh * v.s);
 }
 
 // Drawn outside the camera at the projected point, so it keeps its size.
 function cursor(g, T) {
   if (T < T_ZOOM_IN) return;
-  const k = HK;
-  const toggle = [HEAT.x + 110 * k, toggleY + 32 * k];
-  const tab = [HEAT.x + 214 * k, HEAT.y + 44 * k];
-  const link = [HEAT.x + 440 * k, linkY(1) + 20 * k];
+  const toggle = togglePoint(TOGGLE[0] + 58, TOGGLE[1] + 32);
+  const tab = togglePoint(PANEL[0] + 214, PANEL[1] + 44);
+  const link = fitPoint(LINK[0] + 440, LINK_OPEN + 20);
   const start = [FOCUS[0] + 340, FOCUS[1] + 300];
   const [x, y] = track2(T, [[0, start], [T_ZOOM_IN, start], [T_HOVER - 0.2, toggle], [T_TAB - 0.18, tab], [T_LINK - 0.2, link]], 'snappy');
   const press = (t0) => (T > t0 - 0.05 && T < t0 + 0.4 ? clamp((T - t0 + 0.05) / 0.45) : 0);
@@ -592,7 +518,7 @@ function tallies(g, T) {
   ['Treatments extracted', 'Readouts'].forEach((label, c) => {
     const cx = CARD.x + pad + c * (colW + gap);
     g.font = font(600, 34);
-    risingText(g, label, cx, CARD.y + pad + 30, sp(T - T_STATS - 0.15 - c * 0.05, 'ui'), 0, 34, C.ink);
+    riseWords(g, label, cx, CARD.y + pad + 30, T, T_STATS + 0.15 + c * 0.05, 0, C.ink, { stagger: 0.05 });
     rows.forEach(({ r, values, ours }, i) => {
       const y = CARD.y + pad + 112 + i * 132;
       const t0 = T_BARS + i * 0.12 + c * 0.06;
@@ -612,9 +538,9 @@ function tallies(g, T) {
         g.drawImage(IMG.logo, cx, y - lh + 2, lh * LOGO_ASPECT, lh);
         g.restore();
         g.font = font(600, 24);
-        risingText(g, r.name, cx + lh * 1.3 + 8, y, q, 0, 24, C.primary);
+        riseWords(g, r.name, cx + lh * 1.3 + 8, y, T, t0, 0, C.primary);
       } else {
-        modelName(g, r, cx, y, q, 24);
+        modelName(g, r, cx, y, T, t0, 24);
       }
       const n = values[c];
       const bw = Math.max(0, (n / MAX) * barMax * q);
@@ -644,8 +570,6 @@ export function draw(g, T, opts = {}) {
   g.translate(-c.cx, -c.cy);
   if (opts.rivals !== false) RIVALS.forEach((r, i) => rival(g, T, r, i));
   bioSheet(g, T);
-  expert(g, T);
-  rightColumn(g, T);
   question(g, T, opts.bar === false);
   g.restore();
   cursor(g, T);

@@ -1,5 +1,5 @@
 // Small canvas drawing helpers shared by every film.
-import { clamp, lerp } from './motion.js';
+import { clamp, lerp, sp, easeOutCubic } from './motion.js';
 
 // Registered in index.html from assets/fonts (the product's own faces).
 // 'brand' is Plus Jakarta Sans, for the bionocular wordmark only.
@@ -27,6 +27,44 @@ export function risingText(g, text, x, y, pIn, pOut, size, color, align = 'left'
   g.textAlign = align;
   g.textBaseline = 'alphabetic';
   g.fillText(text, x, y + off);
+  g.restore();
+}
+
+// How display text enters across the master film: word by word, left to right, each word
+// sharp from its first frame, rising a quarter em on a spring while its opacity ramps up more
+// slowly; q (0 -> 1) fades the whole line out at once. Uses the font already set on g.
+// x is the left edge, the centre (align 'center') or the right edge (align 'right').
+export function riseWords(g, text, x, base, t, tIn, q, color, { align = 'left', stagger = 0.06, fade = 0.45 } = {}) {
+  if (t <= tIn || q >= 1) return;
+  const size = parseFloat(/([\d.]+)px/.exec(g.font)[1]);
+  const words = text.split(' ');
+  const space = g.measureText(' ').width;
+  const widths = words.map((w) => g.measureText(w).width);
+  const total = widths.reduce((a, b) => a + b, 0) + space * (words.length - 1);
+  let wx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  const alpha = g.globalAlpha * (1 - clamp(q));
+  g.save();
+  g.fillStyle = color;
+  g.textAlign = 'left';
+  g.textBaseline = 'alphabetic';
+  words.forEach((word, i) => {
+    const ti = t - tIn - i * stagger;
+    if (ti > 0) {
+      g.globalAlpha = alpha * easeOutCubic(clamp(ti / fade));
+      g.fillText(word, wx, base + (1 - sp(ti, 'snappy')) * size * 0.25);
+    }
+    wx += widths[i] + space;
+  });
+  g.restore();
+}
+
+// The same entrance for a drawn block (the lockup): rise d px and fade in, fade out on q.
+export function rise(g, t, tIn, q, paint, d = 24, fade = 0.45) {
+  if (t <= tIn || q >= 1) return;
+  g.save();
+  g.globalAlpha *= easeOutCubic(clamp((t - tIn) / fade)) * (1 - clamp(q));
+  g.translate(0, (1 - sp(t - tIn, 'snappy')) * d);
+  paint();
   g.restore();
 }
 
