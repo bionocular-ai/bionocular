@@ -10,7 +10,7 @@
 import { clamp, lerp, sp, track, track2, window01, easeOutCubic, easeInOutCubic, lift } from './lib/motion.js';
 import { rrect, risingText, riseWords, font, drawCursor, liftOut, mixColor } from './lib/draw.js';
 
-export const FILM = { title: 'q3-chapter', w: 1920, h: 1080, dur: 21.85, bpm: 120 };
+export const FILM = { title: 'q3-chapter', w: 1920, h: 1080, dur: 23.4, bpm: 120 };
 const { w: W, h: H } = FILM;
 
 // Bionocular tokens (web/src/app/globals.css); red is its --destructive.
@@ -57,7 +57,9 @@ const Q = { lines: [0.08, 0.16, 0.24], marks: [0.42, 0.5, 0.58, 0.66], shrink: 0
 // Opus: 13 table rows. Bionocular: "1L (12)".
 const GEMINI = { vendor: 'Google', name: 'Gemini 3.1 Pro', color: '#4285F4', text: '#1A73E8', arms: 8, kept: 2, wipe: 1.3, counted: 1.7 };
 const OPUS = { vendor: 'Anthropic', name: 'Claude Opus 5.5', color: '#D97757', text: '#C96442', arms: 13, kept: 8, wipe: 1.38, counted: 1.78 };
-const BIO = { arms: 12, kept: 12 };
+// Readouts: the 12 rows plus their folded history, counted from the capture's "earlier readout"
+// links (Nivolumab + Ipilimumab 1, Dabrafenib + Trametinib 1, Relatlimab + Nivolumab 4, Nivolumab 4).
+const BIO = { arms: 12, kept: 12, readouts: 22 };
 
 const T_RIVALS = 1.0; // both sheets rise in
 const T_RIVAL_SCROLL = [1.95, 3.55]; // Gemini scrolls to the end, Opus to its table
@@ -91,7 +93,9 @@ const T_BARS = 16.65;
 const T_HEAD = 18.1; // the heading swaps first, so the viewer knows why the bars drop
 const T_DROP = 18.85; // the bars drop to the cross-checked counts
 const T_SEAL = 19.55; // Bionocular's row is marked: expert reviewed
-const T_END = 21.45;
+const T_HIST = 20.55; // our row grows a line: the same 12 arms carry 10 earlier readouts
+const T_CLIMB = 21.0; // and our count climbs 12 -> 22 readouts
+const T_END = 23.0;
 
 // Each answer rides one conveyor: up from below, out the top.
 const conveyor = (T, tIn, tOut) => track(T, [[0, H], [tIn, 0], [tOut, -H - 200]], 'ui');
@@ -132,6 +136,9 @@ cue(T_DROP, 'whoosh', 0.4);
 [0, 1].forEach((i) => cue(T_DROP + 0.1 + i * 0.12, 'tick', 0.5));
 cue(T_DROP + 0.5, 'chime', 0.7);
 cue(T_SEAL, 'pop', 0.6);
+cue(T_HIST, 'tick', 0.4);
+[0, 1, 2, 3, 4].forEach((i) => cue(T_CLIMB + i * 0.16, 'tick', 0.3));
+cue(T_CLIMB + 0.85, 'chime', 0.5);
 
 // ---------------------------------------------------------------- pieces
 function sheet(g, x, y, w, h) {
@@ -190,11 +197,11 @@ function streamed(g, T, wipe, x, y, w, h, paint) {
 const count = (n, t0, T, d = 0.35) => `${Math.round(n * easeOutCubic((T - t0) / d))}`;
 
 // "Google Gemini 3.1 Pro": vendor in the model's colour, model in ink.
-function modelName(g, r, x, y, T, tIn, size) {
+function modelName(g, r, x, y, T, tIn, size, opts) {
   g.font = font(600, size);
-  riseWords(g, r.vendor, x, y, T, tIn, 0, r.text);
+  riseWords(g, r.vendor, x, y, T, tIn, 0, r.text, opts);
   const vw = g.measureText(`${r.vendor} `).width;
-  riseWords(g, r.name, x + vw, y, T, tIn + 0.06, 0, C.ink);
+  riseWords(g, r.name, x + vw, y, T, tIn + 0.06, 0, C.ink, opts);
 }
 
 // "12 results" on the line under a sheet's name.
@@ -626,61 +633,88 @@ function greyOut(g, p) {
   g.filter = `blur(${18 * p}px)`;
   g.drawImage(blurBuf, 0, 0);
   g.filter = 'none';
-  // A veil in the page colour: the scene frosts over rather than going grey.
-  g.globalAlpha = 0.7 * p;
+  // A veil in the page colour: the scene frosts over rather than going grey, with no
+  // shapes of it left to read behind the card.
+  g.globalAlpha = p;
   g.fillStyle = C.bg;
   g.fillRect(0, 0, W, H);
   g.globalAlpha = 1;
 }
 
-const CARD = { w: 1300, h: 640 };
-const SEAL_H = 54; // our row (and the card) grow by this to fit the pill
+// One layout for every row, as in a stat list: the name above its bar, the count in a
+// right-aligned column level with the bar, the bars stopping short of it. Our row sits on a seafoam panel that grows
+// a line for the expert-review pill, then one for its readout history.
+// Every box edge and gap on the card is on an 8 px grid.
+const CARD = { w: 1080, h: 576 };
+const PAD = 72;
+const ROW = { first: 168, pitch: 104, bar: [16, 24] }; // name baseline from the content top; bar top, height
+const SEAL_H = 64; // our panel (and the card) grow by this for the pill
+const HIST_H = 64; // and by this for the history line
 CARD.x = (W - CARD.w) / 2;
-CARD.y = (H - CARD.h - SEAL_H) / 2;
+CARD.y = (H - CARD.h - SEAL_H - HIST_H) / 2;
 const MAX = OPUS.arms;
 const dim = (T) => easeInOutCubic((T - T_STATS) / 0.4);
 const clear = (T) => easeInOutCubic((T - T_END) / 0.35);
 
-// After the drop, our row grows a line for a pill: the 12 results held up under
-// the cross-check, and the answer carries the expert-review badge shown in scene 4.
+// The pill: white on the seafoam panel, teal check and type, wiping in left to right.
 const SEAL = 'Reviewed by a biopharma expert (MD or PhD)';
-function seal(g, T, x, y) {
+function seal(g, T, px, py) {
   if (T < T_SEAL) return;
-  g.font = font(600, 26);
-  const tw = g.measureText(SEAL).width;
-  const [ph, ck] = [46, 26];
-  const pw = tw + ck + 52;
-  const px = x + 24;
-  const py = y + 120 + SEAL_H - ph - 18;
-  const q = sp(T - T_SEAL - 0.25, 'snappy');
+  g.font = font(600, 24);
+  const [ph, ck] = [48, 24];
+  const pw = g.measureText(SEAL).width + ck + 48; // 16 | icon | 8 | text | 24
+  const q = sp(T - T_SEAL - 0.1, 'crisp');
   g.save();
   g.beginPath();
   g.rect(px - 4, py - 4, (pw + 8) * clamp(q), ph + 8);
   g.clip();
-  g.fillStyle = C.primary;
+  g.fillStyle = C.sheet;
   rrect(g, px, py, pw, ph, ph / 2);
   g.fill();
-  g.strokeStyle = C.sheet;
+  g.strokeStyle = C.primary;
   g.lineWidth = 3;
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  const [kx, ky] = [px + 20, py + ph / 2];
+  // The shield with a check, as on the app's review chip.
+  const [sx, sy, sw, sh] = [px + 16, py + (ph - ck) / 2, ck * 0.84, ck];
+  g.lineWidth = 2.4;
   g.beginPath();
-  g.moveTo(kx, ky);
-  g.lineTo(kx + ck * 0.35, ky + ck * 0.3);
-  g.lineTo(kx + ck * 0.85, ky - ck * 0.32);
+  g.moveTo(sx + sw / 2, sy);
+  g.lineTo(sx + sw, sy + sh * 0.18);
+  g.lineTo(sx + sw, sy + sh * 0.5);
+  g.quadraticCurveTo(sx + sw, sy + sh * 0.86, sx + sw / 2, sy + sh);
+  g.quadraticCurveTo(sx, sy + sh * 0.86, sx, sy + sh * 0.5);
+  g.lineTo(sx, sy + sh * 0.18);
+  g.closePath();
+  g.stroke();
+  g.beginPath();
+  g.moveTo(sx + sw * 0.3, sy + sh * 0.5);
+  g.lineTo(sx + sw * 0.46, sy + sh * 0.64);
+  g.lineTo(sx + sw * 0.72, sy + sh * 0.36);
   g.stroke();
   g.restore();
-  g.fillStyle = C.sheet;
-  riseWords(g, SEAL, px + 20 + ck + 12, py + ph / 2 + 9, T, T_SEAL + 0.3, 0, C.sheet, { stagger: 0.04 });
+  riseWords(g, SEAL, px + 16 + ck + 8, py + ph / 2 + 8, T, T_SEAL + 0.2, 0, C.primary, { stagger: 0.04, spring: 'crisp' });
+}
+
+// A count from x, its units after it, each { text, tIn, q } rising in at tIn and fading on q
+// ("of 8" in mono, like the digits; a word in Poppins).
+function stat(g, value, units, x, base, pIn, T, color, size = 44) {
+  g.font = font(600, size, 'mono');
+  risingText(g, value, x, base, pIn, 0, size, color);
+  const ux = x + g.measureText(value).width + 8;
+  for (const { text, tIn, q = 0 } of units) {
+    g.font = text.startsWith('of ') ? font(500, 24, 'mono') : font(500, 24);
+    riseWords(g, text, ux, base, T, tIn, q, C.muted, { spring: 'crisp' });
+  }
 }
 
 function tallies(g, T) {
   const p = sp(T - T_STATS - 0.05, 'ui');
   if (p <= 0) return;
-  const grow = SEAL_H * sp(T - T_SEAL, 'ui');
+  const gSeal = SEAL_H * sp(T - T_SEAL, 'ui');
+  const gHist = HIST_H * sp(T - T_HIST, 'ui');
   const { w } = CARD;
-  const h = CARD.h + grow;
+  const h = CARD.h + gSeal + gHist;
   const s = 0.94 + 0.06 * p;
   g.save();
   g.globalAlpha = clamp(p * 4);
@@ -688,27 +722,28 @@ function tallies(g, T) {
   g.scale(s, s);
   g.translate(-W / 2, -H / 2);
   g.save();
-  g.shadowColor = 'rgba(16, 43, 54, 0.25)';
+  g.shadowColor = 'rgba(16, 43, 54, 0.18)';
   g.shadowBlur = 80;
   g.shadowOffsetY = 24;
   g.fillStyle = C.sheet;
-  rrect(g, CARD.x, CARD.y, w, h, 28);
+  rrect(g, CARD.x, CARD.y, w, h, 32);
   g.fill();
   g.restore();
 
-  const pad = 84;
-  const cx = CARD.x + pad;
-  // One scale for every bar; the numbers sit in one column after the longest, right-aligned,
-  // with "of N" in the space to their right.
-  const numRight = CARD.x + w - pad - 112;
-  const barMax = numRight - 110 - cx;
-  const [barY, barH] = [26, 30]; // bar top below the name line, bar thickness
-  // The heading swaps just before the bars drop.
-  g.font = font(600, 34);
-  // Word by word; the first heading fades out whole before the second rises in.
-  const headOut = easeInOutCubic((T - T_HEAD) / 0.22);
-  riseWords(g, 'Results each answer claimed', cx, CARD.y + pad + 30, T, T_STATS + 0.15, headOut, C.ink, { stagger: 0.05 });
-  riseWords(g, 'Results that held up against the sources', cx, CARD.y + pad + 30, T, T_HEAD + 0.22, 0, C.ink, { stagger: 0.05 });
+  const cx = CARD.x + PAD;
+  const right = CARD.x + w - PAD;
+  const barMax = right - cx - 192; // the longest bar keeps room for its count at its end
+  const [barY, barH] = ROW.bar;
+  // One title style for both states; the first fades out whole before the second rises in.
+  g.font = font(600, 60, 'display');
+  g.letterSpacing = '-1.5px';
+  const title = CARD.y + PAD + 48;
+  riseWords(g, 'Results each answer claimed', cx, title, T, T_STATS + 0.15, easeInOutCubic((T - T_HEAD) / 0.22), C.ink, { stagger: 0.08, spring: 'crisp' });
+  riseWords(g, 'After cross-check', cx, title, T, T_HEAD + 0.22, 0, C.ink, { stagger: 0.08, spring: 'crisp' });
+  g.letterSpacing = '0px';
+  // What every count is, read before the counts.
+  g.font = font(400, 24);
+  riseWords(g, "Each result is one treatment arm: one row of that answer's table", cx, title + 48, T, T_STATS + 0.35, 0, C.muted, { stagger: 0.02, spring: 'crisp' });
 
   const rows = [
     { r: GEMINI, n: GEMINI.arms, kept: GEMINI.kept },
@@ -716,13 +751,13 @@ function tallies(g, T) {
     { r: { name: 'Bionocular agent' }, n: BIO.arms, kept: BIO.kept, ours: true },
   ];
   rows.forEach(({ r, n, kept, ours }, i) => {
-    const y = CARD.y + pad + 120 + i * 140;
+    const y = CARD.y + PAD + ROW.first + i * ROW.pitch + (ours ? 16 : 0); // our panel needs air above it
     const t0 = T_BARS + i * 0.12;
     const q = sp(T - t0, 'ui');
     if (q <= 0) return;
     if (ours) {
       g.fillStyle = C.tint;
-      rrect(g, cx - 24, y - 40, (w - pad * 2 + 48) * clamp(q * 1.4), 120 + grow, 16);
+      rrect(g, cx - 24, y - 48, (right - cx + 48) * clamp(q * 1.4), 112 + gSeal + gHist, 16);
       g.fill();
       const lh = 32;
       g.save();
@@ -732,35 +767,46 @@ function tallies(g, T) {
       g.drawImage(IMG.logo, cx, y - lh + 2, lh * LOGO_ASPECT, lh);
       g.restore();
       g.font = font(600, 28);
-      riseWords(g, r.name, cx + lh * 1.3 + 8, y, T, t0, 0, C.primary);
-      seal(g, T, cx - 24, y - 40);
+      riseWords(g, r.name, cx + lh * 1.3 + 8, y, T, t0, 0, C.primary, { spring: 'crisp' });
+      seal(g, T, cx, y + 64);
+      // The same 12 arms, counted with their earlier readouts: 12 climbs to 22.
+      if (T > T_HIST) {
+        const hb = y + 64 + SEAL_H + 40;
+        // A secondary line, not a score: the sentence, then its count climbing in a size down.
+        const line = `The same ${BIO.arms} treatment arms, with their trial history:`;
+        g.font = font(400, 24);
+        riseWords(g, line, cx, hb, T, T_HIST + 0.1, 0, C.ink, { stagger: 0.03, spring: 'crisp' });
+        const lx = cx + g.measureText(line).width + 16;
+        const climb = easeInOutCubic((T - T_CLIMB) / 0.8);
+        stat(g, `${Math.round(lerp(BIO.arms, BIO.readouts, climb))}`, [{ text: 'readouts', tIn: T_HIST + 0.4 }], lx, hb,
+          sp(T - T_HIST - 0.35, 'crisp'), T, C.primary, 32);
+      }
     } else {
-      modelName(g, r, cx, y, T, t0, 28);
+      modelName(g, r, cx, y, T, t0, 28, { spring: 'crisp' });
     }
     const color = ours ? C.primary : r.color;
-    const full = (n / MAX) * barMax * q;
     const dropAt = t0 - T_BARS + T_DROP;
     const d = sp(T - dropAt, 'ui');
     const value = lerp(n, kept, d);
-    const bw = Math.max(0, (value / MAX) * barMax * q);
-    // The claimed length as a pale tint the solid bar drops back from. No empty track
+    // The claimed length stays as a pale tint the solid bar drops back from. No empty track
     // past it: on our row that would read as a result missing.
     g.fillStyle = mixColor(color, C.sheet, 0.8);
-    rrect(g, cx, y + barY, full, barH, barH / 2);
+    rrect(g, cx, y + barY, (n / MAX) * barMax * q, barH, barH / 2);
     g.fill();
     g.fillStyle = color;
-    rrect(g, cx, y + barY, bw, barH, barH / 2);
+    rrect(g, cx, y + barY, Math.max(0, (value / MAX) * barMax * q), barH, barH / 2);
     g.fill();
-    const size = ours ? 72 : 56;
-    const base = y + barY + barH / 2 + size * 0.36;
-    g.font = font(600, size, 'mono');
+    // Every row reads "kept of claimed" once the bars drop, ours too: 12 of 12.
     const label = T < dropAt ? count(n, t0, T, 0.5) : `${Math.round(value)}`;
-    risingText(g, label, numRight, base, sp(T - t0 - 0.04, 'snappy'), 0, size, ours ? C.primary : C.ink, 'right');
-    // Every row reads "kept of claimed", ours too, so 12 of 12 says nothing was dropped.
-    if (d > 0.02) {
-      g.font = font(500, 30, 'mono');
-      risingText(g, `of ${n}`, numRight + 16, base, sp(T - dropAt - 0.1, 'snappy'), 0, 30, C.muted);
-    }
+    // The count sits just past the claimed length, level with the bar. All three start the
+    // same size; ours grows a size as the bars drop, so only the check sets it apart.
+    const size = ours ? lerp(44, 56, d) : 44;
+    const units = [
+      { text: 'claimed', tIn: t0 + 0.3, q: easeInOutCubic((T - dropAt) / 0.15) },
+      { text: `of ${n}`, tIn: dropAt + 0.1 },
+    ];
+    stat(g, label, units, cx + (n / MAX) * barMax + 24, y + barY + barH / 2 + size * 0.36,
+      sp(T - t0 - 0.04, 'crisp'), T, ours ? C.primary : C.ink, size);
   });
   g.restore();
 }

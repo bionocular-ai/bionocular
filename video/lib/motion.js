@@ -27,6 +27,7 @@ export function spring(t, k = 170, d = 26) {
 // Named spring presets. Use these instead of raw numbers so motion stays consistent.
 export const SPRINGS = {
   snappy: [320, 30], // buttons, toggles, leading edges
+  crisp: [320, 36], // as fast as snappy, critically damped: text and labels that settle without overshoot
   ui: [170, 26], // cards, containers, camera
   heavy: [90, 19], // big type, logo lockups
   soft: [60, 16], // slow drifts
