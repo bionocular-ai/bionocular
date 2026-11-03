@@ -21,7 +21,7 @@ import * as km from './km.js';
 const C = q2.C;
 // Where each chapter is picked up and left, in its own time.
 const Q1_FROM = 0.85, Q1_TO = 8.4; // film.js: from its chip (the rivals rise at 0.9) to the settled tally card
-const Q2_FROM = 0.95, Q2_TO = 22.3; // q3.js: from its chip to the cross-check seal, before its last hold
+const Q2_FROM = 0.95, Q2_TO = 22.8; // q3.js: from its chip to the cross-check seal, before its last hold
 const KM_TO = 16.55; // km.js: through the upload caption, before its own clear
 const INTRO_TO = 23.45; // intro.js: its diagram slide has lifted away; the login rises into the white
 // [scene, length in s]

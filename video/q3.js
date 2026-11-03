@@ -10,7 +10,7 @@
 import { clamp, lerp, sp, track, track2, window01, easeOutCubic, easeInOutCubic, lift } from './lib/motion.js';
 import { rrect, risingText, riseWords, font, drawCursor, liftOut, mixColor } from './lib/draw.js';
 
-export const FILM = { title: 'q3-chapter', w: 1920, h: 1080, dur: 23.4, bpm: 120 };
+export const FILM = { title: 'q3-chapter', w: 1920, h: 1080, dur: 23.7, bpm: 120 };
 const { w: W, h: H } = FILM;
 
 // Bionocular tokens (web/src/app/globals.css); red is its --destructive.
@@ -95,7 +95,7 @@ const T_DROP = 18.85; // the bars drop to the cross-checked counts
 const T_SEAL = 19.55; // Bionocular's row is marked: expert reviewed
 const T_HIST = 20.55; // our row grows a line: the same 12 arms carry 10 earlier readouts
 const T_CLIMB = 21.0; // and our count climbs 12 -> 22 readouts
-const T_END = 23.0;
+const T_END = 23.3;
 
 // Each answer rides one conveyor: up from below, out the top.
 const conveyor = (T, tIn, tOut) => track(T, [[0, H], [tIn, 0], [tOut, -H - 200]], 'ui');
@@ -773,7 +773,7 @@ function tallies(g, T) {
       if (T > T_HIST) {
         const hb = y + 64 + SEAL_H + 40;
         // A secondary line, not a score: the sentence, then its count climbing in a size down.
-        const line = `The same ${BIO.arms} treatment arms, with their trial history:`;
+        const line = `The same ${BIO.arms} arms, with their trial history:`;
         g.font = font(400, 24);
         riseWords(g, line, cx, hb, T, T_HIST + 0.1, 0, C.ink, { stagger: 0.03, spring: 'crisp' });
         const lx = cx + g.measureText(line).width + 16;
@@ -801,10 +801,8 @@ function tallies(g, T) {
     // The count sits just past the claimed length, level with the bar. All three start the
     // same size; ours grows a size as the bars drop, so only the check sets it apart.
     const size = ours ? lerp(44, 56, d) : 44;
-    const units = [
-      { text: 'claimed', tIn: t0 + 0.3, q: easeInOutCubic((T - dropAt) / 0.15) },
-      { text: `of ${n}`, tIn: dropAt + 0.1 },
-    ];
+    // Bare counts under "Results each answer claimed" (the title already says claimed), then "of 8".
+    const units = [{ text: `of ${n}`, tIn: dropAt + 0.1 }];
     stat(g, label, units, cx + (n / MAX) * barMax + 24, y + barY + barH / 2 + size * 0.36,
       sp(T - t0 - 0.04, 'crisp'), T, ours ? C.primary : C.ink, size);
   });
