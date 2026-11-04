@@ -8,9 +8,9 @@
 // 2026-10-20. Every coordinate below is measured from their pixels.
 
 import { clamp, lerp, sp, track, track2, window01, easeOutCubic, easeInOutCubic, lift } from './lib/motion.js';
-import { rrect, risingText, font, drawCursor, liftOut } from './lib/draw.js';
+import { rrect, risingText, riseWords, font, drawCursor, liftOut, mixColor } from './lib/draw.js';
 
-export const FILM = { title: 'q3-chapter', w: 1920, h: 1080, dur: 20.95, bpm: 120 };
+export const FILM = { title: 'q3-chapter', w: 1920, h: 1080, dur: 23.7, bpm: 120 };
 const { w: W, h: H } = FILM;
 
 // Bionocular tokens (web/src/app/globals.css); red is its --destructive.
@@ -57,7 +57,9 @@ const Q = { lines: [0.08, 0.16, 0.24], marks: [0.42, 0.5, 0.58, 0.66], shrink: 0
 // Opus: 13 table rows. Bionocular: "1L (12)".
 const GEMINI = { vendor: 'Google', name: 'Gemini 3.1 Pro', color: '#4285F4', text: '#1A73E8', arms: 8, kept: 2, wipe: 1.3, counted: 1.7 };
 const OPUS = { vendor: 'Anthropic', name: 'Claude Opus 5.5', color: '#D97757', text: '#C96442', arms: 13, kept: 8, wipe: 1.38, counted: 1.78 };
-const BIO = { arms: 12, kept: 12 };
+// Readouts: the 12 rows plus their folded history, counted from the capture's "earlier readout"
+// links (Nivolumab + Ipilimumab 1, Dabrafenib + Trametinib 1, Relatlimab + Nivolumab 4, Nivolumab 4).
+const BIO = { arms: 12, kept: 12, readouts: 22 };
 
 const T_RIVALS = 1.0; // both sheets rise in
 const T_RIVAL_SCROLL = [1.95, 3.55]; // Gemini scrolls to the end, Opus to its table
@@ -74,7 +76,7 @@ const T_BIO_COUNT = 9.15;
 const T_BIO_SCROLL = [9.7, 11.3]; // after a beat on the opening text
 const T_BIO_BACK = 11.35; // back up to the class note and the filter row
 const T_NOTE = [11.75, 12.55]; // the note's first sentence lifts out, settles back
-const T_POP = [12.7, 13.6]; // "Reviewed by an expert" lifts out, settles back
+const T_POP = [12.7, 13.6]; // "Reviewed by a biopharma expert" lifts out, settles back
 const T_CH = 13.65; // down to the Charts toggle under the table
 const T_ZOOM_IN = 13.85; // the camera leans into the toggle
 const T_HOVER = 14.05; // the cursor rests on Charts: its border darkens
@@ -87,9 +89,13 @@ const T_DOTS = 15.05; // the bubbles pop in, lowest median PFS first
 const T_LINK = 15.75; // the cursor ends on "Open in Efficacy vs Safety Index Hub"
 const T_STATS = 16.45; // the scene greys out behind the tallies
 const T_BARS = 16.65;
-const T_DROP = 17.95; // the bars drop to the cross-checked counts
-const T_SEAL = 18.65; // Bionocular's row is marked: cross-checked and expert reviewed
-const T_END = 20.55;
+// The claimed counts settle at ~17.4 and hold a full second before anything changes.
+const T_HEAD = 18.1; // the heading swaps first, so the viewer knows why the bars drop
+const T_DROP = 18.85; // the bars drop to the cross-checked counts
+const T_SEAL = 19.55; // Bionocular's row is marked: expert reviewed
+const T_HIST = 20.55; // our row grows a line: the same 12 arms carry 10 earlier readouts
+const T_CLIMB = 21.0; // and our count climbs 12 -> 22 readouts
+const T_END = 23.3;
 
 // Each answer rides one conveyor: up from below, out the top.
 const conveyor = (T, tIn, tOut) => track(T, [[0, H], [tIn, 0], [tOut, -H - 200]], 'ui');
@@ -130,6 +136,9 @@ cue(T_DROP, 'whoosh', 0.4);
 [0, 1].forEach((i) => cue(T_DROP + 0.1 + i * 0.12, 'tick', 0.5));
 cue(T_DROP + 0.5, 'chime', 0.7);
 cue(T_SEAL, 'pop', 0.6);
+cue(T_HIST, 'tick', 0.4);
+[0, 1, 2, 3, 4].forEach((i) => cue(T_CLIMB + i * 0.16, 'tick', 0.3));
+cue(T_CLIMB + 0.85, 'chime', 0.5);
 
 // ---------------------------------------------------------------- pieces
 function sheet(g, x, y, w, h) {
@@ -188,15 +197,14 @@ function streamed(g, T, wipe, x, y, w, h, paint) {
 const count = (n, t0, T, d = 0.35) => `${Math.round(n * easeOutCubic((T - t0) / d))}`;
 
 // "Google Gemini 3.1 Pro": vendor in the model's colour, model in ink.
-function modelName(g, r, x, y, pIn, size) {
+function modelName(g, r, x, y, T, tIn, size, opts) {
   g.font = font(600, size);
-  risingText(g, r.vendor, x, y, pIn, 0, size, r.text);
+  riseWords(g, r.vendor, x, y, T, tIn, 0, r.text, opts);
   const vw = g.measureText(`${r.vendor} `).width;
-  risingText(g, r.name, x + vw, y, pIn, 0, size, C.ink);
-  return x + vw + g.measureText(r.name).width;
+  riseWords(g, r.name, x + vw, y, T, tIn + 0.06, 0, C.ink, opts);
 }
 
-// "12 treatment arms" on the line under a sheet's name.
+// "12 results" on the line under a sheet's name.
 function armsTally(g, n, x, y, t0, T) {
   if (T < t0) return;
   const pIn = sp(T - t0, 'snappy');
@@ -205,7 +213,7 @@ function armsTally(g, n, x, y, t0, T) {
   risingText(g, s, x, y, pIn, 0, 26, C.ink);
   const tx = x + g.measureText(s).width + 10;
   g.font = font(500, 20);
-  risingText(g, 'treatment arms', tx, y - 2, pIn, 0, 20, C.ink);
+  riseWords(g, 'results', tx, y - 2, T, t0 + 0.04, 0, C.ink);
 }
 
 // ---------------------------------------------------------------- scene 1: the question
@@ -260,7 +268,7 @@ function question(g, T) {
       rrect(g, x, ty(line) - 39, w, 53, 9);
       g.fill();
     });
-    QUESTION.forEach((text, i) => risingText(g, text, tx, ty(i), sp(T - Q.lines[i], 'snappy'), 0, 44, C.ink));
+    QUESTION.forEach((text, i) => riseWords(g, text, tx, ty(i), T, Q.lines[i], 0, C.ink, { stagger: 0.02, fade: 0.3 }));
     g.restore();
   }
   g.font = font(400, 18);
@@ -298,7 +306,7 @@ function rival(g, T, r, i, parts, bg) {
   const at = T_RIVALS + i * 0.08;
   const top = RIVAL.y + rivalsY(T) + (1 - sp(T - at, 'ui')) * 40;
   if (top > H + 40 || top < -h - 300) return;
-  modelName(g, r, x, top - 64, sp(T - at - 0.1, 'ui'), 30);
+  modelName(g, r, x, top - 64, T, at + 0.1, 30);
   armsTally(g, r.arms, x, top - 20, r.counted, T);
   sheet(g, x, top, w, h);
   topStroke(g, x, top, w, h, r.color, easeOutCubic((T - at - 0.1) / 0.4));
@@ -387,12 +395,12 @@ function crossChecked(g, T, x, top) {
   g.fillRect(x, top, w, h);
   g.drawImage(IMG.checked, x, y0, w, IMG.checked.naturalHeight * s);
   g.restore();
-  // "13 treatment arms" gains its qualifier.
+  // "13 results" gains its qualifier.
   g.font = font(500, 26, 'mono');
   let tx = x + g.measureText(`${OPUS.arms}`).width + 10;
   g.font = font(500, 20);
-  tx += g.measureText('treatment arms').width + 12;
-  risingText(g, '· cross-checked against the sources', tx, top - 22, sp(T - T_SWAP - 0.1, 'snappy'), 0, 20, C.muted);
+  tx += g.measureText('results').width + 12;
+  riseWords(g, '· cross-checked against the sources', tx, top - 22, T, T_SWAP + 0.1, 0, C.muted);
 }
 
 // Each red row lifts from the Opus sheet to the centre, over both sheets.
@@ -415,14 +423,14 @@ function rivals(g, T) {
   // The caption sits under both sheets and leaves with them.
   const top = RIVAL.y + rivalsY(T);
   g.font = font(600, 40, 'display');
-  risingText(g, 'These numbers are non-existent and this is GenAI', RIVAL.x[0], top + RIVAL.h + 66, sp(T - T_CAPTION, 'snappy'), 0, 40, C.redText);
+  riseWords(g, 'These numbers are non-existent and this is GenAI', RIVAL.x[0], top + RIVAL.h + 66, T, T_CAPTION, 0, C.redText);
   redLifts(g, T);
 }
 
 // ---------------------------------------------------------------- scene 4: the Bionocular answer
 // The 2x capture at one scale, across the full grid; a beat on the opening
 // text, it scrolls the whole answer, comes back to the class note and the
-// filter row, the note's first sentence lifts out, then "Reviewed by an expert
+// filter row, the note's first sentence lifts out, then "Reviewed by a biopharma expert
 // (MD or PhD)" does (the 2x hover capture), as in Q2. Then, as in Q2, down to
 // the Charts toggle: hover, click, the panel unfolds with no chart drawn,
 // Bubble is clicked and its chart builds, the view pulls back until the whole
@@ -430,12 +438,12 @@ function rivals(g, T) {
 const BS = { w: 1600, y: 210, h: 800 };
 BS.x = (W - BS.w) / 2;
 BS.s = BS.w / 2920;
-const NOTE = [52, 807, 972, 58]; // "No treatment reports Grade 3+ TEAE; showing Grade 3+ TRAE (6 treatments)"
-const CHIP = [1321, 929, 511, 64]; // the filter in the capture, measured from the DOM
+const NOTE = [52, 796, 972, 58]; // "No treatment reports Grade 3+ TEAE; showing Grade 3+ TRAE (6 treatments)"
+const CHIP = [1321, 918, 638, 64]; // the filter in the capture, measured from the DOM (scripts/capture-answers.sh)
 // The charts captures, in their own px; their row 0 is the toggle's row in the
 // answer capture (`at`). Measured from the DOM and the pixels.
 const CHARTS = {
-  at: 2590,
+  at: 2579,
   head: 72, // the open toggle and the gap under it
   box: [52, 72, 2868, 1610],
   body: [54, 148, 2862, 1532], // inside the border, under the tab row
@@ -489,7 +497,7 @@ function bio(g, T) {
     g.restore();
   }
   g.font = font(600, 30);
-  risingText(g, 'Bionocular agent', BS.x + 62, top - 42, sp(T - T_BIO - 0.1, 'ui'), 0, 30, C.ink);
+  riseWords(g, 'Bionocular agent', BS.x + 62, top - 42, T, T_BIO + 0.1, 0, C.ink);
   armsTally(g, BIO.arms, BS.x + 62 + 270, top - 42, T_BIO_COUNT, T);
   sheet(g, BS.x, top, BS.w, BS.h);
   thinking(g, BS.x + 44, top + 50, T, window01(T, T_BIO + 0.05, T_BIO_WIPE + 0.12, 0.08, 0.1));
@@ -611,9 +619,9 @@ function cursor(g, T) {
 }
 
 // ---------------------------------------------------------------- scene 5: the tallies
-// The scene greys out; one card holds the arms each answer gave, on one shared
-// scale. Then the bars drop to the arms that held up under the cross-check,
-// leaving a faint ghost of what was claimed.
+// The scene frosts over; one card holds the results each answer gave, on one shared
+// scale. Then the bars drop to the results that held up under the cross-check,
+// leaving the claimed length as a pale tint of the bar.
 let blurBuf;
 function greyOut(g, p) {
   blurBuf ??= Object.assign(document.createElement('canvas'), { width: W, height: H });
@@ -625,68 +633,88 @@ function greyOut(g, p) {
   g.filter = `blur(${18 * p}px)`;
   g.drawImage(blurBuf, 0, 0);
   g.filter = 'none';
-  g.fillStyle = `rgba(16, 43, 54, ${0.45 * p})`;
+  // A veil in the page colour: the scene frosts over rather than going grey, with no
+  // shapes of it left to read behind the card.
+  g.globalAlpha = p;
+  g.fillStyle = C.bg;
   g.fillRect(0, 0, W, H);
+  g.globalAlpha = 1;
 }
 
-const CARD = { w: 1300, h: 640 };
-const SEAL_H = 54; // our row (and the card) grow by this to fit the pill
+// One layout for every row, as in a stat list: the name above its bar, the count in a
+// right-aligned column level with the bar, the bars stopping short of it. Our row sits on a seafoam panel that grows
+// a line for the expert-review pill, then one for its readout history.
+// Every box edge and gap on the card is on an 8 px grid.
+const CARD = { w: 1080, h: 576 };
+const PAD = 72;
+const ROW = { first: 168, pitch: 104, bar: [16, 24] }; // name baseline from the content top; bar top, height
+const SEAL_H = 64; // our panel (and the card) grow by this for the pill
+const HIST_H = 64; // and by this for the history line
 CARD.x = (W - CARD.w) / 2;
-CARD.y = (H - CARD.h - SEAL_H) / 2;
+CARD.y = (H - CARD.h - SEAL_H - HIST_H) / 2;
 const MAX = OPUS.arms;
 const dim = (T) => easeInOutCubic((T - T_STATS) / 0.4);
 const clear = (T) => easeInOutCubic((T - T_END) / 0.35);
 
-// After the drop, our row grows a line and gets a seafoam ring and a pill:
-// the 12 arms held up under the cross-check, and the answer carries the
-// "Reviewed by an expert (MD or PhD)" badge shown in scene 4.
-const SEAL = 'Cross-checked  ·  Reviewed by an expert (MD or PhD)';
-function seal(g, T, x, y, w, h) {
-  const p = sp(T - T_SEAL, 'ui');
-  if (p <= 0) return;
-  const per = 2 * (w + h);
-  g.save();
-  g.strokeStyle = C.accent;
-  g.lineWidth = 3;
-  g.setLineDash([per * clamp(p), per]);
-  rrect(g, x - 8, y - 8, w + 16, h + 16, 22);
-  g.stroke();
-  g.restore();
-
-  g.font = font(600, 22);
-  const tw = g.measureText(SEAL).width;
-  const [ph, ck] = [40, 24];
-  const pw = tw + ck + 52;
-  const px = x + 24;
-  const py = y + 120 + SEAL_H - ph - 18;
-  const q = sp(T - T_SEAL - 0.25, 'snappy');
+// The pill: white on the seafoam panel, teal check and type, wiping in left to right.
+const SEAL = 'Reviewed by a biopharma expert (MD or PhD)';
+function seal(g, T, px, py) {
+  if (T < T_SEAL) return;
+  g.font = font(600, 24);
+  const [ph, ck] = [48, 24];
+  const pw = g.measureText(SEAL).width + ck + 48; // 16 | icon | 8 | text | 24
+  const q = sp(T - T_SEAL - 0.1, 'crisp');
   g.save();
   g.beginPath();
   g.rect(px - 4, py - 4, (pw + 8) * clamp(q), ph + 8);
   g.clip();
-  g.fillStyle = C.primary;
+  g.fillStyle = C.sheet;
   rrect(g, px, py, pw, ph, ph / 2);
   g.fill();
-  g.strokeStyle = C.sheet;
+  g.strokeStyle = C.primary;
   g.lineWidth = 3;
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  const [kx, ky] = [px + 20, py + ph / 2];
+  // The shield with a check, as on the app's review chip.
+  const [sx, sy, sw, sh] = [px + 16, py + (ph - ck) / 2, ck * 0.84, ck];
+  g.lineWidth = 2.4;
   g.beginPath();
-  g.moveTo(kx, ky);
-  g.lineTo(kx + ck * 0.35, ky + ck * 0.3);
-  g.lineTo(kx + ck * 0.85, ky - ck * 0.32);
+  g.moveTo(sx + sw / 2, sy);
+  g.lineTo(sx + sw, sy + sh * 0.18);
+  g.lineTo(sx + sw, sy + sh * 0.5);
+  g.quadraticCurveTo(sx + sw, sy + sh * 0.86, sx + sw / 2, sy + sh);
+  g.quadraticCurveTo(sx, sy + sh * 0.86, sx, sy + sh * 0.5);
+  g.lineTo(sx, sy + sh * 0.18);
+  g.closePath();
+  g.stroke();
+  g.beginPath();
+  g.moveTo(sx + sw * 0.3, sy + sh * 0.5);
+  g.lineTo(sx + sw * 0.46, sy + sh * 0.64);
+  g.lineTo(sx + sw * 0.72, sy + sh * 0.36);
   g.stroke();
   g.restore();
-  risingText(g, SEAL, px + 20 + ck + 12, py + ph / 2 + 8, sp(T - T_SEAL - 0.35, 'snappy'), 0, 22, C.sheet);
+  riseWords(g, SEAL, px + 16 + ck + 8, py + ph / 2 + 8, T, T_SEAL + 0.2, 0, C.primary, { stagger: 0.04, spring: 'crisp' });
+}
+
+// A count from x, its units after it, each { text, tIn, q } rising in at tIn and fading on q
+// ("of 8" in mono, like the digits; a word in Poppins).
+function stat(g, value, units, x, base, pIn, T, color, size = 44) {
+  g.font = font(600, size, 'mono');
+  risingText(g, value, x, base, pIn, 0, size, color);
+  const ux = x + g.measureText(value).width + 8;
+  for (const { text, tIn, q = 0 } of units) {
+    g.font = text.startsWith('of ') ? font(500, 24, 'mono') : font(500, 24);
+    riseWords(g, text, ux, base, T, tIn, q, C.muted, { spring: 'crisp' });
+  }
 }
 
 function tallies(g, T) {
   const p = sp(T - T_STATS - 0.05, 'ui');
   if (p <= 0) return;
-  const grow = SEAL_H * sp(T - T_SEAL, 'ui');
+  const gSeal = SEAL_H * sp(T - T_SEAL, 'ui');
+  const gHist = HIST_H * sp(T - T_HIST, 'ui');
   const { w } = CARD;
-  const h = CARD.h + grow;
+  const h = CARD.h + gSeal + gHist;
   const s = 0.94 + 0.06 * p;
   g.save();
   g.globalAlpha = clamp(p * 4);
@@ -694,23 +722,28 @@ function tallies(g, T) {
   g.scale(s, s);
   g.translate(-W / 2, -H / 2);
   g.save();
-  g.shadowColor = 'rgba(16, 43, 54, 0.25)';
+  g.shadowColor = 'rgba(16, 43, 54, 0.18)';
   g.shadowBlur = 80;
   g.shadowOffsetY = 24;
   g.fillStyle = C.sheet;
-  rrect(g, CARD.x, CARD.y, w, h, 28);
+  rrect(g, CARD.x, CARD.y, w, h, 32);
   g.fill();
   g.restore();
 
-  const pad = 84;
-  const cx = CARD.x + pad;
-  const barMax = w - pad * 2 - 160;
-  const drop = sp(T - T_DROP, 'ui');
-  // The heading swaps as the bars drop.
-  g.font = font(600, 34);
-  const swap = sp(T - T_DROP, 'snappy');
-  risingText(g, 'Treatment arms in the answer', cx, CARD.y + pad + 30, sp(T - T_STATS - 0.15, 'ui'), swap, 34, C.ink);
-  risingText(g, 'Treatment arms that hold up after cross-check', cx, CARD.y + pad + 30, sp(T - T_DROP - 0.15, 'snappy'), 0, 34, C.ink);
+  const cx = CARD.x + PAD;
+  const right = CARD.x + w - PAD;
+  const barMax = right - cx - 192; // the longest bar keeps room for its count at its end
+  const [barY, barH] = ROW.bar;
+  // One title style for both states; the first fades out whole before the second rises in.
+  g.font = font(600, 60, 'display');
+  g.letterSpacing = '-1.5px';
+  const title = CARD.y + PAD + 48;
+  riseWords(g, 'Results each answer claimed', cx, title, T, T_STATS + 0.15, easeInOutCubic((T - T_HEAD) / 0.22), C.ink, { stagger: 0.08, spring: 'crisp' });
+  riseWords(g, 'After cross-check', cx, title, T, T_HEAD + 0.22, 0, C.ink, { stagger: 0.08, spring: 'crisp' });
+  g.letterSpacing = '0px';
+  // What every count is, read before the counts.
+  g.font = font(400, 24);
+  riseWords(g, "Each result is one treatment arm: one row of that answer's table", cx, title + 48, T, T_STATS + 0.35, 0, C.muted, { stagger: 0.02, spring: 'crisp' });
 
   const rows = [
     { r: GEMINI, n: GEMINI.arms, kept: GEMINI.kept },
@@ -718,57 +751,60 @@ function tallies(g, T) {
     { r: { name: 'Bionocular agent' }, n: BIO.arms, kept: BIO.kept, ours: true },
   ];
   rows.forEach(({ r, n, kept, ours }, i) => {
-    const y = CARD.y + pad + 120 + i * 140;
+    const y = CARD.y + PAD + ROW.first + i * ROW.pitch + (ours ? 16 : 0); // our panel needs air above it
     const t0 = T_BARS + i * 0.12;
     const q = sp(T - t0, 'ui');
     if (q <= 0) return;
     if (ours) {
       g.fillStyle = C.tint;
-      rrect(g, cx - 24, y - 40, (w - pad * 2 + 48) * clamp(q * 1.4), 120 + grow, 16);
+      rrect(g, cx - 24, y - 48, (right - cx + 48) * clamp(q * 1.4), 112 + gSeal + gHist, 16);
       g.fill();
-      const lh = 28;
+      const lh = 32;
       g.save();
       g.beginPath();
       g.rect(cx, y - lh - 2, lh * 1.3, (lh + 8) * clamp(q));
       g.clip();
       g.drawImage(IMG.logo, cx, y - lh + 2, lh * LOGO_ASPECT, lh);
       g.restore();
-      g.font = font(600, 24);
-      risingText(g, r.name, cx + lh * 1.3 + 8, y, q, 0, 24, C.primary);
-      seal(g, T, cx - 24, y - 40, w - pad * 2 + 48, 120 + grow);
+      g.font = font(600, 28);
+      riseWords(g, r.name, cx + lh * 1.3 + 8, y, T, t0, 0, C.primary, { spring: 'crisp' });
+      seal(g, T, cx, y + 64);
+      // The same 12 arms, counted with their earlier readouts: 12 climbs to 22.
+      if (T > T_HIST) {
+        const hb = y + 64 + SEAL_H + 40;
+        // A secondary line, not a score: the sentence, then its count climbing in a size down.
+        const line = `The same ${BIO.arms} arms, with their trial history:`;
+        g.font = font(400, 24);
+        riseWords(g, line, cx, hb, T, T_HIST + 0.1, 0, C.ink, { stagger: 0.03, spring: 'crisp' });
+        const lx = cx + g.measureText(line).width + 16;
+        const climb = easeInOutCubic((T - T_CLIMB) / 0.8);
+        stat(g, `${Math.round(lerp(BIO.arms, BIO.readouts, climb))}`, [{ text: 'readouts', tIn: T_HIST + 0.4 }], lx, hb,
+          sp(T - T_HIST - 0.35, 'crisp'), T, C.primary, 32);
+      }
     } else {
-      modelName(g, r, cx, y, q, 24);
+      modelName(g, r, cx, y, T, t0, 28, { spring: 'crisp' });
     }
-    const full = (n / MAX) * barMax * q;
+    const color = ours ? C.primary : r.color;
     const dropAt = t0 - T_BARS + T_DROP;
     const d = sp(T - dropAt, 'ui');
     const value = lerp(n, kept, d);
-    const bw = Math.max(0, (value / MAX) * barMax * q);
-    // Ghost of the claimed length once the bar has dropped.
-    if (kept < n && d > 0) {
-      g.save();
-      g.globalAlpha *= 0.5 * clamp(d * 2);
-      g.strokeStyle = r.color;
-      g.lineWidth = 2;
-      g.setLineDash([8, 6]);
-      rrect(g, cx + 1, y + 19, full - 2, 42, 10);
-      g.stroke();
-      g.restore();
-    }
-    g.fillStyle = ours ? C.primary : r.color;
-    rrect(g, cx, y + 18, bw, 44, 10);
+    // The claimed length stays as a pale tint the solid bar drops back from. No empty track
+    // past it: on our row that would read as a result missing.
+    g.fillStyle = mixColor(color, C.sheet, 0.8);
+    rrect(g, cx, y + barY, (n / MAX) * barMax * q, barH, barH / 2);
     g.fill();
-    const size = ours ? 72 : 56;
-    g.font = font(600, size, 'mono');
+    g.fillStyle = color;
+    rrect(g, cx, y + barY, Math.max(0, (value / MAX) * barMax * q), barH, barH / 2);
+    g.fill();
+    // Every row reads "kept of claimed" once the bars drop, ours too: 12 of 12.
     const label = T < dropAt ? count(n, t0, T, 0.5) : `${Math.round(value)}`;
-    // The number rides the bar end, then sits past the ghost so it never covers it.
-    const lx = cx + Math.max(bw, kept < n ? full * drop : 0) + 20;
-    risingText(g, label, lx, y + 40 + size * 0.36, sp(T - t0 - 0.04, 'snappy'), 0, size, ours ? C.primary : C.ink);
-    if (kept < n && d > 0.02) {
-      const lw = g.measureText(label).width;
-      g.font = font(500, 26, 'mono');
-      risingText(g, `of ${n}`, lx + lw + 14, y + 40 + size * 0.36, sp(T - dropAt - 0.1, 'snappy'), 0, 26, C.muted);
-    }
+    // The count sits just past the claimed length, level with the bar. All three start the
+    // same size; ours grows a size as the bars drop, so only the check sets it apart.
+    const size = ours ? lerp(44, 56, d) : 44;
+    // Bare counts under "Results each answer claimed" (the title already says claimed), then "of 8".
+    const units = [{ text: `of ${n}`, tIn: dropAt + 0.1 }];
+    stat(g, label, units, cx + (n / MAX) * barMax + 24, y + barY + barH / 2 + size * 0.36,
+      sp(T - t0 - 0.04, 'crisp'), T, ours ? C.primary : C.ink, size);
   });
   g.restore();
 }

@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Captures the screens the master film's joins need (docs/storyboard-master.md) into assets/screens/agent/:
-# the login card typed in, the Efficacy hub and the agent threads with a rail icon hovered, the empty
-# agent page and the Question 1 thread, and both questions typed into their composers one word per frame.
+# the login card typed in, the Efficacy hub and the Question 2 thread with a rail icon hovered, and the
+# empty agent page with Question 1 typed into its composer one word per frame (Question 2 is typed into
+# master v2's canvas composer, assets/screens/composer/).
 # Needs the web dev server on :3000 and the logged-in profile. Headless, 2x, pointer parked, caret hidden.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=assets/screens/agent
-mkdir -p "$OUT/q1" "$OUT/q2"
+mkdir -p "$OUT/q1"
 BASE=http://localhost:3000
 ab() { agent-browser "$@" >/dev/null; }
 
@@ -76,19 +77,6 @@ park; shot agent-empty
 echo "empty composer: $(composer_rect)"
 type_words q1 "show me all published efficacy parameters (ORR, DCR and CR) in metastatic /cutaneous melanoma for active treatments. strict rule: only treatments which are in phase 1 trial."
 
-# The Question 1 thread (2026-10-08) at its foot: at rest, then Question 2 typed as a follow-up.
-ab open "$BASE/dashboard/cutaneous-melanoma/agent"
-ab wait --text "What do you want to know?"
-clean
-history Show
-open_chat "show me all published efficacy parameters (ORR, DCR and CR) in metastatic" "08/10/2026"
-ab wait --text "Open in Efficacy Intelligence Hub"
-history Hide
-ab wait 1500
-park; shot q1-thread
-echo "thread composer: $(composer_rect)"
-type_words q2 "provide phase 3 active clinical treatments showing median PFS vs grade3+ Treatment emergent adverse events vs treatment discontinuation due to AEs in metastatic /cutaneous melanoma."
-
 # The Question 2 thread (2026-10-20) at its foot, then the KM Curves Intelligence rail icon hovered.
 ab open "$BASE/dashboard/cutaneous-melanoma/agent"
 ab wait --text "What do you want to know?"
@@ -104,11 +92,10 @@ rail_hover "KM Curves Intelligence"; shot q2-thread-km-hover
 agent-browser close
 
 # Typing only changes a band around each composer (measured as the pixel diff from the frame at rest),
-# so the film loads those bands, not 53 full frames: q1c/ and q2c/, 2x crops of CSS [x, y, w, h].
+# so the film loads those bands, not full frames: q1c/, 2x crops of CSS [x, y, w, h].
 crop_dir() {
   mkdir -p "$OUT/$1c"
   for f in "$OUT/$1"/*@2x.png; do ffmpeg -hide_banner -loglevel error -y -i "$f" -vf "crop=$2" "$OUT/$1c/$(basename "$f")"; done
   echo "$OUT/$1c: $(ls "$OUT/$1c" | wc -l | tr -d ' ') crops"
 }
 crop_dir q1 1584:384:752:680   # CSS [376, 340, 792, 192]: the title through the suggestion chips
-crop_dir q2 2192:252:448:1540  # CSS [224, 770, 1096, 126]: the thread composer, one or two lines

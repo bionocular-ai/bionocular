@@ -6,7 +6,7 @@
 // Storyboard: docs/storyboard-intro.md. Claims: docs/BRIEF.md.
 
 import { clamp, sp, easeOutCubic } from './lib/motion.js';
-import { rrect, risingText, font } from './lib/draw.js';
+import { rrect, riseWords, font } from './lib/draw.js';
 
 export const FILM = { title: 'intro-chapter', w: 1920, h: 1080, dur: 23.8, bpm: 120 };
 const { w: W, h: H } = FILM;
@@ -46,9 +46,9 @@ function type(g, weight, size, family = 'sans', track = 0) {
   g.textBaseline = 'alphabetic';
 }
 
-function head(g, text, y, size, color, pIn, pOut) {
+function head(g, text, y, size, color, t, tIn, out) {
   type(g, 600, size, 'display', -0.04);
-  risingText(g, text, X, y, pIn, pOut, size, color);
+  riseWords(g, text, X, y, t, tIn, out, color, { stagger: 0.07 });
   g.letterSpacing = '0px';
 }
 
@@ -132,8 +132,8 @@ cue(3.15, 'whoosh', 0.3);
 
 function stats(g, T) {
   const t = T - S.stats[0], out = leave(T, S.stats[1]);
-  head(g, 'The evidence is exploding.', 300, 112, C.ink, sp(t - 0.1, 'heavy'), out);
-  head(g, "Your tools can't keep up.", 424, 112, C.primary, sp(t - 0.55, 'heavy'), out);
+  head(g, 'The evidence is exploding.', 300, 112, C.ink, t, 0.1, out);
+  head(g, "Your tools can't keep up.", 424, 112, C.primary, t, 0.55, out);
   const w = (CW - 3 * 32) / 4, top = 500, h = 330;
   STATS.forEach(([n, fmt, label], i) => {
     const d = STAT_IN(i);
@@ -221,8 +221,8 @@ function icon(g, kind, x, y, t) {
 
 function drown(g, T) {
   const t = T - S.drown[0], out = leave(T, S.drown[1]);
-  head(g, 'Teams are drowning in data', 230, 100, C.ink, sp(t - 0.1, 'heavy'), out);
-  head(g, "they can't compare", 334, 100, C.ink, sp(t - 0.24, 'heavy'), out);
+  head(g, 'Teams are drowning in data', 230, 100, C.ink, t, 0.1, out);
+  head(g, "they can't compare", 334, 100, C.ink, t, 0.45, out);
   wrapRich(g, LEAD2, 1400).forEach((line, k) => {
     const y = 422 + k * 46;
     masked(g, y, 30, sp(t - 0.55 - k * 0.07, 'ui'), out, () => {
@@ -260,8 +260,8 @@ AUDIENCES.forEach((_, i) => cue(S.built[0] + AUD_IN(i) + 0.05, 'tick', 0.32));
 
 function built(g, T) {
   const t = T - S.built[0], out = leave(T, S.built[1]);
-  head(g, 'Built for the people who shape', 220, 100, C.ink, sp(t - 0.1, 'heavy'), out);
-  head(g, 'treatment decisions', 324, 100, C.ink, sp(t - 0.24, 'heavy'), out);
+  head(g, 'Built for the people who shape', 220, 100, C.ink, t, 0.1, out);
+  head(g, 'treatment decisions', 324, 100, C.ink, t, 0.52, out);
   const w = (CW - 2 * 24) / 3, h = 250;
   AUDIENCES.forEach(([title, body], i) => {
     const x0 = X + (i % 3) * (w + 24), y0 = 400 + Math.floor(i / 3) * (h + 24);
@@ -298,11 +298,11 @@ cue(S.rigor[0] + PAIR_OUT + 0.02, 'whoosh', 0.28);
 
 function rigor(g, T) {
   const t = T - S.rigor[0], out = leave(T, S.rigor[1]);
-  head(g, 'AI speed.', 225, 108, C.ink, sp(t - 0.1, 'heavy'), out);
-  head(g, 'Human rigor.', 340, 108, C.primary, sp(t - 0.26, 'heavy'), out);
+  head(g, 'AI speed.', 225, 108, C.ink, t, 0.1, out);
+  head(g, 'Human rigor.', 340, 108, C.primary, t, 0.26, out);
   type(g, 400, 30);
   wrap(g, 'Every datapoint in the platform passes through a three-stage pipeline that no pure-AI tool or manual team can match alone.', 1150)
-    .forEach((l, k) => risingText(g, l, X, 424 + k * 46, sp(t - 0.5 - k * 0.07, 'ui'), out, 30, C.muted));
+    .forEach((l, k) => riseWords(g, l, X, 424 + k * 46, t, 0.5 + k * 0.07, out, C.muted, { stagger: 0.02 }));
   const w = (CW - 24) / 2, top = 530, h = 430;
   PILLARS.forEach(([num, title, body], i) => {
     const pair = i < 2 ? 0 : 1, d = PAIR_IN[pair] + (i % 2) * 0.15;
@@ -484,7 +484,7 @@ function diagram(g, T) {
     g.restore();
   }
   type(g, 400, 24);
-  risingText(g, 'Opens In', 1582, 768, sp(t - 2.8, 'ui'), out, 24, C.muted);
+  riseWords(g, 'Opens In', 1582, 768, t, 2.8, out, C.muted);
   // bionocular AI Agent
   card(g, ...D.agent, sp(t - 2.55), out, (x, y) => {
     g.font = font(800, 32, 'brand');

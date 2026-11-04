@@ -5,12 +5,12 @@
 // app, the AI Agent rail opens Question 1's composer, Question 2 is typed as a follow-up under
 // Question 1's answer, and the KM rail icon opens the KM page. Each chapter draws itself at
 // its own local time, from where the join hands over to where the next one takes it.
-// The cards use the landing page's lockup and tagline on the satin ground, and come into
-// focus as the captions do. Pure function of T, like every chapter.
+// The cards use the landing page's lockup and tagline on the satin ground, and rise in
+// word by word as the captions do. Pure function of T, like every chapter.
 
 import { clamp, sp, easeInOutCubic } from './lib/motion.js';
-import { font } from './lib/draw.js';
-import { satin, focus, lockup, logo } from './lib/cards.js';
+import { font, riseWords, rise } from './lib/draw.js';
+import { satin, lockup, logo } from './lib/cards.js';
 import * as product from './intro.js';
 import * as pages from './pages.js';
 import * as joins from './joins.js';
@@ -21,7 +21,7 @@ import * as km from './km.js';
 const C = q2.C;
 // Where each chapter is picked up and left, in its own time.
 const Q1_FROM = 0.85, Q1_TO = 8.4; // film.js: from its chip (the rivals rise at 0.9) to the settled tally card
-const Q2_FROM = 0.95, Q2_TO = 19.5; // q3.js: from its chip to the cross-check seal, before its last hold
+const Q2_FROM = 0.95, Q2_TO = 22.8; // q3.js: from its chip to the cross-check seal, before its last hold
 const KM_TO = 16.55; // km.js: through the upload caption, before its own clear
 const INTRO_TO = 23.45; // intro.js: its diagram slide has lifted away; the login rises into the white
 // [scene, length in s]
@@ -38,7 +38,7 @@ for (const [name, d] of SEQ) { START[name] = total; total += d; }
 export const FILM = { title: 'master', w: 1920, h: 1080, dur: +total.toFixed(3), bpm: 120 };
 const { w: W, h: H } = FILM;
 
-export const IMAGES = [...product.IMAGES, ...pages.IMAGES, ...joins.IMAGES, ...q2.IMAGES, ...q3.IMAGES, ...km.IMAGES, logo];
+export const IMAGES = [...product.IMAGES, ...pages.IMAGES, ...joins.IMAGES, ...joins.CANVAS_IMAGES, ...q2.IMAGES, ...q3.IMAGES, ...km.IMAGES, logo];
 
 export const CUES = [];
 const at = (name, t, type, gain = 1) => CUES.push({ t: +(START[name] + t).toFixed(3), type, gain });
@@ -55,21 +55,19 @@ joins.CUES.forEach((x) => at(x.beat, x.t, x.type, x.gain));
 const TAGLINE = 'Human-verified oncology intelligence';
 const URL = 'bionocular.ai';
 
-function centred(g, text, base, size, weight, color) {
+// A centred line, its words rising in one after the other.
+function centred(g, text, base, size, weight, color, t, tIn, q) {
   g.font = font(weight, size);
-  g.fillStyle = color;
-  g.textAlign = 'center';
-  g.textBaseline = 'alphabetic';
-  g.fillText(text, W / 2, base);
+  riseWords(g, text, W / 2, base, t, tIn, q, color, { align: 'center' });
 }
 
-// The lockup and tagline come into focus on the satin and leave the same way; the ground
+// The lockup and tagline rise in on the satin and fade out together; the ground
 // eases to the intro's white as they go, so the cut to the first slide has no flash.
 function brand(g, t) {
   satin(g, t, 1);
   const out = (d) => easeInOutCubic((t - 1.15 - d) / 0.35);
-  focus(g, sp(t - 0.1, 'heavy'), out(0), () => lockup(g, 520, 120));
-  focus(g, sp(t - 0.4, 'ui'), out(0.05), () => centred(g, TAGLINE, 616, 44, 500, C.ink));
+  rise(g, t, 0.1, out(0), () => lockup(g, 520, 120));
+  centred(g, TAGLINE, 616, 44, 500, C.ink, t, 0.4, out(0.05));
   g.globalAlpha = easeInOutCubic((t - 1.2) / 0.36);
   g.fillStyle = '#FFFFFF';
   g.fillRect(0, 0, W, H);
@@ -81,7 +79,7 @@ at('brand', 0.62, 'tick', 0.5);
 at('brand', 1.25, 'whoosh', 0.35);
 
 // The KM sheet shrinks back toward the centre and blurs into the satin as the lockup
-// comes into focus in its place: the app goes back into the logo it came from.
+// rises in its place: the app goes back into the logo it came from.
 let buf;
 function end(g, t) {
   const e = easeInOutCubic(t / 0.8);
@@ -100,9 +98,9 @@ function end(g, t) {
     g.restore();
   }
   satin(g, START.end + t, easeInOutCubic((t - 0.1) / 0.6));
-  focus(g, sp(t - 0.45, 'heavy'), 0, () => lockup(g, 490, 120));
-  focus(g, sp(t - 0.8, 'ui'), 0, () => centred(g, TAGLINE, 592, 44, 500, C.ink));
-  focus(g, sp(t - 1.1, 'ui'), 0, () => centred(g, URL, 700, 44, 600, C.primary));
+  rise(g, t, 0.45, 0, () => lockup(g, 490, 120));
+  centred(g, TAGLINE, 592, 44, 500, C.ink, t, 0.8, 0);
+  centred(g, URL, 700, 44, 600, C.primary, t, 1.1, 0);
   // Seafoam underline under the URL, drawn left to right.
   const u = clamp(sp(t - 1.3, 'ui'));
   if (u > 0) {
