@@ -284,7 +284,7 @@ function ReviewedToggle({ on, onToggle }: { on: boolean; onToggle: () => void })
       )}
     >
       <ShieldCheck className={cn('h-3.5 w-3.5', on ? 'text-emerald-700' : '')} aria-hidden />
-      Reviewed by an expert (MD or PhD)
+      Reviewed by a biopharma expert (MD or PhD)
     </button>
   );
 }
@@ -299,7 +299,7 @@ function ReviewedToggle({ on, onToggle }: { on: boolean; onToggle: () => void })
  */
 function ReviewMark({ value }: { value: string }) {
   const good = value === 'Good';
-  const label = `Reviewed by an expert (MD or PhD)${good ? '' : `: ${value.toLowerCase()}`}`;
+  const label = `Reviewed by a biopharma expert (MD or PhD)${good ? '' : `: ${value.toLowerCase()}`}`;
   const Icon = good ? ShieldCheck : ShieldAlert;
   return (
     <span role="img" aria-label={label} title={label} className="ml-1.5 inline-block align-[-2px]">
