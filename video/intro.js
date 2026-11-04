@@ -1,5 +1,6 @@
 // Product intro chapter: the boss's five product-intro slides (2026-10-23), copy
-// verbatim apart from em dashes, in the user's order: the evidence is exploding,
+// verbatim apart from em dashes and the drowning slide's cards (rewritten 2026-11-04,
+// lead removed), in the user's order: the evidence is exploding,
 // teams are drowning in data, who it is built for, AI speed / human rigor, and the
 // product diagram. White canvas (the user's call) in the film's tokens.
 // Everything is a pure function of global time T (seconds). No timers, no state.
@@ -23,7 +24,6 @@ const C = {
   accentText: '#287758',
   tint: '#DAF0E6',
   gold: '#C9A227',
-  goldTint: '#F6EED3',
 };
 
 export const IMAGES = [];
@@ -60,22 +60,6 @@ function wrap(g, text, maxW) {
     if (cur && g.measureText(next).width > maxW) { lines.push(cur); cur = word; } else cur = next;
   }
   if (cur) lines.push(cur);
-  return lines;
-}
-
-// Words with their own font and colour, wrapped into lines of positioned runs.
-function wrapRich(g, segs, maxW) {
-  const lines = [];
-  let line = [], x = 0;
-  for (const s of segs) for (const word of s.t.split(' ').filter(Boolean)) {
-    g.font = s.f;
-    const ww = g.measureText(word).width, gap = line.length ? g.measureText(' ').width : 0;
-    if (line.length && x + gap + ww > maxW) { lines.push(line); line = []; x = 0; }
-    const at = line.length ? x + g.measureText(' ').width : 0;
-    line.push({ word, f: s.f, c: s.c, x: at });
-    x = at + ww;
-  }
-  if (line.length) lines.push(line);
   return lines;
 }
 
@@ -167,16 +151,12 @@ function stats(g, T) {
 }
 
 // ---------------------------------------------------------------- 2. teams are drowning in data
-const LEAD2 = [
-  { t: 'In 2025, ADC trials grew 30% and bispecific antibody trials grew 66%. Every ASCO and ESMO brings dozens of new readouts. Yet the core question remains unanswered:', f: font(400, 30), c: C.muted },
-  { t: 'are these numbers actually comparable?', f: font(600, 30), c: C.ink },
-];
 const PROBLEMS = [
-  ['Weeks to benchmark', 'Analysts manually extract ORR, PFS, OS from abstracts, posters, and publications. One conference can generate 40+ relevant readouts across 8 tumor types.', 'watch'],
-  ["Numbers that can't be compared", 'Median PFS of 11.2 vs. 8.4 months means nothing without matching line of therapy, biomarker, prior treatment, assessment method, and data maturity.', 'scales'],
-  ['Headlines miss the curve shape', 'A median PFS hides crossing curves, late separations, and tail plateaus - exactly the patterns that matter for IO and ADC combinations.', 'curves'],
+  ['Weeks to benchmark', 'One has to manually extract efficacy and safety parameters from abstracts, posters, and publications. One conference can generate 100+ readouts across various tumor types.', 'watch'],
+  ["Numbers that can't be compared", 'A median PFS of X months means nothing without matching prior line, biomarker, SoC, and emerging therapy datapoints.', 'scales'],
+  ['Headlines miss the curve shape', 'Beyond median PFS, crossing curves, late separation, tail plateaus, and other patterns are crucial, and as important as any other safety or efficacy metric.', 'curves'],
 ];
-const PROB_IN = (i) => 1.4 + i * 0.55;
+const PROB_IN = (i) => 1.0 + i * 0.45;
 cue(S.drown[0] + 0.05, 'whoosh', 0.35);
 PROBLEMS.forEach((_, i) => cue(S.drown[0] + PROB_IN(i) + 0.05, 'tick', 0.45));
 cue(S.drown[0] + PROB_IN(2) + 1.35, 'pop', 0.5);
@@ -184,7 +164,7 @@ cue(S.drown[0] + PROB_IN(2) + 1.35, 'pop', 0.5);
 function icon(g, kind, x, y, t) {
   const s = 68;
   rrect(g, x, y, s, s, 16);
-  g.fillStyle = kind === 'scales' ? C.goldTint : C.tint;
+  g.fillStyle = C.tint;
   g.fill();
   g.save();
   g.lineWidth = 3;
@@ -198,7 +178,7 @@ function icon(g, kind, x, y, t) {
     const a = -Math.PI / 2 + Math.max(0, t) * 2.4;
     g.beginPath(); g.moveTo(cx, cy + 3); g.lineTo(cx + Math.cos(a) * 12, cy + 3 + Math.sin(a) * 12); g.stroke();
   } else if (kind === 'scales') {
-    g.strokeStyle = '#9A7A14';
+    g.strokeStyle = C.primary;
     const tilt = Math.sin(Math.max(0, t) * 2.6) * 0.16 * Math.exp(-Math.max(0, t) * 0.5);
     g.beginPath(); g.moveTo(cx, cy - 16); g.lineTo(cx, cy + 18); g.moveTo(cx - 10, cy + 18); g.lineTo(cx + 10, cy + 18); g.stroke();
     const ex = Math.cos(tilt) * 19, ey = Math.sin(tilt) * 19;
@@ -210,37 +190,30 @@ function icon(g, kind, x, y, t) {
     // Two survival curves drawn left to right; they cross.
     const p = clamp(t / 1.1);
     g.beginPath(); g.rect(x + 12, y + 10, (s - 24) * p, s - 20); g.clip();
-    g.lineWidth = 2.5;
-    g.strokeStyle = C.primary;
-    g.beginPath(); g.moveTo(x + 14, y + 18); g.lineTo(x + 26, y + 18); g.lineTo(x + 26, y + 30); g.lineTo(x + 40, y + 30); g.lineTo(x + 40, y + 46); g.lineTo(x + 54, y + 46); g.stroke();
     g.strokeStyle = C.accent;
-    g.beginPath(); g.moveTo(x + 14, y + 18); g.lineTo(x + 20, y + 18); g.lineTo(x + 20, y + 36); g.lineTo(x + 34, y + 36); g.lineTo(x + 34, y + 40); g.lineTo(x + 54, y + 40); g.stroke();
+    g.beginPath(); g.moveTo(x + 14, y + 20); g.lineTo(x + 22, y + 20); g.lineTo(x + 22, y + 38); g.lineTo(x + 54, y + 38); g.stroke();
+    g.strokeStyle = C.primary;
+    g.beginPath(); g.moveTo(x + 14, y + 20); g.lineTo(x + 34, y + 20); g.lineTo(x + 34, y + 28); g.lineTo(x + 44, y + 28); g.lineTo(x + 44, y + 48); g.lineTo(x + 54, y + 48); g.stroke();
   }
   g.restore();
 }
 
 function drown(g, T) {
   const t = T - S.drown[0], out = leave(T, S.drown[1]);
-  head(g, 'Teams are drowning in data', 230, 100, C.ink, t, 0.1, out);
-  head(g, "they can't compare", 334, 100, C.ink, t, 0.45, out);
-  wrapRich(g, LEAD2, 1400).forEach((line, k) => {
-    const y = 422 + k * 46;
-    masked(g, y, 30, sp(t - 0.55 - k * 0.07, 'ui'), out, () => {
-      for (const w of line) { g.font = w.f; g.fillStyle = w.c; g.letterSpacing = '0px'; g.fillText(w.word, X + w.x, y); }
-    });
-  });
-  const w = (CW - 2 * 24) / 3, top = 565, h = 420;
+  head(g, 'Teams are drowning in data', 262, 100, C.ink, t, 0.1, out);
+  head(g, "they can't compare", 366, 100, C.ink, t, 0.45, out);
+  const w = (CW - 2 * 24) / 3, top = 442, h = 436;
   PROBLEMS.forEach(([title, body, kind], i) => {
     const d = PROB_IN(i);
     card(g, X + i * (w + 24), top, w, h, sp(t - d), out, (x, y) => {
       icon(g, kind, x + 40, y + 40, t - d - 0.3);
-      type(g, 600, 28, 'sans', -0.01);
+      // One-line titles at this size keep every body on the same baseline across the row.
+      type(g, 600, 26, 'sans', -0.01);
       g.fillStyle = C.ink;
-      const tl = wrap(g, title, w - 80);
-      textLines(g, tl, x + 40, y + 160, 38);
+      g.fillText(title, x + 40, y + 158);
       type(g, 400, 25);
       g.fillStyle = C.muted;
-      textLines(g, wrap(g, body, w - 80), x + 40, y + 160 + (tl.length - 1) * 38 + 48, 37);
+      textLines(g, wrap(g, body, w - 80), x + 40, y + 204, 37);
     });
   });
 }
