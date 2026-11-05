@@ -451,43 +451,46 @@ function efficacy(g, T) {
   clipped(g, [x, Math.max(56, y - s), w, base - y], () => blit(g, IMG.effP3, [x, y, w, base - y], -s, 0));
 }
 
+let pointerIn = false; // set per frame from draw()'s opts: the pointer is already on screen
+const c = (r, dx = 0.5, dy = 0.5) => [r[0] + r[2] * dx, r[1] + r[3] * dy];
+const POINTER_KEYS = [
+  [0, [760, 520]],
+  [T_TU_LEAN + 0.2, [620, 430]],
+  [T_TU_CLICK - 0.35, c(R.tuNew, 0.45)],
+  [T_TU_WIPE + 0.3, [560, 560]],
+  [T_TU_HOVER - 0.3, RAIL.ln],
+  [T_LN + 0.3, [700, 420]],
+  [T_LN_CLICK - 0.4, c(R.lnEff, 0.45)],
+  [T_LN_RISE + 0.3, [900, 440]],
+  [T_LN_OPEN - 0.4, c(R.lnAll10, 0.4)],
+  [T_LN_OPEN + 0.3, [620, 600]],
+  [T_LN_HOVER - 0.3, RAIL.ls],
+  [T_LS + 0.3, [600, 420]],
+  [T_LS_MENU - 0.35, c(R.lsGroupBy, 0.4)],
+  [T_LS_PICK - 0.35, c(R.lsLine, 0.35)],
+  [T_LS_COLS + 0.3, [700, 620]],
+  [T_LS_HOVER - 0.3, RAIL.hub],
+  [T_HUB + 0.3, [300, 420]],
+  [T_HUB_P3 - 0.35, c(R.hubP3Label, 0.2)],
+  [T_HUB_TICKS[0] - 0.35, c(R.hubBoxes[0])],
+  [T_HUB_TICKS[1] - 0.3, c(R.hubBoxes[1])],
+  [T_HUB_SEL + 0.2, [1000, 640]],
+  [T_FAB - 0.35, [1336, 833]],
+  [T_FAB + 0.35, [980, 520]],
+  [T_CLOSE - 0.4, c(R.agentClose)],
+  [T_CLOSE + 0.3, [900, 520]],
+  [T_HUB_HOVER - 0.3, RAIL.eff],
+  [T_EFF + 0.3, [640, 420]],
+  [T_EFF_P3 - 0.35, c(R.effP3, 0.45)],
+  [T_EFF_SCROLL + 0.2, [1100, 720]],
+];
+export const pointerAt = (T) => track2(T, POINTER_KEYS, 'snappy');
 function cursor(g, T) {
-  const c = (r, dx = 0.5, dy = 0.5) => [r[0] + r[2] * dx, r[1] + r[3] * dy];
-  const [x, y] = track2(T, [
-    [0, [760, 520]],
-    [T_TU_LEAN + 0.2, [620, 430]],
-    [T_TU_CLICK - 0.35, c(R.tuNew, 0.45)],
-    [T_TU_WIPE + 0.3, [560, 560]],
-    [T_TU_HOVER - 0.3, RAIL.ln],
-    [T_LN + 0.3, [700, 420]],
-    [T_LN_CLICK - 0.4, c(R.lnEff, 0.45)],
-    [T_LN_RISE + 0.3, [900, 440]],
-    [T_LN_OPEN - 0.4, c(R.lnAll10, 0.4)],
-    [T_LN_OPEN + 0.3, [620, 600]],
-    [T_LN_HOVER - 0.3, RAIL.ls],
-    [T_LS + 0.3, [600, 420]],
-    [T_LS_MENU - 0.35, c(R.lsGroupBy, 0.4)],
-    [T_LS_PICK - 0.35, c(R.lsLine, 0.35)],
-    [T_LS_COLS + 0.3, [700, 620]],
-    [T_LS_HOVER - 0.3, RAIL.hub],
-    [T_HUB + 0.3, [300, 420]],
-    [T_HUB_P3 - 0.35, c(R.hubP3Label, 0.2)],
-    [T_HUB_TICKS[0] - 0.35, c(R.hubBoxes[0])],
-    [T_HUB_TICKS[1] - 0.3, c(R.hubBoxes[1])],
-    [T_HUB_SEL + 0.2, [1000, 640]],
-    [T_FAB - 0.35, [1336, 833]],
-    [T_FAB + 0.35, [980, 520]],
-    [T_CLOSE - 0.4, c(R.agentClose)],
-    [T_CLOSE + 0.3, [900, 520]],
-    [T_HUB_HOVER - 0.3, RAIL.eff],
-    [T_EFF + 0.3, [640, 420]],
-    [T_EFF_P3 - 0.35, c(R.effP3, 0.45)],
-    [T_EFF_SCROLL + 0.2, [1100, 720]],
-  ], 'snappy');
+  const [x, y] = pointerAt(T);
   const presses = [T_TU_CLICK, T_LN, T_LN_CLICK, T_LN_OPEN, T_LS, T_LS_MENU, T_LS_PICK, T_HUB, T_HUB_P3,
     ...T_HUB_TICKS, T_FAB, T_CLOSE, T_EFF, T_EFF_P3];
   const press = Math.max(0, ...presses.map((t0) => (T > t0 - 0.05 && T < t0 + 0.3 ? clamp((T - t0 + 0.05) / 0.35) : 0)));
-  const alpha = window01(T, T_TU_LEAN + 0.2, T_EFF_GROW[0] + 0.3, 0.12, 0.2);
+  const alpha = window01(T, pointerIn ? 0 : T_TU_LEAN + 0.2, T_EFF_GROW[0] + 0.3, pointerIn ? 0.001 : 0.12, 0.2);
   const [sx, sy] = toScreen(T, [x, y]);
   drawCursor(g, sx, sy, press, alpha);
 }
@@ -536,8 +539,10 @@ function page(g, T, px) {
 }
 
 // opts.rise false: the sheet starts in place instead of rising in.
+// opts.pointer true: the pointer is already on screen when this picks up.
 export function draw(g, T, opts = {}) {
   rise = opts.rise !== false;
+  pointerIn = opts.pointer === true;
   const mac = g.mac;
   g.mac = true; // the macOS pointer, here and inside any master film
   g.setTransform(1, 0, 0, 1, 0, 0);
