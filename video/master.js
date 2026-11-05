@@ -1,8 +1,8 @@
 // The master film (docs/storyboard-master.md): brand card, the product intro (intro.js),
-// sign-in, the dashboard tour (pages.js), Question 1 (simple, film.js), Question 2 (complex,
-// q3.js), KM Curves Intelligence (km.js), end card. One app window runs from sign-in to the
-// last chapter and every jump is a click inside it (joins.js): the login card grows into the
-// app, the AI Agent rail opens Question 1's composer, Question 2 is typed as a follow-up under
+// sign-in, the disease portfolios, the dashboard tour (pages.js), Question 1 (simple, film.js),
+// Question 2 (complex, q3.js), KM Curves Intelligence (km.js), end card. One app window runs
+// from sign-in to the last chapter and every jump is a click inside it (joins.js): the login card
+// grows into the app, Cutaneous Melanoma's card opens the tour, the AI Agent rail opens Question 1's composer, Question 2 is typed as a follow-up under
 // Question 1's answer, and the KM rail icon opens the KM page. Each chapter draws itself at
 // its own local time, from where the join hands over to where the next one takes it.
 // The cards use the landing page's lockup and tagline on the satin ground, and rise in
@@ -26,7 +26,7 @@ const KM_TO = 16.55; // km.js: through the upload caption, before its own clear
 const INTRO_TO = 23.45; // intro.js: its diagram slide has lifted away; the login rises into the white
 // [scene, length in s]
 const SEQ = [
-  ['brand', 1.56], ['intro', INTRO_TO], ['login', joins.LOGIN_DUR],
+  ['brand', 1.56], ['intro', INTRO_TO], ['login', joins.LOGIN_DUR], ['pick', joins.PICK_DUR],
   ['tour', pages.T_DONE - joins.TOUR_FROM], ['toQ1', joins.TO_Q1_DUR], ['q1', Q1_TO - Q1_FROM],
   ['toQ2', joins.TO_Q2_DUR], ['q2', Q2_TO - Q2_FROM], ['toKM', joins.TO_KM_DUR], ['km', KM_TO],
   ['end', 3.4],
@@ -121,7 +121,8 @@ const SCENES = {
   brand,
   intro: (g, t) => product.draw(g, t),
   login: (g, t) => joins.login(g, t),
-  tour: (g, t) => pages.draw(g, joins.TOUR_FROM + t, { rise: false }),
+  pick: (g, t) => joins.pick(g, t),
+  tour: (g, t) => pages.draw(g, joins.TOUR_FROM + t, { rise: false, pointer: true }),
   toQ1: (g, t) => joins.toQ1(g, t, q2.CHIP_TEXT),
   q1: (g, t) => q2.draw(g, Q1_FROM + t, { bar: false }),
   toQ2: (g, t) => joins.toQ2(g, t, q3.CHIP_TEXT, (x) => q2.draw(x, Q1_TO + Math.min(t, 0.2), { bar: false })),

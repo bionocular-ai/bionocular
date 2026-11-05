@@ -1,6 +1,7 @@
 // The master film's joins (docs/storyboard-master.md): one app window from sign-in to the
 // last chapter, every jump a click inside it. Sign-in on the real /login page, the card
-// growing into the app sheet; the AI Agent rail click into Question 1, typed into the real
+// growing into the app sheet; the eight disease portfolios, Cutaneous Melanoma clicked into
+// the tour; the AI Agent rail click into Question 1, typed into the real
 // composer; Question 2 typed into the composer on the bare canvas (master v2's, captures in
 // assets/screens/composer/); the KM rail click. The app screens are 2x captures from
 // scripts/capture-agent.sh, all coordinates their CSS px.
@@ -40,8 +41,17 @@ const ASK = {
     wrap: 15, send: [[1119, 426, 36, 36], [1119, 436, 36, 36]],
   },
 };
+// /dashboard's eight disease portfolios (scripts/capture-portfolio.sh): each hover is a crop of its
+// card and shadow, this far outside the card on every side.
+const PORT = {
+  rest: image('port-rest'),
+  empty: image('port-empty'), // the same page, its cards not yet in
+  hover: Array.from({ length: 8 }, (_, i) => image(`portc/0${i + 1}`)),
+  cards: [80, 404, 728, 1052].map((x) => [x, 247, 308, 168]).concat([80, 404, 728, 1052].map((x) => [x, 431, 308, 168])),
+  pad: 20,
+};
 export const IMAGES = [...Object.values(LOGIN).filter((v) => v instanceof Image), ...LOGIN.email, ...LOGIN.pass,
-  ...Object.values(APP), ...Object.values(ASK).flatMap((q) => [...q.words, q.hover])];
+  ...Object.values(APP), ...Object.values(ASK).flatMap((q) => [...q.words, q.hover]), PORT.rest, PORT.empty, ...PORT.hover];
 
 export const CUES = []; // in each beat's local time, keyed by beat: { beat, t, type, gain }
 const cue = (beat, t, type, gain = 1) => CUES.push({ beat, t: +t.toFixed(3), type, gain });
@@ -132,11 +142,10 @@ function morph(g, t, from, chipText) {
 // ---------------------------------------------------------------- sign in
 // The intro's last slide clears on white; the /login page rises from below as a panel,
 // demo@bionocular.ai types in, the password fills, the pointer clicks Login, and the white
-// card grows into the app sheet (Trial Updates, the tour's first frame) while the teal
+// card grows into the app sheet (the disease portfolios, where sign-in lands) while the teal
 // ground falls away to the canvas.
 const L = { email: 0.55, step: 0.15, field2: 1.5, pass: 1.6, hover: 2.2, click: 2.45, grow: [2.6, 3.5] };
 export const LOGIN_DUR = 3.6;
-export const TOUR_FROM = 0.6; // the tour's local time the grown card lands on
 cue('login', 0.02, 'whoosh', 0.4);
 cue('login', 0.32, 'thump', 0.5);
 [...LOGIN.email.keys()].forEach((i) => cue('login', L.email + i * L.step, 'tick', 0.22));
@@ -173,12 +182,11 @@ export function login(g, t) {
   g.restore();
 
   if (t >= L.grow[0]) {
-    // The card's white grows into the sheet the tour opens on; Trial Updates resolves inside it.
-    const tc = pages.camAt(TOUR_FROM);
+    // The card's white grows into the portfolios' sheet, and the page resolves inside it.
     const [cx0, cy0] = loginScreen(c, LOGIN.card);
     const card = { x: cx0, y: cy0, w: LOGIN.card[2] * c.k, h: LOGIN.card[3] * c.k, r: 16 * c.k };
-    const [sx, sy] = pages.onScreen(tc, [0, 0]);
-    const S = pages.B * tc.z;
+    const [sx, sy] = pages.onScreen(PICK_WIDE, [0, 0]);
+    const S = pages.B * PICK_WIDE.z;
     const target = { x: sx, y: sy, w: pages.VIEW.w * S, h: pages.VIEW.h * S, r: 14 * S };
     const r = Object.fromEntries(Object.keys(card).map((k) => [k, lerp(card[k], target[k], m)]));
     g.save();
@@ -192,7 +200,7 @@ export function login(g, t) {
     g.save();
     rrect(g, r.x, r.y, r.w, r.h, r.r);
     g.clip();
-    blurred(g, 0, clamp((m - 0.25) / 0.5), (x) => pages.draw(x, TOUR_FROM, { rise: false }));
+    blurred(g, 0, clamp((m - 0.25) / 0.5), (x) => pickFrame(x, t - LOGIN_DUR));
     g.restore();
   }
 
@@ -204,6 +212,92 @@ export function login(g, t) {
   const press = Math.max(0, ...[0.45, L.field2 - 0.05, L.click].map((t0) => 1 - Math.abs(t - t0) / 0.14));
   const [sx, sy] = loginScreen(c, [px, py]);
   drawCursor(g, sx, sy + rise, press, window01(t, 0.25, L.grow[0] + 0.1, 0.12, 0.15));
+}
+
+// ---------------------------------------------------------------- the disease portfolios
+// Sign-in lands on /dashboard. The eight cards stagger in as they do on the real page, the
+// pointer walks the bottom row left to right and the top row back, each card taking its hover,
+// and clicks Cutaneous Melanoma as the camera leans in. Its Trial Updates wipes in, rail and
+// all, the camera and pointer flowing straight into the tour's first lean. The cards start while
+// the login card is still growing, so t runs from before 0 there.
+const PICK = { walk: 0.6, step: 0.24, up: 0.12, click: 2.8 };
+PICK.order = [4, 5, 6, 7, 3, 2, 1, 0]; // card indices, in the order the pointer reaches them
+PICK.at = PICK.order.map((_, i) => PICK.walk + i * PICK.step + (i >= 4 ? PICK.up : 0));
+PICK.lean = PICK.at[4] - 0.2;
+export const PICK_DUR = PICK.click + 0.7;
+export const TOUR_FROM = 1; // the tour's local time this hands over to, inside its first lean
+const PICK_WIDE = { cx: 720, cy: 350, z: 1.15 }; // every card, and the sheet's edges inside the frame
+const PICK_LEAN = { cx: 500, cy: 300, z: 1.55 }; // the header to the bottom row, cards 1-3 whole
+PICK.order.forEach((_, i) => cue('pick', PICK.at[i], 'tick', 0.2));
+cue('pick', PICK.lean, 'whoosh', 0.25);
+cue('pick', PICK.click, 'click', 0.85);
+cue('pick', PICK.click + 0.05, 'whoosh', 0.35);
+
+const pickCam = (t) => {
+  const e = easeInOutCubic((t - PICK.click) / (PICK_DUR - PICK.click));
+  // The tour's camera as it runs up to the handover, so the speed carries across the cut.
+  const tour = pages.camAt(TOUR_FROM - (PICK_DUR - t));
+  const v = (k) => lerp(track(t, [[0, PICK_WIDE[k]], [PICK.lean, PICK_LEAN[k]]], 'heavy'), tour[k], e);
+  return { cx: v('cx'), cy: v('cy'), z: v('z') };
+};
+
+function pickPage(g, t) {
+  pages.view(g, PORT.empty);
+  PORT.cards.forEach(([x, y, w, h], i) => {
+    // Masked, not faded, as the landscape's columns land.
+    const q = sp(t + 0.3 - i * 0.06, 'ui');
+    pages.clipped(g, [x - 2, y - 2, w + 4, (h + 4) * clamp(q)], () => pages.blit(g, PORT.rest, [x - 2, y - 2, w + 4, h + 4], (1 - q) * 24));
+  });
+  PICK.order.forEach((card, i) => {
+    const a = i < 7 ? window01(t, PICK.at[i], PICK.at[i + 1] + 0.1, 0.12, 0.2) : clamp((t - PICK.at[i]) / 0.12);
+    if (a <= 0) return;
+    const [x, y, w, h] = PORT.cards[card];
+    const m = PORT.pad;
+    g.save();
+    g.globalAlpha = a;
+    g.drawImage(PORT.hover[card], x - m, y - m, w + m * 2, h + m * 2);
+    g.restore();
+  });
+  // No rail on this page, so the whole frame below the top bar wipes in, and the bar's links change.
+  const p = clamp(sp(t - PICK.click, 'ui'));
+  if (p <= 0) return;
+  const [W0, H0] = [pages.VIEW.w, pages.VIEW.h];
+  g.save();
+  g.globalAlpha = clamp(p * 3);
+  pages.blit(g, pages.IMG.tuAll, [0, 0, W0, 56]);
+  g.restore();
+  pages.clipped(g, [0, 56, W0, (H0 - 56) * p], () => {
+    g.save();
+    g.translate(0, (1 - p) * 6);
+    pages.view(g, pages.IMG.tuAll);
+    g.restore();
+  });
+  if (p < 0.995) {
+    g.save();
+    g.globalAlpha = Math.min(1, (1 - p) * 8);
+    g.fillStyle = C.line;
+    g.fillRect(0, 56 + (H0 - 56) * p - 1, W0, 1);
+    g.restore();
+  }
+}
+
+function pickFrame(g, t, c = PICK_WIDE) {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = C.bg;
+  g.fillRect(0, 0, W, H);
+  pages.sheet(g, c, () => pickPage(g, t));
+}
+
+export function pick(g, t) {
+  const c = pickCam(t);
+  pickFrame(g, t, c);
+  const [px, py] = track2(t, [
+    [0, [720, 660]],
+    ...PICK.order.map((card, i) => [PICK.at[i] - 0.14, center(PORT.cards[card], 0.5, 0.45)]),
+    [PICK.click + 0.2, pages.pointerAt(TOUR_FROM)],
+  ], 'ui');
+  const [sx, sy] = pages.onScreen(c, [px, py]);
+  drawCursor(g, sx, sy, clamp(1 - Math.abs(t - PICK.click) / 0.14), clamp((t - 0.15) / 0.12));
 }
 
 // ---------------------------------------------------------------- the agent composer
