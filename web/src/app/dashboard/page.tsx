@@ -79,7 +79,14 @@ export default function MainDashboardPage() {
                 <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--brand-text-muted)] mb-2 opacity-60">
                   Oncology Intelligence · {CANCER_TYPES.length} Indications
                 </p>
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-[var(--brand-text)] tracking-tight leading-none">
+                {/* The same title type as PageHeader on every other page. */}
+                <h1
+                  className="font-semibold leading-[1.1] tracking-[-0.01em] text-(--brand-text)"
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 'clamp(24px, 3.4vw, 34px)',
+                  }}
+                >
                   Disease Portfolios{' '}
                   <span style={{ color: 'var(--brand-primary)' }}>
                     <span className="brand-text"><span className="brand-bio">bio</span>nocular</span>
@@ -119,20 +126,6 @@ export default function MainDashboardPage() {
                     className="group relative bg-white overflow-hidden cursor-pointer flex flex-col min-h-[168px] transition-all duration-200 hover:shadow-lg hover:-translate-y-px"
                     style={{ borderRadius: '7px', border: '1px solid #dce9e4' }}
                   >
-                    {/* Large faint ordinal — decorative depth */}
-                    <div
-                      className="absolute right-2 bottom-1 leading-none select-none pointer-events-none font-black"
-                      style={{
-                        color: type.accent,
-                        opacity: 0.07,
-                        fontSize: '72px',
-                        fontVariantNumeric: 'tabular-nums',
-                        fontFamily: 'var(--font-display)',
-                      }}
-                    >
-                      {String(i + 1).padStart(2, '0')}
-                    </div>
-
                     <div className="flex flex-col flex-1 p-4 relative z-10">
                       {/* Category label with color swatch */}
                       <div className="flex items-center gap-1.5 mb-3">
@@ -162,7 +155,20 @@ export default function MainDashboardPage() {
                       </h2>
 
                       {/* Footer */}
-                      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
+                      <div className="relative flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
+                        {/* Large faint ordinal, standing on the footer's line so it never meets "View". */}
+                        <div
+                          className="absolute right-0 bottom-full -z-10 leading-none select-none pointer-events-none font-black"
+                          style={{
+                            color: type.accent,
+                            opacity: 0.07,
+                            fontSize: '72px',
+                            fontVariantNumeric: 'tabular-nums',
+                            fontFamily: 'var(--font-display)',
+                          }}
+                        >
+                          {String(i + 1).padStart(2, '0')}
+                        </div>
                         <span
                           className="text-[9px] font-mono font-semibold tracking-wider"
                           style={{ color: type.accent, opacity: 0.45 }}
