@@ -10,14 +10,14 @@ import { Search, ArrowUpRight } from 'lucide-react';
 import { ROUTES } from '@/lib/constants';
 
 const CANCER_TYPES = [
-  { name: 'Cutaneous Melanoma',                        slug: 'cutaneous-melanoma',                           accent: '#1B4F65', category: 'Cutaneous' },
-  { name: 'Cutaneous Squamous Cell Carcinoma (cSCC)',  slug: 'cutaneous-squamous-cell-carcinoma',            accent: '#2D7D5A', category: 'Squamous' },
-  { name: 'Cutaneous Melanoma (Brain/CNS Metastases)', slug: 'cutaneous-melanoma-with-brain-cns-metastasis', accent: '#5B3E8F', category: 'Brain/CNS' },
-  { name: 'Uveal Melanoma',                            slug: 'uveal-melanoma',                               accent: '#1A4A8A', category: 'Uveal' },
-  { name: 'Acral Melanoma',                            slug: 'acral-melanoma',                               accent: '#7B3FA0', category: 'Acral' },
-  { name: 'Mucosal Melanoma',                          slug: 'mucosal-melanoma',                             accent: '#A63820', category: 'Mucosal' },
-  { name: 'Basal Cell Carcinoma (BCC)',                slug: 'basal-cell-carcinoma',                         accent: '#8A5C1E', category: 'Basal' },
-  { name: 'Merkel Cell Carcinoma (MCC)',               slug: 'merkel-cell-carcinoma',                        accent: '#1E7070', category: 'Merkel' },
+  { name: 'Cutaneous Melanoma',                        slug: 'cutaneous-melanoma',                           accent: '#1B4F65' },
+  { name: 'Cutaneous Squamous Cell Carcinoma (cSCC)',  slug: 'cutaneous-squamous-cell-carcinoma',            accent: '#2D7D5A' },
+  { name: 'Cutaneous Melanoma (Brain/CNS Metastases)', slug: 'cutaneous-melanoma-with-brain-cns-metastasis', accent: '#5B3E8F' },
+  { name: 'Uveal Melanoma',                            slug: 'uveal-melanoma',                               accent: '#1A4A8A' },
+  { name: 'Acral Melanoma',                            slug: 'acral-melanoma',                               accent: '#7B3FA0' },
+  { name: 'Mucosal Melanoma',                          slug: 'mucosal-melanoma',                             accent: '#A63820' },
+  { name: 'Basal Cell Carcinoma (BCC)',                slug: 'basal-cell-carcinoma',                         accent: '#8A5C1E' },
+  { name: 'Merkel Cell Carcinoma (MCC)',               slug: 'merkel-cell-carcinoma',                        accent: '#1E7070' },
 ];
 
 export default function MainDashboardPage() {
@@ -76,7 +76,10 @@ export default function MainDashboardPage() {
             {/* Hero row: title left, search right */}
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5 mb-5">
               <div>
-                <p className="text-[9px] font-bold tracking-[0.22em] uppercase text-[var(--brand-text-muted)] mb-2 opacity-60">
+                <p
+                  className="text-[11px] font-medium uppercase tracking-[0.14em] text-(--brand-text-muted) mb-2"
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                >
                   Oncology Intelligence · {CANCER_TYPES.length} Indications
                 </p>
                 {/* The same title type as PageHeader on every other page. */}
@@ -103,6 +106,7 @@ export default function MainDashboardPage() {
                 </div>
                 <input
                   type="text"
+                  aria-label="Filter indications"
                   placeholder="Filter indications…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -116,31 +120,31 @@ export default function MainDashboardPage() {
 
             {/* Card grid — 4×2 on desktop */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-              {filteredTypes.map((type, i) => (
+              {filteredTypes.map((type) => (
                 <Link
                   key={type.slug}
                   href={`/dashboard/${type.slug}`}
-                  className="cancer-card block"
+                  className="cancer-card group block rounded-[7px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary) focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F8F6]"
                 >
                   <div
-                    className="group relative bg-white overflow-hidden cursor-pointer flex flex-col min-h-[168px] transition-all duration-200 hover:shadow-lg hover:-translate-y-px"
+                    className="relative bg-white overflow-hidden cursor-pointer flex flex-col min-h-[112px] sm:min-h-[168px] transition-all duration-200 hover:shadow-lg hover:-translate-y-px active:scale-[0.98] active:duration-100"
                     style={{ borderRadius: '7px', border: '1px solid #dce9e4' }}
                   >
-                    <div className="flex flex-col flex-1 p-4 relative z-10">
-                      {/* Category label with color swatch */}
-                      <div className="flex items-center gap-1.5 mb-3">
-                        <span
-                          className="shrink-0 rounded-[2px]"
-                          style={{ width: '7px', height: '7px', backgroundColor: type.accent }}
-                        />
-                        <p
-                          className="text-[9px] font-bold tracking-[0.18em] uppercase leading-none"
-                          style={{ color: type.accent }}
-                        >
-                          {type.category}
-                        </p>
-                      </div>
+                    {/* Large faint ordinal, decorative. Its place in the full list, whatever the filter shows. */}
+                    <div
+                      aria-hidden
+                      className="absolute right-2 bottom-1 text-[48px] sm:text-[72px] leading-none select-none pointer-events-none font-black"
+                      style={{
+                        color: type.accent,
+                        opacity: 0.07,
+                        fontVariantNumeric: 'tabular-nums',
+                        fontFamily: 'var(--font-display)',
+                      }}
+                    >
+                      {String(CANCER_TYPES.indexOf(type) + 1).padStart(2, '0')}
+                    </div>
 
+                    <div className="flex flex-col flex-1 p-4 relative z-10">
                       {/* Cancer name in the display face */}
                       <h2
                         className="leading-snug flex-1 text-[var(--brand-text)] line-clamp-3"
@@ -154,34 +158,14 @@ export default function MainDashboardPage() {
                         {type.name}
                       </h2>
 
-                      {/* Footer */}
-                      <div className="relative flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100">
-                        {/* Large faint ordinal, standing on the footer's line so it never meets "View". */}
-                        <div
-                          className="absolute right-0 bottom-full -z-10 leading-none select-none pointer-events-none font-black"
-                          style={{
-                            color: type.accent,
-                            opacity: 0.07,
-                            fontSize: '72px',
-                            fontVariantNumeric: 'tabular-nums',
-                            fontFamily: 'var(--font-display)',
-                          }}
-                        >
-                          {String(i + 1).padStart(2, '0')}
-                        </div>
-                        <span
-                          className="text-[9px] font-mono font-semibold tracking-wider"
-                          style={{ color: type.accent, opacity: 0.45 }}
-                        >
-                          #{String(i + 1).padStart(2, '0')}
-                        </span>
-                        <div
-                          className="flex items-center gap-0.5 text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-2 group-hover:translate-x-0"
-                          style={{ color: type.accent }}
-                        >
-                          View
-                          <ArrowUpRight className="h-3 w-3" />
-                        </div>
+                      {/* Shown on hover or keyboard focus, and always where there is no hover. */}
+                      <div
+                        aria-hidden
+                        className="flex items-center gap-0.5 mt-3 text-xs font-semibold opacity-0 -translate-x-2 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-0 group-focus-visible:opacity-100 group-focus-visible:translate-x-0 [@media(hover:none)]:opacity-100 [@media(hover:none)]:translate-x-0"
+                        style={{ color: type.accent }}
+                      >
+                        View
+                        <ArrowUpRight className="h-3 w-3" />
                       </div>
                     </div>
                   </div>
