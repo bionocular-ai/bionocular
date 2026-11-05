@@ -23,7 +23,9 @@ export function DashboardNavLink({ className }: DashboardNavLinkProps) {
       href={`/dashboard/${category}`}
       aria-label="Go to dashboard"
       className={cn(
-        'inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-sm font-medium sm:px-4',
+        'relative inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-sm font-medium sm:px-4',
+        // A 44 px target around the 34 px pill.
+        'before:absolute before:-inset-y-[5px] before:-inset-x-[3px]',
         'bg-(--brand-primary) border-transparent text-white',
         'transition-all duration-200 ease-out',
         'hover:bg-(--brand-primary-hover) hover:shadow-md',
