@@ -150,7 +150,10 @@ async def test_retries_200_error_body_and_logs_message(tmp_path):
 @pytest.mark.asyncio
 async def test_retries_empty_choices_and_non_json():
     posted: list = []
-    bad = [httpx.Response(200, json={"choices": []}), httpx.Response(200, text="<html>")]
+    bad = [
+        httpx.Response(200, json={"choices": []}),
+        httpx.Response(200, text="<html>"),
+    ]
     await _svc([*bad, _resp(VALID)], posted=posted).generate_structured("p", M)
     assert len(posted) == 3
 
