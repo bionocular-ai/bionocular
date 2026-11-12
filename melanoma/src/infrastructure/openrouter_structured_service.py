@@ -35,8 +35,8 @@ PROVIDER = {
 _WAIT = wait_random_exponential(max=60)  # module-level so tests can zero it
 
 
-class _Retryable(Exception):
-    """429, 5xx or empty content."""
+class OpenRouterError(RuntimeError):
+    """Retryable failure (429, 5xx, error body, non-JSON or empty content) that outlived the retries."""
 
 
 def to_strict_schema(model: type[BaseModel]) -> dict[str, Any]:
@@ -122,9 +122,12 @@ class OpenRouterStructuredService(StructuredLLMService):
                     URL, json=body, headers={"Authorization": f"Bearer {self._key}"}
                 )
                 if resp.status_code == 429 or resp.status_code >= 500:
-                    raise _Retryable(f"HTTP {resp.status_code}")
+                    raise OpenRouterError(f"HTTP {resp.status_code}")
                 resp.raise_for_status()
-                data = resp.json()
+                try:
+                    data = resp.json()
+                except ValueError:
+                    raise OpenRouterError("non-JSON body") from None
                 provider = data.get("provider")
                 usage = data.get("usage") or {}
                 prompt_tokens = usage.get("prompt_tokens", 0)
@@ -132,9 +135,13 @@ class OpenRouterStructuredService(StructuredLLMService):
                 cached = (usage.get("prompt_tokens_details") or {}).get(
                     "cached_tokens", 0
                 )
+                if data.get("error") or not data.get("choices"):
+                    err = data.get("error")
+                    msg = err.get("message") if isinstance(err, dict) else err
+                    raise OpenRouterError(f"error body: {msg or 'no choices'}")
                 content = (data["choices"][0]["message"].get("content") or "").strip()
                 if not content:
-                    raise _Retryable("empty content")
+                    raise OpenRouterError("empty content")
                 return response_schema.model_validate_json(content)
             except Exception as e:
                 status, error = "error", f"{type(e).__name__}: {e}"
@@ -169,7 +176,7 @@ class OpenRouterStructuredService(StructuredLLMService):
             wait=_WAIT,
             stop=stop_after_attempt(max_retries),
             retry=retry_if_exception_type(
-                (_Retryable, httpx.TransportError, ValidationError)
+                (OpenRouterError, httpx.TransportError, ValidationError)
             ),
             reraise=True,
         ):

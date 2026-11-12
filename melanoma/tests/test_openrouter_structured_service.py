@@ -8,6 +8,7 @@ from tenacity import wait_none
 from src.infrastructure import openrouter_structured_service as mod
 from src.infrastructure.cost_calculator import CostCalculator
 from src.infrastructure.openrouter_structured_service import (
+    OpenRouterError,
     OpenRouterStructuredService,
     to_strict_schema,
 )
@@ -124,6 +125,42 @@ async def test_raises_after_max_retries():
     with pytest.raises(ValidationError):
         await svc.generate_structured("p", M, max_retries=3)
     assert len(posted) == 3
+
+
+@pytest.mark.asyncio
+async def test_empty_content_exhausted_raises_public_error():
+    posted: list = []
+    svc = _svc(["", "  ", ""], posted=posted)
+    with pytest.raises(OpenRouterError):
+        await svc.generate_structured("p", M, max_retries=3)
+    assert len(posted) == 3
+
+
+@pytest.mark.asyncio
+async def test_retries_200_error_body_and_logs_message(tmp_path):
+    posted: list = []
+    err = httpx.Response(200, json={"error": {"message": "upstream down"}})
+    svc = _svc([err, _resp(VALID)], tmp_path, posted=posted)
+    await svc.generate_structured("p", M)
+    assert len(posted) == 2
+    first = json.loads((tmp_path / "log.jsonl").read_text().splitlines()[0])
+    assert "upstream down" in first["error"]
+
+
+@pytest.mark.asyncio
+async def test_retries_empty_choices_and_non_json():
+    posted: list = []
+    bad = [httpx.Response(200, json={"choices": []}), httpx.Response(200, text="<html>")]
+    await _svc([*bad, _resp(VALID)], posted=posted).generate_structured("p", M)
+    assert len(posted) == 3
+
+
+@pytest.mark.asyncio
+async def test_call_log_records_other_provider(tmp_path):
+    svc = _svc([_resp(VALID, provider="Other")], tmp_path)
+    await svc.generate_structured("p", M)
+    line = json.loads((tmp_path / "log.jsonl").read_text().splitlines()[0])
+    assert line["provider"] == "Other"
 
 
 @pytest.mark.asyncio
