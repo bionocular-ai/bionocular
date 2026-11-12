@@ -317,7 +317,8 @@ def applies(field: SheetField, indication: str) -> bool:
     scope = re.sub(r"\([^)]*\)", "", field.applies_to).strip()
     if not scope or scope.lower() == "all":
         return True
-    for item in (i.strip().lower() for i in scope.split(",")):
+    for raw in (i.strip() for i in scope.split(",")):
+        item = raw.lower()
         if item in _ALIASES:
             if indication in _ALIASES[item]:
                 return True
@@ -325,6 +326,8 @@ def applies(field: SheetField, indication: str) -> bool:
             return True
         else:
             hay = f"{indication} {re.sub(r'[(][^)]*[)]', '', _INCLUDES.get(indication, ''))}"
-            if re.search(rf"(?<![\w-]){re.escape(item)}(?![\w-])", hay.lower()):
+            # Acronyms (ALL) match case-sensitively so prose "all" cannot hit them.
+            pat = rf"(?<![\w-]){re.escape(raw)}(?![\w-])"
+            if re.search(pat, hay) if raw.isupper() else re.search(pat, hay, re.I):
                 return True
     return False

@@ -122,6 +122,12 @@ def test_applies():
     )
 
 
+def test_applies_acronym_not_prose_word():
+    f = SheetField("r", "Median RFS", "t", "AML, ALL", "d", False, False)
+    assert applies(f, "ALL") and applies(f, "AML")
+    assert not applies(f, "CML")  # CML includes say "all phases"
+
+
 def test_heme_prompt_placeholder():
     assert "{abstract_text}" in HEME_SEPARATION_PROMPT
     assert chr(0x2014) not in HEME_SEPARATION_PROMPT
