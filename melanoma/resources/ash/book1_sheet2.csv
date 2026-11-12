@@ -16,7 +16,7 @@ Modality,Enum: antibody / bispecific / ADC / small molecule / CAR-T / other cell
 Drug class / sub-type,Text,All,"e.g. covalent BTK inhibitor, anti-CD38 antibody"
 Cell therapy product,Text,CAR-T and other cell therapy arms,"e.g. cilta-cel, axi-cel"
 Lymphodepletion regimen,Text,CAR-T and other cell therapy arms,"e.g. Flu/Cy, bendamustine"
-Bridging therapy (% and type),Number (%) + text,CAR-T and other cell therapy arms,"Share of patients who got therapy between apheresis and infusion, and what"
+Bridging therapy (type),Text,CAR-T and other cell therapy arms,"Therapy given between apheresis and infusion, e.g. R-GemOx, radiotherapy"
 Response criteria,Enum + version: IMWG 2016 / iwCLL 2018 / Lugano 2014 / ELN 2022 / IWG 2023 / IWWM-11 / other,All,Criteria the response endpoints were assessed by
 Assessment by,Enum: IRC / investigator,All,Who assessed response or progression (independent review committee or investigator)
 Disease subtype,Text + code (NCIt),All,"Disease as reported, plus its NCIt concept code"
