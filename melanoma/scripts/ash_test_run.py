@@ -4,6 +4,7 @@ Usage (from melanoma/):
   poetry run python3 scripts/ash_test_run.py --ids 94 --out data/ash_test_run/probe.json
 
 Results go to --out after each abstract; a rerun skips abstracts that finished cleanly.
+Resume does not fingerprint prompts: delete results.json after a prompt change.
 """
 
 import argparse
@@ -89,7 +90,9 @@ async def _run_family(
             result["extracted"] = extracted.model_dump()
         async with sem:
             verdict = await llm.generate_structured(
-                prompt=_with_abstract(judge_prompt(family, result["extracted"]), text),
+                prompt=_with_abstract(
+                    judge_prompt(family, result["extracted"], arms), text
+                ),
                 response_schema=JudgeVerdict,
                 temperature=0.0,
                 max_tokens=MAX_TOKENS,

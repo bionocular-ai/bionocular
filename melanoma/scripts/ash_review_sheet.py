@@ -41,6 +41,8 @@ COLUMNS = [
     "note",
     "corrected_value",
     "other_values",
+    "other_values_verdict",
+    "other_values_note",
     "text_only",
     "check",
     "check_note",
@@ -50,6 +52,7 @@ SUMMARY_COLUMNS = [
     "field",
     "applies",
     "filled",
+    "filled_cells",
     "quote_missing",
     "judge_pass",
     "judge_fail",
@@ -105,6 +108,9 @@ def build_rows(
             ]
             for arm_id, arm, f, cell, other in cells:
                 j = judge.get((arm_id, f.key), {})
+                ov = (
+                    judge.get((arm_id, "other_values"), {}) if arm_id != "trial" else {}
+                )
                 check, note = checks.get((number, arm, f.name), ("", ""))
                 rows.append(
                     {
@@ -123,6 +129,8 @@ def build_rows(
                         "note": j.get("note", ""),
                         "corrected_value": j.get("corrected_value", ""),
                         "other_values": other,
+                        "other_values_verdict": ov.get("verdict", ""),
+                        "other_values_note": ov.get("note", ""),
                         "text_only": f.text_only,
                         "check": check,
                         "check_note": note,
@@ -165,11 +173,14 @@ def summarize(
                         applies(f, selection[n]["indication"]) for n in abstracts
                     ),
                     "filled": len({r["abstract"] for r in filled}),
+                    "filled_cells": len(filled),
                     "quote_missing": sum(r["quote_found"] is False for r in filled),
                     "judge_pass": sum(r["verdict"] == "pass" for r in mine),
                     "judge_fail": sum(r["verdict"] == "fail" for r in mine),
                     "judge_uncertain": sum(r["verdict"] == "uncertain" for r in mine),
-                    "wrong": sum(r["check"] == "wrong" for r in mine),
+                    "wrong": sum(
+                        str(r["check"]).strip().lower() == "wrong" for r in mine
+                    ),
                     "other_values_mentions": sum(
                         _mentions(f, t) for t in arm_notes.values()
                     ),
@@ -181,13 +192,14 @@ def summarize(
 def read_checks(path: Path) -> Checks:
     if not path.exists():
         return {}
-    ws = openpyxl.load_workbook(path, read_only=True)["Values"]
+    wb = openpyxl.load_workbook(path, read_only=True)
+    ws = wb["Values"]
     it = ws.iter_rows(values_only=True)
     header = list(next(it))
     ix = {
         c: header.index(c) for c in ("abstract", "arm", "field", "check", "check_note")
     }
-    return {
+    checks = {
         (str(r[ix["abstract"]]), str(r[ix["arm"]]), str(r[ix["field"]])): (
             r[ix["check"]] or "",
             r[ix["check_note"]] or "",
@@ -195,6 +207,8 @@ def read_checks(path: Path) -> Checks:
         for r in it
         if r[ix["check"]]
     }
+    wb.close()
+    return checks
 
 
 def _sheet(ws: Any, columns: list[str], rows: list[dict[str, Any]]) -> None:

@@ -73,3 +73,23 @@ def test_render_format():
 def test_abstract_number():
     assert abstract_number("10.1182/blood-2025-2254") == "2254"
     assert abstract_number("10.1182/blood.2025028935") is None
+
+
+def test_heading_words_inside_other_words_stay_plain():
+    assert jats_to_sections(p("Resulting in a higher ORR.")) == [
+        (None, "Resulting in a higher ORR.")
+    ]
+    assert jats_to_sections(p("Methodology was standard.")) == [
+        (None, "Methodology was standard.")
+    ]
+    assert jats_to_sections(p("aimed at testing X")) == [(None, "aimed at testing X")]
+
+
+def test_bare_heading_paragraph_carries_to_next_text():
+    assert jats_to_sections(p("Results") + p("ORR was 80%.")) == [
+        ("Results", "ORR was 80%.")
+    ]
+
+
+def test_glued_capital_heading():
+    assert jats_to_sections(p("ResultsORR was 80%.")) == [("Results", "ORR was 80%.")]

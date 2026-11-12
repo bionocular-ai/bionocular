@@ -37,7 +37,7 @@ HEADINGS = {
 # Longest key first so "patients and methods" wins over any shorter prefix.
 _OPENER = re.compile(
     r"^(" + "|".join(sorted(map(re.escape, HEADINGS), key=len, reverse=True)) + r")"
-    r"(?:\s*[:：.]\s*|\s+|(?=[A-Z]))(.*)$",
+    r"(?:\s*[:：.]\s*|\s+|(?-i:(?=[A-Z]))|$)(.*)$",
     re.I | re.S,
 )
 # Citation-style paragraph: "Surname AB, Surname CD, ... Journal. 2025;16:"
@@ -53,15 +53,20 @@ def _clean(fragment: str) -> str:
 def jats_to_sections(jats: str) -> list[tuple[str | None, str]]:
     """Return (heading or None, text) per paragraph; trailing reference list dropped."""
     out: list[tuple[str | None, str]] = []
+    pending: str | None = None  # heading-only paragraph, applies to the next one
     for raw in re.findall(r"<jats:p>(.*?)</jats:p>", jats, re.S):
         text = _clean(raw)
         if not text:
             continue
         m = _OPENER.match(text)
-        if m and m.group(2).strip():
+        if m and not m.group(2).strip():
+            pending = HEADINGS[m.group(1).lower()]
+            continue
+        if m:
             out.append((HEADINGS[m.group(1).lower()], m.group(2).strip()))
         else:
-            out.append((None, text))
+            out.append((pending, text))
+        pending = None
     # ponytail: references are only ever trailing; cut from the first reference-like paragraph
     for i, (_, text) in enumerate(out):
         if re.match(r"references?\b", text, re.I) or _CITATION.match(text):
@@ -91,7 +96,7 @@ def main() -> None:
     args = ap.parse_args()
     wanted = args.ids.split(",")
     found: dict[str, str] = {}
-    with args.corpus.open() as f:
+    with args.corpus.open(encoding="utf-8") as f:
         for line in f:
             rec = json.loads(line)
             num = abstract_number(rec.get("DOI", ""))
@@ -104,7 +109,7 @@ def main() -> None:
     if missing:
         raise SystemExit(f"ids not found in corpus: {missing}")
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text("\n".join(found[i] for i in wanted))
+    args.out.write_text("\n".join(found[i] for i in wanted), encoding="utf-8")
     print(f"wrote {len(found)} abstracts to {args.out}")
 
 

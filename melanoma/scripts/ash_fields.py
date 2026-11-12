@@ -216,7 +216,7 @@ def family_prompt(family: Family, arms: list[TreatmentArm]) -> str:
     return "\n\n".join(parts)
 
 
-def judge_prompt(family: Family, extracted: dict) -> str:
+def judge_prompt(family: Family, extracted: dict, arms: list[TreatmentArm]) -> str:
     return "\n\n".join(
         [
             f"TASK: You are auditing an extraction ({family.title}) against the abstract "
@@ -241,6 +241,7 @@ def judge_prompt(family: Family, extracted: dict) -> str:
             "model knowledge; fail any that are not. Use arm_id 'trial' for trial-level "
             "fields.",
             "Fields:\n" + _fields_block(family),
+            "Arms:\n" + "\n".join(f"{a.arm_id}: {a.arm_name}" for a in arms),
             "Extraction:\n" + json.dumps(extracted, indent=2),
         ]
     )

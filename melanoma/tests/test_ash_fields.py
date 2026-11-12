@@ -138,12 +138,20 @@ def test_heme_prompt_placeholder():
     assert chr(0x2014) not in HEME_SEPARATION_PROMPT
 
 
+_ARMS = [TreatmentArm(arm_id="arm_1", arm_name="Drug X", generic_name="x")]
+
+
 def test_judge_models():
     fam = FAMILIES[0]
     assert "pass" in str(JudgeVerdict.model_json_schema())
-    jp = judge_prompt(fam, {"arms": {}})
+    jp = judge_prompt(fam, {"arms": {}}, _ARMS)
     assert "other_values" in jp
     # Other timepoints/populations are correct in other_values; off-family measures are not.
     assert "do not fail it" in jp and "not in the field list at all" in jp
     # Empty cells are judged only when the abstract states the value.
     assert "Skip empty cells" in jp
+
+
+def test_judge_prompt_lists_arm_names():
+    jp = judge_prompt(FAMILIES[0], {"arms": {}}, _ARMS)
+    assert "Arms:\n" in jp and "arm_1: Drug X" in jp

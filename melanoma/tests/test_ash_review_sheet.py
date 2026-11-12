@@ -93,6 +93,13 @@ RESULTS = {
                 "note": "no quote",
                 "corrected_value": "",
             },
+            {
+                "arm_id": "arm_1",
+                "key": "other_values",
+                "verdict": "fail",
+                "note": "off-family",
+                "corrected_value": "",
+            },
         ],
     ),
     "2": _result(
@@ -123,6 +130,10 @@ def test_rows_count_and_fields() -> None:
     assert r["doi"] == "10.1182/blood-2025-1" and r["indication"] == "AML"
     assert r["verdict"] == "pass" and r["value"] == "80%"
     assert "evaluable" in r["other_values"]
+    assert (
+        r["other_values_verdict"] == "fail" and r["other_values_note"] == "off-family"
+    )
+    assert trial[0]["other_values_verdict"] == ""
 
 
 def test_quote_found() -> None:
@@ -140,6 +151,7 @@ def test_summary_counts() -> None:
     assert s["MRD-negative CR"]["applies"] == 1  # AML abstract only
     assert s["ORR"]["applies"] == 2
     assert s["ORR"]["filled"] == 2 and s["MRD-negative CR"]["filled"] == 1
+    assert s["ORR"]["filled_cells"] == 2 and s["MRD-negative CR"]["filled_cells"] == 1
     assert s["MRD-negative CR"]["quote_missing"] == 1
     assert s["ORR"]["judge_pass"] == 1 and s["MRD-negative CR"]["judge_fail"] == 1
     # Review Focus 1: a field named twice in other_values counts twice.
