@@ -1,4 +1,7 @@
 """Prompt-shape tests for treatment arm separator. Behavioural fixture tests live in Task 3."""
+import pytest
+
+from src.domain.treatment_arm_models import TreatmentArmSeparationSchema
 from src.infrastructure.treatment_arm_separator import TreatmentArmSeparator
 
 
@@ -39,3 +42,30 @@ def test_prompt_consolidates_rule_blocks() -> None:
 def test_prompt_keeps_abstract_text_placeholder() -> None:
     p = TreatmentArmSeparator._create_separation_prompt()
     assert "{abstract_text}" in p
+
+
+class _CapturingLLM:
+    def __init__(self) -> None:
+        self.prompts: list[str] = []
+
+    async def generate_structured(self, prompt: str, **_: object) -> object:
+        self.prompts.append(prompt)
+        return TreatmentArmSeparationSchema(treatment_arms=[])
+
+
+def test_default_prompt_unchanged() -> None:
+    sep = TreatmentArmSeparator(_CapturingLLM())  # type: ignore[arg-type]
+    assert sep.separation_prompt == TreatmentArmSeparator._create_separation_prompt()
+
+
+@pytest.mark.asyncio
+async def test_custom_prompt_used() -> None:
+    llm = _CapturingLLM()
+    sep = TreatmentArmSeparator(llm, separation_prompt="X {abstract_text}")  # type: ignore[arg-type]
+    await sep.separate_treatment_arms("ABS", "id1")
+    assert llm.prompts == ["X ABS"]
+
+
+def test_custom_prompt_needs_placeholder() -> None:
+    with pytest.raises(ValueError):
+        TreatmentArmSeparator(_CapturingLLM(), separation_prompt="no placeholder")  # type: ignore[arg-type]
