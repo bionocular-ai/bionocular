@@ -85,10 +85,11 @@ GVHD-free relapse-free survival,Number (%) + timepoint,Allo-HCT,"GRFS: survival 
 Non-relapse mortality,Number (%) + timepoint,Allo-HCT,Death without prior relapse or progression
 Cumulative incidence of relapse,Number (%) + timepoint,Allo-HCT,
 ORR rate,Number (%),All,Overall response rate under the recorded response criteria
-CR rate,Number (%),All,"Complete response rate under the recorded response criteria. AML CR (ELN 2022): marrow blasts <5%, no circulating or Auer-rod blasts, no extramedullary disease, ANC >=1.0 and platelets >=100 x10^9/L"
+CR rate,Number (%),All,"Complete response rate under the recorded response criteria. AML CR (ELN 2022): marrow blasts <5%, no circulating or Auer-rod blasts, no extramedullary disease, ANC >=1.0 and platelets >=100 x10^9/L. Myeloma: CR alone; CR or better goes in >=CR rate"
 CBR,Number (%),"MM, WM","Myeloma: ORR plus minimal response (>=MR, IMWG). Waldenström has no formal CBR (IWWM); treat a reported CBR as trial-defined"
 POD24 rate,Number (%),Follicular lymphoma,"Progression or death within 24 months of starting first-line chemoimmunotherapy (Casulo, JCO 2015); some papers anchor on diagnosis, so record the anchor"
 >=VGPR rate,Number (%),"MM, AL amyloidosis","Myeloma VGPR (IMWG 2016): M-protein detectable by immunofixation but not electrophoresis, or >=90% serum M-protein reduction and urine M-protein <100 mg/24 h. AL: VGPR is dFLC <40 mg/L"
+>=CR rate,Number (%),MM,"Myeloma CR or better (IMWG 2016): CR plus sCR. CR is negative serum and urine immunofixation, no soft-tissue plasmacytomas and <5% plasma cells in marrow"
 sCR rate,Number (%),MM,Stringent CR (IMWG 2016): CR plus normal serum FLC ratio and no clonal plasma cells in marrow by IHC or flow
 CR/CRh rate,Number (%),AML,CR plus CR with partial hematologic recovery. CRh (ELN 2022): CR criteria except ANC >=0.5 and platelets >=50 x10^9/L
 Composite CR (CR + CRi),Number (%) + components,AML,"No ELN 2022 standard; trials define it (CR + CRi, or CR + CRh + CRi). Record which components were counted"

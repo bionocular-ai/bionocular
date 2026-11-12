@@ -46,10 +46,10 @@ def _resolve(schema: dict, node: dict) -> dict:
 def test_every_row_in_one_family():
     with CSV_PATH.open(newline="") as f:
         names = [r["field"] for r in csv.DictReader(f)]
-    assert len(names) == 143
+    assert len(names) == 144
     expected = [n for n in names if n != "Cytokine Release Syndrome or CRS"]
     got = [f.name for f in ALL_FIELDS]
-    assert len(got) == len(set(got)) == 142
+    assert len(got) == len(set(got)) == 143
     assert sorted(got) == sorted(expected)
 
 
