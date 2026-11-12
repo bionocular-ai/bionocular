@@ -213,17 +213,22 @@ def main() -> None:
     families = load_families(_root / "resources" / "ash" / "book1_sheet2.csv")
     ids = args.ids.split(",") if args.ids else None
     start = time.monotonic()
-    asyncio.run(
-        run(
-            args.md,
-            args.out,
-            llm,
-            families,
-            args.concurrency,
-            args.family_concurrency,
-            ids,
-        )
-    )
+
+    async def _run_and_close() -> None:
+        try:
+            await run(
+                args.md,
+                args.out,
+                llm,
+                families,
+                args.concurrency,
+                args.family_concurrency,
+                ids,
+            )
+        finally:
+            await llm.aclose()
+
+    asyncio.run(_run_and_close())
     summary = costs.get_summary()
     print(
         f"spend ${summary.total_cost:.4f} over {summary.total_requests} calls, "

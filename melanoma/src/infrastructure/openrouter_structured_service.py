@@ -45,6 +45,9 @@ def to_strict_schema(model: type[BaseModel]) -> dict[str, Any]:
 
     def _fix(node: Any) -> None:
         if isinstance(node, dict):
+            if node.get("type") == "object" and "properties" not in node:
+                # strict mode needs every key named; a dict[str, X] field has none
+                raise ValueError(f"open-ended object is not strict-compatible: {node}")
             if "properties" in node:
                 node["required"] = sorted(node["properties"])
                 node["additionalProperties"] = False
@@ -74,7 +77,13 @@ class OpenRouterStructuredService(StructuredLLMService):
         self.model = model
         self.cost_calculator = cost_calculator
         self.call_log_path = call_log_path
+        self._owns_http = http is None
         self._http = http or httpx.AsyncClient(timeout=300)
+
+    async def aclose(self) -> None:
+        """Close the HTTP client if this service created it."""
+        if self._owns_http:
+            await self._http.aclose()
 
     def _log(self, **fields: Any) -> None:
         if self.call_log_path is None:

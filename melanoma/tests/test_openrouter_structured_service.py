@@ -77,6 +77,26 @@ def test_strict_schema_requires_all_and_closes_objects():
         assert o["additionalProperties"] is False
 
 
+def test_strict_schema_rejects_open_dict():
+    class D(BaseModel):
+        scores: dict[str, int]
+
+    with pytest.raises(ValueError, match="open-ended object"):
+        to_strict_schema(D)
+
+
+@pytest.mark.asyncio
+async def test_aclose_closes_only_an_owned_client():
+    calc = CostCalculator()
+    owned = OpenRouterStructuredService("m", calc, api_key="k")
+    await owned.aclose()
+    assert owned._http.is_closed
+    shared = httpx.AsyncClient()
+    await OpenRouterStructuredService("m", calc, api_key="k", http=shared).aclose()
+    assert not shared.is_closed
+    await shared.aclose()
+
+
 def test_missing_key_raises(monkeypatch):
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     with pytest.raises(ValueError):
