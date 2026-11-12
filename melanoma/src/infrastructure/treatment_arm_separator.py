@@ -9,14 +9,13 @@ from datetime import datetime
 from typing import Any
 
 from ..domain.constants import TREATMENT_ARM_SEPARATION_OPERATION
-from ..domain.structured_llm_interfaces import StructuredLLMService
 from ..domain.treatment_arm_models import (
     ArmType,
     TreatmentArm,
     TreatmentArmSeparationResult,
     TreatmentArmSeparationSchema,
 )
-from .gemini_service import is_retryable_error
+from .gemini_service import GeminiLLMService, is_retryable_error
 
 logger = logging.getLogger(__name__)
 
@@ -29,26 +28,16 @@ class TreatmentArmSeparator:
     for downstream processing.
     """
 
-    def __init__(
-        self,
-        llm_service: StructuredLLMService,
-        separation_prompt: str | None = None,
-    ):
+    def __init__(self, llm_service: GeminiLLMService):
         """Initialize treatment arm separator.
 
         Args:
-            llm_service: LLM service (structured output required)
-            separation_prompt: Optional custom prompt; must contain the
-                {abstract_text} placeholder. Defaults to the built-in prompt.
+            llm_service: Gemini LLM service (structured output required)
         """
         self.llm_service = llm_service
 
         # Treatment arm separation prompt
-        if separation_prompt is None:
-            separation_prompt = self._create_separation_prompt()
-        elif "{abstract_text}" not in separation_prompt:
-            raise ValueError("separation_prompt must contain {abstract_text}")
-        self.separation_prompt = separation_prompt
+        self.separation_prompt = self._create_separation_prompt()
 
         logger.info("Treatment arm separator initialized")
 

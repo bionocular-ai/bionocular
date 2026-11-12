@@ -17,7 +17,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 from tenacity import (
     AsyncRetrying,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_random_exponential,
 )
@@ -33,10 +33,16 @@ PROVIDER = {
     "require_parameters": True,
 }
 _WAIT = wait_random_exponential(max=60)  # module-level so tests can zero it
+# At temperature 0 a reply that fails the schema mostly fails again: one retry, not six.
+MAX_VALIDATION_FAILURES = 2
 
 
 class OpenRouterError(RuntimeError):
     """Retryable failure (429, 5xx, error body, non-JSON or empty content) that outlived the retries."""
+
+
+class OpenRouterTruncatedError(RuntimeError):
+    """The reply hit max_tokens. Not retried: the same call would be cut off again."""
 
 
 def to_strict_schema(model: type[BaseModel]) -> dict[str, Any]:
@@ -89,7 +95,7 @@ class OpenRouterStructuredService(StructuredLLMService):
         if self.call_log_path is None:
             return
         row = {"ts": datetime.now(timezone.utc).isoformat(), **fields}
-        with self.call_log_path.open("a") as f:
+        with self.call_log_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(row) + "\n")
 
     async def generate_structured(
@@ -122,7 +128,15 @@ class OpenRouterStructuredService(StructuredLLMService):
             "reasoning": {"enabled": False},
         }
 
+        validation_failures = 0
+
+        def _retryable(e: BaseException) -> bool:
+            if isinstance(e, ValidationError):
+                return validation_failures < MAX_VALIDATION_FAILURES
+            return isinstance(e, (OpenRouterError, httpx.TransportError))
+
         async def _attempt() -> T:
+            nonlocal validation_failures
             prompt_tokens = completion_tokens = cached = 0
             provider = None
             status, error = "ok", None
@@ -148,11 +162,18 @@ class OpenRouterStructuredService(StructuredLLMService):
                     err = data.get("error")
                     msg = err.get("message") if isinstance(err, dict) else err
                     raise OpenRouterError(f"error body: {msg or 'no choices'}")
-                content = (data["choices"][0]["message"].get("content") or "").strip()
+                choice = data["choices"][0]
+                if choice.get("finish_reason") == "length":
+                    raise OpenRouterTruncatedError(
+                        f"reply cut off at max_tokens={max_tokens}"
+                    )
+                content = (choice["message"].get("content") or "").strip()
                 if not content:
                     raise OpenRouterError("empty content")
                 return response_schema.model_validate_json(content)
             except Exception as e:
+                if isinstance(e, ValidationError):
+                    validation_failures += 1
                 status, error = "error", f"{type(e).__name__}: {e}"
                 raise
             finally:
@@ -184,9 +205,7 @@ class OpenRouterStructuredService(StructuredLLMService):
         async for attempt in AsyncRetrying(
             wait=_WAIT,
             stop=stop_after_attempt(max_retries),
-            retry=retry_if_exception_type(
-                (OpenRouterError, httpx.TransportError, ValidationError)
-            ),
+            retry=retry_if_exception(_retryable),
             reraise=True,
         ):
             with attempt:

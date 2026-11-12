@@ -10,6 +10,7 @@ from src.infrastructure.cost_calculator import CostCalculator
 from src.infrastructure.openrouter_structured_service import (
     OpenRouterError,
     OpenRouterStructuredService,
+    OpenRouterTruncatedError,
     to_strict_schema,
 )
 
@@ -141,10 +142,32 @@ async def test_retries_429_and_5xx():
 @pytest.mark.asyncio
 async def test_raises_after_max_retries():
     posted: list = []
-    svc = _svc(["{"] * 3, posted=posted)
-    with pytest.raises(ValidationError):
+    svc = _svc([httpx.Response(503)] * 3, posted=posted)
+    with pytest.raises(OpenRouterError):
         await svc.generate_structured("p", M, max_retries=3)
     assert len(posted) == 3
+
+
+@pytest.mark.asyncio
+async def test_schema_failures_stop_after_two_attempts():
+    posted: list = []
+    svc = _svc(["{"] * 6, posted=posted)
+    with pytest.raises(ValidationError):
+        await svc.generate_structured("p", M)
+    assert len(posted) == 2
+
+
+@pytest.mark.asyncio
+async def test_truncated_reply_is_not_retried():
+    posted: list = []
+    cut = httpx.Response(
+        200,
+        json={"choices": [{"finish_reason": "length", "message": {"content": "{"}}]},
+    )
+    svc = _svc([cut, _resp(VALID)], posted=posted)
+    with pytest.raises(OpenRouterTruncatedError):
+        await svc.generate_structured("p", M)
+    assert len(posted) == 1
 
 
 @pytest.mark.asyncio
