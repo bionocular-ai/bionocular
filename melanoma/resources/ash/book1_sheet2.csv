@@ -1,0 +1,144 @@
+field,type,applies_to,definition
+Arm label,Text; enum (experimental / control / single arm / dose cohort),All,"Arm name as reported, plus its role in the study"
+Regimen name,Text,All,"Regimen as reported, e.g. D-VRd, pola-R-CHP"
+Component drugs,List (text),All,
+Generic name (per component),Text (INN),All,
+Brand name,Text,All,
+Dose,"Number + unit (mg, mg/kg, mg/m², cells for CAR-T)",All,
+Route,Enum: IV / SC / oral / other,All,
+Dosing schedule,Text,All,e.g. Q3W; days 1-21 of a 28-day cycle
+Step-up dosing,Yes/no + schedule,Bispecific antibodies,"Priming doses before the full dose, as reported"
+Fixed-duration vs continuous,Enum: fixed duration / continuous (treat to progression),All,
+Therapy phase,Enum: induction / consolidation / maintenance / salvage / bridging / conditioning,All,
+Mechanism of action,Text,All,
+Target,Text,All,"Molecular target, e.g. BCMA, CD20xCD3, BTK, BCL2"
+Modality,Enum: antibody / bispecific / ADC / small molecule / CAR-T / other cell therapy / chemotherapy / other,All,
+Drug class / sub-type,Text,All,"e.g. covalent BTK inhibitor, anti-CD38 antibody"
+Cell therapy product,Text,CAR-T and other cell therapy arms,"e.g. cilta-cel, axi-cel"
+Lymphodepletion regimen,Text,CAR-T and other cell therapy arms,"e.g. Flu/Cy, bendamustine"
+Bridging therapy (% and type),Number (%) + text,CAR-T and other cell therapy arms,"Share of patients who got therapy between apheresis and infusion, and what"
+Response criteria,Enum + version: IMWG 2016 / iwCLL 2018 / Lugano 2014 / ELN 2022 / IWG 2023 / IWWM-11 / other,All,Criteria the response endpoints were assessed by
+Assessment by,Enum: IRC / investigator,All,Who assessed response or progression (independent review committee or investigator)
+Disease subtype,Text + code (NCIt),All,"Disease as reported, plus its NCIt concept code"
+Median line of therapy,Number (median),All,"Median number of prior lines of therapy in the population, e.g. median 4"
+Range line of therapy,Two numbers (min-max),Relapsed / refractory settings,"Range of prior lines of therapy, e.g. 1-11"
+Transplant eligibility / fitness,Enum: transplant-eligible / transplant-ineligible / fit / unfit (as reported),All,
+Median age,Number (years),All,
+Patients enrolled,Number (count),All,
+Patients treated,Number (count),All,
+Patients evaluable,Number (count),All,Patients evaluable for the primary endpoint
+Crossover allowed,Yes / no,Randomized trials,
+Crossover rate,Number (%),Randomized trials,Percent of the control arm that crossed over
+Biomarker,Text (list: marker + status + % of patients),All,"Molecular or cytogenetic markers describing the population, e.g. del(17p) 15%, FLT3-ITD+, TP53 mutated"
+Median PFS,Number (months) or NR,All,Median progression-free survival
+Median follow-up PFS,Number (months),All,
+p-value PFS,"Number + qualifier (<, =)",All,
+HR PFS,Number,All,
+95% CI of HR PFS,Two numbers (lower-upper),All,
+Median OS,Number (months) or NR,All,Median overall survival
+Median follow-up OS,Number (months),All,
+p-value OS,"Number + qualifier (<, =)",All,
+HR OS,Number,All,
+95% CI of HR OS,Two numbers (lower-upper),All,
+PFS rate 6 mo,Number (%),All,
+PFS rate 12 mo,Number (%),All,
+PFS rate 18 mo,Number (%),All,
+PFS rate 24 mo,Number (%),All,
+PFS rate 36 mo,Number (%),All,
+PFS rate 48 mo,Number (%),All,
+PFS rate 60 months / 5 years,Number (%),All,
+OS rate 6 mo,Number (%),All,
+OS rate 12 mo,Number (%),All,
+OS rate 18 mo,Number (%),All,
+OS rate 24 mo,Number (%),All,
+OS rate 36 mo,Number (%),All,
+OS rate 48 mo,Number (%),All,
+OS rate 60 months / 5 years,Number (%),All,
+Median EFS,Number (months) or NR,"AML, ALL, lymphoma",Event-free survival; record the event definition if given
+Median follow-up EFS,Number (months),"AML, ALL, lymphoma",
+p-value EFS,"Number + qualifier (<, =)","AML, ALL, lymphoma",
+HR EFS,Number,"AML, ALL, lymphoma",
+95% CI of HR EFS,Two numbers (lower-upper),"AML, ALL, lymphoma",
+Median RFS,Number (months) or NR,"AML, ALL","Relapse-free survival, measured from CR"
+Median follow-up RFS,Number (months),"AML, ALL",
+p-value RFS,"Number + qualifier (<, =)","AML, ALL",
+HR RFS,Number,"AML, ALL",
+95% CI of HR RFS,Two numbers (lower-upper),"AML, ALL",
+Median DFS,Number (months) or NR,"AML, ALL",Disease-free survival
+Median follow-up DFS,Number (months),"AML, ALL",
+p-value DFS,"Number + qualifier (<, =)","AML, ALL",
+HR DFS,Number,"AML, ALL",
+95% CI of HR DFS,Two numbers (lower-upper),"AML, ALL",
+Median LFS,Number (months) or NR,"AML, MDS, Allo-HCT",Leukemia-free survival
+Median follow-up LFS,Number (months),"AML, MDS, Allo-HCT",
+p-value LFS,"Number + qualifier (<, =)","AML, MDS, Allo-HCT",
+HR LFS,Number,"AML, MDS, Allo-HCT",
+95% CI of HR LFS,Two numbers (lower-upper),"AML, MDS, Allo-HCT",
+Median DOR,Number (months) or NR,All,
+DOR rate,Number (%) + timepoint (months),All,Share of responders still in response at the stated time
+Duration of complete response,Number (months) or NR,All,
+Median time to response,Number (months),All,
+Median TTP,Number (months) or NR,All,
+Median TTNT,Number (months) or NR,All,Time to next treatment
+PFS2,Number (months) or NR,"MM, CLL, lymphoma","Time to progression on the next line of therapy, or death"
+GVHD-free relapse-free survival,Number (%) + timepoint,Allo-HCT,"GRFS: survival free of grade III-IV acute GVHD, chronic GVHD needing systemic therapy, relapse and death (Holtan, Blood 2015)"
+Non-relapse mortality,Number (%) + timepoint,Allo-HCT,Death without prior relapse or progression
+Cumulative incidence of relapse,Number (%) + timepoint,Allo-HCT,
+ORR rate,Number (%),All,Overall response rate under the recorded response criteria
+CR rate,Number (%),All,"Complete response rate under the recorded response criteria. AML CR (ELN 2022): marrow blasts <5%, no circulating or Auer-rod blasts, no extramedullary disease, ANC >=1.0 and platelets >=100 x10^9/L"
+CBR,Number (%),"MM, WM","Myeloma: ORR plus minimal response (>=MR, IMWG). Waldenström has no formal CBR (IWWM); treat a reported CBR as trial-defined"
+POD24 rate,Number (%),Follicular lymphoma,"Progression or death within 24 months of starting first-line chemoimmunotherapy (Casulo, JCO 2015); some papers anchor on diagnosis, so record the anchor"
+>=VGPR rate,Number (%),"MM, AL amyloidosis","Myeloma VGPR (IMWG 2016): M-protein detectable by immunofixation but not electrophoresis, or >=90% serum M-protein reduction and urine M-protein <100 mg/24 h. AL: VGPR is dFLC <40 mg/L"
+sCR rate,Number (%),MM,Stringent CR (IMWG 2016): CR plus normal serum FLC ratio and no clonal plasma cells in marrow by IHC or flow
+CR/CRh rate,Number (%),AML,CR plus CR with partial hematologic recovery. CRh (ELN 2022): CR criteria except ANC >=0.5 and platelets >=50 x10^9/L
+Composite CR (CR + CRi),Number (%) + components,AML,"No ELN 2022 standard; trials define it (CR + CRi, or CR + CRh + CRi). Record which components were counted"
+MLFS rate,Number (%),"AML, MDS","Morphologic leukemia-free state (ELN 2022): marrow blasts <5%, no Auer rods, no circulating blasts, no extramedullary disease; no count recovery required"
+MRD negativity rate,Number (%) + method + threshold,"MM, ALL, CLL, AML",Record assay and threshold. Myeloma (IMWG 2016): no clonal plasma cells by NGF or NGS at >=10^-5. CLL: <10^-4 (uMRD4)
+Sustained MRD negativity,Number (%) + duration,MM,Myeloma (IMWG 2016): MRD negativity in marrow confirmed at least 1 year apart
+MRD-negative CR,Number (%) + method + threshold,"ALL, AML","CR with MRD below the stated threshold; ELN 2022 adds MRD-negative suffixes (CR-MRDneg, CRh-MRDneg)"
+Bridge to transplant rate,Number (%),"AML, ALL, MDS",Share of patients who went on to allo-HCT after the study treatment
+Undetectable MRD (uMRD4),Number (%) + compartment (blood / marrow),CLL,"iwCLL 2018: <1 CLL cell per 10,000 leukocytes (<10^-4) in blood or marrow"
+RBC transfusion independence,Number (%) + duration (weeks),"MDS, myelofibrosis",Store the trial's own duration. MDS: no RBC transfusion for >=8 weeks (IWG 2006; IWG 2018 within a 16-24 week window); deeper endpoints use >=16 or >=24 weeks. MF trials define their own (e.g. >=12 weeks)
+Hematologic improvement-erythroid,Number (%),MDS,"IWG 2006 (MDS): Hb rise >=1.5 g/dL, or >=4 fewer RBC units per 8 weeks, lasting >=8 weeks; IWG 2018 revises it for lower-risk MDS"
+MMR rate,Number (%),CML,Major molecular response (ELN 2020): BCR::ABL1 <=0.1% on the International Scale
+MR4.5,Number (%) + timepoint,CML,ELN 2020: BCR::ABL1 <=0.0032% IS (MR4 is <=0.01%)
+SVR35,Number (%) + timepoint (usually week 24),Myelofibrosis,>=35% reduction in spleen volume from baseline by MRI or CT; timepoint is trial-specific (usually week 24)
+TSS50,Number (%) + timepoint (usually week 24),Myelofibrosis,>=50% reduction in total symptom score (MFSAF) from baseline; timepoint is trial-specific (usually week 24)
+Major response rate (>=PR),Number (%),Waldenström,"Waldenström (IWWM-6 / IWWM-11): PR or better, i.e. >=50% IgM reduction; distinct from ORR, which includes MR (>=25%)"
+Hematologic CR (AL amyloidosis),Number (%),AL amyloidosis,ISA 2012 consensus: negative serum and urine immunofixation and normal FLC ratio
+DLT,Number (count) / N DLT-evaluable,Phase 1,Protocol-defined toxicity in the DLT window (usually cycle 1) judged unacceptable
+MTD,"Dose + unit, or not reached",Phase 1,"Highest dose with a DLT rate below the target (typically <33%, e.g. <=1 of 6)"
+RP2D,Dose + unit,Phase 1,"Dose chosen for phase 2 from safety, PK/PD and activity; can be below the MTD"
+Grade >=3 AEs,Number (%),All,
+Grade >=3 TEAEs,Number (%),All,
+Grade >=3 TRAEs,Number (%),All,
+Serious AEs,Number (%),All,
+Serious TEAEs,Number (%),All,
+Serious TRAEs,Number (%),All,
+Discontinuation due to AEs,Number (%),All,
+Discontinuation due to TEAEs,Number (%),All,
+Discontinuation due to TRAEs,Number (%),All,
+Deaths due to AEs,"Number (count, %)",All,
+Deaths due to TEAEs,"Number (count, %)",All,
+Deaths due to TRAEs,"Number (count, %)",All,
+Grade >=3 neutropenia,Number (%),All,
+Grade >=3 thrombocytopenia,Number (%),All,
+Grade >=3 infections,Number (%),All,
+CRS any grade,Number (%) + grading system,"CAR-T, bispecific antibodies","ASTCT 2019 consensus (Lee): grades 1-4 by fever, hypotension and hypoxia; record if another system (e.g. Lee 2014, CTCAE) is used"
+CRS grade >=3,Number (%) + grading system,"CAR-T, bispecific antibodies","ASTCT 2019: grade 3 = hypotension needing one vasopressor (with or without vasopressin) and/or high-flow nasal cannula, facemask, non-rebreather or Venturi mask; grade 4 = multiple vasopressors and/or positive pressure (CPAP, BiPAP, intubation)"
+ICANS any grade,Number (%) + grading system,"CAR-T, bispecific antibodies","ASTCT 2019: graded by ICE score, consciousness, seizures, motor findings and cerebral edema (CAPD for children under 12)"
+ICANS grade >=3,Number (%) + grading system,"CAR-T, bispecific antibodies","ASTCT 2019 grade 3-4 (e.g. ICE 0-2, seizure, or cerebral edema)"
+30-day mortality,Number (%),"AML, ALL, MDS (intensive therapy)",Deaths from any cause within 30 days of starting treatment
+60-day mortality,Number (%),"AML, ALL, MDS (intensive therapy)",Deaths from any cause within 60 days of starting treatment
+AEs leading to dose reduction,Number (%),All,
+TEAEs leading to dose reduction,Number (%),All,
+TRAEs leading to dose reduction,Number (%),All,
+AEs leading to dose interruption,Number (%),All,
+TEAEs leading to dose interruption,Number (%),All,
+TRAEs leading to dose interruption,Number (%),All,
+AEs requiring hospitalization,Number (%),All,
+TEAEs requiring hospitalization,Number (%),All,
+TRAEs requiring hospitalization,Number (%),All,
+Immune related AE,,,
+Cytokine Release Syndrome or CRS,,,
+Infusion-Related Reaction (IRR),,,
