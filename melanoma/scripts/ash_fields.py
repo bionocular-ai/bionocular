@@ -187,10 +187,16 @@ def family_prompt(family: Family, arms: list[TreatmentArm]) -> str:
         "Each field returns {value, quote}. quote is the exact verbatim substring of the "
         "abstract that supports the value; copy it character for character. If the "
         "abstract does not state the field for that arm, return empty strings for both.",
-        "other_values (one per arm): a short text naming each further value the abstract "
-        "reports for this family's fields that one value per field cannot hold, such as "
-        "another population, criterion, threshold, dose level or timepoint. Name the field "
-        "and the context. Empty string if there is none.",
+        "Fill the fields first. If a value the abstract reports matches one of the fields "
+        "above, it belongs in that field; never put it in other_values instead.",
+        "other_values (one per arm) is the overflow for the fields above only: a short "
+        "text naming each further value of one of these fields that the field cannot "
+        "hold, because it is for a second population, criterion, threshold, dose level, "
+        "or a timepoint with no field of its own (for example a 30-month PFS rate when "
+        "only 24- and 36-month fields exist), or because it is a count where the field "
+        "takes a percentage. Name the field and the context. Never list values of "
+        "measures that are not in the field list above; other extraction passes cover "
+        "them. Empty string if there is none.",
         "If the abstract gives a second value for the same field in one arm (for example "
         "ORR in the ITT population and in evaluable patients), keep the primary value in "
         "the field and put the second value in other_values; never drop it.",
@@ -214,15 +220,26 @@ def judge_prompt(family: Family, extracted: dict) -> str:
     return "\n\n".join(
         [
             f"TASK: You are auditing an extraction ({family.title}) against the abstract "
-            "text. For every arm and field in the extraction, return a verdict: pass if "
-            "value and quote are supported by the abstract and the quote is verbatim; fail "
-            "if wrong, unsupported or attributed to the wrong arm; uncertain if the "
-            "abstract is ambiguous. Give a short note, and corrected_value when you fail "
-            "a field (empty string otherwise). Also check other_values: a value that "
-            "belongs to a field but was dropped, or one wrongly placed there, is a fail "
-            "for that field. Text-only fields must be stated in the abstract text, never "
-            "supplied from model knowledge; fail any that are not. Use arm_id 'trial' for "
-            "trial-level fields.",
+            "text. Return a verdict for every filled field of every arm: pass if value and "
+            "quote are supported by the abstract and the quote is verbatim; fail if wrong, "
+            "unsupported or attributed to the wrong arm; uncertain if the abstract is "
+            "ambiguous. Skip empty cells: return no item for a field left empty, unless the "
+            "abstract states a value for that field and arm, in which case the empty cell "
+            "is a fail with the value as corrected_value. 'Not reported' is never an item. "
+            "Give a short note, and corrected_value when you fail a "
+            "field (empty string otherwise).",
+            "other_values holds further values of these fields that no field can hold. A "
+            "value there for another timepoint, population, threshold or dose level (for "
+            "example a 30-month rate when only 24- and 36-month fields exist), or a count "
+            "where the field takes a percentage, is correct: do not fail it. A value there "
+            "whose measure is not in the field list at all is wrong for this family. "
+            "If a value in other_values does match a field in the list and that field is "
+            "empty, fail that field (key = the field's key) with the value as "
+            "corrected_value. Return a verdict for other_values itself only when it is "
+            "wrong (key 'other_values').",
+            "Text-only fields must be stated in the abstract text, never supplied from "
+            "model knowledge; fail any that are not. Use arm_id 'trial' for trial-level "
+            "fields.",
             "Fields:\n" + _fields_block(family),
             "Extraction:\n" + json.dumps(extracted, indent=2),
         ]

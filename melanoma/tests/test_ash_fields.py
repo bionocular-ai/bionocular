@@ -94,6 +94,10 @@ def test_prompt_has_rules_and_definitions():
         assert "arm_1: LINVO + DARA" in p and "arm_2: LINVO + ISA" in p
         assert "other_values" in p
         assert "second value for the same field" in p
+        # A value that fits a field goes in the field; other_values is the overflow.
+        assert "never put it in other_values" in p
+        # other_values is scoped to this family's fields, not the whole abstract.
+        assert "Never list values of measures that are not in the field list" in p
 
 
 def test_text_only_fields():
@@ -137,4 +141,9 @@ def test_heme_prompt_placeholder():
 def test_judge_models():
     fam = FAMILIES[0]
     assert "pass" in str(JudgeVerdict.model_json_schema())
-    assert "other_values" in judge_prompt(fam, {"arms": {}})
+    jp = judge_prompt(fam, {"arms": {}})
+    assert "other_values" in jp
+    # Other timepoints/populations are correct in other_values; off-family measures are not.
+    assert "do not fail it" in jp and "not in the field list at all" in jp
+    # Empty cells are judged only when the abstract states the value.
+    assert "Skip empty cells" in jp
