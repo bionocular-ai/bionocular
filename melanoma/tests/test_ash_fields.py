@@ -1,157 +1,228 @@
-"""Tests for the ASH workbook field spec, schemas and prompts."""
+"""Tests for the ASH workbook fields, schemas and prompts."""
 
 import csv
-import re
 import sys
 from pathlib import Path
 
+import pytest
+
 _root = Path(__file__).parent.parent
-sys.path.insert(0, str(_root))
 sys.path.insert(0, str(_root / "scripts"))
 
 from ash_fields import (  # noqa: E402
-    HEME_SEPARATION_PROMPT,
+    ARM_PROMPT,
     INDICATIONS,
+    Arm,
+    ArmList,
+    Family,
     JudgeVerdict,
-    SheetField,
     applies,
+    arm_fields,
     family_prompt,
+    fields_for,
+    judge_items,
     judge_prompt,
     load_families,
+    missed_model,
+    missed_prompt,
     response_model,
 )
 
-from src.domain.prompt_templates import SHARED_EXTRACTION_RULES  # noqa: E402
-from src.domain.treatment_arm_models import TreatmentArm  # noqa: E402
+from src.infrastructure.openrouter_structured_service import (  # noqa: E402
+    to_strict_schema,
+)
 
 CSV_PATH = _root / "resources" / "ash" / "book1_sheet2.csv"
 FAMILIES = load_families(CSV_PATH)
 ALL_FIELDS = [f for fam in FAMILIES for f in fam.fields]
-TEXT_ONLY = {
-    "Mechanism of action",
-    "Target",
-    "Modality",
-    "Drug class / sub-type",
-    "Generic name (per component)",
-    "Brand name",
-    "Disease subtype",
-}
+BY_NAME = {f.name: f for f in ALL_FIELDS}
+ARMS = [Arm("arm_1", "Drug X", "experimental"), Arm("arm_2", "Placebo", "control")]
 
 
-def _resolve(schema: dict, node: dict) -> dict:
-    ref = node.get("$ref")
-    return schema["$defs"][ref.split("/")[-1]] if ref else node
+def _family(key: str) -> Family:
+    return next(f for f in FAMILIES if f.key == key)
 
 
-def test_every_row_in_one_family():
-    with CSV_PATH.open(newline="") as f:
-        names = [r["field"] for r in csv.DictReader(f)]
-    assert len(names) == 144
-    expected = [n for n in names if n != "Cytokine Release Syndrome or CRS"]
+def _cell(value: str = "", quote: str = "", **kw: object) -> dict[str, object]:
+    return {
+        "value": value,
+        "quote": quote,
+        "detail": "",
+        "basis": "",
+        "derived": False,
+        **kw,
+    }
+
+
+def test_only_abstract_rows_are_asked():
+    with CSV_PATH.open(newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 148
+    asked = [r["field"] for r in rows if r["source"] in ("abstract", "both")]
     got = [f.name for f in ALL_FIELDS]
-    assert len(got) == len(set(got)) == 143
-    assert sorted(got) == sorted(expected)
+    assert len(got) == len(set(got)) == 135
+    assert sorted(got) == sorted(asked)
+    for moved in ("Route", "Modality", "Target", "Arm label"):
+        assert moved not in BY_NAME
 
 
-def test_family_sizes():
-    for fam in FAMILIES:
-        assert 5 <= len(fam.fields) <= 30, fam.key
+def test_every_asked_row_has_family_scope_and_type():
+    for f in ALL_FIELDS:
+        assert f.scope in ("arm", "comparison", "trial"), f.name
+        assert f.value_type, f.name
+        assert f.key.isidentifier() and len({x.key for x in ALL_FIELDS}) == 135
+    assert BY_NAME["HR PFS"].scope == "comparison"
+    assert BY_NAME["Biomarker"].scope == "trial"
+    assert BY_NAME["Non-relapse mortality"].family == "duration_transplant"
+    assert BY_NAME["p-value PFS"].allowed == ()
 
 
-def test_keys_are_valid_json_identifiers():
-    keys = [f.key for f in ALL_FIELDS]
-    assert all(re.fullmatch(r"[a-z][a-z0-9_]*", k) for k in keys)
-    assert len(keys) == len(set(keys))
+def test_fields_for_filters_by_indication():
+    rates = _family("response_rates")
+    mm = {f.name for f in fields_for(rates, "Multiple myeloma").fields}
+    cll = {f.name for f in fields_for(rates, "CLL / SLL").fields}
+    assert ">=CR rate" in mm and ">=CR rate" not in cll
+    assert "CR/CRh rate" not in mm
+    assert fields_for(rates, None) == rates
+    assert not fields_for(_family("survival_other"), "Multiple myeloma").fields
 
 
-def test_response_model_shape():
-    fam = next(f for f in FAMILIES if any(x.trial_level for x in f.fields))
-    schema = response_model(fam, ["arm_1", "arm_2"]).model_json_schema()
-    arms = _resolve(schema, schema["properties"]["arms"])
-    arm = _resolve(schema, arms["properties"]["arm_1"])
-    assert "other_values" in arm["properties"]
-    key = next(f.key for f in fam.fields if not f.trial_level)
-    cell = _resolve(schema, arm["properties"][key])
-    assert "quote" in cell["properties"] and "value" in cell["properties"]
-    assert "trial" in schema["properties"]
-    no_trial = next(f for f in FAMILIES if not any(x.trial_level for x in f.fields))
+def test_comparison_fields_only_on_the_experimental_arm():
+    pfs = _family("survival_pfs_os")
+    exp = {f.key for f in arm_fields(pfs, ARMS[0])}
+    ctl = {f.key for f in arm_fields(pfs, ARMS[1])}
+    assert "hr_pfs" in exp and "hr_pfs" not in ctl
+    assert "median_pfs" in exp and "median_pfs" in ctl
+    schema = to_strict_schema(response_model(pfs, ARMS))
+    arms = schema["properties"]["arms"]["properties"]
+    assert "hr_pfs" in arms["arm_1"]["properties"]
+    assert "hr_pfs" not in arms["arm_2"]["properties"]
+    assert "extra" in arms["arm_2"]["properties"]
+
+
+def test_enum_fields_are_schema_enums():
+    schema = to_strict_schema(response_model(_family("population"), ARMS))
+    value = schema["properties"]["trial"]["properties"]["analysis_type"]["properties"][
+        "value"
+    ]
+    assert "final" in value["enum"] and "" in value["enum"]
+
+
+def test_response_model_accepts_a_filled_reply():
+    fam = fields_for(_family("survival_pfs_os"), "Multiple myeloma")
+    model = response_model(fam, ARMS)
+    arms = {
+        a.arm_id: {f.key: _cell() for f in arm_fields(fam, a)} | {"extra": []}
+        for a in ARMS
+    }
+    arms["arm_1"]["extra"] = [
+        {"field": "median_pfs", "value": "22", "context": "age >=75", "quote": "q"}
+    ]
+    assert model.model_validate({"arms": arms})
+    arms["arm_1"]["extra"][0]["field"] = "not_a_field"
+    with pytest.raises(ValueError):
+        model.model_validate({"arms": arms})
+
+
+def test_family_without_fields_cannot_be_asked():
+    with pytest.raises(ValueError):
+        response_model(Family("x", "X", ()), ARMS)
+
+
+def test_family_prompt_states_rules_fields_and_arms():
+    prompt = family_prompt(_family("survival_pfs_os"), ARMS)
+    for needle in (
+        "Never use what you know",
+        'basis: "arm"',
+        "earlier analysis",
+        "hr_pfs (HR PFS)",
+        "arm_1: Drug X (experimental)",
+        "EXAMPLE 2 (invented)",
+    ):
+        assert needle in prompt
+    assert "Grade 3+" not in prompt  # melanoma table rules are gone
+    pop = family_prompt(_family("population"), ARMS)
+    assert "go under 'trial' once" in pop
+    assert "Fill only if the abstract says it in words." in pop
+
+
+def test_arm_prompt_and_schema():
+    assert "{abstract_text}" in ARM_PROMPT and "dose_variation" not in ARM_PROMPT
+    assert "Dose levels" in ARM_PROMPT
+    to_strict_schema(ArmList)
+
+
+def test_judge_items_number_fields_and_extras():
+    fam = _family("survival_pfs_os")
+    extracted = {
+        "arms": {
+            "arm_1": {
+                "median_pfs": _cell("30.1", "median PFS was 30.1", basis="arm"),
+                "median_os": _cell(),
+                "extra": [
+                    {
+                        "field": "median_pfs",
+                        "value": "22",
+                        "context": "age >=75",
+                        "quote": "q",
+                    }
+                ],
+            }
+        }
+    }
+    items = judge_items(fam, extracted, ARMS)
+    assert [(i["id"], i["kind"], i["key"]) for i in items] == [
+        (1, "field", "median_pfs"),
+        (2, "extra", "median_pfs"),
+    ]
+    prompt = judge_prompt(fam, items, ARMS)
     assert (
-        "trial"
-        not in response_model(no_trial, ["arm_1"]).model_json_schema()["properties"]
+        "1 | Drug X | Median PFS | value: 30.1 | basis: arm | derived: false" in prompt
+    )
+    assert "2 | Drug X | Median PFS | value: 22 | extra value for: age >=75" in prompt
+    assert "value_ok" in prompt and "quote_ok" in prompt
+    JudgeVerdict.model_validate(
+        {
+            "items": [
+                {
+                    "id": 1,
+                    "value_ok": "no",
+                    "quote_ok": "yes",
+                    "error": "wrong_measure",
+                    "right_value": "",
+                    "right_quote": "",
+                }
+            ]
+        }
     )
 
 
-def test_prompt_has_rules_and_definitions():
-    arms = [
-        TreatmentArm(arm_id="arm_1", arm_name="LINVO + DARA", generic_name="x"),
-        TreatmentArm(arm_id="arm_2", arm_name="LINVO + ISA", generic_name="y"),
-    ]
-    for fam in FAMILIES:
-        p = family_prompt(fam, arms)
-        assert SHARED_EXTRACTION_RULES in p
-        for f in fam.fields:
-            assert f.name in p and f.definition in p
-        assert "arm_1: LINVO + DARA" in p and "arm_2: LINVO + ISA" in p
-        assert "other_values" in p
-        assert "second value for the same field" in p
-        # A value that fits a field goes in the field; other_values is the overflow.
-        assert "never put it in other_values" in p
-        # other_values is scoped to this family's fields, not the whole abstract.
-        assert "Never list values of measures that are not in the field list" in p
-
-
-def test_text_only_fields():
-    assert {f.name for f in ALL_FIELDS if f.text_only} == TEXT_ONLY
-    fam = next(f for f in FAMILIES if any(x.text_only for x in f.fields))
-    arms = [TreatmentArm(arm_id="arm_1", arm_name="a", generic_name="a")]
-    assert "own knowledge" in family_prompt(fam, arms)
+def test_missed_prompt_lists_only_empty_fields():
+    fam = _family("survival_pfs_os")
+    extracted = {
+        "arms": {
+            "arm_1": {"median_pfs": _cell("30", "q"), "median_os": _cell(), "extra": []}
+        }
+    }
+    empty = missed_prompt(fam, extracted, ARMS).split("EMPTY\n")[1]
+    assert empty == "arm_1: median_os"
+    model = missed_model(fam, ARMS)
+    to_strict_schema(model)
+    assert model.model_validate(
+        {
+            "items": [
+                {"arm_id": "arm_1", "field": "median_os", "value": "40", "quote": "q"}
+            ]
+        }
+    )
 
 
 def test_applies():
-    crs = SheetField(
-        "crs", "CRS any grade", "t", "CAR-T, bispecific antibodies", "d", False, False
-    )
-    aml = SheetField("a", "CR/CRh rate", "t", "AML", "d", False, False)
-    mm = SheetField("m", "sCR rate", "t", "MM", "d", False, False)
-    allf = SheetField("x", "Median age", "t", "All", "d", False, False)
     assert len(INDICATIONS) == 20
-    assert applies(crs, "DLBCL")
-    assert not applies(aml, "Multiple myeloma")
-    assert applies(aml, "AML") and not applies(aml, "APL")
-    assert applies(mm, "Multiple myeloma")
-    assert applies(allf, "CML")
-    lym = SheetField("p", "PFS2", "t", "MM, CLL, lymphoma", "d", False, False)
-    assert applies(lym, "Follicular lymphoma") and not applies(lym, "Waldenström")
-    assert not applies(
-        SheetField("c", "MMR rate", "t", "CML", "d", False, False), "CMML"
-    )
-
-
-def test_applies_acronym_not_prose_word():
-    f = SheetField("r", "Median RFS", "t", "AML, ALL", "d", False, False)
-    assert applies(f, "ALL") and applies(f, "AML")
-    assert not applies(f, "CML")  # CML includes say "all phases"
-
-
-def test_heme_prompt_placeholder():
-    assert "{abstract_text}" in HEME_SEPARATION_PROMPT
-    assert chr(0x2014) not in HEME_SEPARATION_PROMPT
-
-
-_ARMS = [TreatmentArm(arm_id="arm_1", arm_name="Drug X", generic_name="x")]
-
-
-def test_judge_models():
-    fam = FAMILIES[0]
-    assert "pass" in str(JudgeVerdict.model_json_schema())
-    jp = judge_prompt(fam, {"arms": {}}, _ARMS)
-    assert "other_values" in jp
-    # Other timepoints/populations are correct in other_values; off-family measures are not.
-    assert "do not fail it" in jp and "not in the field list at all" in jp
-    # Empty cells are judged only when the abstract states the value.
-    assert "Skip empty cells" in jp
-
-
-def test_judge_prompt_lists_arm_names():
-    jp = judge_prompt(FAMILIES[0], {"arms": {}}, _ARMS)
-    assert "Arms:\n" in jp and "arm_1: Drug X" in jp
+    assert applies(BY_NAME["Median PFS"], "CML")
+    assert applies(BY_NAME["sCR rate"], "Multiple myeloma")
+    assert not applies(BY_NAME["sCR rate"], "AML")
+    assert applies(BY_NAME["Median EFS"], "DLBCL")  # "lymphoma" group
+    assert applies(BY_NAME["CRS any grade"], "CML")  # design scope, not a disease
+    assert applies(BY_NAME["Median RFS"], "ALL")
+    assert not applies(BY_NAME["Median RFS"], "Follicular lymphoma")  # prose "all"

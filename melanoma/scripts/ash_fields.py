@@ -1,15 +1,16 @@
-"""ASH test run: workbook fields, family split, response schemas and prompts.
+"""ASH test run: workbook fields, response schemas, prompts.
 
-Fields are data (resources/ash/book1_sheet2.csv), not AttributeType members.
-One extraction call per family; the harness appends the abstract text to the
-prompts built here.
+Fields are data (resources/ash/book1_sheet2.csv, a copy of the workbook's Sheet2).
+Each row carries its family, scope (arm / comparison / trial), source, value type,
+allowed values and evidence rule. Only rows whose source is the abstract are asked
+here; registry rows are filled from ClinicalTrials.gov elsewhere.
+One extraction call per family; the harness appends the abstract text.
 """
 
 import csv
-import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Literal
 
@@ -17,32 +18,48 @@ from pydantic import BaseModel, create_model
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.domain.prompt_templates import SHARED_EXTRACTION_RULES  # noqa: E402
-from src.domain.treatment_arm_models import TreatmentArm  # noqa: E402
-
 RESOURCES = Path(__file__).parent.parent / "resources" / "ash"
-DROPPED = {"Cytokine Release Syndrome or CRS"}  # duplicate of "CRS any grade"
-TEXT_ONLY_NAMES = (
-    "mechanism of action",
-    "target",
-    "modality",
-    "drug class",
-    "generic name",
-    "brand name",
-    "disease subtype",
-)
-TRIAL_LEVEL_NAMES = ("trial name", "nct", "disease subtype")
+ABSTRACT_SOURCES = ("abstract", "both")
+FAMILY_TITLES = {
+    "dose_events_special": "Dose changes, DLT and CRS/ICANS",
+    "safety_overall": "Overall safety",
+    "survival_other": "EFS, RFS, DFS and LFS",
+    "duration_transplant": "Response duration, time-to-event and transplant outcomes",
+    "survival_pfs_os": "PFS and OS",
+    "response_rates": "Response and disease-specific rates",
+    "population": "Population and study design",
+    "regimen_drug": "Regimen and drug profile",
+}
+TYPE_TEXT = {
+    "percent": "percent, bare number 0-100",
+    "months": "months, bare number",
+    "months_or_nr": "months, bare number, or NR if not reached",
+    "count": "whole number",
+    "number": "bare number",
+    "range": "low-high, e.g. 0.41-0.74",
+    "p_value": "<, = or > then the number, e.g. <0.001",
+    "dose": "dose with its unit",
+    "text": "short text",
+}
 
 
 @dataclass(frozen=True)
 class SheetField:
     key: str
     name: str
-    type: str
+    family: str
+    scope: str  # arm | comparison | trial
+    source: str
+    value_type: str
+    allowed: tuple[str, ...]
+    detail: str
+    evidence: str
     applies_to: str
     definition: str
-    text_only: bool
-    trial_level: bool
+
+    @property
+    def trial_level(self) -> bool:
+        return self.scope == "trial"
 
 
 @dataclass(frozen=True)
@@ -52,51 +69,11 @@ class Family:
     fields: tuple[SheetField, ...]
 
 
-# Ordered: the first pattern matching the lowercased field name wins.
-_FAMILY_RULES: tuple[tuple[str, str, str], ...] = (
-    (
-        "dose_events_special",
-        "Dose changes, DLT and CRS/ICANS",
-        r"dose reduction|dose interruption|hospitali|^crs|^icans|^dlt|^mtd|^rp2d",
-    ),
-    (
-        "safety_overall",
-        "Overall safety",
-        r"^grade >=3|^serious|^discontinuation|^deaths|mortality|immune related|infusion-related",
-    ),
-    (
-        "survival_other",
-        "EFS, RFS, DFS and LFS",
-        r"\b(efs|rfs|dfs|lfs)\b",
-    ),
-    (
-        "duration_transplant",
-        "Response duration, time-to-event and transplant outcomes",
-        r"^median (dor|time to|ttp|ttnt)|^dor rate|duration of complete|^pfs2"
-        r"|gvhd|non-relapse|cumulative incidence",
-    ),
-    ("survival_pfs_os", "PFS and OS", r"\b(pfs|os)\b"),
-    (
-        "response_rates",
-        "Response and disease-specific rates",
-        r"\borr\b|cr rate|^cbr|pod24|vgpr|^scr|cr/crh|composite cr|mlfs|mrd|bridge to"
-        r"|transfusion independence|hematologic improvement|^mmr|^mr4|svr35|tss50"
-        r"|major response|hematologic cr",
-    ),
-    (
-        "population",
-        "Population and study design",
-        r"response criteria|assessment by|disease subtype|line of therapy|transplant elig"
-        r"|median age|^patients |crossover|biomarker",
-    ),
-    (
-        "regimen_drug",
-        "Regimen and drug profile",
-        r"arm label|regimen name|component|generic|brand|^dose$|route|dosing schedule"
-        r"|step-up|fixed-duration|therapy phase|mechanism|^target|modality|drug class"
-        r"|cell therapy|lymphodepletion|bridging therapy",
-    ),
-)
+@dataclass(frozen=True)
+class Arm:
+    arm_id: str
+    arm_name: str
+    role: str  # experimental | control | single arm
 
 
 def _slug(name: str) -> str:
@@ -106,104 +83,231 @@ def _slug(name: str) -> str:
 
 
 def load_families(csv_path: Path) -> tuple[Family, ...]:
-    buckets: dict[str, list[SheetField]] = {k: [] for k, _, _ in _FAMILY_RULES}
-    with csv_path.open(newline="") as f:
+    """Fields asked of the abstract, grouped by the workbook's family column."""
+    buckets: dict[str, list[SheetField]] = {k: [] for k in FAMILY_TITLES}
+    with csv_path.open(newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            name = row["field"]
-            if name in DROPPED:
+            if row["source"] not in ABSTRACT_SOURCES:
                 continue
-            low = name.lower()
-            sheet_field = SheetField(
-                key=_slug(name),
-                name=name,
-                type=row["type"],
-                applies_to=row["applies_to"],
-                definition=row["definition"],
-                text_only=low.startswith(TEXT_ONLY_NAMES),
-                trial_level=low.startswith(TRIAL_LEVEL_NAMES),
+            if row["family"] not in buckets:
+                raise ValueError(f"No family for workbook field: {row['field']}")
+            allowed = (
+                tuple(v.strip() for v in row["allowed_values"].split(" / ") if v)
+                if row["value_type"] in ("enum", "yes_no")
+                else ()
             )
-            for key, _, pattern in _FAMILY_RULES:
-                if re.search(pattern, low):
-                    buckets[key].append(sheet_field)
-                    break
-            else:
-                raise ValueError(f"No family for workbook field: {name}")
-    return tuple(
-        Family(key, title, tuple(buckets[key])) for key, title, _ in _FAMILY_RULES
+            buckets[row["family"]].append(
+                SheetField(
+                    key=_slug(row["field"]),
+                    name=row["field"],
+                    family=row["family"],
+                    scope=row["scope"],
+                    source=row["source"],
+                    value_type=row["value_type"],
+                    allowed=allowed,
+                    detail=row["detail"],
+                    evidence=row["evidence"],
+                    applies_to=row["applies_to"],
+                    definition=row["definition"],
+                )
+            )
+    return tuple(Family(k, t, tuple(buckets[k])) for k, t in FAMILY_TITLES.items())
+
+
+def fields_for(family: Family, indication: str | None) -> Family:
+    """The family narrowed to the fields that apply to this indication (all if unknown)."""
+    if indication is None:
+        return family
+    return replace(
+        family, fields=tuple(f for f in family.fields if applies(f, indication))
     )
+
+
+def arm_fields(family: Family, arm: Arm) -> list[SheetField]:
+    """Comparison fields (hazard ratio, CI, p-value) exist on the experimental arm only."""
+    return [
+        f
+        for f in family.fields
+        if f.scope == "arm" or (f.scope == "comparison" and arm.role == "experimental")
+    ]
 
 
 class Cell(BaseModel):
     value: str
     quote: str
+    detail: str
+    basis: Literal["", "arm", "pooled"]
+    derived: bool
+
+
+class ArmItem(BaseModel):
+    arm_name: str
+    role: Literal["experimental", "control", "single arm"]
+    n: str
+    source_text: str
+
+
+class ArmList(BaseModel):
+    results_reported: Literal["per_arm", "pooled_only", "mixed"]
+    arms: list[ArmItem]
 
 
 class JudgeItem(BaseModel):
-    arm_id: str
-    key: str
-    verdict: Literal["pass", "fail", "uncertain"]
-    note: str
-    corrected_value: str
+    id: int
+    value_ok: Literal["yes", "no", "unsure"]
+    quote_ok: Literal["yes", "no"]
+    error: Literal[
+        "",
+        "not_stated",
+        "wrong_measure",
+        "wrong_arm_or_group",
+        "wrong_analysis",
+        "wrong_number",
+        "outside_knowledge",
+    ]
+    right_value: str
+    right_quote: str
 
 
 class JudgeVerdict(BaseModel):
     items: list[JudgeItem]
 
 
-def response_model(family: Family, arm_ids: list[str]) -> type[BaseModel]:
-    """{"trial"?: {key: Cell}, "arms": {arm_id: {key: Cell, "other_values": str}}}."""
-    # Any: create_model's **field_definitions overloads reject inferred tuple types
-    arm_fields: dict[str, Any] = {
-        f.key: (Cell, ...) for f in family.fields if not f.trial_level
-    }
-    arm_fields["other_values"] = (str, ...)
-    arm_model = create_model(f"{family.key}_arm", **arm_fields)
-    arm_defs: dict[str, Any] = {a: (arm_model, ...) for a in arm_ids}
-    arms_model = create_model(f"{family.key}_arms", **arm_defs)
-    top: dict[str, Any] = {"arms": (arms_model, ...)}
-    trial_fields: dict[str, Any] = {
-        f.key: (Cell, ...) for f in family.fields if f.trial_level
-    }
-    if trial_fields:
-        top = {
-            "trial": (create_model(f"{family.key}_trial", **trial_fields), ...),
-            **top,
-        }
-    return create_model(f"{family.key}_response", **top)
-
-
-def _fields_block(family: Family) -> str:
-    return "\n".join(
-        f"- {f.key} ({f.name}); type: {f.type}; definition: {f.definition or 'none given'}"
-        for f in family.fields
+def _cell_type(family: Family, f: SheetField) -> Any:
+    if not f.allowed:
+        return Cell
+    # Any: Literal built from workbook data
+    values: Any = Literal[(*f.allowed, "")]  # type: ignore[valid-type]
+    return create_model(
+        f"{family.key}_{f.key}_cell", __base__=Cell, value=(values, ...)
     )
 
 
-def family_prompt(family: Family, arms: list[TreatmentArm]) -> str:
+def _keys_literal(fields: list[SheetField]) -> Any:
+    return Literal[tuple(f.key for f in fields)]  # type: ignore[valid-type]
+
+
+def response_model(family: Family, arms: list[Arm]) -> type[BaseModel]:
+    """{"trial"?: {key: Cell}, "arms"?: {arm_id: {key: Cell, "extra": [Extra]}}}."""
+    top: dict[str, Any] = {}
+    trial: dict[str, Any] = {
+        f.key: (_cell_type(family, f), ...) for f in family.fields if f.trial_level
+    }
+    if trial:
+        top["trial"] = (create_model(f"{family.key}_trial", **trial), ...)
+    arm_models: dict[str, Any] = {}
+    for arm in arms:
+        fields = arm_fields(family, arm)
+        if not fields:
+            continue
+        extra = create_model(
+            f"{family.key}_{arm.arm_id}_extra",
+            field=(_keys_literal(fields), ...),
+            value=(str, ...),
+            context=(str, ...),
+            quote=(str, ...),
+        )
+        defs: dict[str, Any] = {f.key: (_cell_type(family, f), ...) for f in fields}
+        defs["extra"] = (list[extra], ...)  # type: ignore[valid-type]
+        arm_models[arm.arm_id] = (
+            create_model(f"{family.key}_{arm.arm_id}", **defs),
+            ...,
+        )
+    if arm_models:
+        top["arms"] = (create_model(f"{family.key}_arms", **arm_models), ...)
+    if not top:
+        raise ValueError(f"family {family.key} has no fields to ask")
+    return create_model(f"{family.key}_response", **top)
+
+
+def missed_model(family: Family, arms: list[Arm]) -> type[BaseModel]:
+    ids: Any = Literal[(*(a.arm_id for a in arms), "trial")]  # type: ignore[valid-type]
+    item = create_model(
+        f"{family.key}_missed_item",
+        arm_id=(ids, ...),
+        field=(_keys_literal(list(family.fields)), ...),
+        value=(str, ...),
+        quote=(str, ...),
+    )
+    return create_model(f"{family.key}_missed", items=(list[item], ...))  # type: ignore[valid-type]
+
+
+def _fields_block(family: Family) -> str:
+    lines = []
+    for f in family.fields:
+        kind = (
+            "one of: " + " / ".join(f.allowed) if f.allowed else TYPE_TEXT[f.value_type]
+        )
+        line = f"- {f.key} ({f.name}); {kind}"
+        if f.detail:
+            line += f"; detail: {f.detail}"
+        line += f"; {f.definition}" if f.definition else ""
+        if f.evidence == "stated only":
+            line += " Fill only if the abstract says it in words."
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _arms_block(arms: list[Arm]) -> str:
+    return "\n".join(f"{a.arm_id}: {a.arm_name} ({a.role})" for a in arms)
+
+
+ARM_PROMPT = """TASK: List the treatment arms in this hematology trial abstract.
+
+An arm is a group of patients that receives a regimen different from the other groups.
+
+ARE arms:
+1. Each randomized group, including placebo, control, observation and standard of care.
+2. Groups that get different drugs, even in one study: "DrugA + DrugB" and "DrugA + DrugC" are two arms, also when the abstract reports their results pooled.
+3. Risk-stratified groups that get different regimens (standard-risk gets X, high-risk gets X + Y).
+4. A single-arm study has exactly one arm.
+
+Are NOT arms (never list them):
+5. Dose levels or dose-escalation cohorts of the same drugs (DL1, DL2, 100 mg vs 200 mg).
+6. Expansion cohorts, step-up cohorts, outpatient subsets of the same drugs.
+7. Subgroups by age, risk, mutation, prior therapy, response.
+8. Phases given to the same patients (induction, consolidation, maintenance).
+
+If two groups get the same drugs, they are ONE arm.
+
+For each arm:
+- arm_name: the drugs or regimen as the abstract names them. No outside knowledge.
+- role: experimental, control, or single arm.
+- n: patients in this arm if stated, else "".
+- source_text: the sentence that defines the arm, copied exactly.
+
+results_reported: "pooled_only" if the abstract says results combine the arms and gives no per-arm outcomes; "per_arm" if outcomes are given per arm; "mixed" otherwise.
+
+ABSTRACT:
+{abstract_text}
+"""
+
+_RULES = """RULES
+1. Use only what the abstract says. If it does not state a field for an arm, return "" for value and quote. Never use what you know about the drug or disease.
+2. quote: copy the exact words from the abstract that state the value. The quote must name the measure (for a PFS field the quote contains "PFS" or "progression-free").
+3. value: numbers only, no units, no "%". Durations in months ("NR" if not reached). If you had to calculate it (count to percent, days to months, "all patients" = 100, "none" = 0), set derived = true.
+4. detail: the timepoint, method, threshold or grading system the field asks for, else "".
+5. basis: "arm" if the value is for this arm only. "pooled" if the abstract gives it for all arms together. A pooled value goes on every arm with basis "pooled". Patient counts are the exception: a trial total never goes on an arm.
+6. Extract the analysis this abstract reports. Ignore results from an earlier analysis that the abstract quotes as background ("in the primary analysis", "previously reported").
+7. One measure, one field. Never put EFS in a PFS field, a CR rate in ORR, or an MRD rate in a response field. If no field fits, leave it out.
+8. extra: further values of THESE fields that the field cannot hold: a subgroup, a dose level, a second population (evaluable vs ITT), another timepoint, a second analysis. Give field, value, context (who or when), and quote. Never drop a second value; never put a first value here."""
+
+_EXAMPLES = """EXAMPLE 1 (invented)
+Text: "In the primary analysis (median follow-up 18 months) PFS HR was 0.60 (P<0.001). Here we report the final analysis. At a median follow-up of 40 months, median PFS was 30.1 months with zorvamab vs 14.2 months with placebo (HR 0.55; 95% CI 0.41-0.74). In patients aged >=75, median PFS was 22.0 vs 11.0 months."
+arm_1 zorvamab: median_pfs {value "30.1", quote "median PFS was 30.1 months with zorvamab", basis "arm"}; hr_pfs {value "0.55", quote "HR 0.55; 95% CI 0.41-0.74"}; p_value_pfs {value "", quote ""} because P<0.001 is from the earlier analysis; extra [{field "median_pfs", value "22.0", context "patients aged >=75", quote "In patients aged >=75, median PFS was 22.0 vs 11.0 months"}].
+arm_2 placebo: median_pfs {value "14.2", ...}; no hazard ratio fields.
+
+EXAMPLE 2 (invented)
+Text: "Twelve patients received telnotug + drug A and nine received telnotug + drug B. Results combine both cohorts. CRS occurred in 8 of 21 patients. No ICANS was observed."
+Both arms: crs_any_grade {value "38.1", quote "CRS occurred in 8 of 21 patients", basis "pooled", derived true}; icans_any_grade {value "0", quote "No ICANS was observed", basis "pooled", derived true}. patients_treated: arm_1 "12", arm_2 "9", basis "arm"."""
+
+
+def family_prompt(family: Family, arms: list[Arm]) -> str:
     trial = [f.key for f in family.fields if f.trial_level]
-    text_only = [f.key for f in family.fields if f.text_only]
     parts = [
-        f"TASK: Extract the following fields ({family.title}) from the abstract, "
-        "once for each treatment arm listed below.",
-        SHARED_EXTRACTION_RULES,
-        "Fields:\n" + _fields_block(family),
-        "Arms:\n" + "\n".join(f"{a.arm_id}: {a.arm_name}" for a in arms),
-        "Each field returns {value, quote}. quote is the exact verbatim substring of the "
-        "abstract that supports the value; copy it character for character. If the "
-        "abstract does not state the field for that arm, return empty strings for both.",
-        "Fill the fields first. If a value the abstract reports matches one of the fields "
-        "above, it belongs in that field; never put it in other_values instead.",
-        "other_values (one per arm) is the overflow for the fields above only: a short "
-        "text naming each further value of one of these fields that the field cannot "
-        "hold, because it is for a second population, criterion, threshold, dose level, "
-        "or a timepoint with no field of its own (for example a 30-month PFS rate when "
-        "only 24- and 36-month fields exist), or because it is a count where the field "
-        "takes a percentage. Name the field and the context. Never list values of "
-        "measures that are not in the field list above; other extraction passes cover "
-        "them. Empty string if there is none.",
-        "If the abstract gives a second value for the same field in one arm (for example "
-        "ORR in the ITT population and in evaluable patients), keep the primary value in "
-        "the field and put the second value in other_values; never drop it.",
+        "TASK: Fill the fields below from the abstract, for each arm listed. "
+        f"Fields: {family.title}.",
+        _RULES,
     ]
     if trial:
         parts.append(
@@ -211,103 +315,107 @@ def family_prompt(family: Family, arms: list[TreatmentArm]) -> str:
             + ", ".join(trial)
             + ") go under 'trial' once, not per arm."
         )
-    if text_only:
-        parts.append(
-            "Text-only fields (" + ", ".join(text_only) + ") are filled only when the "
-            "abstract text states them. Never fill them from your own knowledge of the drug "
-            "or disease; if the abstract does not say it, return empty strings."
-        )
+    parts += [
+        "FIELDS\n" + _fields_block(family),
+        "ARMS\n" + _arms_block(arms),
+        _EXAMPLES,
+    ]
     return "\n\n".join(parts)
 
 
-def judge_prompt(family: Family, extracted: dict, arms: list[TreatmentArm]) -> str:
+def judge_items(
+    family: Family, extracted: dict[str, Any], arms: list[Arm]
+) -> list[dict[str, Any]]:
+    """Every filled value (fields and extras) as a flat, numbered list for the judge."""
+    names = {a.arm_id: a.arm_name for a in arms} | {"trial": "whole trial"}
+    by_key = {f.key: f for f in family.fields}
+    scopes: list[tuple[str, dict[str, Any]]] = []
+    if "trial" in extracted:
+        scopes.append(("trial", extracted["trial"]))
+    scopes += list(extracted.get("arms", {}).items())
+    items: list[dict[str, Any]] = []
+    for arm_id, cells in scopes:
+        for key, cell in cells.items():
+            if key != "extra" and cell["value"]:
+                items.append({"kind": "field", "arm_id": arm_id, "key": key, **cell})
+        for ex in cells.get("extra", []):
+            if ex["value"]:
+                items.append(
+                    {"kind": "extra", "arm_id": arm_id, "key": ex["field"], **ex}
+                )
+    for i, item in enumerate(items, 1):
+        item["id"] = i
+        item["arm_name"] = names[item["arm_id"]]
+        item["field_name"] = by_key[item["key"]].name
+    return items
+
+
+def _item_line(item: dict[str, Any]) -> str:
+    if item["kind"] == "extra":
+        tail = f"extra value for: {item['context']}"
+    else:
+        tail = f"basis: {item['basis'] or 'none'} | derived: {str(item['derived']).lower()}"
+    return (
+        f"{item['id']} | {item['arm_name']} | {item['field_name']} | "
+        f"value: {item['value']} | {tail} | quote: \"{item['quote']}\""
+    )
+
+
+_JUDGE_RULES = """TASK: Check each extracted value below against the abstract. Answer two separate questions for every item.
+
+A. value_ok: is this the right value for this field and this arm, according to the abstract?
+- "yes": the abstract states it (or it is simple arithmetic from stated numbers and marked derived).
+- "no": pick the error:
+  not_stated - the abstract does not say this; it could only come from knowledge of the drug or disease.
+  wrong_measure - the number belongs to a different measure (EFS not PFS, CR not ORR, MRD not response).
+  wrong_arm_or_group - the number belongs to another arm, a subgroup or a dose level. A value marked "pooled" on several arms is correct if the abstract reports only pooled results.
+  wrong_analysis - the number is from an earlier analysis quoted as background.
+  wrong_number - the abstract gives a different number.
+- "unsure": the abstract is ambiguous. Say what is ambiguous in right_value.
+
+B. quote_ok: does the quote, on its own, state the whole value? "no" if it covers only part of it. A correct value with a short quote is value_ok "yes", quote_ok "no".
+
+Rules:
+1. Judge only against the abstract text. Do not use what you know about the drug.
+2. Unit conversion and count-to-percent are not errors.
+3. right_value: only when value_ok is "no" and the abstract states the right value. Then right_quote must be the exact words that state it. Otherwise both are "".
+4. Return one item for every id. Do not add items."""
+
+
+def judge_prompt(family: Family, items: list[dict[str, Any]], arms: list[Arm]) -> str:
     return "\n\n".join(
         [
-            f"TASK: You are auditing an extraction ({family.title}) against the abstract "
-            "text. Return a verdict for every filled field of every arm: pass if value and "
-            "quote are supported by the abstract and the quote is verbatim; fail if wrong, "
-            "unsupported or attributed to the wrong arm; uncertain if the abstract is "
-            "ambiguous. Skip empty cells: return no item for a field left empty, unless the "
-            "abstract states a value for that field and arm, in which case the empty cell "
-            "is a fail with the value as corrected_value. 'Not reported' is never an item. "
-            "Give a short note, and corrected_value when you fail a "
-            "field (empty string otherwise).",
-            "other_values holds further values of these fields that no field can hold. A "
-            "value there for another timepoint, population, threshold or dose level (for "
-            "example a 30-month rate when only 24- and 36-month fields exist), or a count "
-            "where the field takes a percentage, is correct: do not fail it. A value there "
-            "whose measure is not in the field list at all is wrong for this family. "
-            "If a value in other_values does match a field in the list and that field is "
-            "empty, fail that field (key = the field's key) with the value as "
-            "corrected_value. Return a verdict for other_values itself only when it is "
-            "wrong (key 'other_values').",
-            "Text-only fields must be stated in the abstract text, never supplied from "
-            "model knowledge; fail any that are not. Use arm_id 'trial' for trial-level "
-            "fields.",
-            "Fields:\n" + _fields_block(family),
-            "Arms:\n" + "\n".join(f"{a.arm_id}: {a.arm_name}" for a in arms),
-            "Extraction:\n" + json.dumps(extracted, indent=2),
+            _JUDGE_RULES,
+            "FIELD DEFINITIONS\n" + _fields_block(family),
+            "ARMS\n" + _arms_block(arms),
+            "ITEMS\n" + "\n".join(_item_line(i) for i in items),
         ]
     )
 
 
-HEME_SEPARATION_PROMPT = """
-TASK: Identify the treatment arms in this hematology clinical trial abstract.
+def missed_prompt(family: Family, extracted: dict[str, Any], arms: list[Arm]) -> str:
+    """Ask only for values the abstract states and the extraction left empty."""
+    empty = []
+    if "trial" in extracted:
+        keys = [k for k, c in extracted["trial"].items() if not c["value"]]
+        empty.append("trial: " + (", ".join(keys) or "none"))
+    for arm_id, cells in extracted.get("arms", {}).items():
+        keys = [k for k, c in cells.items() if k != "extra" and not c["value"]]
+        empty.append(f"{arm_id}: " + (", ".join(keys) or "none"))
+    return "\n\n".join(
+        [
+            "TASK: The fields listed under EMPTY were left empty for this abstract. "
+            "Find any of them that the abstract does state. Return one item per value "
+            "found: arm_id, field, value (numbers only, no units), and quote (the exact "
+            "words that state it). Return an empty list if the abstract states none of "
+            "them. Use only the abstract, never what you know about the drug. A value "
+            "for a subgroup, a dose level or an earlier analysis does not count.",
+            "FIELDS\n" + _fields_block(family),
+            "ARMS\n" + _arms_block(arms),
+            "EMPTY\n" + "\n".join(empty),
+        ]
+    )
 
-Treatment arms are usually defined in the Title and in Methods / Patients and Methods / Study Design. Look there first; confirm against Results.
-
-RULES:
-1. An arm is a distinct regimen or comparison group. Most trials have 1-3; multi-regimen trials may have more.
-2. Treatment and control groups are arms. Different regimens are different arms: "LINVO + DARA" and "LINVO + ISA" are two arms even in one phase 1/2 study.
-3. Combination = single arm with "+" notation (e.g., "Venetoclax + Azacitidine").
-4. Placebo / control / observation / best available therapy / transplant-only groups ARE arms. Use arm_type="placebo" or "control".
-5. A single-arm study has one arm.
-6. NOT arms - do NOT emit these as separate arms (their results go in the arm they belong to):
-   - Dose levels or dose-escalation cohorts of one regimen (e.g., 5 mg vs 10 mg of the same combination)
-   - Cohorts within one regimen (expansion cohorts, step-up dosing cohorts)
-   - Subgroups (cytogenetic risk, age, line of therapy, prior treatment, response status, biomarker status)
-   - Phases of one regimen (induction, consolidation, maintenance given to the same patients)
-7. If the abstract uses cohort labels (e.g., "Cohort A"), append the regimen: "Cohort A (Teclistamab + Daratumumab)".
-8. Prefer drug names over generic labels like "Arm 1", "Treatment arm".
-9. Do not use outside knowledge to name a regimen; use only what the abstract states.
-
-FIELDS:
-- arm_id: "arm_1", "arm_2", ... (sequential)
-- arm_name: drug or regimen name(s) as referred to in the text
-- generic_name: generic names of the DEFINING drugs of this arm, "+" joined; "Placebo" / "Control" for non-drug arms
-- combination_drugs: list of individual drugs for combination arms; [] for monotherapy/placebo/non-drug
-- arm_type: one of [monotherapy, combination, placebo, control, dose_variation, unknown]
-- line_of_treatment: one of [first_line, second_line, third_line_plus, adjuvant, neoadjuvant, maintenance, unknown]
-- dose: dose with units as stated, "Drug dose + Drug dose" for combinations; null if not stated
-- dosing_schedule: schedule using standard abbreviations (QD, BID, QW, Q2W, Q3W, Q4W; "Q3W x4"); null if not stated
-- patient_count: integer N for this arm if explicitly stated, else 0
-- nct_number: NCT identifier if found, else ""
-- source_text: the verbatim sentence from the abstract that defines this arm
-- confidence_score: 1.0 arm explicitly named in the design; 0.7 clearly inferable from Methods + Results; 0.4 uncertain
-
-OUTPUT FORMAT (JSON ONLY - no markdown, no explanations):
-{
-  "treatment_arms": [
-    {
-      "arm_id": "arm_1",
-      "arm_name": "Linvoseltamab + Daratumumab",
-      "generic_name": "Linvoseltamab + Daratumumab",
-      "combination_drugs": ["Linvoseltamab", "Daratumumab"],
-      "arm_type": "combination",
-      "line_of_treatment": "second_line",
-      "dose": "Linvoseltamab 200 mg + Daratumumab 1800 mg",
-      "dosing_schedule": "Q4W",
-      "patient_count": 42,
-      "nct_number": "NCT00000000",
-      "source_text": "...patients received linvoseltamab plus daratumumab...",
-      "confidence_score": 1.0
-    }
-  ]
-}
-
-ABSTRACT:
-{abstract_text}
-"""
 
 INDICATIONS: tuple[str, ...]
 _INCLUDES: dict[str, str]
