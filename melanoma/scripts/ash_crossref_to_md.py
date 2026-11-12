@@ -35,9 +35,15 @@ HEADINGS = {
     "summary and conclusions": "Conclusions",
 }
 # Longest key first so "patients and methods" wins over any shorter prefix.
+_KEYS = "|".join(sorted(map(re.escape, HEADINGS), key=len, reverse=True))
+# "Methods and Results:", "Summary of Results:" - a colon is required, the heading is kept as written.
+_COMPOUND = re.compile(
+    rf"^((?:{_KEYS})\s+(?-i:and|of)\s+[A-Za-z ]{{1,30}}?)\s*[:：]\s*(.*)$", re.I | re.S
+)
+# A space-separated opener counts only when the next word is not plain lowercase,
+# so "Results from the subgroup..." stays prose but "Results mNGS detected..." is a heading.
 _OPENER = re.compile(
-    r"^(" + "|".join(sorted(map(re.escape, HEADINGS), key=len, reverse=True)) + r")"
-    r"(?:\s*[:：.]\s*|\s+|(?-i:(?=[A-Z]))|$)(.*)$",
+    rf"^({_KEYS})" r"(?:\s*[:：.]\s*|\s+(?-i:(?![a-z]+\b))|(?-i:(?=[A-Z]))|$)(.*)$",
     re.I | re.S,
 )
 # Citation-style paragraph: "Surname AB, Surname CD, ... Journal. 2025;16:"
@@ -58,12 +64,13 @@ def jats_to_sections(jats: str) -> list[tuple[str | None, str]]:
         text = _clean(raw)
         if not text:
             continue
-        m = _OPENER.match(text)
+        m = _COMPOUND.match(text) or _OPENER.match(text)
+        heading = m and HEADINGS.get(m.group(1).lower(), m.group(1))
         if m and not m.group(2).strip():
-            pending = HEADINGS[m.group(1).lower()]
+            pending = heading
             continue
         if m:
-            out.append((HEADINGS[m.group(1).lower()], m.group(2).strip()))
+            out.append((heading, m.group(2).strip()))
         else:
             out.append((pending, text))
         pending = None
@@ -100,7 +107,7 @@ def main() -> None:
         for line in f:
             rec = json.loads(line)
             num = abstract_number(rec.get("DOI", ""))
-            if num in wanted and rec.get("abstract"):
+            if num and num in wanted and rec.get("abstract"):
                 title = _clean((rec.get("title") or [""])[0])
                 found[num] = render_abstract(
                     num, title, jats_to_sections(rec["abstract"])

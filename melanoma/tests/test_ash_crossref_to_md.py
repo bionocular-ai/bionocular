@@ -93,3 +93,32 @@ def test_bare_heading_paragraph_carries_to_next_text():
 
 def test_glued_capital_heading():
     assert jats_to_sections(p("ResultsORR was 80%.")) == [("Results", "ORR was 80%.")]
+
+
+def test_compound_heading_with_colon_kept_as_written():
+    assert jats_to_sections(p("Methods and Results: We report x.")) == [
+        ("Methods and Results", "We report x.")
+    ]
+    assert jats_to_sections(p("Summary and Conclusions: Done.")) == [
+        ("Conclusions", "Done.")
+    ]
+
+
+def test_prose_starting_with_heading_word_stays_plain():
+    for text in (
+        "Results from the subgroup analyses were consistent.",
+        "Methods and Results We report x.",
+    ):
+        assert jats_to_sections(p(text)) == [(None, text)]
+
+
+def test_capitalised_connector_is_not_a_compound_heading():
+    assert jats_to_sections(p("Results Of 128 pts (HA: n=101), most were male.")) == [
+        ("Results", "Of 128 pts (HA: n=101), most were male.")
+    ]
+
+
+def test_heading_before_lowercase_led_term():
+    assert jats_to_sections(p("Results mNGS detected 24/25.")) == [
+        ("Results", "mNGS detected 24/25.")
+    ]
