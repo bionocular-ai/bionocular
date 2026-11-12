@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 _root = Path(__file__).parent.parent
-sys.path.insert(0, str(_root / "src"))
+sys.path.insert(0, str(_root))
 sys.path.insert(0, str(_root / "scripts"))
 
 from ash_fields import (  # noqa: E402
@@ -20,8 +20,9 @@ from ash_fields import (  # noqa: E402
     load_families,
     response_model,
 )
-from domain.prompt_templates import SHARED_EXTRACTION_RULES  # noqa: E402
-from domain.treatment_arm_models import TreatmentArm  # noqa: E402
+
+from src.domain.prompt_templates import SHARED_EXTRACTION_RULES  # noqa: E402
+from src.domain.treatment_arm_models import TreatmentArm  # noqa: E402
 
 CSV_PATH = _root / "resources" / "ash" / "book1_sheet2.csv"
 FAMILIES = load_families(CSV_PATH)

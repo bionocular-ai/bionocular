@@ -15,10 +15,10 @@ from typing import Literal
 
 from pydantic import BaseModel, create_model
 
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from domain.prompt_templates import SHARED_EXTRACTION_RULES  # noqa: E402
-from domain.treatment_arm_models import TreatmentArm  # noqa: E402
+from src.domain.prompt_templates import SHARED_EXTRACTION_RULES  # noqa: E402
+from src.domain.treatment_arm_models import TreatmentArm  # noqa: E402
 
 RESOURCES = Path(__file__).parent.parent / "resources" / "ash"
 DROPPED = {"Cytokine Release Syndrome or CRS"}  # duplicate of "CRS any grade"
