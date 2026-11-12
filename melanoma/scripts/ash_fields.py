@@ -11,7 +11,7 @@ import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, create_model
 
@@ -152,14 +152,18 @@ class JudgeVerdict(BaseModel):
 
 def response_model(family: Family, arm_ids: list[str]) -> type[BaseModel]:
     """{"trial"?: {key: Cell}, "arms": {arm_id: {key: Cell, "other_values": str}}}."""
-    arm_fields = {f.key: (Cell, ...) for f in family.fields if not f.trial_level}
+    # Any: create_model's **field_definitions overloads reject inferred tuple types
+    arm_fields: dict[str, Any] = {
+        f.key: (Cell, ...) for f in family.fields if not f.trial_level
+    }
     arm_fields["other_values"] = (str, ...)
     arm_model = create_model(f"{family.key}_arm", **arm_fields)
-    arms_model = create_model(
-        f"{family.key}_arms", **{a: (arm_model, ...) for a in arm_ids}
-    )
-    top = {"arms": (arms_model, ...)}
-    trial_fields = {f.key: (Cell, ...) for f in family.fields if f.trial_level}
+    arm_defs: dict[str, Any] = {a: (arm_model, ...) for a in arm_ids}
+    arms_model = create_model(f"{family.key}_arms", **arm_defs)
+    top: dict[str, Any] = {"arms": (arms_model, ...)}
+    trial_fields: dict[str, Any] = {
+        f.key: (Cell, ...) for f in family.fields if f.trial_level
+    }
     if trial_fields:
         top = {
             "trial": (create_model(f"{family.key}_trial", **trial_fields), ...),
