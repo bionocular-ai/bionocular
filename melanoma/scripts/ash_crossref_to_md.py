@@ -69,7 +69,9 @@ def jats_to_sections(jats: str) -> list[tuple[str | None, str]]:
     return out
 
 
-def render_abstract(number: str, title: str, sections: list[tuple[str | None, str]]) -> str:
+def render_abstract(
+    number: str, title: str, sections: list[tuple[str | None, str]]
+) -> str:
     parts = [f"### Abstract ID: {number}\n\n#### Title:\n{title}\n"]
     for heading, text in sections:
         parts.append(f"#### {heading}:\n{text}\n" if heading else f"{text}\n")
@@ -95,7 +97,9 @@ def main() -> None:
             num = abstract_number(rec.get("DOI", ""))
             if num in wanted and rec.get("abstract"):
                 title = _clean((rec.get("title") or [""])[0])
-                found[num] = render_abstract(num, title, jats_to_sections(rec["abstract"]))
+                found[num] = render_abstract(
+                    num, title, jats_to_sections(rec["abstract"])
+                )
     missing = [i for i in wanted if i not in found]
     if missing:
         raise SystemExit(f"ids not found in corpus: {missing}")

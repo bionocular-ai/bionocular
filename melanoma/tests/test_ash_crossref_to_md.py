@@ -17,7 +17,9 @@ def p(text):
 
 
 def test_paragraph_opener_becomes_heading():
-    assert jats_to_sections(p("Introduction LINVO is...")) == [("Introduction", "LINVO is...")]
+    assert jats_to_sections(p("Introduction LINVO is...")) == [
+        ("Introduction", "LINVO is...")
+    ]
 
 
 def test_heading_variants_and_typos():
@@ -30,7 +32,9 @@ def test_heading_variants_and_typos():
         "Conclusions：": "Conclusions",
     }
     for opener, canon in cases.items():
-        assert jats_to_sections(p(f"{opener} Some text here.")) == [(canon, "Some text here.")]
+        assert jats_to_sections(p(f"{opener} Some text here.")) == [
+            (canon, "Some text here.")
+        ]
 
 
 def test_efficacy_paragraph_stays_in_results():
@@ -39,7 +43,9 @@ def test_efficacy_paragraph_stays_in_results():
 
 
 def test_unknown_opener_keeps_text():
-    assert jats_to_sections(p("Funding This work...")) == [(None, "Funding This work...")]
+    assert jats_to_sections(p("Funding This work...")) == [
+        (None, "Funding This work...")
+    ]
 
 
 def test_entities_tags_whitespace():
