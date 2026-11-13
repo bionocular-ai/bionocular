@@ -11,10 +11,10 @@
   <meta property="og:description" content="Compare efficacy, safety and survival across oncology treatments, map the trial landscape, follow the news and ask an AI agent - in one place.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://bionocular.ai/">
-  <meta property="og:image" content="https://bionocular.ai/og.jpg?v=20261024">
+  <meta property="og:image" content="https://bionocular.ai/og.jpg?v=20261113">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Bionocular.ai - next-gen AI and machine learning for oncology insights.">
+  <meta property="og:image:alt" content="Bionocular.ai - cut the noise, focus on what matters: oncology intelligence by indication, with every number traceable.">
   <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="favicon.ico?v=20261012" sizes="any">
   <link rel="icon" href="icon.svg?v=20261012" type="image/svg+xml">
@@ -23,9 +23,9 @@
   <link rel="preload" href="fonts/onest-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/poppins-latin-300.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/poppins-latin-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=20261026b">
+  <link rel="stylesheet" href="styles.css?v=20261113b">
   <script src="data/km-checkmate067-pfs.js?v=20261015" defer></script>
-  <script src="script.js?v=20261026b" defer></script>
+  <script src="script.js?v=20261113" defer></script>
 </head>
 <body>
 
@@ -33,12 +33,30 @@
   <div class="wrap bar">
     <a class="brand" href="#hero" aria-label="Bionocular home"><img src="logo.svg?v=20261012" alt=""><span><span class="bio">bio</span>nocular</span></a>
     <nav class="nav" id="nav" aria-label="Primary">
-      <a href="#product">Product</a><a href="#survival">Survival Intelligence</a><a href="#about">About</a><a href="#contact">Contact</a>
+      <div class="dd">
+        <a href="#product">Product<svg class="chev" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5"/></svg></a>
+        <div class="dd-panel">
+          <p class="dd-h"><b>bio</b>nocular Onco</p>
+          <div class="dd-cols">
+            <ul class="dd-tabs">
+              <li class="on">Skin Cancer &amp; Melanoma Franchise<svg class="chev" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M3.5 2 6.5 5 3.5 8"/></svg></li>
+              <li class="off">Hematology Franchise<span class="soon">Coming soon</span></li>
+            </ul>
+            <ul class="dd-types" aria-label="Skin Cancer &amp; Melanoma Franchise cancer types"><li>Cutaneous / Metastatic Melanoma</li><li>Acral Melanoma</li><li>Uveal Melanoma</li><li>Mucosal Melanoma</li><li>Melanoma with Brain/CNS Metastases</li><li>Basal Cell Carcinoma</li><li>Cutaneous Squamous Cell Carcinoma</li><li>Merkel Cell Carcinoma</li></ul>
+          </div>
+        </div>
+      </div><a href="#survival">Survival Intelligence</a><a href="#about">About</a><a href="#contact">Contact</a>
     </nav>
     <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="sheet"><span></span></button>
   </div>
   <nav class="sheet" id="sheet" aria-label="Menu">
-    <a href="#product">Product</a><a href="#survival">Survival Intelligence</a><a href="#about">About</a>
+    <a href="#product">Product</a>
+    <div class="sheet-sub">
+      <p class="dd-h"><b>bio</b>nocular Onco</p>
+      <details><summary>Skin Cancer &amp; Melanoma Franchise</summary><ul><li>Cutaneous / Metastatic Melanoma</li><li>Acral Melanoma</li><li>Uveal Melanoma</li><li>Mucosal Melanoma</li><li>Melanoma with Brain/CNS Metastases</li><li>Basal Cell Carcinoma</li><li>Cutaneous Squamous Cell Carcinoma</li><li>Merkel Cell Carcinoma</li></ul></details>
+      <p class="off">Hematology Franchise<span class="soon">Coming soon</span></p>
+    </div>
+    <a href="#survival">Survival Intelligence</a><a href="#about">About</a>
     <a href="#contact">Contact</a>
   </nav>
 </header>
@@ -47,21 +65,38 @@
   <canvas class="hero-bg" id="heroBg" aria-hidden="true"></canvas>
   <div class="wrap hero-grid">
     <div class="hero-copy">
-      <div class="rotator"><h1 class="h1" id="h1" data-on><span>Next-gen AI and Machine learning</span><span class="soft"> for Oncology insights.</span></h1><p class="h1" aria-hidden="true"><span>Cutting the noise</span><span class="soft"> and only focusing on the key elements.</span></p></div>
-      <p class="lead">Human-verified oncology intelligence for biopharma teams&nbsp;- from raw data noise to clinical clarity, instantly.</p>
+      <h1 class="h1" id="h1">Cut the noise.<span class="soft"> Focus on what matters.</span></h1>
+      <p class="pitch">Generic platforms flatten disease outcomes. We go indication by indication, in oncology only, with every number traceable.</p>
+      <p class="by">Built by oncology experts, for oncology experts.</p>
+      <a class="btn" href="mailto:info@bionocular.ai?subject=Bionocular%20demo">Book a demo</a>
     </div>
-    <div class="hero-copy">
-      <div class="ai-line"><span style="white-space:nowrap">bionocular AI</span> <s>Artificial</s> <b>Authenticated</b> Intelligence</div>
-      <p class="vision">Where Clinical Rigor Meets Strategic Vision.<small>By Biopharma Strategists, for Biopharma Leaders.</small></p>
-      <ul class="caps">
-        <li style="display:block"><span class="label">Cancer specific&nbsp;- platform capabilities</span></li>
-        <li><i>01</i>Innovative dashboard</li>
-        <li><i>02</i><span>Efficacy &amp; safety of all treatments&nbsp;- stopped, ongoing or SoC</span></li>
-        <li><i>03</i>Live news &amp; live monitoring of all treatments</li>
-        <li><i>04</i>Clinical trial landscape with treatment, modality, target, line &amp; more</li>
-        <li><i>05</i>AI agent</li>
-      </ul>
+    <div class="hero-side">
+      <section class="fr" aria-labelledby="fr-skin">
+        <h2 id="fr-skin">Skin Cancer &amp; Melanoma Franchise</h2>
+        <ul class="types"><li>Cutaneous / Metastatic Melanoma</li><li>Acral Melanoma</li><li>Uveal Melanoma</li><li>Mucosal Melanoma</li><li>Melanoma with Brain/CNS Metastases</li><li>Basal Cell Carcinoma</li><li>Cutaneous Squamous Cell Carcinoma</li><li>Merkel Cell Carcinoma</li></ul>
+      </section>
+      <section class="fr" aria-labelledby="fr-heme">
+        <h2 id="fr-heme">Hematology Franchise</h2>
+        <span class="soon">Coming soon</span>
+      </section>
+      <div class="agent">
+        <h2>A dedicated AI agent for each cancer type</h2>
+        <p>Every data point and outcome, from industry-sponsored and academic (non-industry) clinical trials alike.</p>
+      </div>
     </div>
+  </div>
+  <div class="wrap hero-caps" id="heroCaps">
+    <p class="label">Platform capabilities</p>
+    <ol class="caps">
+      <li><i>01</i><span><b>Interactive dashboard:</b> filter by cancer, line of therapy, biomarker and modality</span></li>
+      <li><i>02</i><span><b>Efficacy and safety for every treatment:</b> approved, investigational, discontinued and standard of care</span></li>
+      <li><i>03</i><span><b>Digitized KM curves (PFS, OS, RFS, EFS and more):</b> overlay competing arms across therapies and recompute HRs, or set PFS against OS for the same therapy</span></li>
+      <li><i>04</i><span><b>Real-time news and conference monitoring</b> for every treatment</span></li>
+      <li><i>05</i><span><b>Trial landscape</b> by drug, modality, target, line of therapy and more</span></li>
+      <li><i>06</i><span><b>AI agent over interconnected, verified<sup>*</sup> efficacy, safety and KM survival twins:</b> ask a question, get an answer with source links</span></li>
+    </ol>
+    <p class="caps-note">Every number traced to its source, and expert-verified<sup>*</sup> oncology evidence (<sup>*</sup>not all values are expert-verified yet; full expert verification is planned).</p>
+    <p class="caps-close">Analysis that used to take days now takes hours.</p>
   </div>
 </section>
 
