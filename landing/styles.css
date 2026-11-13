@@ -60,6 +60,42 @@ a { color: inherit; }
 /* The active section also gets an underline, so the state never rests on colour alone. It grows in place; it doesn't travel between links. */
 .nav a::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; border-radius: 2px; background: var(--accent-ink); transform: scaleX(0); opacity: 0; transition: transform .35s var(--settle), opacity .2s; }
 .nav a[aria-current="true"]::after { transform: none; opacity: 1; }
+/* Product opens a panel that grows from under its own link and leaves the same way. Hover or keyboard focus opens it;
+   Escape shuts it until the pointer or focus leaves (script.js). Solid, like the sheet: a backdrop blur cannot nest in the bar's. */
+.dd { position: relative; display: flex; }
+.dd::after { content: ""; position: absolute; top: 100%; left: -1rem; right: -1rem; height: 1.5rem; }
+.dd > a { white-space: nowrap; }
+.nav .chev { display: inline-block; margin-left: .3rem; vertical-align: .05em; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: transform .35s var(--settle); }
+.dd-panel { position: absolute; top: 100%; left: 50%; translate: -50% 0; margin-top: 1.25rem; width: 42rem; padding: 1.25rem; border-radius: 18px; cursor: default;
+  background: #fff; box-shadow: 0 0 0 1px rgba(16,43,54,.07), 0 30px 60px -24px rgba(16,43,54,.35);
+  transform-origin: 50% 0; transform: translateY(-6px) scale(.97); opacity: 0; visibility: hidden; transition: transform .35s var(--settle), opacity .2s, visibility 0s .35s; }
+.dd-panel::before { content: ""; position: absolute; inset: -1.25rem 0 100%; } /* a bridge over the gap, so the pointer can cross it */
+.dd:is(:hover, :has(:focus-visible)):not([data-shut]) .dd-panel { transform: none; opacity: 1; visibility: visible; transition: transform .35s var(--settle), opacity .2s, visibility 0s; }
+.dd:is(:hover, :has(:focus-visible)):not([data-shut]) > a .chev { transform: rotate(180deg); }
+/* Hover waits a beat, so a pointer passing over Product on its way along the bar does not flash the panel. */
+.dd:hover:not(:has(:focus-visible)):not([data-shut]) :is(.dd-panel, .chev) { transition-delay: .08s; }
+.dd-h { margin: 0 0 .875rem; font: 500 1rem/1 'Plus Jakarta Sans', sans-serif; letter-spacing: .004em; color: #1A1A1A; }
+.dd-h b { font-weight: 800; }
+.dd-cols { display: grid; grid-template-columns: 19rem 1fr; gap: 1rem; }
+.dd-tabs, .dd-types { list-style: none; margin: 0; padding: 0; }
+.dd-tabs { display: grid; gap: .25rem; align-content: start; }
+.dd-tabs li { display: flex; align-items: center; justify-content: space-between; gap: .375rem; padding: .625rem .75rem; border-radius: 10px; line-height: 1.3; letter-spacing: 0; }
+.dd-tabs .on { background: var(--tint); color: var(--primary); font-weight: 500; }
+.dd-tabs .off { color: var(--muted); }
+.dd-tabs .soon, .sheet-sub .soon { padding: .25rem .5rem; }
+.dd-types { padding-left: 1rem; border-left: 1px solid var(--hair); display: grid; align-content: start; }
+.dd-types li { padding: .3rem 0; color: var(--text); line-height: 1.35; letter-spacing: 0; }
+/* In the phone sheet the franchises sit indented under Product, the cancer types folded away. */
+.sheet-sub { display: grid; gap: .125rem; margin: -.25rem 0 .25rem 1rem; padding-left: 1rem; border-left: 1px solid var(--hair); font-size: .9375rem; }
+.sheet-sub .dd-h { margin: .375rem 0; }
+.sheet-sub summary { display: flex; justify-content: space-between; align-items: center; min-height: 44px; margin: 0 -.5rem; padding: .5rem; border-radius: 10px; list-style: none; cursor: pointer; font-weight: 500; color: var(--text); }
+.sheet-sub summary::-webkit-details-marker { display: none; }
+.sheet-sub summary:active { background: var(--tint); }
+.sheet-sub summary::after { content: ""; width: 6px; height: 6px; margin-right: .5rem; border: solid currentColor; border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); transition: transform .35s var(--settle); }
+.sheet-sub details[open] summary::after { transform: translateY(1px) rotate(-135deg); }
+.sheet-sub ul { list-style: none; margin: 0 0 .5rem; padding: 0; font-size: .875rem; color: var(--muted); }
+.sheet-sub ul li { padding: .25rem 0; }
+.sheet-sub .off { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0; padding: .5rem 0; color: var(--muted); }
 .menu-btn { all: unset; justify-self: end; display: none; cursor: pointer; width: 42px; height: 42px; border-radius: 50%; place-items: center; }
 .menu-btn:active { transform: scale(.94); }
 .menu-btn:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
@@ -115,10 +151,10 @@ a { color: inherit; }
     radial-gradient(ellipse 50% 60% at 72% 45%, rgba(218,240,230,.55), transparent 70%),
     /* The page tint fades to white toward the foot, so the hero meets the white section below without a seam. */
     linear-gradient(var(--bg) calc(100% - 260px), var(--surface));
-  /* The heatmap band (script.js) takes the room the bottom padding keeps below the copy. The hero fills the first screen
+  /* The heatmap band (script.js) runs behind the platform capabilities and the short padding below them. The hero fills the first screen
      less 9rem, capped at 60rem, the copy centred in what is left. The 9rem is the OS section's top padding plus a sliver: only the top of the next heading peeks in, a cue that the page
      goes on without a second headline competing with this one. Where the copy is taller, the hero grows to fit. */
-  padding: calc(var(--header-h) + clamp(2rem, 5vw, 4.5rem)) 0 clamp(9rem, 14vw, 13rem); overflow: hidden;
+  padding: calc(var(--header-h) + clamp(2rem, 5vw, 4.5rem)) 0 clamp(3rem, 6vw, 5rem); overflow: hidden;
   min-height: min(100svh - 9rem, 60rem); display: grid; align-content: center; isolation: isolate; }
 /* One soft light from the top left, under the heatmap. */
 .hero::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
@@ -139,25 +175,43 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 @media (min-width: 1200px) { .hero > .wrap { width: min(1632px, 100% - 15rem); } }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(2.5rem, 5vw, 4rem); align-items: center; }
 @media (min-width: 1024px) { .hero-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
-.hero-copy { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.35rem; justify-items: start; }
-.rotator { display: grid; grid-template-columns: minmax(0, 1fr); width: 100%; }
-.rotator > .h1 { grid-area: 1 / 1; align-self: end; opacity: 0; }
-.rotator > .h1[data-on] { opacity: 1; }
-/* A handoff, not a crossfade: the old line lifts away, then the new one rises in, so the two never overlap. */
-.rotator[data-live] > .h1[data-out] { animation: h1-out .4s cubic-bezier(.4, 0, 1, 1) both; }
-.rotator[data-live] > .h1[data-on] { animation: h1-in .9s var(--settle) .35s both; }
-@keyframes h1-out { from { opacity: 1; } to { opacity: 0; transform: translateY(-.15em); filter: blur(6px); } }
-@keyframes h1-in { from { opacity: 0; transform: translateY(.15em); filter: blur(6px); } }
-.hero .lead { max-width: 30rem; }
-.ai-line { font: 500 1.0625rem/1.3 var(--text-font); }
-.ai-line s { color: rgba(16,43,54,.4); text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
-.ai-line b { color: var(--accent-text); font-weight: 600; }
-.vision { margin: 0; font-family: var(--display); font-weight: 400; font-size: 1.25rem; line-height: 1.25; letter-spacing: -0.04em; }
-.vision small { display: block; font-family: var(--text-font); font-weight: 300; font-size: .875rem; letter-spacing: -0.02em; color: var(--muted); margin-top: .2rem; }
-.caps { list-style: none; margin: 0; padding: 0 0 0 1rem; border-left: 1.5px solid var(--accent); display: grid; gap: .45rem; font-size: .9375rem; color: var(--text); }
-.caps .label { color: var(--accent-text); margin-bottom: .2rem; }
-.caps li { display: grid; grid-template-columns: 1.75rem 1fr; }
-.caps i { font: 400 .75rem/1.9 var(--mono); font-style: normal; color: var(--accent-text); }
+.hero-copy { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; justify-items: start; }
+.hero .h1 .soft { display: block; text-wrap: balance; }
+.pitch { margin: .25rem 0 0; max-width: 29rem; font: 300 1.0625rem/1.45 var(--text-font); letter-spacing: -0.02em; color: var(--text); text-wrap: pretty; }
+.by { margin: 0; font: 500 1.0625rem/1.4 var(--display); letter-spacing: -0.03em; color: var(--accent-text); text-wrap: balance; }
+@media (min-width: 768px) { .pitch, .by { font-size: 1.1875rem; } }
+/* Press feedback lands on pointer-down and is quick, so the button answers the touch, not the release. */
+.btn { display: inline-flex; align-items: center; height: 44px; padding: 0 1.25rem; margin-top: .25rem; border-radius: 10px; background: var(--text); color: #fff;
+  font: 500 1.0625rem/1 var(--text-font); letter-spacing: -0.01em; text-decoration: none; transition: background-color .2s, transform .1s ease-out; }
+.btn:hover { background: var(--ink); }
+.btn:active { transform: scale(.97); }
+.btn:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+/* The franchises: one card per disease area, the live one listing its cancer types. */
+.hero-side { display: grid; gap: 1rem; }
+.fr { padding: 1.25rem 1.25rem 1.375rem; border-radius: 16px; background: rgba(255,255,255,.62); box-shadow: 0 0 0 1px var(--border); }
+.fr h2, .agent h2 { margin: 0 0 .875rem; font: 600 1.0625rem/1.3 var(--display); letter-spacing: -0.03em; color: var(--text); }
+.types { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .5rem; }
+.types li { padding: .375rem .75rem; border-radius: 999px; background: var(--tint); color: var(--primary); font-size: .8125rem; line-height: 1.35; letter-spacing: 0; }
+.soon { display: inline-block; padding: .375rem .625rem; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--accent); font: 500 .6875rem/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-text); white-space: nowrap; }
+.agent { margin-top: .25rem; padding: 1.25rem 0 0; border-top: 1px solid var(--border); }
+.agent h2 { margin-bottom: .375rem; }
+.agent p { margin: 0; max-width: 30rem; font-size: .9375rem; line-height: 1.55; color: var(--muted); }
+/* Platform capabilities sit on the heatmap band (script.js), two columns from tablets up. */
+.hero-caps { margin-top: clamp(3.5rem, 7vw, 5.5rem); }
+.hero-caps > .label { display: block; margin: 0; padding: 0 0 1rem 1rem; border-left: 1.5px solid var(--accent); color: var(--accent-text); }
+/* Two lists, each flowing on its own, so every item sits the same distance below the one above it. Stacked on phones,
+   where the accent rule runs down both; side by side from tablets, where it marks only the first column. */
+.caps-cols { display: grid; }
+.caps { list-style: none; margin: 0; padding: 0 0 0 1rem; border-left: 1.5px solid var(--accent); display: grid; align-content: start; gap: .875rem; font-size: .9375rem; line-height: 1.5; color: var(--muted); }
+.caps + .caps { padding-top: .875rem; }
+@media (min-width: 768px) { .caps-cols { grid-template-columns: 1fr 1fr; column-gap: 3rem; } .caps + .caps { padding-top: 0; border-left: 0; } }
+.caps li { display: grid; grid-template-columns: 2rem 1fr; }
+.caps b { font-weight: 500; color: var(--text); }
+.caps i { font: 400 .8125rem/1.73 var(--mono); font-style: normal; letter-spacing: 0; color: var(--accent-text); }
+.caps-note { margin: 1.25rem 0 0; font-size: .8125rem; line-height: 1.5; letter-spacing: 0; color: var(--muted); }
+.caps-fn { margin: 1.5rem 0 0; font-size: .8125rem; line-height: 1.5; letter-spacing: 0; color: var(--muted); }
+.caps sup, .caps-note sup, .caps-fn sup { font-size: .7em; line-height: 0; color: var(--gold-ink); }
+.caps-close { margin: .75rem 0 0; font: 500 1.0625rem/1.4 var(--display); letter-spacing: -0.02em; color: var(--text); }
 
 .chip { font: 500 .6875rem/1 var(--mono); padding: .35rem .6rem; border-radius: 999px; background: var(--tint); color: var(--primary); }
 .chip.g { background: var(--gold-tint); color: var(--gold-ink); }
@@ -526,7 +580,7 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 /* ── Accessibility preferences: gentler, not absent ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
-  .layer, .twin path, .sheet, .meta span { transition-property: opacity !important; transition-duration: .2s !important; }
+  .layer, .twin path, .sheet, .dd-panel, .meta span { transition-property: opacity !important; transition-duration: .2s !important; }
   #Lsrc { transform: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
@@ -534,7 +588,9 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 }
 @media (prefers-contrast: more) {
   .chart { box-shadow: 0 0 0 1.5px var(--text); }
-  .hero .lead, .caps { color: var(--text); }
+  .caps, .agent p, .caps-note, .caps-fn { color: var(--text); }
+  .fr, .types li { box-shadow: inset 0 0 0 1px var(--muted); }
+  .dd-panel { box-shadow: 0 0 0 1px var(--muted), 0 30px 60px -24px rgba(16,43,54,.35); }
   .site-header[data-scrolled] { box-shadow: 0 1px 0 var(--border); }
 }
 
