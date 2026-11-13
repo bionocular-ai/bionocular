@@ -2,8 +2,8 @@
 
 Fields are data (resources/ash/book1_sheet2.csv, a copy of the workbook's Sheet2).
 Each row carries its family, scope (arm / comparison / trial), source, value type,
-allowed values and evidence rule. Only rows whose source is the abstract are asked
-here; registry rows are filled from ClinicalTrials.gov elsewhere.
+allowed values and evidence rule. Rows whose source is the abstract are asked here;
+registry rows are filled from ClinicalTrials.gov by ash_registry_run.py.
 One extraction call per family; the harness appends the abstract text.
 """
 
@@ -82,12 +82,14 @@ def _slug(name: str) -> str:
     return s if s[0].isalpha() else "f_" + s
 
 
-def load_families(csv_path: Path) -> tuple[Family, ...]:
-    """Fields asked of the abstract, grouped by the workbook's family column."""
+def load_families(
+    csv_path: Path, sources: tuple[str, ...] = ABSTRACT_SOURCES
+) -> tuple[Family, ...]:
+    """Fields from the given sources (default: the abstract), grouped by family."""
     buckets: dict[str, list[SheetField]] = {k: [] for k in FAMILY_TITLES}
     with csv_path.open(newline="", encoding="utf-8") as f:
         for row in csv.DictReader(f):
-            if row["source"] not in ABSTRACT_SOURCES:
+            if row["source"] not in sources:
                 continue
             if row["family"] not in buckets:
                 raise ValueError(f"No family for workbook field: {row['field']}")
@@ -191,7 +193,9 @@ def pooled_fields(family: Family, arms: list[Arm]) -> list[SheetField]:
     return [f for f in family.fields if f.scope == "arm"] if len(arms) > 1 else []
 
 
-def response_model(family: Family, arms: list[Arm]) -> type[BaseModel]:
+def response_model(
+    family: Family, arms: list[Arm], pooled_list: bool = True
+) -> type[BaseModel]:
     """{"trial"?: {key: Cell}, "pooled"?: [Pooled], "arms"?: {arm_id: {key: Cell, "extra": [Extra]}}}."""
     top: dict[str, Any] = {}
     trial: dict[str, Any] = {
@@ -199,7 +203,7 @@ def response_model(family: Family, arms: list[Arm]) -> type[BaseModel]:
     }
     if trial:
         top["trial"] = (create_model(f"{family.key}_trial", **trial), ...)
-    pooled = pooled_fields(family, arms)
+    pooled = pooled_fields(family, arms) if pooled_list else []
     if pooled:
         item = create_model(
             f"{family.key}_pooled",
