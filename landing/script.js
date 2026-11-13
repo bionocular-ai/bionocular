@@ -106,6 +106,11 @@ const pillSprings = pills => {
     const bandTop = Math.round(caps.getBoundingClientRect().top - r.top - u), rows = Math.max(3, Math.floor((H - bandTop) / c));
     const rnd = rng(9), nx = Math.round((R - L) / c), cells = [];
     for (let r = 0; r < rows; r++) for (let i = 0; i < nx; i++) cells.push({ x: L + i * c, y: bandTop + (rows - 1 - r) * c, r, i, p: rnd() * 6.3, q: rnd() * 6.3 });
+    // The gold cell is the one moving accent, so it keeps off the capabilities text: a cell is clear when it overlaps no
+    // line box of the label, the items or the notes.
+    const rg = document.createRange(), lines = [];
+    for (const e of caps.querySelectorAll('.label, li, p')) { rg.selectNodeContents(e); for (const b of rg.getClientRects()) lines.push([b.left - r.left, b.top - r.top, b.right - r.left, b.bottom - r.top]); }
+    for (const k of cells) k.clear = !lines.some(([x0, y0, x1, y1]) => k.x < x1 && k.x + c > x0 && k.y < y1 && k.y + c > y0);
     S = { c, rows, nx, cells, bandTop, slot: -1, pick: null, prev: null };
   }
 
@@ -132,7 +137,7 @@ const pillSprings = pills => {
     const s = Math.floor(t / STEP), ph = (t / STEP) % 1;
     if (s !== S.slot) {
       S.slot = s; S.prev = S.pick;
-      const p = S.prev, far = cells.filter(k => k.r >= 1 && k.r <= rows - 2 && (!p || Math.abs(k.i - p.i) >= S.nx / 3));
+      const p = S.prev, far = cells.filter(k => k.clear && k.r >= 1 && k.r <= rows - 2 && (!p || Math.abs(k.i - p.i) >= S.nx / 3));
       S.pick = far[Math.floor(Math.random() * far.length)];
     }
     const into = ease(ph * 3);
