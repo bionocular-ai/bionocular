@@ -78,19 +78,22 @@ SETTING = SheetField(
 )
 # The workbook definitions of these rows were written for the abstract.
 REGISTRY_DEFS = {
-    "Generic name (per component)": "Generic (INN) names of the arm's drugs from the interventions list, joined with ' + '. A code name (ABC-123) only if no generic name is given.",
+    "Generic name (per component)": "Generic (INN) names of ALL the arm's drugs and cell therapies from its interventions, joined with ' + '. Not a brand name. A code name (ABC-123) only if the record gives no generic name. Drugs the record does not list stay out.",
     "Brand name": "Brand names from the interventions' other names, joined with ' + '. Empty if none is listed.",
-    "Route": "Route the record states for the arm's drugs (IV, intravenous, infusion, SC, subcutaneous, oral). If drugs differ, the experimental drug's route.",
-    "Fixed-duration vs continuous": "fixed duration: the record states a cap (N cycles, N months, a single infusion). continuous: it says until progression or unacceptable toxicity. Otherwise empty.",
-    "Therapy phase": "Every phase the arm's protocol covers, in order, joined with ' + '. Values: induction / consolidation / maintenance / salvage / bridging / conditioning.",
-    "Mechanism of action": "How the experimental drug works, only as the record states it.",
+    "Route": "Route of each drug, in the order of the generic names, joined with ' + ' (oral + IV). Use IV, SC, oral or other, only where the record states it (intravenous, infusion, subcutaneous, by mouth, orally, capsule or tablet); '?' for a drug whose route is not stated.",
+    "Fixed-duration vs continuous": "fixed duration: the record states a cap on the whole treatment (N cycles or courses, N months, a single dose or infusion). continuous: it says until progression or unacceptable toxicity, or ends in open-ended maintenance. A day schedule within a cycle or course (days 1-7) is not a cap. 'Until death, withdrawal or study end' is neither. Otherwise empty.",
+    "Therapy phase": "Every phase the arm's protocol covers, in order, joined with ' + ', only where the record names the phase in words (induction, consolidation, maintenance, salvage, bridging, conditioning). 'Part 1' or 'course 1-8' names no phase.",
+    "Mechanism of action": "How the experimental drug works, only in the record's own words. Never from the drug's name or class.",
     "Target": "Molecular target as the record states it, e.g. BCMA, CD20xCD3, BTK, BCL2.",
-    "Modality": "Only from the record's own words (antibody, bispecific, ADC, CAR-T, small molecule). 'Inhibitor' alone does not state a modality.",
+    "Modality": "Only from the record's own words (antibody, bispecific, ADC, CAR-T, small molecule, chemotherapy). 'Inhibitor', 'tablet' or a drug name alone does not state a modality.",
     "Drug class / sub-type": "Drug class as the record states it, e.g. covalent BTK inhibitor, anti-CD38 antibody.",
     "Transplant eligibility / fitness": "From the eligibility criteria: transplant-eligible / transplant-ineligible / fit / unfit. 'Eligible for intensive chemotherapy' is 'fit', not transplant-eligible.",
     "Crossover allowed": "yes only if the record says patients may cross over to the other arm; no if it says crossover is not allowed; else empty.",
 }
-MULTI = {"Therapy phase"}  # several values joined with ' + ': text, not an enum
+MULTI = {
+    "Therapy phase",
+    "Route",
+}  # several values joined with ' + ': text, not an enum
 
 
 def registry_family(csv_path: Path) -> Family:
@@ -143,7 +146,7 @@ def record_text(study: dict[str, Any]) -> str:
 _RULES = """RULES
 1. Use only the registry record(s) below. If they do not state a field for an arm, return "" for value and quote. Never use what you know about the drug.
 2. quote: copy the exact words from the record that state the value.
-3. The ARMS are the abstract's arms. Match each to the record's arm groups and interventions by drug names. A registry arm group that matches no abstract arm is ignored.
+3. The ARMS are the abstract's arms. Match each to the record's arm groups and interventions by drug names. A registry arm group that matches no abstract arm is ignored. With several records, use the one whose arms match the abstract's arms; take a value from another record only for the same drug and the same use.
 4. detail: what the field's detail asks for, else "".
 5. A drug shared by several arms gets its values on each of those arms. derived is true only if you had to combine or convert.
 6. extra: a second value for the same field and arm (another phase, another drug's route), with context."""

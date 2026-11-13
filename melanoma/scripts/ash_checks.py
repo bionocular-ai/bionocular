@@ -65,7 +65,23 @@ def cell_flags(field: SheetField, cell: dict[str, Any], text: str) -> list[str]:
         if re.search(name_re, field.name) and not re.search(quote_re, quote, re.I):
             flags.append("measure_not_in_quote")
             break
+    if not timepoint_in_quote(field.name, quote):
+        flags.append("timepoint_not_in_quote")
     return flags
+
+
+def timepoint_in_quote(field_name: str, quote: str) -> bool:
+    """A 'rate N mo' field needs N months (or N/12 years) in the quote."""
+    m = re.search(r"\b(\d+) mo", field_name)
+    if not m:
+        return True
+    n = int(m.group(1))
+    words = [rf"\b{n}[- ]?(?:mo|month)"]
+    if n % 12 == 0:
+        y = n // 12
+        words.append(rf"\b{y}[- ]?(?:y|year)")
+        words += [r"\bone[- ]year", r"\b1-?yr"] if y == 1 else []
+    return any(re.search(w, quote, re.I) for w in words)
 
 
 def same_on_arms(family: Family, extracted: dict[str, Any]) -> set[tuple[str, str]]:

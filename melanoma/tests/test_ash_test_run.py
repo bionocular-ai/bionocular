@@ -16,6 +16,7 @@ sys.path.insert(0, str(_root / "scripts"))
 from ash_fields import ArmList, JudgeVerdict, load_families  # noqa: E402
 from ash_test_run import (  # noqa: E402
     META,
+    _flags,
     _truly_missed,
     fingerprint,
     parse_md,
@@ -213,3 +214,28 @@ async def test_concurrency_bounds(tmp_path: Path) -> None:
     llm = FakeLLM(delay=0.01)
     await run(md, out, llm, FAMILIES, concurrency=2, family_concurrency=2)
     assert 1 < llm.max_in_flight <= 4
+
+
+def test_flags_cover_extras_and_pooled() -> None:
+    fam = next(
+        f
+        for f in load_families(_root / "resources" / "ash" / "book1_sheet2.csv")
+        if f.key == "survival_pfs_os"
+    )
+    text = "The 30-month PFS was 41% in arm A. Median PFS was 20 months overall."
+    extra = {
+        "field": "pfs_rate_36_mo",
+        "value": "41",
+        "context": "ITT",
+        "quote": "The 30-month PFS was 41% in arm A",
+    }
+    pooled = {
+        "field": "median_pfs",
+        "value": "20",
+        "context": "",
+        "detail": "",
+        "quote": "Median PFS was 20 months overall",
+        "derived": False,
+    }
+    got = _flags(fam, {"pooled": [pooled], "arms": {"arm_1": {"extra": [extra]}}}, text)
+    assert got == {"arm_1.extra.0": ["timepoint_not_in_quote"]}

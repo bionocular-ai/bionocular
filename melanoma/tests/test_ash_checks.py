@@ -5,7 +5,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from ash_checks import cell_flags, quote_found, same_on_arms  # noqa: E402
+from ash_checks import (  # noqa: E402
+    cell_flags,
+    quote_found,
+    same_on_arms,
+    timepoint_in_quote,
+)
 from ash_fields import Family, SheetField  # noqa: E402
 
 TEXT = "Median PFS was 30.1 months (HR 0.55; 95% CI 0.41\u20130.74). CRS in 8 of 21 patients."
@@ -93,3 +98,17 @@ def test_same_on_arms():
     }
     arms["arm_2"]["crs_any_grade"]["value"] = "40"
     assert same_on_arms(fam, {"arms": arms}) == set()
+
+
+def test_timepoint_in_quote():
+    assert timepoint_in_quote("Median PFS", "anything")
+    assert timepoint_in_quote("PFS rate 24 mo", "24-month PFS was 71%")
+    assert timepoint_in_quote("PFS rate 24 mo", "PFS at 2 years was 71%")
+    assert not timepoint_in_quote("PFS rate 24 mo", "30-month PFS was 71%")
+    assert not timepoint_in_quote("PFS rate 36 mo", "30-month PFS was 38.1%")
+    assert timepoint_in_quote("OS rate 12 mo", "The 1-year OS is 85%")
+    assert timepoint_in_quote("PFS rate 60 months / 5 years", "5-year PFS 90%")
+    rate = _f("PFS rate 36 mo", "percent")
+    assert "timepoint_not_in_quote" in cell_flags(
+        rate, _cell("30.1", "Median PFS was 30.1 months"), TEXT
+    )

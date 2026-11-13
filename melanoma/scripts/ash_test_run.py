@@ -118,6 +118,12 @@ def _flags(
                 flags.append("same_on_arms")
             if flags:
                 out[f"{arm_id}.{key}"] = flags
+        for i, ex in enumerate(cells.get("extra", [])):
+            if ex["value"] and (got := cell_flags(by_key[ex["field"]], ex, text)):
+                out[f"{arm_id}.extra.{i}"] = got
+    for i, p in enumerate(extracted.get("pooled", [])):
+        if p["value"] and (got := cell_flags(by_key[p["field"]], p, text)):
+            out[f"pooled.{i}"] = got
     return out
 
 

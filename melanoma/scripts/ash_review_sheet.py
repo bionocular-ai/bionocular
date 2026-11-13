@@ -143,7 +143,7 @@ def build_rows(
                 }
                 for i in got.get("items", [])
             }
-            for p in extracted.get("pooled", []):
+            for i, p in enumerate(extracted.get("pooled", [])):
                 add(
                     fam,
                     "pooled",
@@ -154,6 +154,7 @@ def build_rows(
                     detail=p["detail"],
                     derived="yes" if p["derived"] else "",
                     quote=p["quote"],
+                    flags=", ".join(got["flags"].get(f"pooled.{i}", [])),
                     **judged.get(("pooled", "pooled", p["field"], p["context"]), {}),
                 )
             scopes = list(extracted.get("arms", {}).items())
@@ -175,7 +176,7 @@ def build_rows(
                         flags=", ".join(got["flags"].get(f"{arm_id}.{key}", [])),
                         **judged.get(("field", arm_id, key, ""), {}),
                     )
-                for ex in cells.get("extra", []):
+                for i, ex in enumerate(cells.get("extra", [])):
                     add(
                         fam,
                         arm_id,
@@ -184,6 +185,7 @@ def build_rows(
                         value=ex["value"],
                         context=ex["context"],
                         quote=ex["quote"],
+                        flags=", ".join(got["flags"].get(f"{arm_id}.extra.{i}", [])),
                         **judged.get(("extra", arm_id, ex["field"], ex["context"]), {}),
                     )
             for m in (got.get("missed") or {}).get("items", []):
