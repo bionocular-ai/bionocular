@@ -178,7 +178,7 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .hero-copy { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; justify-items: start; }
 .hero .h1 .soft { display: block; text-wrap: balance; }
 .pitch { margin: .25rem 0 0; max-width: 29rem; font: 500 1.0625rem/1.55 var(--text-font); letter-spacing: -0.02em; color: var(--text); text-wrap: pretty; }
-.by { margin: 0; max-width: 26rem; font: 500 1.125rem/1.4 var(--display); letter-spacing: -0.03em; color: var(--accent-text); text-wrap: balance; }
+.by { margin: 0; font: 500 1.125rem/1.4 var(--display); letter-spacing: -0.03em; color: var(--accent-text); text-wrap: balance; }
 @media (min-width: 768px) { .pitch { font-size: 1.1875rem; } .by { font-size: 1.25rem; } }
 /* Press feedback lands on pointer-down and is quick, so the button answers the touch, not the release. */
 .btn { display: inline-flex; align-items: center; height: 44px; padding: 0 1.25rem; margin-top: .25rem; border-radius: 10px; background: var(--text); color: #fff;
