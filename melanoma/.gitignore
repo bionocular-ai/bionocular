@@ -211,3 +211,7 @@ config.local.*
 *.secret.key
 tests/fixtures/holdout/csv/
 
+
+# ASH test-run outputs (abstract text must not be committed)
+data/postprocessed/ASH_Abstracts/
+data/ash_test_run/

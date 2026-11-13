@@ -1,0 +1,149 @@
+field,type,applies_to,definition,family,scope,source,value_type,allowed_values,detail,evidence
+Arm label,Text; enum (experimental / control / single arm / dose cohort),All,Role of the arm only. One of the enum values. The arm's name is already known from the arm list.,regimen_drug,arm,arm step,enum,experimental / control / single arm,,stated only
+Regimen name,Text,All,"Regimen as the abstract names it: a named combination (D-VRd, pola-R-CHP, 7+3) or, for a single-drug arm, the drug's name (pirtobrutinib). It must cover every part of the arm: a backbone name alone (7+3) is wrong for an arm that adds a drug (7+3 + uproleselan).",regimen_drug,arm,abstract,text,,,stated only
+Component drugs,List (text),All,"Drugs and cell therapies in the arm's regimen as the abstract names them, joined with ' + '. Include the study cell therapy (CAR-T, Orca-T) and the conditioning drugs given in the arm. Do not expand an abbreviation (Pola-BR) unless the abstract expands it.",regimen_drug,arm,abstract,text,,,stated only
+Generic name (per component),Text (INN),All,,regimen_drug,arm,registry,text,,,stated only
+Brand name,Text,All,,regimen_drug,arm,registry,text,,,stated only
+Dose,"Number + unit (mg, mg/kg, mg/m², cells for CAR-T)",All,,regimen_drug,arm,abstract,dose,,,stated only
+Route,Enum: IV / SC / oral / other,All,"Fill only when the abstract says the route (IV, intravenous, infusion, SC, subcutaneous, oral, orally). A dose or schedule alone (200 mg QD) is not a route.",regimen_drug,arm,registry,enum,IV / SC / oral / other,,stated only
+Dosing schedule,Text,All,e.g. Q3W; days 1-21 of a 28-day cycle,regimen_drug,arm,abstract,text,,,stated only
+Step-up dosing,Yes/no + schedule,Bispecific antibodies,"Priming doses before the full dose, as reported",regimen_drug,arm,abstract,yes_no,yes / no,schedule,stated only
+Fixed-duration vs continuous,Enum: fixed duration / continuous (treat to progression),All,"fixed duration: the abstract states a cap (N cycles, N months, a single infusion). continuous: it says until progression or unacceptable toxicity. 'Still on treatment at cutoff' is neither: leave empty.",regimen_drug,arm,registry,enum,fixed duration / continuous (treat to progression),,stated only
+Therapy phase,Enum: induction / consolidation / maintenance / salvage / bridging / conditioning,All,"Every phase the arm's protocol covers, in order, joined with ' + ' (induction + consolidation).",regimen_drug,arm,registry,enum,induction / consolidation / maintenance / salvage / bridging / conditioning,,stated only
+Mechanism of action,Text,All,,regimen_drug,arm,registry,text,,,stated only
+Target,Text,All,"Molecular target, e.g. BCMA, CD20xCD3, BTK, BCL2",regimen_drug,arm,registry,text,,,stated only
+Modality,Enum: antibody / bispecific / ADC / small molecule / CAR-T / other cell therapy / chemotherapy / other,All,"Fill only from the abstract's own words (antibody, bispecific, ADC, CAR-T, small molecule). 'Inhibitor' alone does not state a modality: leave empty.",regimen_drug,arm,registry,enum,antibody / bispecific / ADC / small molecule / CAR-T / other cell therapy / chemotherapy / other,,stated only
+Drug class / sub-type,Text,All,"e.g. covalent BTK inhibitor, anti-CD38 antibody",regimen_drug,arm,registry,text,,,stated only
+Cell therapy product,Text,CAR-T and other cell therapy arms,"e.g. cilta-cel, axi-cel",regimen_drug,arm,abstract,text,,,stated only
+Lymphodepletion regimen,Text,CAR-T and other cell therapy arms,"e.g. Flu/Cy, bendamustine",regimen_drug,arm,abstract,text,,,stated only
+Bridging therapy (type),Text,CAR-T and other cell therapy arms,"Therapy given between apheresis and infusion, e.g. R-GemOx, radiotherapy",regimen_drug,arm,abstract,text,,,stated only
+Response criteria,Enum + version: IMWG 2016 / iwCLL 2018 / Lugano 2014 / ELN 2022 / IWG 2023 / IWWM-11 / other,All,Name of the criteria the response endpoints were assessed by. Version only if the abstract states it; 'IMWG' with no year stays 'IMWG'. Criteria cited for one definition only (e.g. MRD-negative CR) do not count.,population,trial,both,text,,version if stated,stated only
+Assessment by,Enum: IRC / investigator,All,Who assessed response or progression (independent review committee or investigator),population,trial,both,enum,IRC / investigator,,stated only
+Disease subtype,Text + code (NCIt),All,Disease and setting as the abstract states them for the enrolled population (e.g. relapsed/refractory multiple myeloma). A subgroup being analysed is not the subtype. No code: NCIt codes are mapped in code afterwards.,population,trial,both,text,,,stated only
+Median line of therapy,Number (median),All,"Median number of prior lines of therapy in the population, e.g. median 4",population,arm,abstract,number,,,stated or derived
+Range line of therapy,Two numbers (min-max),Relapsed / refractory settings,"Range of prior lines of therapy, e.g. 1-11",population,arm,abstract,range,,,stated or derived
+Transplant eligibility / fitness,Enum: transplant-eligible / transplant-ineligible / fit / unfit (as reported),All,"Only the abstract's own wording. 'Eligible for intensive chemotherapy' is 'fit', not transplant-eligible.",population,arm,registry,enum,transplant-eligible / transplant-ineligible / fit / unfit,,stated only
+Median age,Number (years),All,,population,arm,abstract,number,,,stated or derived
+Patients enrolled,Number (count),All,"Patients enrolled or randomized to THIS arm. If only a trial total is given, leave the arm empty and fill 'Patients enrolled (trial total)'.",population,arm,abstract,count,,,stated or derived
+Patients treated,Number (count),All,Patients who received treatment in THIS arm. A sum of stated strata counts is allowed and is marked derived.,population,arm,abstract,count,,,stated or derived
+Patients evaluable,Number (count),All,Patients evaluable for the primary endpoint in THIS arm. A trial total goes nowhere on the arm.,population,arm,abstract,count,,,stated or derived
+Crossover allowed,Yes / no,Randomized trials,,population,trial,registry,yes_no,yes / no,,stated only
+Crossover rate,Number (%),Randomized trials,Percent of the control arm that crossed over,population,arm,abstract,percent,,,stated or derived
+Biomarker,Text (list: marker + status + % of patients),All,"Observed baseline markers of the enrolled population with their shares (del(17p) 15%). Asked once for the trial. If the abstract gives shares per arm, the per-arm shares go to extra values. Names of subgroups used in an outcome analysis are not biomarkers. The marker REQUIRED to enrol comes from the registry.",population,trial,abstract,text,,,stated only
+Median PFS,Number (months) or NR,All,"Median progression-free survival. Never EFS, RFS, DFS or TTP: those have their own fields.",survival_pfs_os,arm,abstract,months_or_nr,,,stated or derived
+Median follow-up PFS,Number (months),All,"Median follow-up the abstract explicitly ties to PFS (e.g. 'median follow-up for PFS'). A follow-up stated for the study or the analysis as a whole goes in 'Median follow-up (overall)', not here. Never fill it for an endpoint the abstract does not report.",survival_pfs_os,arm,abstract,months,,,stated or derived
+p-value PFS,"Number + qualifier (<, =)",All,,survival_pfs_os,comparison,abstract,p_value,"<, = or > then a number",,stated or derived
+HR PFS,Number,All,"Hazard ratio for PFS, experimental vs control. Written on the experimental arm only. The quote must name PFS or progression-free.",survival_pfs_os,comparison,abstract,number,,,stated or derived
+95% CI of HR PFS,Two numbers (lower-upper),All,,survival_pfs_os,comparison,abstract,range,,,stated or derived
+Median OS,Number (months) or NR,All,Median overall survival,survival_pfs_os,arm,abstract,months_or_nr,,,stated or derived
+Median follow-up OS,Number (months),All,"Median follow-up the abstract explicitly ties to OS (e.g. 'median follow-up for OS'). A follow-up stated for the study or the analysis as a whole goes in 'Median follow-up (overall)', not here. Never fill it for an endpoint the abstract does not report.",survival_pfs_os,arm,abstract,months,,,stated or derived
+p-value OS,"Number + qualifier (<, =)",All,,survival_pfs_os,comparison,abstract,p_value,"<, = or > then a number",,stated or derived
+HR OS,Number,All,"Hazard ratio for OS, experimental vs control. Written on the experimental arm only.",survival_pfs_os,comparison,abstract,number,,,stated or derived
+95% CI of HR OS,Two numbers (lower-upper),All,,survival_pfs_os,comparison,abstract,range,,,stated or derived
+PFS rate 6 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+PFS rate 12 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+PFS rate 18 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+PFS rate 24 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+PFS rate 36 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+PFS rate 48 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+PFS rate 60 months / 5 years,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+OS rate 6 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+OS rate 12 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+OS rate 18 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+OS rate 24 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+OS rate 36 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+OS rate 48 mo,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+OS rate 60 months / 5 years,Number (%),All,,survival_pfs_os,arm,abstract,percent,,,stated or derived
+Median EFS,Number (months) or NR,"AML, ALL, lymphoma","Median event-free survival; record the event definition if given. Never PFS, RFS or DFS.",survival_other,arm,abstract,months_or_nr,,,stated or derived
+Median follow-up EFS,Number (months),"AML, ALL, lymphoma","Median follow-up the abstract explicitly ties to EFS (e.g. 'median follow-up for EFS'). A follow-up stated for the study or the analysis as a whole goes in 'Median follow-up (overall)', not here. Never fill it for an endpoint the abstract does not report.",survival_other,arm,abstract,months,,,stated or derived
+p-value EFS,"Number + qualifier (<, =)","AML, ALL, lymphoma",,survival_other,comparison,abstract,p_value,"<, = or > then a number",,stated or derived
+HR EFS,Number,"AML, ALL, lymphoma",,survival_other,comparison,abstract,number,,,stated or derived
+95% CI of HR EFS,Two numbers (lower-upper),"AML, ALL, lymphoma",,survival_other,comparison,abstract,range,,,stated or derived
+Median RFS,Number (months) or NR,"AML, ALL","Relapse-free survival, measured from CR",survival_other,arm,abstract,months_or_nr,,,stated or derived
+Median follow-up RFS,Number (months),"AML, ALL","Median follow-up the abstract explicitly ties to RFS (e.g. 'median follow-up for RFS'). A follow-up stated for the study or the analysis as a whole goes in 'Median follow-up (overall)', not here. Never fill it for an endpoint the abstract does not report.",survival_other,arm,abstract,months,,,stated or derived
+p-value RFS,"Number + qualifier (<, =)","AML, ALL",,survival_other,comparison,abstract,p_value,"<, = or > then a number",,stated or derived
+HR RFS,Number,"AML, ALL",,survival_other,comparison,abstract,number,,,stated or derived
+95% CI of HR RFS,Two numbers (lower-upper),"AML, ALL",,survival_other,comparison,abstract,range,,,stated or derived
+Median DFS,Number (months) or NR,"AML, ALL",Disease-free survival,survival_other,arm,abstract,months_or_nr,,,stated or derived
+Median follow-up DFS,Number (months),"AML, ALL","Median follow-up the abstract explicitly ties to DFS (e.g. 'median follow-up for DFS'). A follow-up stated for the study or the analysis as a whole goes in 'Median follow-up (overall)', not here. Never fill it for an endpoint the abstract does not report.",survival_other,arm,abstract,months,,,stated or derived
+p-value DFS,"Number + qualifier (<, =)","AML, ALL",,survival_other,comparison,abstract,p_value,"<, = or > then a number",,stated or derived
+HR DFS,Number,"AML, ALL",,survival_other,comparison,abstract,number,,,stated or derived
+95% CI of HR DFS,Two numbers (lower-upper),"AML, ALL",,survival_other,comparison,abstract,range,,,stated or derived
+Median LFS,Number (months) or NR,"AML, MDS, Allo-HCT",Leukemia-free survival,survival_other,arm,abstract,months_or_nr,,,stated or derived
+Median follow-up LFS,Number (months),"AML, MDS, Allo-HCT","Median follow-up the abstract explicitly ties to LFS (e.g. 'median follow-up for LFS'). A follow-up stated for the study or the analysis as a whole goes in 'Median follow-up (overall)', not here. Never fill it for an endpoint the abstract does not report.",survival_other,arm,abstract,months,,,stated or derived
+p-value LFS,"Number + qualifier (<, =)","AML, MDS, Allo-HCT",,survival_other,comparison,abstract,p_value,"<, = or > then a number",,stated or derived
+HR LFS,Number,"AML, MDS, Allo-HCT",,survival_other,comparison,abstract,number,,,stated or derived
+95% CI of HR LFS,Two numbers (lower-upper),"AML, MDS, Allo-HCT",,survival_other,comparison,abstract,range,,,stated or derived
+Median DOR,Number (months) or NR,All,Median duration of response among responders. Never the duration of CR or of MRD negativity.,duration_transplant,arm,abstract,months_or_nr,,,stated or derived
+DOR rate,Number (%) + timepoint (months),All,Share of responders still in response at the stated time,duration_transplant,arm,abstract,percent,,timepoint (months),stated or derived
+Duration of complete response,Number (months) or NR,All,,duration_transplant,arm,abstract,months_or_nr,,,stated or derived
+Median time to response,Number (months),All,,duration_transplant,arm,abstract,months,,,stated or derived
+Median TTP,Number (months) or NR,All,Median time to progression. Never PFS: PFS also counts deaths.,duration_transplant,arm,abstract,months_or_nr,,,stated or derived
+Median TTNT,Number (months) or NR,All,Time to next treatment,duration_transplant,arm,abstract,months_or_nr,,,stated or derived
+PFS2,Number (months) or NR,"MM, CLL, lymphoma","Time to progression on the next line of therapy, or death",duration_transplant,arm,abstract,months_or_nr,,,stated or derived
+GVHD-free relapse-free survival,Number (%) + timepoint,Allo-HCT,"GRFS: survival free of grade III-IV acute GVHD, chronic GVHD needing systemic therapy, relapse and death (Holtan, Blood 2015)",duration_transplant,arm,abstract,percent,,timepoint,stated or derived
+Non-relapse mortality,Number (%) + timepoint,Allo-HCT,Death without prior relapse or progression,duration_transplant,arm,abstract,percent,,timepoint,stated or derived
+Cumulative incidence of relapse,Number (%) + timepoint,Allo-HCT,,duration_transplant,arm,abstract,percent,,timepoint,stated or derived
+ORR rate,Number (%),All,"Overall response rate under the stated criteria. Never fill it from a CR rate, a CR/CRi rate or an MRD rate.",response_rates,arm,abstract,percent,,,stated or derived
+CR rate,Number (%),All,"Complete response alone, under the stated criteria. Myeloma 'CR or better' goes in >=CR rate. AML CR/CRi and CR/CRh have their own fields.",response_rates,arm,abstract,percent,,,stated or derived
+CBR,Number (%),"MM, WM","Myeloma: ORR plus minimal response (>=MR, IMWG). Waldenström has no formal CBR (IWWM); treat a reported CBR as trial-defined",response_rates,arm,abstract,percent,,,stated or derived
+POD24 rate,Number (%),Follicular lymphoma,"Progression or death within 24 months of starting first-line chemoimmunotherapy (Casulo, JCO 2015); some papers anchor on diagnosis, so record the anchor",response_rates,arm,abstract,percent,,,stated or derived
+>=VGPR rate,Number (%),"MM, AL amyloidosis","Myeloma VGPR (IMWG 2016): M-protein detectable by immunofixation but not electrophoresis, or >=90% serum M-protein reduction and urine M-protein <100 mg/24 h. AL: VGPR is dFLC <40 mg/L",response_rates,arm,abstract,percent,,,stated or derived
+>=CR rate,Number (%),MM,"Myeloma CR or better (IMWG 2016): CR plus sCR. CR is negative serum and urine immunofixation, no soft-tissue plasmacytomas and <5% plasma cells in marrow",response_rates,arm,abstract,percent,,,stated or derived
+sCR rate,Number (%),MM,"Stringent CR (IMWG). A rate of MRD negativity among sCR patients is an MRD value, not an sCR rate.",response_rates,arm,abstract,percent,,,stated or derived
+CR/CRh rate,Number (%),AML,CR plus CRh only. CR/CRi goes in Composite CR.,response_rates,arm,abstract,percent,,,stated or derived
+Composite CR (CR + CRi),Number (%) + components,AML,"No ELN 2022 standard; trials define it (CR + CRi, or CR + CRh + CRi). Record which components were counted",response_rates,arm,abstract,percent,,components,stated or derived
+MLFS rate,Number (%),"AML, MDS","Morphologic leukemia-free state (ELN 2022): marrow blasts <5%, no Auer rods, no circulating blasts, no extramedullary disease; no count recovery required",response_rates,arm,abstract,percent,,,stated or derived
+MRD negativity rate,Number (%) + method + threshold,"MM, ALL, CLL, AML",Share of the arm (or of MRD-evaluable patients in the arm) that is MRD-negative. detail = assay and threshold. A subgroup's rate goes to extra values.,response_rates,arm,abstract,percent,,method + threshold,stated or derived
+Sustained MRD negativity,Number (%) + duration,MM,Myeloma (IMWG 2016): MRD negativity in marrow confirmed at least 1 year apart,response_rates,arm,abstract,percent,,duration,stated or derived
+MRD-negative CR,Number (%) + method + threshold,"ALL, AML","CR with MRD below the stated threshold; ELN 2022 adds MRD-negative suffixes (CR-MRDneg, CRh-MRDneg)",response_rates,arm,abstract,percent,,method + threshold,stated or derived
+Bridge to transplant rate,Number (%),"AML, ALL, MDS",Share who went on to allo-HCT only. A rate that pools transplant with CAR-T or other therapy does not count.,response_rates,arm,abstract,percent,,,stated or derived
+Undetectable MRD (uMRD4),Number (%) + compartment (blood / marrow),CLL,"iwCLL 2018: <1 CLL cell per 10,000 leukocytes (<10^-4) in blood or marrow",response_rates,arm,abstract,percent,,compartment (blood / marrow),stated or derived
+RBC transfusion independence,Number (%) + duration (weeks),"MDS, myelofibrosis",Share with RBC transfusion independence in the analysis this abstract reports. detail = duration (>=8 weeks). Earlier-analysis figures quoted as background are ignored.,response_rates,arm,abstract,percent,,duration (weeks),stated or derived
+Hematologic improvement-erythroid,Number (%),MDS,"IWG 2006 (MDS): Hb rise >=1.5 g/dL, or >=4 fewer RBC units per 8 weeks, lasting >=8 weeks; IWG 2018 revises it for lower-risk MDS",response_rates,arm,abstract,percent,,,stated or derived
+MMR rate,Number (%),CML,Major molecular response (ELN 2020): BCR::ABL1 <=0.1% on the International Scale,response_rates,arm,abstract,percent,,,stated or derived
+MR4.5,Number (%) + timepoint,CML,ELN 2020: BCR::ABL1 <=0.0032% IS (MR4 is <=0.01%),response_rates,arm,abstract,percent,,timepoint,stated or derived
+SVR35,Number (%) + timepoint (usually week 24),Myelofibrosis,>=35% reduction in spleen volume from baseline by MRI or CT; timepoint is trial-specific (usually week 24),response_rates,arm,abstract,percent,,timepoint (usually week 24),stated or derived
+TSS50,Number (%) + timepoint (usually week 24),Myelofibrosis,>=50% reduction in total symptom score (MFSAF) from baseline; timepoint is trial-specific (usually week 24),response_rates,arm,abstract,percent,,timepoint (usually week 24),stated or derived
+Major response rate (>=PR),Number (%),Waldenström,"Waldenström (IWWM-6 / IWWM-11): PR or better, i.e. >=50% IgM reduction; distinct from ORR, which includes MR (>=25%)",response_rates,arm,abstract,percent,,,stated or derived
+Hematologic CR (AL amyloidosis),Number (%),AL amyloidosis,ISA 2012 consensus: negative serum and urine immunofixation and normal FLC ratio,response_rates,arm,abstract,percent,,,stated or derived
+DLT,Number (count) / N DLT-evaluable,Phase 1,Number of patients with a DLT in THIS arm or dose level. detail = number DLT-evaluable.,dose_events_special,arm,abstract,count,,number DLT-evaluable,stated or derived
+MTD,"Dose + unit, or not reached",Phase 1,"Highest dose with a DLT rate below the target (typically <33%, e.g. <=1 of 6)",dose_events_special,arm,abstract,dose,,,stated only
+RP2D,Dose + unit,Phase 1,"Dose chosen for phase 2 from safety, PK/PD and activity; can be below the MTD",dose_events_special,arm,abstract,dose,,,stated only
+Grade >=3 AEs,Number (%),All,"Share of the arm with any grade >=3 adverse event, as an overall rate. Do not sum individual event rates and do not use a single event's rate.",safety_overall,arm,abstract,percent,,,stated or derived
+Grade >=3 TEAEs,Number (%),All,"Share of the arm with any grade >=3 treatment-emergent adverse event, as an overall rate. Never a single event's rate, never a sum of event rates.",safety_overall,arm,abstract,percent,,,stated or derived
+Grade >=3 TRAEs,Number (%),All,"Share of the arm with any grade >=3 treatment-related adverse event, as an overall rate. Never a single event's rate, never a sum of event rates, never a count of events.",safety_overall,arm,abstract,percent,,,stated or derived
+Serious AEs,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+Serious TEAEs,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+Serious TRAEs,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+Discontinuation due to AEs,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+Discontinuation due to TEAEs,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+Discontinuation due to TRAEs,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+Deaths due to AEs,"Number (count, %)",All,,safety_overall,arm,abstract,count,,percent if stated,stated or derived
+Deaths due to TEAEs,"Number (count, %)",All,,safety_overall,arm,abstract,count,,percent if stated,stated or derived
+Deaths due to TRAEs,"Number (count, %)",All,,safety_overall,arm,abstract,count,,percent if stated,stated or derived
+Grade >=3 neutropenia,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+Grade >=3 thrombocytopenia,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+Grade >=3 infections,Number (%),All,,safety_overall,arm,abstract,percent,,,stated or derived
+CRS any grade,Number (%) + grading system,"CAR-T, bispecific antibodies",Share of the arm with CRS of any grade. 'All patients' is 100 and 'none' is 0 (marked derived). detail = grading system if stated.,dose_events_special,arm,abstract,percent,,grading system,stated or derived
+CRS grade >=3,Number (%) + grading system,"CAR-T, bispecific antibodies","ASTCT 2019: grade 3 = hypotension needing one vasopressor (with or without vasopressin) and/or high-flow nasal cannula, facemask, non-rebreather or Venturi mask; grade 4 = multiple vasopressors and/or positive pressure (CPAP, BiPAP, intubation)",dose_events_special,arm,abstract,percent,,grading system,stated or derived
+ICANS any grade,Number (%) + grading system,"CAR-T, bispecific antibodies","Share of the arm with ICANS of any grade, as a percentage. A bare event count with no denominator is not a rate: put it in extra values.",dose_events_special,arm,abstract,percent,,grading system,stated or derived
+ICANS grade >=3,Number (%) + grading system,"CAR-T, bispecific antibodies","ASTCT 2019 grade 3-4 (e.g. ICE 0-2, seizure, or cerebral edema)",dose_events_special,arm,abstract,percent,,grading system,stated or derived
+30-day mortality,Number (%),"AML, ALL, MDS (intensive therapy)",Deaths from any cause within 30 days of starting treatment,safety_overall,arm,abstract,percent,,,stated or derived
+60-day mortality,Number (%),"AML, ALL, MDS (intensive therapy)",Deaths from any cause within 60 days of starting treatment,safety_overall,arm,abstract,percent,,,stated or derived
+AEs leading to dose reduction,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+TEAEs leading to dose reduction,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+TRAEs leading to dose reduction,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+AEs leading to dose interruption,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+TEAEs leading to dose interruption,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+TRAEs leading to dose interruption,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+AEs requiring hospitalization,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+TEAEs requiring hospitalization,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+TRAEs requiring hospitalization,Number (%),All,,dose_events_special,arm,abstract,percent,,,stated or derived
+Immune related AE,,,Share of the arm with any immune-related adverse event.,safety_overall,arm,abstract,percent,,,stated or derived
+Cytokine Release Syndrome or CRS,,,,,arm,duplicate,percent,,,stated or derived
+Infusion-Related Reaction (IRR),,,Share of the arm with an infusion-related reaction of any grade.,safety_overall,arm,abstract,percent,,,stated or derived
+Trial name,Text,All,"Name of the trial as the abstract states it, e.g. CARTITUDE-4. Empty for drug or disease abbreviations and for bare protocol codes. Used only when the registry has no acronym.",population,trial,abstract,text,,,stated only
+Analysis type,Enum,All,"Which analysis this abstract reports, in the abstract's own words.",population,trial,abstract,enum,interim / primary / final / updated or long-term follow-up / post hoc,,stated only
+Median follow-up (overall),Number (months),All,"Median follow-up stated for the study or the reported analysis as a whole, when it is not tied to one endpoint.",population,trial,abstract,months,,,stated or derived
+Patients enrolled (trial total),Number (count),All,Total enrolled or randomized across all arms.,population,trial,abstract,count,,,stated or derived
