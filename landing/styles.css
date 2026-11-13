@@ -199,8 +199,12 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 /* Platform capabilities sit on the heatmap band (script.js), two columns from tablets up. */
 .hero-caps { margin-top: clamp(3.5rem, 7vw, 5.5rem); }
 .hero-caps > .label { display: block; margin: 0; padding: 0 0 1rem 1rem; border-left: 1.5px solid var(--accent); color: var(--accent-text); }
-.caps { list-style: none; margin: 0; padding: 0 0 0 1rem; border-left: 1.5px solid var(--accent); display: grid; gap: .875rem 3rem; font-size: .9375rem; line-height: 1.5; color: var(--muted); }
-@media (min-width: 768px) { .caps { grid-template-columns: 1fr 1fr; } }
+/* Two lists, each flowing on its own, so every item sits the same distance below the one above it. Stacked on phones,
+   where the accent rule runs down both; side by side from tablets, where it marks only the first column. */
+.caps-cols { display: grid; }
+.caps { list-style: none; margin: 0; padding: 0 0 0 1rem; border-left: 1.5px solid var(--accent); display: grid; align-content: start; gap: .875rem; font-size: .9375rem; line-height: 1.5; color: var(--muted); }
+.caps + .caps { padding-top: .875rem; }
+@media (min-width: 768px) { .caps-cols { grid-template-columns: 1fr 1fr; column-gap: 3rem; } .caps + .caps { padding-top: 0; border-left: 0; } }
 .caps li { display: grid; grid-template-columns: 2rem 1fr; }
 .caps b { font-weight: 500; color: var(--text); }
 .caps i { font: 400 .8125rem/1.73 var(--mono); font-style: normal; letter-spacing: 0; color: var(--accent-text); }
