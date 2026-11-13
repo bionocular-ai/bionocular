@@ -44,7 +44,6 @@ def _cell(value: str = "", quote: str = "", **kw: Any) -> dict[str, Any]:
         "value": value,
         "quote": quote,
         "detail": "",
-        "basis": "arm",
         "derived": False,
         **kw,
     }
@@ -57,6 +56,16 @@ RESULTS: dict[str, Any] = {
             "resp": {
                 "extracted": {
                     "trial": {"disease_subtype": _cell("AML", "not in text")},
+                    "pooled": [
+                        {
+                            "field": "orr",
+                            "value": "70",
+                            "context": "evaluable",
+                            "detail": "",
+                            "quote": "q",
+                            "derived": False,
+                        }
+                    ],
                     "arms": {
                         "arm_1": {
                             "orr": _cell("80", "ORR was 80%"),
@@ -141,7 +150,8 @@ def _one(rows: list[dict[str, Any]], **want: Any) -> dict[str, Any]:
 
 def test_rows_fields_extras_and_missed() -> None:
     rows = _rows()
-    assert [r["kind"] for r in rows] == ["field", "field", "field", "extra", "missed"]
+    kinds = ["pooled", "field", "field", "field", "extra", "missed"]
+    assert [r["kind"] for r in rows] == kinds
     assert all(set(r) == set(COLUMNS) for r in rows)
     sub = _one(rows, field="Disease subtype")
     assert sub["arm"] == "trial" and sub["quote_found"] is False
@@ -153,12 +163,15 @@ def test_rows_fields_extras_and_missed() -> None:
     assert extra["context"] == "over 75" and extra["value_ok"] == "unsure"
     assert _one(rows, field="MRD-negative CR", kind="field")["quote_found"] is None
     assert _one(rows, kind="missed")["value"] == "40"
+    pooled = _one(rows, kind="pooled")
+    assert pooled["arm"] == "pooled (all arms)" and pooled["context"] == "evaluable"
 
 
 def test_summary_counts() -> None:
     by_field = {s["field"]: s for s in summarize(_rows(), FAMILIES, SELECTION)}
     orr = by_field["ORR"]
     assert (orr["filled_cells"], orr["extra_values"], orr["judge_unsure"]) == (1, 1, 1)
+    assert orr["pooled"] == 1
     assert by_field["MRD-negative CR"]["applies"] == 1  # AML only, abstract 1
     assert by_field["MRD-negative CR"]["missed"] == 1
     sub = by_field["Disease subtype"]

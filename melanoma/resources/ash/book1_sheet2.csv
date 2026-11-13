@@ -1,6 +1,6 @@
 field,type,applies_to,definition,family,scope,source,value_type,allowed_values,detail,evidence
 Arm label,Text; enum (experimental / control / single arm / dose cohort),All,Role of the arm only. One of the enum values. The arm's name is already known from the arm list.,regimen_drug,arm,arm step,enum,experimental / control / single arm,,stated only
-Regimen name,Text,All,"Regimen as reported, e.g. D-VRd, pola-R-CHP",regimen_drug,arm,abstract,text,,,stated only
+Regimen name,Text,All,"Regimen as the abstract names it: a named combination (D-VRd, pola-R-CHP, 7+3) or, for a single-drug arm, the drug's name (pirtobrutinib). Not empty for monotherapy.",regimen_drug,arm,abstract,text,,,stated only
 Component drugs,List (text),All,"Drugs in the regimen as the abstract names them, joined with ' + '. Do not expand an abbreviation (Pola-BR) unless the abstract expands it.",regimen_drug,arm,abstract,text,,,stated only
 Generic name (per component),Text (INN),All,,regimen_drug,arm,registry,text,,,stated only
 Brand name,Text,All,,regimen_drug,arm,registry,text,,,stated only

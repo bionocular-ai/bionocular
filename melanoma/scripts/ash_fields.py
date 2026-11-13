@@ -136,7 +136,6 @@ class Cell(BaseModel):
     value: str
     quote: str
     detail: str
-    basis: Literal["", "arm", "pooled"]
     derived: bool
 
 
@@ -187,14 +186,31 @@ def _keys_literal(fields: list[SheetField]) -> Any:
     return Literal[tuple(f.key for f in fields)]  # type: ignore[valid-type]
 
 
+def pooled_fields(family: Family, arms: list[Arm]) -> list[SheetField]:
+    """Arm fields that can hold a value given for all arms together (2+ arms only)."""
+    return [f for f in family.fields if f.scope == "arm"] if len(arms) > 1 else []
+
+
 def response_model(family: Family, arms: list[Arm]) -> type[BaseModel]:
-    """{"trial"?: {key: Cell}, "arms"?: {arm_id: {key: Cell, "extra": [Extra]}}}."""
+    """{"trial"?: {key: Cell}, "pooled"?: [Pooled], "arms"?: {arm_id: {key: Cell, "extra": [Extra]}}}."""
     top: dict[str, Any] = {}
     trial: dict[str, Any] = {
         f.key: (_cell_type(family, f), ...) for f in family.fields if f.trial_level
     }
     if trial:
         top["trial"] = (create_model(f"{family.key}_trial", **trial), ...)
+    pooled = pooled_fields(family, arms)
+    if pooled:
+        item = create_model(
+            f"{family.key}_pooled",
+            field=(_keys_literal(pooled), ...),
+            value=(str, ...),
+            context=(str, ...),
+            detail=(str, ...),
+            quote=(str, ...),
+            derived=(bool, ...),
+        )
+        top["pooled"] = (list[item], ...)  # type: ignore[valid-type]
     arm_models: dict[str, Any] = {}
     for arm in arms:
         fields = arm_fields(family, arm)
@@ -268,7 +284,11 @@ Are NOT arms (never list them):
 7. Subgroups by age, risk, mutation, prior therapy, response.
 8. Phases given to the same patients (induction, consolidation, maintenance).
 
-If two groups get the same drugs, they are ONE arm.
+If two groups get the same drugs, they are ONE arm. These rules hold even when the abstract itself calls the groups arms.
+
+EXAMPLES (invented)
+- "The study has two arms by donor type: matched (n=30) and mismatched (n=6). The first 12 patients received drug A + drug B. The next 24 received drug A + drug C, the last 10 of them at a lower dose of drug C." -> two arms: "drug A + drug B" and "drug A + drug C". Donor type is a subgroup; the lower dose is a dose level.
+- "Patients received zorvacel at 1x10^6 (n=3), 2x10^6 (n=6) or 1.5x10^6 cells/kg (n=1)." -> one arm: "zorvacel".
 
 For each arm:
 - arm_name: the drugs or regimen as the abstract names them. No outside knowledge.
@@ -287,19 +307,19 @@ _RULES = """RULES
 2. quote: copy the exact words from the abstract that state the value. The quote must name the measure (for a PFS field the quote contains "PFS" or "progression-free").
 3. value: numbers only, no units, no "%". Durations in months ("NR" if not reached). If you had to calculate it (count to percent, days to months, "all patients" = 100, "none" = 0), set derived = true.
 4. detail: the timepoint, method, threshold or grading system the field asks for, else "".
-5. basis: "arm" if the value is for this arm only. "pooled" if the abstract gives it for all arms together. A pooled value goes on every arm with basis "pooled". Patient counts are the exception: a trial total never goes on an arm.
+5. A value on an arm is for that arm only. A value the abstract gives only for all arms together (a rate across cohorts, the median age of the whole study) goes once in 'pooled', with context saying which population if it is not all patients; leave that field empty on every arm. Never copy a pooled value onto an arm. A median follow-up for the whole study is pooled too. A value the abstract says holds in each arm ("in both arms, the median age was 67") goes on each arm. A trial total of patients goes in patients_enrolled_trial_total, not in pooled. With a single arm there is no 'pooled': everything goes on the arm.
 6. Extract the analysis this abstract reports. Ignore results from an earlier analysis that the abstract quotes as background ("in the primary analysis", "previously reported").
 7. One measure, one field. Never put EFS in a PFS field, a CR rate in ORR, or an MRD rate in a response field. If no field fits, leave it out.
 8. extra: further values of THESE fields that the field cannot hold: a subgroup, a dose level, a second population (evaluable vs ITT), another timepoint, a second analysis. Give field, value, context (who or when), and quote. Never drop a second value; never put a first value here."""
 
 _EXAMPLES = """EXAMPLE 1 (invented)
 Text: "In the primary analysis (median follow-up 18 months) PFS HR was 0.60 (P<0.001). Here we report the final analysis. At a median follow-up of 40 months, median PFS was 30.1 months with zorvamab vs 14.2 months with placebo (HR 0.55; 95% CI 0.41-0.74). In patients aged >=75, median PFS was 22.0 vs 11.0 months."
-arm_1 zorvamab: median_pfs {value "30.1", quote "median PFS was 30.1 months with zorvamab", basis "arm"}; hr_pfs {value "0.55", quote "HR 0.55; 95% CI 0.41-0.74"}; p_value_pfs {value "", quote ""} because P<0.001 is from the earlier analysis; extra [{field "median_pfs", value "22.0", context "patients aged >=75", quote "In patients aged >=75, median PFS was 22.0 vs 11.0 months"}].
+arm_1 zorvamab: median_pfs {value "30.1", quote "median PFS was 30.1 months with zorvamab"}; hr_pfs {value "0.55", quote "HR 0.55; 95% CI 0.41-0.74"}; p_value_pfs {value "", quote ""} because P<0.001 is from the earlier analysis; extra [{field "median_pfs", value "22.0", context "patients aged >=75", quote "In patients aged >=75, median PFS was 22.0 vs 11.0 months"}].
 arm_2 placebo: median_pfs {value "14.2", ...}; no hazard ratio fields.
 
 EXAMPLE 2 (invented)
 Text: "Twelve patients received telnotug + drug A and nine received telnotug + drug B. Results combine both cohorts. CRS occurred in 8 of 21 patients. No ICANS was observed."
-Both arms: crs_any_grade {value "38.1", quote "CRS occurred in 8 of 21 patients", basis "pooled", derived true}; icans_any_grade {value "0", quote "No ICANS was observed", basis "pooled", derived true}. patients_treated: arm_1 "12", arm_2 "9", basis "arm"."""
+pooled: [{field "crs_any_grade", value "38.1", context "", quote "CRS occurred in 8 of 21 patients", derived true}, {field "icans_any_grade", value "0", context "", quote "No ICANS was observed", derived true}]. On both arms crs_any_grade and icans_any_grade stay empty. patients_treated: arm_1 "12", arm_2 "9"."""
 
 
 def family_prompt(family: Family, arms: list[Arm]) -> str:
@@ -327,13 +347,20 @@ def judge_items(
     family: Family, extracted: dict[str, Any], arms: list[Arm]
 ) -> list[dict[str, Any]]:
     """Every filled value (fields and extras) as a flat, numbered list for the judge."""
-    names = {a.arm_id: a.arm_name for a in arms} | {"trial": "whole trial"}
+    names = {a.arm_id: a.arm_name for a in arms} | {
+        "trial": "whole trial",
+        "pooled": "all arms together",
+    }
     by_key = {f.key: f for f in family.fields}
     scopes: list[tuple[str, dict[str, Any]]] = []
     if "trial" in extracted:
         scopes.append(("trial", extracted["trial"]))
     scopes += list(extracted.get("arms", {}).items())
-    items: list[dict[str, Any]] = []
+    items: list[dict[str, Any]] = [
+        {"kind": "pooled", "arm_id": "pooled", "key": p["field"], **p}
+        for p in extracted.get("pooled", [])
+        if p["value"]
+    ]
     for arm_id, cells in scopes:
         for key, cell in cells.items():
             if key != "extra" and cell["value"]:
@@ -354,7 +381,9 @@ def _item_line(item: dict[str, Any]) -> str:
     if item["kind"] == "extra":
         tail = f"extra value for: {item['context']}"
     else:
-        tail = f"basis: {item['basis'] or 'none'} | derived: {str(item['derived']).lower()}"
+        tail = f"derived: {str(item['derived']).lower()}"
+        if item["kind"] == "pooled" and item["context"]:
+            tail = f"population: {item['context']} | {tail}"
     return (
         f"{item['id']} | {item['arm_name']} | {item['field_name']} | "
         f"value: {item['value']} | {tail} | quote: \"{item['quote']}\""
@@ -368,7 +397,7 @@ A. value_ok: is this the right value for this field and this arm, according to t
 - "no": pick the error:
   not_stated - the abstract does not say this; it could only come from knowledge of the drug or disease.
   wrong_measure - the number belongs to a different measure (EFS not PFS, CR not ORR, MRD not response).
-  wrong_arm_or_group - the number belongs to another arm, a subgroup or a dose level. A value marked "pooled" on several arms is correct if the abstract reports only pooled results.
+  wrong_arm_or_group - the number belongs to another arm, a subgroup or a dose level. A value on one arm that the abstract gives only for all arms together is wrong. Items under "all arms together" are correct only if the abstract gives the value for all arms combined.
   wrong_analysis - the number is from an earlier analysis quoted as background.
   wrong_number - the abstract gives a different number.
 - "unsure": the abstract is ambiguous. Say what is ambiguous in right_value.
@@ -409,7 +438,7 @@ def missed_prompt(family: Family, extracted: dict[str, Any], arms: list[Arm]) ->
             "found: arm_id, field, value (numbers only, no units), and quote (the exact "
             "words that state it). Return an empty list if the abstract states none of "
             "them. Use only the abstract, never what you know about the drug. A value "
-            "for a subgroup, a dose level or an earlier analysis does not count.",
+            "for a subgroup, a dose level, an earlier analysis or all arms together does not count.",
             "FIELDS\n" + _fields_block(family),
             "ARMS\n" + _arms_block(arms),
             "EMPTY\n" + "\n".join(empty),

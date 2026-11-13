@@ -48,7 +48,6 @@ def _cell(value: str = "", quote: str = "", **kw: object) -> dict[str, object]:
         "value": value,
         "quote": quote,
         "detail": "",
-        "basis": "",
         "derived": False,
         **kw,
     }
@@ -118,10 +117,35 @@ def test_response_model_accepts_a_filled_reply():
     arms["arm_1"]["extra"] = [
         {"field": "median_pfs", "value": "22", "context": "age >=75", "quote": "q"}
     ]
-    assert model.model_validate({"arms": arms})
+    assert model.model_validate({"pooled": [], "arms": arms})
     arms["arm_1"]["extra"][0]["field"] = "not_a_field"
     with pytest.raises(ValueError):
-        model.model_validate({"arms": arms})
+        model.model_validate({"pooled": [], "arms": arms})
+
+
+def test_pooled_values_have_one_list_and_only_with_two_arms():
+    pfs = _family("survival_pfs_os")
+    schema = to_strict_schema(response_model(pfs, ARMS))
+    keys = schema["properties"]["pooled"]["items"]["properties"]["field"]["enum"]
+    assert "median_pfs" in keys and "hr_pfs" not in keys
+    one = to_strict_schema(response_model(pfs, ARMS[:1]))
+    assert "pooled" not in one["properties"]
+    pooled = [
+        {
+            "field": "median_pfs",
+            "value": "20",
+            "context": "",
+            "detail": "",
+            "quote": "q",
+            "derived": False,
+        }
+    ]
+    items = judge_items(pfs, {"pooled": pooled, "arms": {}}, ARMS)
+    assert [(i["kind"], i["arm_name"]) for i in items] == [
+        ("pooled", "all arms together")
+    ]
+    line = "1 | all arms together | Median PFS | value: 20 | derived: false"
+    assert line in judge_prompt(pfs, items, ARMS)
 
 
 def test_family_without_fields_cannot_be_asked():
@@ -133,7 +157,7 @@ def test_family_prompt_states_rules_fields_and_arms():
     prompt = family_prompt(_family("survival_pfs_os"), ARMS)
     for needle in (
         "Never use what you know",
-        'basis: "arm"',
+        "goes once in 'pooled'",
         "earlier analysis",
         "hr_pfs (HR PFS)",
         "arm_1: Drug X (experimental)",
@@ -149,6 +173,8 @@ def test_family_prompt_states_rules_fields_and_arms():
 def test_arm_prompt_and_schema():
     assert "{abstract_text}" in ARM_PROMPT and "dose_variation" not in ARM_PROMPT
     assert "Dose levels" in ARM_PROMPT
+    assert "even when the abstract itself calls the groups arms" in ARM_PROMPT
+    assert "Donor type is a subgroup" in ARM_PROMPT
     to_strict_schema(ArmList)
 
 
@@ -157,7 +183,7 @@ def test_judge_items_number_fields_and_extras():
     extracted = {
         "arms": {
             "arm_1": {
-                "median_pfs": _cell("30.1", "median PFS was 30.1", basis="arm"),
+                "median_pfs": _cell("30.1", "median PFS was 30.1"),
                 "median_os": _cell(),
                 "extra": [
                     {
@@ -176,9 +202,7 @@ def test_judge_items_number_fields_and_extras():
         (2, "extra", "median_pfs"),
     ]
     prompt = judge_prompt(fam, items, ARMS)
-    assert (
-        "1 | Drug X | Median PFS | value: 30.1 | basis: arm | derived: false" in prompt
-    )
+    assert "1 | Drug X | Median PFS | value: 30.1 | derived: false" in prompt
     assert "2 | Drug X | Median PFS | value: 22 | extra value for: age >=75" in prompt
     assert "value_ok" in prompt and "quote_ok" in prompt
     JudgeVerdict.model_validate(

@@ -32,7 +32,6 @@ def _cell(value: str, quote: str, **kw: object) -> dict[str, object]:
         "value": value,
         "quote": quote,
         "detail": "",
-        "basis": "arm",
         "derived": False,
         **kw,
     }
@@ -80,7 +79,7 @@ def test_flags():
     )
 
 
-def test_same_on_arms_unless_pooled():
+def test_same_on_arms():
     fam = Family(
         "fam",
         "Fam",
@@ -92,6 +91,5 @@ def test_same_on_arms_unless_pooled():
         ("arm_1", "crs_any_grade"),
         ("arm_2", "crs_any_grade"),
     }
-    arms["arm_2"]["crs_any_grade"]["basis"] = "pooled"
-    arms["arm_1"]["crs_any_grade"]["basis"] = "pooled"
+    arms["arm_2"]["crs_any_grade"]["value"] = "40"
     assert same_on_arms(fam, {"arms": arms}) == set()

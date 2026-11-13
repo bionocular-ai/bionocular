@@ -100,15 +100,17 @@ def test_parse_md(tmp_path: Path) -> None:
 
 def test_missed_items_must_target_an_empty_asked_field() -> None:
     extracted = {
-        "arms": {"arm_1": {"orr": {"value": "80"}, "cr": {"value": ""}, "extra": []}}
+        "pooled": [{"field": "cr", "value": "30"}],
+        "arms": {"arm_1": {"orr": {"value": "80"}, "cr": {"value": ""}, "extra": []}},
     }
     items = [
         {"arm_id": "arm_1", "field": "orr", "value": "80", "quote": "q"},  # filled
         {"arm_id": "arm_1", "field": "cr", "value": " ", "quote": ""},  # no value
         {"arm_id": "arm_2", "field": "cr", "value": "5", "quote": "q"},  # not asked
+        {"arm_id": "arm_1", "field": "cr", "value": "30", "quote": "q"},  # pooled
         {"arm_id": "arm_1", "field": "cr", "value": "40", "quote": "q"},
     ]
-    assert _truly_missed(items, extracted) == [items[3]]
+    assert _truly_missed(items, extracted) == [items[4]]
 
 
 @pytest.mark.asyncio

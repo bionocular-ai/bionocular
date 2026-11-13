@@ -39,7 +39,6 @@ COLUMNS = [
     "context",
     "value",
     "detail",
-    "basis",
     "derived",
     "quote",
     "quote_found",
@@ -64,6 +63,7 @@ SUMMARY_COLUMNS = [
     "judge_unsure",
     "quote_not_ok",
     "extra_values",
+    "pooled",
     "missed",
     "wrong",
 ]
@@ -81,7 +81,7 @@ def _row(
     family: str, arm: str, field: str, kind: str, cols: dict[str, Any]
 ) -> dict[str, Any]:
     blank = dict.fromkeys(
-        ("context", "value", "detail", "basis", "derived", "quote", "flags"), ""
+        ("context", "value", "detail", "derived", "quote", "flags"), ""
     )
     return {
         "arm": arm,
@@ -124,6 +124,7 @@ def build_rows(
         res, sel, text = results[number], selection[number], texts[number]
         names = {a["arm_id"]: f"{a['arm_id']}: {a['arm_name']}" for a in res["arms"]}
         names["trial"] = "trial"
+        names["pooled"] = "pooled (all arms)"
 
         mine: list[dict[str, Any]] = []
 
@@ -142,6 +143,19 @@ def build_rows(
                 }
                 for i in got.get("items", [])
             }
+            for p in extracted.get("pooled", []):
+                add(
+                    fam,
+                    "pooled",
+                    name_of[p["field"]],
+                    "pooled",
+                    value=p["value"],
+                    context=p["context"],
+                    detail=p["detail"],
+                    derived="yes" if p["derived"] else "",
+                    quote=p["quote"],
+                    **judged.get(("pooled", "pooled", p["field"], p["context"]), {}),
+                )
             scopes = list(extracted.get("arms", {}).items())
             if "trial" in extracted:
                 scopes.insert(0, ("trial", extracted["trial"]))
@@ -156,7 +170,6 @@ def build_rows(
                         "field",
                         value=cell["value"],
                         detail=cell["detail"],
-                        basis=cell["basis"],
                         derived="yes" if cell["derived"] else "",
                         quote=cell["quote"],
                         flags=", ".join(got["flags"].get(f"{arm_id}.{key}", [])),
@@ -226,6 +239,7 @@ def summarize(
                     "judge_unsure": sum(r["value_ok"] == "unsure" for r in mine),
                     "quote_not_ok": sum(r["quote_ok"] == "no" for r in mine),
                     "extra_values": sum(r["kind"] == "extra" for r in mine),
+                    "pooled": sum(r["kind"] == "pooled" for r in mine),
                     "missed": sum(r["kind"] == "missed" for r in mine),
                     "wrong": sum(
                         str(r["check"]).strip().lower() == "wrong" for r in mine

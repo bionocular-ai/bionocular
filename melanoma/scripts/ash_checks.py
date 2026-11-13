@@ -69,17 +69,12 @@ def cell_flags(field: SheetField, cell: dict[str, Any], text: str) -> list[str]:
 
 
 def same_on_arms(family: Family, extracted: dict[str, Any]) -> set[tuple[str, str]]:
-    """(arm_id, key) of arm-level values repeated on 2+ arms with the same quote, not marked pooled."""
+    """(arm_id, key) of arm-level values repeated on 2+ arms with the same quote: likely a pooled value copied onto arms."""
     seen: dict[tuple[str, str, str], list[str]] = {}
     for arm_id, cells in extracted.get("arms", {}).items():
         for f in family.fields:
             cell = cells.get(f.key)
-            if (
-                f.scope == "arm"
-                and cell
-                and cell["value"]
-                and cell["basis"] != "pooled"
-            ):
+            if f.scope == "arm" and cell and cell["value"]:
                 seen.setdefault((f.key, cell["value"], cell["quote"]), []).append(
                     arm_id
                 )

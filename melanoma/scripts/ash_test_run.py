@@ -115,7 +115,7 @@ def _flags(
                 continue
             flags = cell_flags(by_key[key], cell, text)
             if (arm_id, key) in repeated:
-                flags.append("same_on_arms_not_pooled")
+                flags.append("same_on_arms")
             if flags:
                 out[f"{arm_id}.{key}"] = flags
     return out
@@ -126,15 +126,18 @@ def _truly_missed(
 ) -> list[dict[str, Any]]:
     """Keep only items for a field the extraction asked for and left empty.
 
-    The model tends to repeat values that are already filled.
+    The model tends to repeat values that are already filled, or to put a pooled
+    value back on an arm.
     """
     cells = {"trial": extracted.get("trial", {}), **extracted.get("arms", {})}
+    pooled = {(p["field"], p["value"].strip()) for p in extracted.get("pooled", [])}
     return [
         i
         for i in items
         if i["value"].strip()
         and i["field"] in cells.get(i["arm_id"], {})
         and not cells[i["arm_id"]][i["field"]]["value"]
+        and (i["field"], i["value"].strip()) not in pooled
     ]
 
 
