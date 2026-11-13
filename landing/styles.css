@@ -201,7 +201,8 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .caps b { font-weight: 500; color: var(--text); }
 .caps i { font: 400 .75rem/2 var(--mono); font-style: normal; color: var(--accent-text); }
 .caps-note { margin: 1.25rem 0 0; font-size: .8125rem; line-height: 1.5; color: var(--muted); }
-.caps sup, .caps-note sup { font-size: .7em; line-height: 0; color: var(--gold-ink); }
+.caps-fn { margin: 1.5rem 0 0; font-size: .75rem; line-height: 1.5; color: var(--muted); }
+.caps sup, .caps-note sup, .caps-fn sup { font-size: .7em; line-height: 0; color: var(--gold-ink); }
 .caps-close { margin: .75rem 0 0; font: 500 1.0625rem/1.4 var(--display); letter-spacing: -0.02em; color: var(--text); }
 
 .chip { font: 500 .6875rem/1 var(--mono); padding: .35rem .6rem; border-radius: 999px; background: var(--tint); color: var(--primary); }
@@ -579,7 +580,7 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 }
 @media (prefers-contrast: more) {
   .chart { box-shadow: 0 0 0 1.5px var(--text); }
-  .caps, .agent p, .caps-note { color: var(--text); }
+  .caps, .agent p, .caps-note, .caps-fn { color: var(--text); }
   .site-header[data-scrolled] { box-shadow: 0 1px 0 var(--border); }
 }
 
