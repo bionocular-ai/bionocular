@@ -90,12 +90,16 @@ a { color: inherit; }
 .dd-row.off { justify-content: flex-start; color: var(--muted); cursor: default; }
 .dd-row .soon, .sheet-sub .soon { padding: .25rem .5rem; }
 /* The cancer types wait for the franchise: they step in from its side, one after another, and leave all at once. */
-.dd-types { list-style: none; margin: 0; padding: .25rem 0 0 2rem; border-left: 1px solid var(--hair); display: grid; grid-auto-flow: column; grid-template-rows: repeat(4, auto);
-  grid-auto-columns: max-content; column-gap: 3rem; align-content: start; visibility: hidden; transition: visibility 0s .15s; }
+/* Two groups: the melanomas, then the non-melanoma skin cancers. */
+.dd-types { padding: .25rem 0 0 2rem; border-left: 1px solid var(--hair); display: grid; grid-template-columns: repeat(2, max-content); gap: 1.25rem 3.5rem;
+  align-content: start; visibility: hidden; transition: visibility 0s .15s; }
+.dd-types ul { list-style: none; margin: 0; padding: 0; }
+.dd-g { margin: 0 0 .375rem; font: 700 .6875rem/1.4 var(--text-font); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .dd[data-types] .dd-types { visibility: visible; transition: none; }
-.dd-types li { padding: .4rem 0; font-size: .9375rem; line-height: 1.35; letter-spacing: 0; color: var(--text); opacity: 0; translate: -6px 0; transition: opacity .15s, translate .15s; }
-.dd[data-types] .dd-types li { opacity: 1; translate: none; transition: opacity .25s ease-out calc(var(--i) * 25ms), translate .4s var(--settle) calc(var(--i) * 25ms); }
-@media (max-width: 1199px) { .dd-types { grid-auto-flow: row; grid-template-rows: none; } } /* one column when two would overflow */
+.dd-types :is(li, .dd-g) { opacity: 0; translate: -6px 0; transition: opacity .15s, translate .15s; }
+.dd-types li { padding: .4rem 0; font-size: .9375rem; line-height: 1.35; letter-spacing: 0; color: var(--text); }
+.dd[data-types] .dd-types :is(li, .dd-g) { opacity: 1; translate: none; transition: opacity .25s ease-out calc(var(--i) * 25ms), translate .4s var(--settle) calc(var(--i) * 25ms); }
+@media (max-width: 1199px) { .dd-types { grid-template-columns: max-content; } } /* one column when two would overflow */
 .nav-scrim { position: fixed; inset: 0; z-index: 49; background: rgba(16,43,54,.12); pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .2s, visibility 0s .2s; }
 .site-header[data-dd] + .nav-scrim { opacity: 1; visibility: visible; transition: opacity .3s ease-out, visibility 0s; }
 /* In the phone sheet the franchises sit indented under Product, the cancer types folded away. */
@@ -593,7 +597,7 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 /* ── Accessibility preferences: gentler, not absent ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; }
-  .layer, .twin path, .sheet, .dd-panel, .dd-types li, .meta span { transition-property: opacity !important; transition-duration: .2s !important; }
+  .layer, .twin path, .sheet, .dd-panel, .dd-types :is(li, .dd-g), .meta span { transition-property: opacity !important; transition-duration: .2s !important; }
   .dd-panel { clip-path: none !important; opacity: 0; }
   .dd[data-open] .dd-panel { opacity: 1; }
   #Lsrc { transform: none; }
