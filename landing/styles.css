@@ -50,7 +50,7 @@ a { color: inherit; }
 .site-header[data-scrolled] { box-shadow: 0 1px 0 rgba(16,43,54,.08); }
 /* With the Product panel open, bar and panel read as one white surface: no divider, no translucency. */
 .site-header[data-dd] { background: #fff; box-shadow: none; }
-.bar { height: 100%; display: grid; grid-template-columns: auto 1fr; align-items: center; color: var(--text); }
+.bar { height: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; color: var(--text); }
 /* The brand lockup: the mark stands 1.05em tall, its foot 0.12em below the baseline, and "bio" is the 800 weight in the same colour. */
 .brand { justify-self: start; display: inline-block; white-space: nowrap; line-height: 1; color: #1A1A1A; text-decoration: none; font: 500 22px/1 'Plus Jakarta Sans', sans-serif; letter-spacing: .004em; }
 @media (min-width: 1280px) { .site-header .brand { font-size: 26px; } }
@@ -129,6 +129,7 @@ a { color: inherit; }
 @media (max-width: 899px) {
   .bar > .nav { display: none; }
   .menu-btn { display: grid; }
+  .bar > .btn-bar { display: none; }
   /* The sheet drops from the menu button and leaves the same way. */
   .sheet { display: grid; gap: .25rem; width: calc(100% - 2rem); margin: .5rem auto 0; padding: .75rem; border-radius: 26px;
     /* Solid: a backdrop blur cannot nest inside the bar's own blur, so a translucent sheet would let the page show through. */
@@ -137,6 +138,8 @@ a { color: inherit; }
   .site-header[data-open] .sheet { transform: none; opacity: 1; visibility: visible; transition: transform .45s var(--settle), opacity .25s, visibility 0s; }
   .sheet a { text-decoration: none; padding: .9rem 1rem; border-radius: 14px; font: 600 1.25rem/1.2 var(--display); letter-spacing: -0.03em; color: var(--text); }
   .sheet a:active { background: var(--tint); }
+  .sheet .btn { justify-content: center; height: 48px; margin-top: .5rem; padding: 0 1rem; font: 500 1.0625rem/1 var(--text-font); letter-spacing: -0.01em; color: #fff; }
+  .sheet .btn:active { background: var(--ink); }
 }
 
 
@@ -203,6 +206,7 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .btn:hover { background: var(--ink); }
 .btn:active { transform: scale(.97); }
 .btn:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; }
+.btn-bar { height: 36px; margin: 0 0 0 2.25rem; padding: 0 1rem; font-size: .875rem; }
 /* The franchises: one card per disease area, the live one listing its cancer types. */
 .hero-side { display: grid; gap: 1rem; }
 .fr { padding: 1.25rem 1.25rem 1.375rem; border-radius: 16px; background: rgba(255,255,255,.62); box-shadow: 0 0 0 1px var(--border); }
@@ -239,8 +243,7 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .os-head { text-align: center; padding-bottom: clamp(2.5rem, 5vw, 4rem); }
 .os-head .h2 { margin-bottom: .75rem; font-weight: 500; }
 .os-head .lead { margin-inline: auto; color: var(--text); font-weight: 400; }
-.os-head sup, .case-lid sup, .os-note sup { font-size: .55em; vertical-align: .7em; color: var(--gold); font-weight: 700; }
-.os-note sup { color: var(--gold-ink); }
+.os-head sup, .case-lid sup, .os-note sup { font-size: .55em; vertical-align: .7em; color: var(--gold-ink); font-weight: 700; }
 .os-head .wm { font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: .004em; }
 .os-head .wm b, .case-lid .bio { font-weight: 800; }
 
@@ -575,6 +578,7 @@ main::before { content: ""; position: absolute; z-index: 1; top: 0; left: var(--
 .ab-h3 { margin: 0 0 1.5rem; font: 600 clamp(1.5rem, 2.6vw, 2rem)/1.1 var(--display); letter-spacing: -0.04em; color: var(--text); text-wrap: balance; }
 .ab-h3 em { font-style: normal; color: var(--primary); }
 .ab-block { margin-top: clamp(3.5rem, 7vw, 5.5rem); }
+.ab-cta .ab-h3 { margin-bottom: 1.25rem; }
 /* Audiences: six named seats, hairline-ruled like the principles. */
 .aud { list-style: none; margin: clamp(2.5rem, 5vw, 3.5rem) 0 0; padding: 0; display: grid; gap: 0 2.5rem; }
 @media (min-width: 640px) { .aud { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
