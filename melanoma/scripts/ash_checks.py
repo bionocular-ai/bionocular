@@ -1,4 +1,4 @@
-"""Deterministic checks on extracted ASH values. They flag for review; they reject nothing."""
+"""Deterministic checks on extracted ASH values. They flag for review; extras with a DROP_EXTRA flag are dropped."""
 
 import re
 import unicodedata
