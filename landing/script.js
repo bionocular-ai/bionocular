@@ -62,6 +62,13 @@ const pillSprings = pills => {
   // Product links to the OS stack, where the product story starts; the comparison and the diagram after it keep the link lit.
   const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = ['product', 'how-it-works'].includes(e.target.id) ? 'platform' : e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
   ['hero', 'platform', 'product', 'how-it-works', 'survival', 'about', 'contact'].forEach(id => io.observe(document.getElementById(id)));
+  // The bar's demo button hides while the hero's or the closing demo button is on screen, so two never show together.
+  const ctas = new Set();
+  const ctaIo = new IntersectionObserver(es => {
+    es.forEach(e => e.isIntersecting ? ctas.add(e.target) : ctas.delete(e.target));
+    hdr.toggleAttribute('data-page-cta', ctas.size > 0);
+  }, { rootMargin: '-64px 0px 0px 0px' });
+  document.querySelectorAll('.hero .btn, .ab-cta .btn').forEach(b => ctaIo.observe(b));
   const toggle = open => { hdr.toggleAttribute('data-open', open); btn.setAttribute('aria-expanded', open); };
   btn.addEventListener('click', () => toggle(!hdr.hasAttribute('data-open')));
   sheet.querySelectorAll('a').forEach(a => a.addEventListener('click', () => toggle(false)));
