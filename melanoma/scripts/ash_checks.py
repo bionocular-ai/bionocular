@@ -18,6 +18,13 @@ _TYPE_RE = {
     "range": re.compile(rf"^{_NUM}-(?:{_NUM}|NE|NR)$"),
     "p_value": re.compile(rf"^[<>=]?\s*{_NUM}$"),
 }
+# An overall grade >=3 AE field needs an overall AE term in the quote, not one event's name.
+_OVERALL_AE_FIELD = re.compile(r"^Grade >=3 (?:AEs|TEAEs|TRAEs)$")
+_OVERALL_AE_QUOTE = re.compile(
+    r"\bT?[RE]?AEs?\b|adverse (?:events?|reactions?)|toxicit", re.I
+)
+# Flags that remove an extra value instead of only marking it.
+DROP_EXTRA = {"timepoint_not_in_quote", "not_overall_ae", "mean_not_median"}
 # The words a quote must contain for a field about that measure.
 _MEASURES = (
     (r"\bPFS\b", r"PFS|progression[- ]free"),
@@ -67,6 +74,14 @@ def cell_flags(field: SheetField, cell: dict[str, Any], text: str) -> list[str]:
             break
     if not timepoint_in_quote(field.name, quote):
         flags.append("timepoint_not_in_quote")
+    if _OVERALL_AE_FIELD.match(field.name) and not _OVERALL_AE_QUOTE.search(quote):
+        flags.append("not_overall_ae")
+    if (
+        field.name.startswith("Median")
+        and re.search(r"\bmean\b", quote, re.I)
+        and not re.search(r"median", quote, re.I)
+    ):
+        flags.append("mean_not_median")
     return flags
 
 

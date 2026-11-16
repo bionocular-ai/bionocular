@@ -112,3 +112,19 @@ def test_timepoint_in_quote():
     assert "timepoint_not_in_quote" in cell_flags(
         rate, _cell("30.1", "Median PFS was 30.1 months"), TEXT
     )
+
+
+def test_one_event_rate_is_not_an_overall_ae_rate():
+    f = _f("Grade >=3 TRAEs", "percent")
+    q = "lymphopenia (74%, G3/4 67%)"
+    assert "not_overall_ae" in cell_flags(f, _cell("67", q), q)
+    q = "Grade >=3 TRAEs occurred in 57%"
+    assert "not_overall_ae" not in cell_flags(f, _cell("57", q), q)
+
+
+def test_a_mean_is_not_a_median():
+    f = _f("Median line of therapy", "number")
+    q = "a mean of 5.2 prior lines"
+    assert "mean_not_median" in cell_flags(f, _cell("5.2", q), q)
+    q = "median 4 prior lines (mean 5.2)"
+    assert "mean_not_median" not in cell_flags(f, _cell("4", q), q)

@@ -143,7 +143,7 @@ TRAEs requiring hospitalization,Number (%),All,,dose_events_special,arm,abstract
 Immune related AE,,,Share of the arm with any immune-related adverse event.,safety_overall,arm,abstract,percent,,,stated or derived
 Cytokine Release Syndrome or CRS,,,,,arm,duplicate,percent,,,stated or derived
 Infusion-Related Reaction (IRR),,,Share of the arm with an infusion-related reaction of any grade.,safety_overall,arm,abstract,percent,,,stated or derived
-Trial name,Text,All,"Name of the trial as the abstract states it, e.g. CARTITUDE-4. Empty for drug or disease abbreviations and for bare protocol codes. Used only when the registry has no acronym.",population,trial,abstract,text,,,stated only
+Trial name,Text,All,"Name of the trial as the abstract states it: an acronym (CARTITUDE-4); else a cooperative-group code (AAML1831, E1910, Alliance A041501); else a sponsor protocol code (BGB-11417-105). Empty for drug or disease abbreviations. Used only when the registry has no acronym.",population,trial,abstract,text,,,stated only
 Analysis type,Enum,All,"Which analysis this abstract reports, in the abstract's own words.",population,trial,abstract,enum,interim / primary / final / updated or long-term follow-up / post hoc,,stated only
 Median follow-up (overall),Number (months),All,"Median follow-up stated for the study or the reported analysis as a whole, when it is not tied to one endpoint.",population,trial,abstract,months,,,stated or derived
 Patients enrolled (trial total),Number (count),All,Total enrolled or randomized across all arms.,population,trial,abstract,count,,,stated or derived

@@ -16,7 +16,7 @@ sys.path.insert(0, str(_root / "scripts"))
 from ash_fields import ArmList, JudgeVerdict, load_families  # noqa: E402
 from ash_test_run import (  # noqa: E402
     META,
-    _drop_wrong_timepoint,
+    _drop_unsupported_extras,
     _flags,
     _truly_missed,
     fingerprint,
@@ -261,5 +261,5 @@ def test_extras_with_the_wrong_timepoint_are_dropped() -> None:
         "quote": "2-year PFS was 50%",
     }
     extracted = {"arms": {"arm_1": {"extra": [bad, good]}}}
-    assert _drop_wrong_timepoint(fam, extracted) == [{"arm_id": "arm_1", **bad}]
+    assert _drop_unsupported_extras(fam, extracted, "") == [{"arm_id": "arm_1", **bad}]
     assert extracted["arms"]["arm_1"]["extra"] == [good]

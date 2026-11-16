@@ -27,7 +27,7 @@ _root = Path(__file__).parent.parent
 sys.path.insert(0, str(_root))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ash_checks import cell_flags, same_on_arms, timepoint_in_quote  # noqa: E402
+from ash_checks import DROP_EXTRA, cell_flags, same_on_arms  # noqa: E402
 from ash_fields import (  # noqa: E402
     ARM_PROMPT,
     Arm,
@@ -127,17 +127,21 @@ def _flags(
     return out
 
 
-def _drop_wrong_timepoint(family: Family, extracted: dict[str, Any]) -> list[Any]:
-    """Remove extras whose quote lacks their field's timepoint (a 30-month rate in a 24-month field); return them."""
+def _drop_unsupported_extras(
+    family: Family, extracted: dict[str, Any], text: str
+) -> list[Any]:
+    """Remove extras a code check rules out (wrong timepoint, one AE event for an
+    overall AE field, a mean for a median); return them."""
     by_key = {f.key: f for f in family.fields}
     dropped = []
     for arm_id, cells in extracted.get("arms", {}).items():
         keep = []
         for ex in cells.get("extra", []):
-            if timepoint_in_quote(by_key[ex["field"]].name, ex["quote"]):
-                keep.append(ex)
-            else:
+            flags = cell_flags(by_key[ex["field"]], ex, text)
+            if ex["value"] and DROP_EXTRA.intersection(flags):
                 dropped.append({"arm_id": arm_id, **ex})
+            else:
+                keep.append(ex)
         cells["extra"] = keep
     return dropped
 
@@ -189,7 +193,9 @@ async def _run_family(
                 operation=f"ash_extract:{family.key}",
             )
         result["extracted"] = extracted.model_dump()
-        result["dropped_extras"] = _drop_wrong_timepoint(family, result["extracted"])
+        result["dropped_extras"] = _drop_unsupported_extras(
+            family, result["extracted"], text
+        )
         result["flags"] = _flags(family, result["extracted"], text)
         result["items"] = judge_items(family, result["extracted"], arms)
         if result["items"]:
