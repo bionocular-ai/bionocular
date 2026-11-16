@@ -59,17 +59,34 @@ const pillSprings = pills => {
   const setActive = id => links.forEach(a => a.getAttribute('href') === '#' + id ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'));
   const sync = () => { setActive(atBottom() ? 'contact' : inBand); hdr.toggleAttribute('data-scrolled', scrollY > 0); };
   addEventListener('scroll', sync, { passive: true });
-  // The OS stack and the diagram after the comparison are part of Product too, so they keep the Product link lit.
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = ['platform', 'how-it-works'].includes(e.target.id) ? 'product' : e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
+  // Product links to the OS stack, where the product story starts; the comparison and the diagram after it keep the link lit.
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = ['product', 'how-it-works'].includes(e.target.id) ? 'platform' : e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
   ['hero', 'platform', 'product', 'how-it-works', 'survival', 'about', 'contact'].forEach(id => io.observe(document.getElementById(id)));
   const toggle = open => { hdr.toggleAttribute('data-open', open); btn.setAttribute('aria-expanded', open); };
   btn.addEventListener('click', () => toggle(!hdr.hasAttribute('data-open')));
   sheet.querySelectorAll('a').forEach(a => a.addEventListener('click', () => toggle(false)));
-  // Escape shuts the Product panel until the pointer or focus leaves it, so it can be dismissed without moving away.
-  const dd = nav.querySelector('.dd'), reopen = () => dd.removeAttribute('data-shut');
-  dd.addEventListener('mouseleave', reopen); dd.addEventListener('focusout', reopen);
+  // Product panel: a mouse resting on Product (after a beat) or the chevron button opens it. Clicking Product navigates and
+  // closes it. The Skin franchise row reveals its cancer types on hover, focus or tap; they stay until the panel closes.
+  const dd = document.getElementById('dd'), ddBtn = document.getElementById('ddBtn'), skin = document.getElementById('ddSkin');
+  let ddTimer;
+  const showTypes = on => { dd.toggleAttribute('data-types', on); skin.setAttribute('aria-expanded', on); };
+  const ddSet = open => {
+    clearTimeout(ddTimer);
+    dd.toggleAttribute('data-open', open); hdr.toggleAttribute('data-dd', open); ddBtn.setAttribute('aria-expanded', open);
+    if (!open) showTypes(false);
+  };
+  dd.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') ddTimer = setTimeout(() => ddSet(true), 80); });
+  dd.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') ddSet(false); });
+  dd.querySelector('a').addEventListener('click', () => ddSet(false));
+  ddBtn.addEventListener('click', () => ddSet(!dd.hasAttribute('data-open')));
+  ['pointerenter', 'focus', 'click'].forEach(t => skin.addEventListener(t, () => showTypes(true)));
+  dd.addEventListener('focusout', e => { if (!dd.contains(e.relatedTarget)) ddSet(false); });
   addEventListener('keydown', e => {
-    if (e.key === 'Escape') dd.setAttribute('data-shut', '');
+    if (e.key === 'Escape' && dd.hasAttribute('data-open')) {
+      const inDd = dd.contains(document.activeElement);
+      ddSet(false);
+      if (inDd) ddBtn.focus();
+    }
     if (e.key !== 'Escape' || !hdr.hasAttribute('data-open')) return;
     const inSheet = sheet.contains(document.activeElement);
     toggle(false);

@@ -23,9 +23,9 @@
   <link rel="preload" href="fonts/onest-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/poppins-latin-300.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="fonts/poppins-latin-400.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="styles.css?v=20261113h">
+  <link rel="stylesheet" href="styles.css?v=20261116">
   <script src="data/km-checkmate067-pfs.js?v=20261015" defer></script>
-  <script src="script.js?v=20261113b" defer></script>
+  <script src="script.js?v=20261116" defer></script>
 </head>
 <body>
 
@@ -33,17 +33,16 @@
   <div class="wrap bar">
     <a class="brand" href="#hero" aria-label="Bionocular home"><img src="logo.svg?v=20261012" alt=""><span><span class="bio">bio</span>nocular</span></a>
     <nav class="nav" id="nav" aria-label="Primary">
-      <div class="dd">
-        <a href="#product" aria-describedby="ddDesc">Product<svg class="chev" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5"/></svg></a>
-        <span class="sr-only" id="ddDesc">bionocular Onco: Skin Cancer and Melanoma Franchise, 8 cancer types. Hematology Franchise coming soon.</span>
-        <div class="dd-panel">
-          <p class="dd-h"><b>bio</b>nocular Onco</p>
-          <div class="dd-cols">
-            <ul class="dd-tabs">
-              <li class="on">Skin Cancer &amp; Melanoma Franchise</li>
-              <li class="off">Hematology Franchise<span class="soon">Coming soon</span></li>
-            </ul>
-            <ul class="dd-types" aria-label="Skin Cancer &amp; Melanoma Franchise cancer types"><li>Cutaneous / Metastatic Melanoma</li><li>Acral Melanoma</li><li>Uveal Melanoma</li><li>Mucosal Melanoma</li><li>Melanoma with Brain/CNS Metastases</li><li>Basal Cell Carcinoma</li><li>Cutaneous Squamous Cell Carcinoma</li><li>Merkel Cell Carcinoma</li></ul>
+      <div class="dd" id="dd">
+        <a href="#platform">Product</a><button class="dd-btn" id="ddBtn" type="button" aria-expanded="false" aria-controls="ddPanel" aria-label="Show Product menu"><svg class="chev" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5"/></svg></button>
+        <div class="dd-panel" id="ddPanel">
+          <div class="wrap dd-inner">
+            <div class="dd-fr">
+              <p class="dd-h"><b>bio</b>nocular Onco</p>
+              <button class="dd-row" id="ddSkin" type="button" aria-expanded="false" aria-controls="ddTypes">Skin Cancer &amp; Melanoma Franchise<svg class="arrow" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5"/></svg></button>
+              <p class="dd-row off">Hematology Franchise<span class="soon">Coming soon</span></p>
+            </div>
+            <ul class="dd-types" id="ddTypes" aria-label="Skin Cancer &amp; Melanoma Franchise cancer types"><li style="--i:0">Cutaneous / Metastatic Melanoma</li><li style="--i:1">Acral Melanoma</li><li style="--i:2">Uveal Melanoma</li><li style="--i:3">Mucosal Melanoma</li><li style="--i:4">Melanoma with Brain/CNS Metastases</li><li style="--i:5">Basal Cell Carcinoma</li><li style="--i:6">Cutaneous Squamous Cell Carcinoma</li><li style="--i:7">Merkel Cell Carcinoma</li></ul>
           </div>
         </div>
       </div><a href="#survival">Survival Intelligence</a><a href="#about">About</a><a href="#contact">Contact</a>
@@ -51,7 +50,7 @@
     <button class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="sheet"><span></span></button>
   </div>
   <nav class="sheet" id="sheet" aria-label="Menu">
-    <a href="#product">Product</a>
+    <a href="#platform">Product</a>
     <div class="sheet-sub">
       <p class="dd-h"><b>bio</b>nocular Onco</p>
       <details><summary>Skin Cancer &amp; Melanoma Franchise</summary><ul><li>Cutaneous / Metastatic Melanoma</li><li>Acral Melanoma</li><li>Uveal Melanoma</li><li>Mucosal Melanoma</li><li>Melanoma with Brain/CNS Metastases</li><li>Basal Cell Carcinoma</li><li>Cutaneous Squamous Cell Carcinoma</li><li>Merkel Cell Carcinoma</li></ul></details>
@@ -61,6 +60,7 @@
     <a href="#contact">Contact</a>
   </nav>
 </header>
+<div class="nav-scrim" aria-hidden="true"></div>
 
 <section class="hero" id="hero" aria-labelledby="h1">
   <canvas class="hero-bg" id="heroBg" aria-hidden="true"></canvas>
@@ -268,7 +268,7 @@
   <div class="wrap">
     <div class="footer-grid">
       <div><a class="brand" href="#hero"><img src="logo.svg?v=20261012" alt=""><span><span class="bio">bio</span>nocular</span></a><p>Human-verified oncology intelligence for biopharma teams.</p></div>
-      <div><h4>Platform</h4><ul><li><a href="#product">Product</a></li><li><a href="#survival">Survival Intelligence</a></li></ul></div>
+      <div><h4>Platform</h4><ul><li><a href="#platform">Product</a></li><li><a href="#survival">Survival Intelligence</a></li></ul></div>
       <div><h4>Company</h4><ul><li><a href="#about">About</a></li><li><a href="#contact">Contact</a></li></ul></div>
       <div><h4>Contact</h4><ul><li><a href="mailto:info@bionocular.ai">info@bionocular.ai</a></li></ul></div>
     </div>
