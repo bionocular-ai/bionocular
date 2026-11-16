@@ -1,15 +1,20 @@
 """Tests for the ASH registry-side test run (no network, no model)."""
 
+import asyncio
+import json
 import sys
 from pathlib import Path
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 from ash_registry_run import (  # noqa: E402
+    RecordMatch,
     drop_unsupported,
     flags,
     record_text,
     registry_family,
+    run_one,
 )
 
 from src.infrastructure.openrouter_structured_service import (  # noqa: E402
@@ -56,7 +61,7 @@ def test_record_text_keeps_arms_interventions_and_criteria() -> None:
 
 
 def test_flags() -> None:
-    def cell(v: str, q: str) -> dict[str, object]:
+    def cell(v: str, q: str) -> dict[str, Any]:
         return {"value": v, "quote": q, "detail": "", "derived": False}
 
     extracted = {
@@ -82,7 +87,7 @@ def test_schema_has_no_pooled_list() -> None:
 
 
 def test_drop_unsupported() -> None:
-    def cell(v: str, q: str) -> dict[str, object]:
+    def cell(v: str, q: str) -> dict[str, Any]:
         return {"value": v, "quote": q, "detail": "", "derived": False}
 
     arms = {
@@ -108,3 +113,30 @@ def test_drop_unsupported() -> None:
     assert arms["arm_1"]["route"]["value"] == "oral"
     assert arms["arm_1"]["fixed_duration_vs_continuous"]["value"] == ""
     assert arms["arm_2"]["fixed_duration_vs_continuous"]["value"].startswith("cont")
+
+
+def test_a_cited_trial_record_is_not_used(tmp_path: Path) -> None:
+    """An abstract that cites another trial's NCT id gets no registry values from it."""
+
+    class FakeLLM:
+        def __init__(self) -> None:
+            self.ops: list[str] = []
+
+        async def generate_structured(
+            self, prompt: str, response_schema: Any, **kw: Any
+        ) -> Any:
+            self.ops.append(kw["operation"])
+            return RecordMatch(
+                relation="another trial", reason="phase 3 cited as background"
+            )
+
+    (tmp_path / "NCT01234567.json").write_text(json.dumps(STUDY))
+    run = {
+        "nct_ids": ["NCT01234567"],
+        "arms": [{"arm_id": "arm_1", "arm_name": "Drug X", "role": "single arm"}],
+    }
+    llm = FakeLLM()
+    out = asyncio.run(run_one("1", "text", run, registry_family(CSV), llm, tmp_path, None))  # type: ignore[arg-type]
+    assert out["error"] == "no record of this study"
+    assert out["record_matches"][0]["nct_id"] == "NCT01234567"
+    assert llm.ops == ["ash_registry_match"]  # no fill call

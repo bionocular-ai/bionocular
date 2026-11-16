@@ -5,8 +5,10 @@ Usage (from melanoma/):
       --arms data/ash_test_run/v2/results.json --out data/ash_test_run/registry/results.json
 
 Takes each abstract's NCT ids and arm list from an abstract run (--arms), fetches the
-registry records (cached next to --out), and asks one call per abstract for the
-workbook rows whose source is "registry", plus the trial setting (line of therapy).
+registry records (cached next to --out), keeps only the records of the study the
+abstract reports (an abstract can cite another trial's NCT id as background), and
+asks one call per abstract for the workbook rows whose source is "registry", plus
+the trial setting (line of therapy).
 Values are written per abstract arm so they line up with the abstract run. Nothing
 goes to Supabase.
 """
@@ -21,9 +23,10 @@ import sys
 import time
 from dataclasses import replace
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 _root = Path(__file__).parent.parent
 sys.path.insert(0, str(_root))
@@ -39,7 +42,7 @@ from ash_fields import (  # noqa: E402
     load_families,
     response_model,
 )
-from ash_test_run import META  # noqa: E402
+from ash_test_run import META, parse_md  # noqa: E402
 
 from src.infrastructure.clinical_trials.api_client import (  # noqa: E402
     ClinicalTrialsGovAPIClient,
@@ -165,6 +168,54 @@ _RULES = """RULES
 6. extra: a second value for the same field and arm (another phase, another drug's route), with context."""
 
 
+class RecordMatch(BaseModel):
+    relation: Literal["this study", "another trial"]
+    reason: str
+
+
+MATCH_PROMPT = """TASK: Does this abstract report results (outcomes, safety or patient characteristics) of patients enrolled in the trial registered in the record below?
+
+- "this study": yes. This includes a part, cohort or subgroup of the trial, a longer follow-up, a post hoc analysis, and a pooled or comparative analysis that includes this trial's patients, even alongside patients from elsewhere.
+- "another trial": no. The abstract only mentions the trial, e.g. as background, as an earlier trial, or as the basis for its own, different study.
+
+Compare the abstract's phase, design, drugs and population with the record's, and read how the abstract mentions the NCT id. reason: one sentence.
+
+ABSTRACT:
+{abstract}
+
+REGISTRY RECORD:
+{record}"""
+
+
+async def own_studies(
+    text: str, studies: list[dict[str, Any]], llm: OpenRouterStructuredService
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """The records of the study the abstract reports, and every record's verdict."""
+    verdicts = await asyncio.gather(
+        *(
+            llm.generate_structured(
+                prompt=MATCH_PROMPT.format(abstract=text, record=record_text(s)),
+                response_schema=RecordMatch,
+                temperature=0.0,
+                max_tokens=1024,
+                operation="ash_registry_match",
+            )
+            for s in studies
+        )
+    )
+    matches = [
+        {
+            "nct_id": s["protocolSection"]["identificationModule"]["nctId"],
+            **v.model_dump(),
+        }
+        for s, v in zip(studies, verdicts, strict=True)
+    ]
+    own = [
+        s for s, v in zip(studies, verdicts, strict=True) if v.relation == "this study"
+    ]
+    return own, matches
+
+
 def prompt(family: Family, arms: list[Arm], records: list[str]) -> str:
     return "\n\n".join(
         [
@@ -263,6 +314,7 @@ def drop_unsupported(
 
 async def run_one(
     number: str,
+    text: str,
     run: dict[str, Any],
     family: Family,
     llm: OpenRouterStructuredService,
@@ -278,8 +330,12 @@ async def run_one(
     if not studies or not arms:
         out["error"] = "no registry record" if not studies else "no arms"
         return out
-    records = [record_text(s) for s in studies]
     try:
+        studies, out["record_matches"] = await own_studies(text, studies, llm)
+        if not studies:
+            out["error"] = "no record of this study"
+            return out
+        records = [record_text(s) for s in studies]
         got = await llm.generate_structured(
             prompt=prompt(family, arms, records),
             response_schema=response_model(family, arms, pooled_list=False),
@@ -302,6 +358,9 @@ def main() -> None:
     p.add_argument("--arms", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--ids", help="comma-separated abstract numbers (default: all)")
+    p.add_argument(
+        "--md", type=Path, default=Path("data/postprocessed/ASH_Abstracts/ASH_2025.md")
+    )
     args = p.parse_args()
 
     logging.basicConfig(level=logging.WARNING)
@@ -310,6 +369,7 @@ def main() -> None:
     runs.pop(META, None)
     if args.ids:
         runs = {n: runs[n] for n in args.ids.split(",")}
+    texts = parse_md(args.md)
     family = registry_family(_root / "resources" / "ash" / "book1_sheet2.csv")
     cache = args.out.parent / "records"
     cache.mkdir(parents=True, exist_ok=True)
@@ -326,7 +386,7 @@ def main() -> None:
     async def go() -> dict[str, Any]:
         async def one(n: str) -> tuple[str, dict[str, Any]]:
             async with sem:
-                r = await run_one(n, runs[n], family, llm, cache, client)
+                r = await run_one(n, texts[n], runs[n], family, llm, cache, client)
             print(
                 f"{n}: {r['error'] or 'ok'}"
                 + (f" missing {r['missing']}" if r["missing"] else "")
