@@ -35,6 +35,9 @@ class ModelType(str, Enum):
     GEMINI_25_FLASH_DIRECT = "gemini-2.5-flash"
     GEMINI_38_FLASH_DIRECT = "gemini-3.8-flash"
 
+    # DeepSeek via OpenRouter (DeepInfra fp8)
+    DEEPSEEK_V41_FLASH = "deepseek/deepseek-v4.1-flash-1017"
+
 
 @dataclass
 class ModelPricing:
@@ -166,6 +169,13 @@ class CostCalculator:
             completion_cost_per_1m=3.75,
             max_tokens=1048576,
             description="Gemini 3.8 Flash - GA, allocated quota (Gemini API)",
+        ),
+        ModelType.DEEPSEEK_V41_FLASH: ModelPricing(
+            model=ModelType.DEEPSEEK_V41_FLASH,
+            prompt_cost_per_1m=0.098,
+            completion_cost_per_1m=0.294,
+            max_tokens=1048576,
+            description="DeepSeek V4.1 Flash - DeepInfra fp8 (OpenRouter)",
         ),
     }
 

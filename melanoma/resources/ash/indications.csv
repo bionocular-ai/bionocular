@@ -1,0 +1,21 @@
+indication,includes
+Multiple myeloma,"NDMM, RRMM, high-risk MM, BCMA-directed trials; proposed: POEMS and plasma cell leukemia"
+AL amyloidosis,Systemic AL amyloidosis
+Smoldering myeloma,High-risk and other SMM; proposed: MGUS
+Waldenström,Waldenström macroglobulinemia / lymphoplasmacytic lymphoma
+AML,All AML incl. secondary and therapy-related; excludes APL
+APL,Acute promyelocytic leukemia
+ALL,"B-ALL incl. Ph+ and Ph-like, T-ALL, T-LBL"
+CLL / SLL,CLL and SLL; proposed: Richter transformation
+DLBCL,"DLBCL NOS, HGBL, PMBCL, transformed indolent lymphoma; proposed: primary CNS lymphoma"
+Follicular lymphoma,"Follicular lymphoma, grades 1-3A"
+Mantle cell lymphoma,Mantle cell lymphoma
+Marginal zone lymphoma,"Nodal, splenic and extranodal (MALT) MZL"
+Hodgkin lymphoma,Classic and nodular lymphocyte-predominant
+T-cell lymphoma,"PTCL (incl. AITL, ALCL, ATLL, NK/T) and cutaneous T-cell lymphoma"
+CML,"Chronic myeloid leukemia, all phases"
+MDS,Lower- and higher-risk MDS
+CMML,CMML (other MDS/MPN not included)
+Myelofibrosis,"Primary, post-PV and post-ET myelofibrosis"
+PV / ET,Polycythemia vera and essential thrombocythemia
+Allo-HCT / GVHD,"GVHD prevention and treatment, and transplant abstracts with no single listed disease"

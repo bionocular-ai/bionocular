@@ -2,8 +2,7 @@
 
 Segregated from the broader ``LLMService`` (text/dict extraction) so callers that
 only need structured output - notably the validation judge - depend on just this
-one method. ``GeminiLLMService`` implements it; the OpenRouter backend does not,
-and is not used for structured output.
+one method. ``GeminiLLMService`` and ``OpenRouterStructuredService`` implement it.
 """
 
 from __future__ import annotations
