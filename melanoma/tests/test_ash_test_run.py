@@ -16,6 +16,7 @@ sys.path.insert(0, str(_root / "scripts"))
 from ash_fields import ArmList, JudgeVerdict, load_families  # noqa: E402
 from ash_test_run import (  # noqa: E402
     META,
+    _drop_wrong_timepoint,
     _flags,
     _truly_missed,
     fingerprint,
@@ -239,3 +240,26 @@ def test_flags_cover_extras_and_pooled() -> None:
     }
     got = _flags(fam, {"pooled": [pooled], "arms": {"arm_1": {"extra": [extra]}}}, text)
     assert got == {"arm_1.extra.0": ["timepoint_not_in_quote"]}
+
+
+def test_extras_with_the_wrong_timepoint_are_dropped() -> None:
+    fam = next(
+        f
+        for f in load_families(_root / "resources" / "ash" / "book1_sheet2.csv")
+        if f.key == "survival_pfs_os"
+    )
+    bad = {
+        "field": "pfs_rate_24_mo",
+        "value": "41",
+        "context": "",
+        "quote": "30-month PFS was 41%",
+    }
+    good = {
+        "field": "pfs_rate_24_mo",
+        "value": "50",
+        "context": "ITT",
+        "quote": "2-year PFS was 50%",
+    }
+    extracted = {"arms": {"arm_1": {"extra": [bad, good]}}}
+    assert _drop_wrong_timepoint(fam, extracted) == [{"arm_id": "arm_1", **bad}]
+    assert extracted["arms"]["arm_1"]["extra"] == [good]

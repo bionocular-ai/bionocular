@@ -189,8 +189,18 @@ def _keys_literal(fields: list[SheetField]) -> Any:
 
 
 def pooled_fields(family: Family, arms: list[Arm]) -> list[SheetField]:
-    """Arm fields that can hold a value given for all arms together (2+ arms only)."""
-    return [f for f in family.fields if f.scope == "arm"] if len(arms) > 1 else []
+    """Arm fields that can hold a value given for all arms together (2+ arms only).
+
+    Endpoint follow-up fields are left out: a study-wide follow-up belongs in the
+    trial-level 'Median follow-up (overall)', not in a pooled PFS/OS follow-up.
+    """
+    if len(arms) < 2:
+        return []
+    return [
+        f
+        for f in family.fields
+        if f.scope == "arm" and not f.key.startswith("median_follow_up_")
+    ]
 
 
 def response_model(
@@ -311,7 +321,7 @@ _RULES = """RULES
 2. quote: copy the exact words from the abstract that state the value. The quote must name the measure (for a PFS field the quote contains "PFS" or "progression-free").
 3. value: for number fields, numbers only, no units, no "%". A dose keeps its unit ("48 mg") and text fields keep their words. Durations in months ("NR" if not reached). If you had to calculate it (count to percent, days to months, "all patients" = 100, "none" = 0), set derived = true.
 4. detail: the timepoint, method, threshold or grading system the field asks for, else "".
-5. A value on an arm is for that arm only. A value the abstract gives only for all arms together (a rate across cohorts, the median age of the whole study) goes once in 'pooled', with context saying which population if it is not all patients; leave that field empty on every arm. Never copy a pooled value onto an arm. A median follow-up for the whole study is pooled too. A value the abstract says holds in each arm ("in both arms, the median age was 67") goes on each arm. A trial total of patients goes in patients_enrolled_trial_total, not in pooled. With a single arm there is no 'pooled': everything goes on the arm.
+5. A value on an arm is for that arm only. A value the abstract gives only for all arms together (a rate across cohorts, the median age of the whole study) goes once in 'pooled', with context saying which population if it is not all patients; leave that field empty on every arm. Never copy a pooled value onto an arm. A median follow-up for the whole study or analysis is not an endpoint follow-up: leave every median_follow_up_<endpoint> field empty for it (median_follow_up_overall holds it). A value the abstract says holds in each arm ("in both arms, the median age was 67") goes on each arm. A trial total of patients goes in patients_enrolled_trial_total, not in pooled. With a single arm there is no 'pooled': everything goes on the arm.
 6. Extract the analysis this abstract reports. Ignore results from an earlier analysis that the abstract quotes as background ("in the primary analysis", "previously reported").
 7. One measure, one field. Never put EFS in a PFS field, a CR rate in ORR, or an MRD rate in a response field. If no field fits, leave it out.
 8. extra: further values of THESE fields that the field cannot hold: a subgroup, a dose level, a second population (evaluable vs ITT), a second analysis. Give field, value, context (who or when), and quote. Never drop a second value; never put a first value here. An extra must be the SAME measure as its field and, for a field with a timepoint, the SAME timepoint: a 30-month PFS rate is not a "PFS rate 24 mo" or "PFS rate 36 mo" value, one adverse event's rate is not a "Grade >=3 AEs" value, PFS is not TTP or EFS. If no field is that exact measure, leave the value out."""

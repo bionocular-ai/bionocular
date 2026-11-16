@@ -128,6 +128,7 @@ def test_pooled_values_have_one_list_and_only_with_two_arms():
     schema = to_strict_schema(response_model(pfs, ARMS))
     keys = schema["properties"]["pooled"]["items"]["properties"]["field"]["enum"]
     assert "median_pfs" in keys and "hr_pfs" not in keys
+    assert "median_follow_up_pfs" not in keys  # study follow-up is trial-level
     one = to_strict_schema(response_model(pfs, ARMS[:1]))
     assert "pooled" not in one["properties"]
     pooled = [
