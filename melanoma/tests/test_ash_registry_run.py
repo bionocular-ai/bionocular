@@ -5,7 +5,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from ash_registry_run import flags, record_text, registry_family  # noqa: E402
+from ash_registry_run import (  # noqa: E402
+    drop_unsupported,
+    flags,
+    record_text,
+    registry_family,
+)
 
 from src.infrastructure.openrouter_structured_service import (  # noqa: E402
     to_strict_schema,
@@ -74,3 +79,32 @@ def test_schema_has_no_pooled_list() -> None:
         response_model(registry_family(CSV), arms, pooled_list=False)
     )
     assert "pooled" not in schema["properties"]
+
+
+def test_drop_unsupported() -> None:
+    def cell(v: str, q: str) -> dict[str, object]:
+        return {"value": v, "quote": q, "detail": "", "derived": False}
+
+    arms = {
+        "arm_1": {
+            "generic_name_per_component": cell("Drug X + fludarabine", "q"),
+            "route": cell("oral + IV", "q"),
+            "fixed_duration_vs_continuous": cell("fixed duration", "on days 1-7"),
+        },
+        "arm_2": {
+            "generic_name_per_component": cell("drug x", "q"),
+            "fixed_duration_vs_continuous": cell(
+                "continuous (treat to progression)", "until progression"
+            ),
+        },
+    }
+    dropped = drop_unsupported({"arms": arms}, [STUDY])
+    assert [(d["arm_id"], d["key"]) for d in dropped] == [
+        ("arm_1", "fixed_duration_vs_continuous"),
+        ("arm_1", "generic_name_per_component"),
+        ("arm_1", "route"),
+    ]
+    assert arms["arm_1"]["generic_name_per_component"]["value"] == "Drug X"
+    assert arms["arm_1"]["route"]["value"] == "oral"
+    assert arms["arm_1"]["fixed_duration_vs_continuous"]["value"] == ""
+    assert arms["arm_2"]["fixed_duration_vs_continuous"]["value"].startswith("cont")
