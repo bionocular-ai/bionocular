@@ -59,13 +59,43 @@ const pillSprings = pills => {
   const setActive = id => links.forEach(a => a.getAttribute('href') === '#' + id ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'));
   const sync = () => { setActive(atBottom() ? 'contact' : inBand); hdr.toggleAttribute('data-scrolled', scrollY > 0); };
   addEventListener('scroll', sync, { passive: true });
-  // The OS stack and the diagram after the comparison are part of Product too, so they keep the Product link lit.
-  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = ['platform', 'how-it-works'].includes(e.target.id) ? 'product' : e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
+  // Product links to the OS stack, where the product story starts; the comparison and the diagram after it keep the link lit.
+  const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { inBand = ['product', 'how-it-works'].includes(e.target.id) ? 'platform' : e.target.id; sync(); } }), { rootMargin: '-45% 0px -50% 0px' });
   ['hero', 'platform', 'product', 'how-it-works', 'survival', 'about', 'contact'].forEach(id => io.observe(document.getElementById(id)));
   const toggle = open => { hdr.toggleAttribute('data-open', open); btn.setAttribute('aria-expanded', open); };
   btn.addEventListener('click', () => toggle(!hdr.hasAttribute('data-open')));
   sheet.querySelectorAll('a').forEach(a => a.addEventListener('click', () => toggle(false)));
+  // Product panel: a mouse resting on Product (after a beat) or the chevron button opens it. Clicking Product navigates and
+  // closes it. The Skin franchise row reveals its cancer types on hover, focus or tap; they stay until the panel closes.
+  const dd = document.getElementById('dd'), ddBtn = document.getElementById('ddBtn'), skin = document.getElementById('ddSkin');
+  let ddTimer;
+  const showTypes = on => { dd.toggleAttribute('data-types', on); skin.setAttribute('aria-expanded', on); };
+  const ddSet = open => {
+    clearTimeout(ddTimer);
+    dd.toggleAttribute('data-open', open); hdr.toggleAttribute('data-dd', open); ddBtn.setAttribute('aria-expanded', open);
+    if (!open) showTypes(false);
+  };
+  // Like Apple's bar, the hover region is the whole header, panel included: the pointer can cross the bar's empty space on its
+  // way down to the panel. Leaving the header closes it; resting on another bar item closes it, passing over one does not.
+  const later = (open, ms) => { clearTimeout(ddTimer); ddTimer = setTimeout(() => ddSet(open), ms); };
+  const mouse = f => e => { if (e.pointerType === 'mouse') f(); };
+  dd.addEventListener('pointerenter', mouse(() => later(true, 80)));
+  dd.addEventListener('pointerleave', mouse(() => { if (!dd.hasAttribute('data-open')) clearTimeout(ddTimer); }));
+  hdr.addEventListener('pointerleave', mouse(() => later(false, 100)));
+  [...hdr.querySelectorAll('.bar a, .bar button')].filter(el => !dd.contains(el)).forEach(el => {
+    el.addEventListener('pointerenter', mouse(() => { if (dd.hasAttribute('data-open')) later(false, 250); }));
+    el.addEventListener('pointerleave', mouse(() => { if (dd.hasAttribute('data-open')) clearTimeout(ddTimer); }));
+  });
+  dd.querySelector('a').addEventListener('click', () => ddSet(false));
+  ddBtn.addEventListener('click', () => ddSet(!dd.hasAttribute('data-open')));
+  ['pointerenter', 'focus', 'click'].forEach(t => skin.addEventListener(t, () => showTypes(true)));
+  dd.addEventListener('focusout', e => { if (!dd.contains(e.relatedTarget)) ddSet(false); });
   addEventListener('keydown', e => {
+    if (e.key === 'Escape' && dd.hasAttribute('data-open')) {
+      const inDd = dd.contains(document.activeElement);
+      ddSet(false);
+      if (inDd) ddBtn.focus();
+    }
     if (e.key !== 'Escape' || !hdr.hasAttribute('data-open')) return;
     const inSheet = sheet.contains(document.activeElement);
     toggle(false);
@@ -73,22 +103,9 @@ const pillSprings = pills => {
   });
 })();
 
-// ── Headline rotator ──
+// ── Hero background: a heatmap band behind the platform capabilities ──
 (() => {
-  if (still) return;
-  const R = document.querySelector('.rotator'), P = [...R.children];
-  let i = 0;
-  setInterval(() => {
-    R.setAttribute('data-live', ''); // set on the first swap, so the page loads with the headline already in place
-    P[i].removeAttribute('data-on'); P[i].setAttribute('data-out', '');
-    i = (i + 1) % P.length;
-    P[i].removeAttribute('data-out'); P[i].setAttribute('data-on', '');
-  }, 6000);
-})();
-
-// ── Hero background: a heatmap band below the copy ──
-(() => {
-  const hero = document.getElementById('hero'), cv = document.getElementById('heroBg'), ctx = cv.getContext('2d'), hdr = document.getElementById('hdr');
+  const hero = document.getElementById('hero'), caps = document.getElementById('heroCaps'), cv = document.getElementById('heroBg'), ctx = cv.getContext('2d'), hdr = document.getElementById('hdr');
   const TEAL = '27,79,101', GOLD = '201,162,39';
   const RAMP = [[218,240,230], [122,193,162], [47,138,102], [27,79,101], [14,53,71]];
   const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -101,14 +118,6 @@ const pillSprings = pills => {
   let W = 0, H = 0, L = 0, R = 0, S = {};
   const hh = () => hdr.offsetHeight;
 
-  // Each copy block as an ellipse (lines capped at 560px, for the gold cell to keep clear of) and as its true box.
-  const zones = () => [...hero.querySelectorAll('.hero-copy')].map(e => {
-    const r = hero.getBoundingClientRect(), b = [...e.children].map(k => k.getBoundingClientRect());
-    const x0 = Math.min(...b.map(q => q.left)), x1 = Math.max(...b.map(q => q.left + Math.min(q.width, 560))), y0 = Math.min(...b.map(q => q.top)), y1 = Math.max(...b.map(q => q.bottom));
-    const X1 = Math.max(...b.map(q => q.right));
-    return { x: (x0 + x1) / 2 - r.left, y: (y0 + y1) / 2 - r.top, rx: (x1 - x0) * .7, ry: (y1 - y0) * .75, box: [(x0 + X1) / 2 - r.left, (y0 + y1) / 2 - r.top, (X1 - x0) / 2, (y1 - y0) / 2] };
-  });
-
   function size() {
     const dpr = Math.min(2, devicePixelRatio || 1), r = hero.getBoundingClientRect();
     W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -118,12 +127,16 @@ const pillSprings = pills => {
     L = m; R = W - m;
     document.documentElement.style.setProperty('--grid-l', `${L}px`); document.documentElement.style.setProperty('--grid-r', `${W - R - 1}px`);
     // Heatmap cells are 48px (32px on phones), stretched by a fraction of a pixel so a whole number spans the frame.
-    // The heatmap band sits below the copy, in the room the hero's bottom padding keeps (styles.css). Its thinned top row
-    // reaches a unit up under the copy's last line, so the gold cell's rows still start clear of the text.
-    const u = W < 768 ? 24 : 32, base = W < 768 ? 32 : 48, c = (R - L) / Math.round((R - L) / base), zs = zones();
-    const bandTop = Math.round(Math.max(...zs.map(z => z.box[1] + z.box[3])) - u), rows = Math.max(3, Math.floor((H - bandTop) / c));
+    // The heatmap band runs behind the platform capabilities to the hero foot. Its thinned top row starts a unit above them.
+    const u = W < 768 ? 24 : 32, base = W < 768 ? 32 : 48, c = (R - L) / Math.round((R - L) / base);
+    const bandTop = Math.round(caps.getBoundingClientRect().top - r.top - u), rows = Math.max(3, Math.floor((H - bandTop) / c));
     const rnd = rng(9), nx = Math.round((R - L) / c), cells = [];
     for (let r = 0; r < rows; r++) for (let i = 0; i < nx; i++) cells.push({ x: L + i * c, y: bandTop + (rows - 1 - r) * c, r, i, p: rnd() * 6.3, q: rnd() * 6.3 });
+    // The gold cell is the one moving accent, so it keeps off the capabilities text: a cell is clear when it overlaps no
+    // line box of the label, the items or the notes.
+    const rg = document.createRange(), lines = [];
+    for (const e of caps.querySelectorAll('.label, li, p')) { rg.selectNodeContents(e); for (const b of rg.getClientRects()) lines.push([b.left - r.left, b.top - r.top, b.right - r.left, b.bottom - r.top]); }
+    for (const k of cells) k.clear = !lines.some(([x0, y0, x1, y1]) => k.x < x1 && k.x + c > x0 && k.y < y1 && k.y + c > y0);
     S = { c, rows, nx, cells, bandTop, slot: -1, pick: null, prev: null };
   }
 
@@ -150,7 +163,7 @@ const pillSprings = pills => {
     const s = Math.floor(t / STEP), ph = (t / STEP) % 1;
     if (s !== S.slot) {
       S.slot = s; S.prev = S.pick;
-      const p = S.prev, far = cells.filter(k => k.r >= 1 && k.r <= rows - 2 && (!p || Math.abs(k.i - p.i) >= S.nx / 3));
+      const p = S.prev, far = cells.filter(k => k.clear && k.r >= 1 && k.r <= rows - 2 && (!p || Math.abs(k.i - p.i) >= S.nx / 3));
       S.pick = far[Math.floor(Math.random() * far.length)];
     }
     const into = ease(ph * 3);
