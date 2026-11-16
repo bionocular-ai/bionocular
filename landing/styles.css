@@ -48,6 +48,8 @@ a { color: inherit; }
   box-shadow: 0 1px 0 rgba(16,43,54,0); transition: box-shadow .3s; }
 /* The divider shows only once content scrolls under the header, so the top of the page opens clean. */
 .site-header[data-scrolled] { box-shadow: 0 1px 0 rgba(16,43,54,.08); }
+/* With the Product panel open, bar and panel read as one white surface: no divider, no translucency. */
+.site-header[data-dd] { background: #fff; box-shadow: none; }
 .bar { height: 100%; display: grid; grid-template-columns: auto 1fr; align-items: center; color: var(--text); }
 /* The brand lockup: the mark stands 1.05em tall, its foot 0.12em below the baseline, and "bio" is the 800 weight in the same colour. */
 .brand { justify-self: start; display: inline-block; white-space: nowrap; line-height: 1; color: #1A1A1A; text-decoration: none; font: 500 22px/1 'Plus Jakarta Sans', sans-serif; letter-spacing: .004em; }
@@ -71,7 +73,7 @@ a { color: inherit; }
 .nav .chev { display: block; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; transition: transform .35s var(--settle); }
 .dd[data-open] .chev { transform: rotate(180deg); }
 .dd-panel { position: fixed; top: var(--header-h); left: 0; right: 0; padding: 2rem 0 2.5rem; cursor: default;
-  background: #fff; box-shadow: inset 0 1px 0 rgba(16,43,54,.06), 0 30px 60px -30px rgba(16,43,54,.3);
+  background: #fff; box-shadow: 0 30px 60px -30px rgba(16,43,54,.3);
   clip-path: inset(0 0 100% 0); visibility: hidden; transition: clip-path .2s var(--settle), visibility 0s .2s; }
 .dd[data-open] .dd-panel { clip-path: inset(0 0 -90px 0); visibility: visible; transition: clip-path .4s var(--settle), visibility 0s; }
 .dd-inner { display: grid; grid-template-columns: 27rem 1fr; gap: 3rem; opacity: 0; transition: opacity .1s; }
