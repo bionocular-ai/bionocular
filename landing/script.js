@@ -75,8 +75,17 @@ const pillSprings = pills => {
     dd.toggleAttribute('data-open', open); hdr.toggleAttribute('data-dd', open); ddBtn.setAttribute('aria-expanded', open);
     if (!open) showTypes(false);
   };
-  dd.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') ddTimer = setTimeout(() => ddSet(true), 80); });
-  dd.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') ddSet(false); });
+  // Like Apple's bar, the hover region is the whole header, panel included: the pointer can cross the bar's empty space on its
+  // way down to the panel. Leaving the header closes it; resting on another bar item closes it, passing over one does not.
+  const later = (open, ms) => { clearTimeout(ddTimer); ddTimer = setTimeout(() => ddSet(open), ms); };
+  const mouse = f => e => { if (e.pointerType === 'mouse') f(); };
+  dd.addEventListener('pointerenter', mouse(() => later(true, 80)));
+  dd.addEventListener('pointerleave', mouse(() => { if (!dd.hasAttribute('data-open')) clearTimeout(ddTimer); }));
+  hdr.addEventListener('pointerleave', mouse(() => later(false, 100)));
+  [...hdr.querySelectorAll('.bar a, .bar button')].filter(el => !dd.contains(el)).forEach(el => {
+    el.addEventListener('pointerenter', mouse(() => { if (dd.hasAttribute('data-open')) later(false, 250); }));
+    el.addEventListener('pointerleave', mouse(() => { if (dd.hasAttribute('data-open')) clearTimeout(ddTimer); }));
+  });
   dd.querySelector('a').addEventListener('click', () => ddSet(false));
   ddBtn.addEventListener('click', () => ddSet(!dd.hasAttribute('data-open')));
   ['pointerenter', 'focus', 'click'].forEach(t => skin.addEventListener(t, () => showTypes(true)));
