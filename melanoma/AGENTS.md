@@ -24,7 +24,7 @@ Never import from a lower layer into a higher one (e.g. no FastAPI in `domain/`)
 | `_service.py` | Concrete service implementations | `IngestionService` |
 | `_repository.py` | Data persistence | `SQLAlchemyDocumentRepository` |
 | `_model.py` / `_models.py` | Domain entities (Pydantic) | `Document`, `Chunk` |
-| `_config.py` / `config.py` | Configuration objects | `ServiceConfiguration` |
+| `_config.py` / `config.py` | Configuration objects | `RAGOptimizationConfig` |
 | `_api.py` | FastAPI routers | `clinical_api`, `trials_api` |
 | `_cli.py` | Command-line entry points | `ingest_cli` |
 
