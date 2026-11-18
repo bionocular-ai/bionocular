@@ -122,3 +122,33 @@ def test_heading_before_lowercase_led_term():
     assert jats_to_sections(p("Results mNGS detected 24/25.")) == [
         ("Results", "mNGS detected 24/25.")
     ]
+
+
+def test_section_titles_head_their_paragraphs():
+    jats = (
+        "<jats:sec><jats:title>Abstract</jats:title>"
+        "<jats:sec><jats:title>Study Design and Methods.</jats:title>"
+        + p("Patients got X.")
+        + p("Dosing was weekly.")
+        + "</jats:sec><jats:sec><jats:title>RESULTS</jats:title>"
+        + p("ORR was 80%.")
+        + "</jats:sec><jats:sec><jats:title>Keywords</jats:title>"
+        + p("myeloma; CAR-T")
+        + "</jats:sec><jats:sec><jats:title>References</jats:title>"
+        + p("1. A trial.")
+        + "</jats:sec></jats:sec>"
+    )
+    assert jats_to_sections(jats) == [
+        ("Study Design and Methods", "Patients got X."),
+        (None, "Dosing was weekly."),
+        ("RESULTS", "ORR was 80%."),
+    ]
+
+
+def test_unstructured_abstract_title_is_not_a_heading():
+    jats = (
+        "<jats:sec><jats:title>Abstract</jats:title>"
+        + p("We report X.")
+        + "</jats:sec>"
+    )
+    assert jats_to_sections(jats) == [(None, "We report X.")]
