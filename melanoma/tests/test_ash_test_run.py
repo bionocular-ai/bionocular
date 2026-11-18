@@ -5,6 +5,7 @@ import json
 import sys
 import types
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal, get_args, get_origin
 
 import pytest
@@ -263,3 +264,14 @@ def test_extras_with_the_wrong_timepoint_are_dropped() -> None:
     extracted = {"arms": {"arm_1": {"extra": [bad, good]}}}
     assert _drop_unsupported_extras(fam, extracted, "") == [{"arm_id": "arm_1", **bad}]
     assert extracted["arms"]["arm_1"]["extra"] == [good]
+
+
+@pytest.mark.asyncio
+async def test_spend_cap_skips_abstracts_not_started(tmp_path: Path) -> None:
+    md, out = tmp_path / "a.md", tmp_path / "r.json"
+    md.write_text(_abstract("1") + "\n" + _abstract("2"))
+    costs = SimpleNamespace(get_summary=lambda: SimpleNamespace(total_cost=30.0))
+    llm = FakeLLM()
+    await run(md, out, llm, FAMILIES, costs=costs, max_cost=25.0)  # type: ignore[arg-type]
+    assert not out.exists()  # nothing ran; a rerun with a higher cap starts fresh
+    assert not llm.calls
