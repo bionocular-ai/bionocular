@@ -350,7 +350,9 @@ def main() -> None:
         default=_root / "resources" / "ash" / "test_run_selection.csv",
         help="CSV with abstract,indication; fields are filtered by indication",
     )
-    p.add_argument("--ids", help="comma-separated abstract numbers (default: all)")
+    p.add_argument(
+        "--ids", help="comma-separated abstract numbers (default: the selection)"
+    )
     p.add_argument("--concurrency", type=int, default=5)
     p.add_argument("--family-concurrency", type=int, default=6)
     p.add_argument(
@@ -369,7 +371,7 @@ def main() -> None:
     families = load_families(_root / "resources" / "ash" / "book1_sheet2.csv")
     with args.selection.open(encoding="utf-8", newline="") as f:
         indications = {r["abstract"]: r["indication"] for r in csv.DictReader(f)}
-    ids = args.ids.split(",") if args.ids else None
+    ids = args.ids.split(",") if args.ids else list(indications)
     start = time.monotonic()
 
     async def _run_and_close() -> None:
