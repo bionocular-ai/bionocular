@@ -81,9 +81,9 @@ Median time to response,Number (months),All,,duration_transplant,arm,abstract,mo
 Median TTP,Number (months) or NR,All,Median time to progression. Never PFS: PFS also counts deaths.,duration_transplant,arm,abstract,months_or_nr,,,stated or derived
 Median TTNT,Number (months) or NR,All,Time to next treatment,duration_transplant,arm,abstract,months_or_nr,,,stated or derived
 PFS2,Number (months) or NR,"MM, CLL, lymphoma","Time to progression on the next line of therapy, or death",duration_transplant,arm,abstract,months_or_nr,,,stated or derived
-GVHD-free relapse-free survival,Number (%) + timepoint,Allo-HCT,"GRFS: survival free of grade III-IV acute GVHD, chronic GVHD needing systemic therapy, relapse and death (Holtan, Blood 2015)",duration_transplant,arm,abstract,percent,,timepoint,stated or derived
-Non-relapse mortality,Number (%) + timepoint,Allo-HCT,Death without prior relapse or progression,duration_transplant,arm,abstract,percent,,timepoint,stated or derived
-Cumulative incidence of relapse,Number (%) + timepoint,Allo-HCT,,duration_transplant,arm,abstract,percent,,timepoint,stated or derived
+GVHD-free relapse-free survival,Number (%) + timepoint,All,"GRFS: survival free of grade III-IV acute GVHD, chronic GVHD needing systemic therapy, relapse and death (Holtan, Blood 2015)",duration_transplant,arm,abstract,percent,,timepoint,stated or derived
+Non-relapse mortality,Number (%) + timepoint,All,Death without prior relapse or progression,duration_transplant,arm,abstract,percent,,timepoint,stated or derived
+Cumulative incidence of relapse,Number (%) + timepoint,All,,duration_transplant,arm,abstract,percent,,timepoint,stated or derived
 ORR rate,Number (%),All,"Overall response rate under the stated criteria. Never fill it from a CR rate, a CR/CRi rate or an MRD rate.",response_rates,arm,abstract,percent,,,stated or derived
 CR rate,Number (%),All,"Complete response alone, under the stated criteria. Myeloma 'CR or better' goes in >=CR rate. AML CR/CRi and CR/CRh have their own fields.",response_rates,arm,abstract,percent,,,stated or derived
 CBR,Number (%),"MM, WM","Myeloma: ORR plus minimal response (>=MR, IMWG). Waldenström has no formal CBR (IWWM); treat a reported CBR as trial-defined",response_rates,arm,abstract,percent,,,stated or derived
