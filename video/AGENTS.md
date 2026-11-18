@@ -27,19 +27,20 @@ into `out/master/`. Chapters on their own stay effects-only. The KM captures com
 - Drawing helpers are in `lib/draw.js` (`risingText`, `drawCursor`, `rrect`, `mixColor`, `font`).
 - Fonts are the product's own, symlinked from `web/src/app/fonts` into `assets/fonts` and registered in
   `index.html`: `font(weight, size, 'display')` is Onest, `'sans'` (default) Poppins (400-700), `'mono'`
-  IBM Plex Mono, the app's faces since PR #166. Never rely on system fonts. `assets/logo.svg` links to `web/public/logo.svg`.
+  IBM Plex Mono, the app's faces. Never rely on system fonts. `assets/logo.svg` links to `web/public/logo.svg`.
 - Format: 1920×1080, 16:9, 60 fps. A chapter starts and ends on the bare canvas so chapters join without a seam.
 
 ## Workflow — stop at each gate and wait for my OK
 
 1. **Brief.** Read `docs/BRIEF.md`. If anything essential is missing, ask me before planning.
-2. **Storyboard.** Write `docs/storyboard.md` (scene, time range, on screen, motion, transition, sound cue).
+2. **Storyboard.** Write the chapter's `docs/storyboard-<chapter>.md` (`docs/storyboard.md` for `film.js`) (scene, time range, on screen, motion, transition, sound cue).
    Show it to me. **Stop.**
 3. **Stills.** Build the scenes, then `node render.mjs --stills <one time per scene>`. Open
    `out/stills/sheet.png`, critique it (below), fix, then show me the sheet. **Stop.**
-4. **Draft.** `npm run draft`, then `bash scripts/review.sh out/q2/draft.mp4 <time of fastest action>`.
+4. **Draft.** `npm run draft` (add `-- --film <chapter>` for a chapter other than `film.js`), then
+   `bash scripts/review.sh out/<chapter>/draft.mp4 <time of fastest action>`.
    Critique loop until every score is 8+.
-5. **Final.** `npm run final` → `out/q2/silent.mp4` (picture only) and `out/q2/final.mp4` (with sound).
+5. **Final.** `npm run final` → `out/<chapter>/silent.mp4` (picture only) and `out/<chapter>/final.mp4` (with sound).
    Always deliver both.
 
 ## Critique loop (run it yourself before showing me anything)
