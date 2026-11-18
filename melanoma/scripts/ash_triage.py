@@ -14,6 +14,7 @@ Usage (from melanoma/):
 import argparse
 import asyncio
 import csv
+import hashlib
 import json
 import logging
 import os
@@ -38,6 +39,7 @@ from src.infrastructure.openrouter_structured_service import (  # noqa: E402
 )
 
 KEEP = "treatment_outcomes"
+META = "_meta"
 
 
 class Triage(BaseModel):
@@ -78,6 +80,12 @@ ABSTRACT:
 """
 
 
+def fingerprint() -> str:
+    """Changes whenever the prompt or the verdict schema does."""
+    schema = json.dumps(Triage.model_json_schema(), sort_keys=True)
+    return hashlib.sha256((PROMPT + schema).encode()).hexdigest()[:16]
+
+
 def kept_rows(
     rows: list[dict[str, str]], triage: dict[str, Any]
 ) -> list[dict[str, str]]:
@@ -94,6 +102,11 @@ async def run(
     results: dict[str, Any] = (
         json.loads(out_path.read_text(encoding="utf-8")) if out_path.exists() else {}
     )
+    if results and results.get(META, {}).get("fingerprint") != fingerprint():
+        raise ValueError(
+            f"{out_path} was written with a different prompt; use a new --out or delete it"
+        )
+    results[META] = {"fingerprint": fingerprint()}
     todo = [n for n in texts if n not in results]
     print(f"{len(texts) - len(todo)} already done, {len(todo)} to run")
     sem = asyncio.Semaphore(concurrency)
@@ -157,6 +170,12 @@ def main() -> None:
             await llm.aclose()
 
     results = asyncio.run(_run_and_close())
+    failed = [n for n in texts if n not in results]
+    if failed:
+        raise SystemExit(
+            f"{len(failed)} abstracts have no verdict ({failed[:10]}); rerun to retry. "
+            f"{args.keep_csv} not written."
+        )
     keep = kept_rows(rows, results)
     with args.keep_csv.open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=header, lineterminator="\n")
@@ -164,8 +183,7 @@ def main() -> None:
         w.writerows(keep)
     kinds: dict[str, int] = {}
     for n in texts:
-        k = results.get(n, {}).get("kind", "failed")
-        kinds[k] = kinds.get(k, 0) + 1
+        kinds[results[n]["kind"]] = kinds.get(results[n]["kind"], 0) + 1
     summary = costs.get_summary()
     print(f"kept {len(keep)} of {len(rows)}: {dict(sorted(kinds.items()))}")
     print(

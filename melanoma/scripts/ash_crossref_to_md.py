@@ -67,9 +67,8 @@ def jats_to_sections(jats: str) -> list[tuple[str | None, str]]:
     title is not a heading.
     """
     out: list[tuple[str | None, str]] = []
-    pending: str | None = (
-        None  # heading-only paragraph or title, applies to the next one
-    )
+    # a heading-only paragraph or a section title; applies to the next paragraph
+    pending: str | None = None
     skipping = False
     for tag, raw in re.findall(r"<jats:(title|p)>(.*?)</jats:\1>", jats, re.S):
         text = _clean(raw)
