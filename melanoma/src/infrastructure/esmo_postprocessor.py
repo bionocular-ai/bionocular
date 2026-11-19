@@ -11,8 +11,8 @@ MODIFIED to meet user-specific section requirements:
 
 import re
 
-from domain.interfaces import PostprocessorInterface
-from domain.models import ConferenceType, ParsedAbstract, PostprocessingConfiguration
+from ..domain.interfaces import PostprocessorInterface
+from ..domain.models import ConferenceType, ParsedAbstract, PostprocessingConfiguration
 
 # Expected ESMO 2020 abstract IDs in order (based on DOI sequence)
 ESMO_2020_EXPECTED_IDS = [

@@ -9,8 +9,8 @@ Optimized for DocStrange cloud conversion output, which provides:
 
 import re
 
-from domain.interfaces import PostprocessorInterface
-from domain.models import ConferenceType, ParsedAbstract, PostprocessingConfiguration
+from ..domain.interfaces import PostprocessorInterface
+from ..domain.models import ConferenceType, ParsedAbstract, PostprocessingConfiguration
 
 # LaTeX math emitted by cloud PDF converters (Datalab); Marker did not produce it.
 # Only spans that are unambiguously math are unwrapped: currency ("$405,663 ($402,936)",

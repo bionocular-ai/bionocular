@@ -8,7 +8,6 @@ import pytest
 
 # Add parent to path
 parent_dir = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(parent_dir / "src"))
 sys.path.insert(0, str(parent_dir))
 
 from src.app.json_trials_service import JSONTrialsService  # noqa: E402
