@@ -106,7 +106,7 @@ def get_optional_db_session() -> Session | None:
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("ingest.log"), logging.StreamHandler()],
+    handlers=[logging.FileHandler("ingest.log", delay=True), logging.StreamHandler()],
 )
 
 logger = logging.getLogger(__name__)
@@ -265,7 +265,7 @@ async def ingest_document(
 
         return {
             "success": True,
-            "document": response.dict(),
+            "document": response.model_dump(),
             "message": "Document ingested successfully",
             "source": "upload",
         }
@@ -320,7 +320,7 @@ async def ingest_local_document(
 
         return {
             "success": True,
-            "document": response.dict(),
+            "document": response.model_dump(),
             "message": "Local document ingested successfully",
             "source": "local_file",
             "file_path": file_path,
@@ -381,7 +381,7 @@ async def ingest_batch_documents(
             failed=failed,
             duplicates=duplicates,
             documents=responses,
-        ).dict()
+        ).model_dump()
 
     except HTTPException:
         raise
@@ -449,7 +449,7 @@ async def ingest_local_batch_documents(
             failed=failed,
             duplicates=duplicates,
             documents=responses,
-        ).dict()
+        ).model_dump()
 
     except HTTPException:
         raise
@@ -525,7 +525,11 @@ async def ingest_directory(
                 )
 
                 results.append(
-                    {"file": pdf_file, "success": True, "response": response.dict()}
+                    {
+                        "file": pdf_file,
+                        "success": True,
+                        "response": response.model_dump(),
+                    }
                 )
 
             except Exception as e:
@@ -581,7 +585,7 @@ async def list_documents(
         documents = await repository.get_all_documents(limit=limit, offset=offset)
 
         return {
-            "documents": [doc.dict() for doc in documents],
+            "documents": [doc.model_dump() for doc in documents],
             "total": len(documents),
             "limit": limit,
             "offset": offset,
@@ -603,7 +607,7 @@ async def get_document(document_id: str, db: Session = Depends(get_db_session)) 
         if not document:
             raise HTTPException(status_code=404, detail="Document not found")
 
-        return document.dict()
+        return document.model_dump()
     except HTTPException:
         raise
     except Exception as e:
@@ -758,7 +762,7 @@ async def get_trial(trial_id: str) -> dict:
                 )
 
             # Return full document with metadata
-            return document.dict()
+            return document.model_dump()
         except HTTPException:
             raise
         except Exception as db_error:
@@ -975,7 +979,7 @@ async def get_trial_by_abstract_id(
                     )
 
                 # Return full document with metadata
-                return document.dict()
+                return document.model_dump()
             except HTTPException as http_exc:
                 raise http_exc
             except Exception as db_error:

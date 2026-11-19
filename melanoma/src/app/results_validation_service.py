@@ -37,7 +37,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ..domain.constants import ResultsValidation
@@ -326,7 +326,7 @@ class ValidationCheckpointManager:
     def record(self, doc_id: str, decision: str) -> None:
         self._done[doc_id] = {
             "decision": decision,
-            "recorded_at": datetime.utcnow().isoformat(),
+            "recorded_at": datetime.now(UTC).isoformat(),
         }
         self._path.write_text(json.dumps(self._done, indent=2))
 
@@ -657,7 +657,7 @@ class ResultsValidationService:
     # -- run loop -----------------------------------------------------------
 
     async def run(self) -> list[DocValidationResult]:
-        run_start = datetime.utcnow()
+        run_start = datetime.now(UTC)
         summary = ResultsValidationRunSummary(
             model=self._config.model,
             run_date=run_start,

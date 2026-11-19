@@ -21,7 +21,7 @@ routing outcomes are identical concepts across both validators.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -196,7 +196,7 @@ class DocValidationResult:
     # judge systematically distrusts.
     group_scores: dict[str, float] = field(default_factory=dict)
     error_message: str | None = None
-    validated_at: datetime = field(default_factory=datetime.utcnow)
+    validated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def decision(self) -> ValidationDecision:

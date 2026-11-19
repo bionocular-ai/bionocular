@@ -17,7 +17,7 @@ import logging
 import os
 import pathlib
 import sys
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Optional
 
 import requests
@@ -97,7 +97,7 @@ def build_upsert_row(
         "efficacy_data": extraction.efficacy_data if extraction else {},
         "has_safety": extraction.has_safety if extraction else False,
         "safety_data": extraction.safety_data if extraction else {},
-        "extracted_at": datetime.utcnow().isoformat() if extraction else None,
+        "extracted_at": datetime.now(UTC).isoformat() if extraction else None,
     }
 
 

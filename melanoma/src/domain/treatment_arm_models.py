@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ArmType(str, Enum):
@@ -66,13 +66,15 @@ class TreatmentArm(BaseModel):
     )
     created_at: datetime = Field(default_factory=datetime.now)
 
-    @validator("generic_name")
+    @field_validator("generic_name")
+    @classmethod
     def validate_generic_name(cls, v):
         if not v or not v.strip():
             raise ValueError("Generic name cannot be empty")
         return v.strip()
 
-    @validator("patient_count")
+    @field_validator("patient_count")
+    @classmethod
     def validate_patient_count(cls, v):
         if v is not None and v < 0:
             raise ValueError("Patient count cannot be negative")

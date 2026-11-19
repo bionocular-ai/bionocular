@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class AttributeType(str, Enum):
@@ -649,8 +649,7 @@ class AttributeConfiguration(BaseModel):
     extraction_priority: int = 1
     api_source: bool = False
 
-    class Config:
-        use_enum_values = True
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class AttributeConfigurationFactory:
@@ -2448,7 +2447,8 @@ class ExtractedAttribute(BaseModel):
     validation_errors: list[str] = Field(default_factory=list)
     extracted_at: datetime = Field(default_factory=datetime.now)
 
-    @validator("confidence")
+    @field_validator("confidence")
+    @classmethod
     def validate_confidence(cls, v):
         if not 0.0 <= v <= 1.0:
             raise ValueError("Confidence must be between 0.0 and 1.0")
@@ -2470,7 +2470,8 @@ class NCTNumber(ExtractedAttribute):
 
     attribute_type: Literal[AttributeType.NCT_NUMBER] = AttributeType.NCT_NUMBER
 
-    @validator("value")
+    @field_validator("value")
+    @classmethod
     def validate_nct_format(cls, v):
         if v is None:
             return v
@@ -2486,7 +2487,8 @@ class GenericName(ExtractedAttribute):
 
     attribute_type: Literal[AttributeType.GENERIC_NAME] = AttributeType.GENERIC_NAME
 
-    @validator("value")
+    @field_validator("value")
+    @classmethod
     def validate_generic_name(cls, v):
         if v is None:
             return v
@@ -2502,7 +2504,8 @@ class PValueOS(ExtractedAttribute):
 
     attribute_type: Literal[AttributeType.P_VALUE_OS] = AttributeType.P_VALUE_OS
 
-    @validator("value")
+    @field_validator("value")
+    @classmethod
     def validate_p_value(cls, v):
         if v is None:
             return v
@@ -2533,7 +2536,8 @@ class ObjectiveResponseRate(ExtractedAttribute):
         AttributeType.OBJECTIVE_RESPONSE_RATE
     ] = AttributeType.OBJECTIVE_RESPONSE_RATE
 
-    @validator("value")
+    @field_validator("value")
+    @classmethod
     def validate_orr(cls, v):
         if v is None:
             return v
@@ -2560,7 +2564,8 @@ class Grade3PlusAE(ExtractedAttribute):
         AttributeType.GRADE_3_PLUS_AE
     ] = AttributeType.GRADE_3_PLUS_AE
 
-    @validator("value")
+    @field_validator("value")
+    @classmethod
     def validate_grade_3_plus_ae(cls, v):
         if v is None:
             return v
