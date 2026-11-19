@@ -51,7 +51,7 @@ const pillSprings = pills => {
 (() => {
   const hdr = document.getElementById('hdr'), nav = document.getElementById('nav');
   const links = [...nav.querySelectorAll('a')], btn = document.getElementById('menuBtn'), sheet = document.getElementById('sheet');
-  // The footer is too short to reach the middle of the viewport, so the page bottom counts as Contact.
+  // The contact section sits too low to reach the middle of the viewport, so the page bottom counts as Contact.
   // The band only reports crossings, so remember which section is in it and re-apply on every scroll:
   // that clears Contact again when the reader scrolls back up from the bottom.
   const atBottom = () => innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
@@ -588,6 +588,18 @@ coreCanvas(document.getElementById('core'));
     const d = KM.main[k].reduce((d, [t, p], i) => i ? d + ` H${X(t).toFixed(1)} V${Y(p).toFixed(1)}` : `M${X(t)},${Y(p)}`, '') + ` H${X(60)}`;
     const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     p.setAttribute('d', d); p.setAttribute('fill', 'none'); p.setAttribute('stroke', c); p.setAttribute('stroke-width', '1.6'); sv.append(p);
+  });
+})();
+
+// ── Contact: copy the address, confirm for two seconds ──
+(() => {
+  const btn = document.getElementById('copyMail'), label = btn.querySelector('span');
+  let timer;
+  btn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(btn.dataset.copy); } catch { label.textContent = 'Copy failed'; return; }
+    label.textContent = 'Copied'; btn.toggleAttribute('data-done', true);
+    clearTimeout(timer);
+    timer = setTimeout(() => { label.textContent = 'Copy'; btn.removeAttribute('data-done'); }, 2000);
   });
 })();
 
