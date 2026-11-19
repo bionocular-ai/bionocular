@@ -6,8 +6,7 @@ from typing import Any
 
 from sqlalchemy import Column, DateTime, Enum, String, create_engine
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.sql import func
 
 from ..domain.models import DocumentStatus, DocumentType

@@ -25,7 +25,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from ..domain.structured_llm_interfaces import StructuredLLMService
@@ -247,7 +247,7 @@ class ValidationCheckpointManager:
     def record(self, nct: str, decision: str) -> None:
         self._done[nct] = {
             "decision": decision,
-            "recorded_at": datetime.utcnow().isoformat(),
+            "recorded_at": datetime.now(UTC).isoformat(),
         }
         self._path.write_text(json.dumps(self._done, indent=2))
 
@@ -432,7 +432,7 @@ class TrialValidationService:
                 "use --mode online for now."
             )
 
-        run_start = datetime.utcnow()
+        run_start = datetime.now(UTC)
         summary = ValidationRunSummary(
             model=self._config.model,
             run_date=run_start,

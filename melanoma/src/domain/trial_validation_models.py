@@ -13,7 +13,7 @@ Two kinds of model live here:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -114,7 +114,7 @@ class TrialValidationResult:
     # Corrections actually applied to the cleaned record (2c only).
     applied_corrections: list[dict] = field(default_factory=list)
     error_message: str | None = None
-    validated_at: datetime = field(default_factory=datetime.utcnow)
+    validated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict:
         return {

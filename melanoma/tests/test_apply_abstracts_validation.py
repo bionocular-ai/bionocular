@@ -192,7 +192,8 @@ def test_trial_names_are_exported_rather_than_lost(tmp_path: pathlib.Path) -> No
         path,
     )
     assert written == 1, "only trial_name verdicts belong in this file"
-    rows = list(csv.DictReader(open(path)))
+    with open(path) as f:
+        rows = list(csv.DictReader(f))
     assert rows[0]["row_id"] == "abstract_DOC_arm_1", "keyed for a later schema change"
     assert rows[0]["corrected_value"] == "IGNYTE"
     assert rows[0]["source_evidence"] == "the IGNYTE trial"

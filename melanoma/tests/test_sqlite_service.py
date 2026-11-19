@@ -361,14 +361,7 @@ def test_api_endpoint_with_sqlite(temp_db_path, temp_json_file):
 
             await client.aclose()
 
-        # Run async test
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        loop.run_until_complete(test_endpoint())
+        asyncio.run(test_endpoint())
 
     finally:
         # Restore original environment
