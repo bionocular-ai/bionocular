@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from ash_results_sheet import wide_rows  # noqa: E402
+from ash_results_sheet import _shown, wide_rows  # noqa: E402
 
 
 def _cell(value: str) -> dict:
@@ -33,3 +33,9 @@ def test_abstract_value_wins_and_registry_fills_gaps():
     assert arm["Target"]["value"] == "CD38" and arm["Target"]["source"] == "registry"
     assert "Dose" not in arm  # extras go to the other-values column, not a field
     assert wide["1"]["trial"]["Setting"]["value"] == "newly diagnosed"
+
+
+def test_rates_show_their_denominator():
+    assert _shown({"value": "77.8", "n": "9"}) == "77.8 (n=9)"
+    assert _shown({"value": "77.8", "n": ""}) == "77.8"
+    assert _shown(_cell("CD38")) == "CD38"  # registry cells carry no n

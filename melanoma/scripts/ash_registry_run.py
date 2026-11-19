@@ -333,7 +333,7 @@ async def run_one(
     for nct in run["nct_ids"]:
         study = await asyncio.to_thread(fetch, nct, cache, client)
         (studies.append(study) if study else out["missing"].append(nct))
-    arms = [Arm(a["arm_id"], a["arm_name"], a["role"]) for a in run["arms"]]
+    arms = [Arm(**a) for a in run["arms"]]
     if not studies or not arms:
         out["error"] = "no registry record" if not studies else "no arms"
         return out

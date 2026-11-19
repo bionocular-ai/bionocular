@@ -111,13 +111,27 @@ def test_response_model_accepts_a_filled_reply():
     fam = fields_for(_family("survival_pfs_os"), "Multiple myeloma")
     model = response_model(fam, ARMS)
     arms = {
-        a.arm_id: {f.key: _cell() for f in arm_fields(fam, a)} | {"extra": []}
+        a.arm_id: {
+            f.key: _cell(**({"n": ""} if f.value_type == "percent" else {}))
+            for f in arm_fields(fam, a)
+        }
+        | {"extra": []}
         for a in ARMS
     }
     arms["arm_1"]["extra"] = [
-        {"field": "median_pfs", "value": "22", "context": "age >=75", "quote": "q"}
+        {
+            "field": "median_pfs",
+            "value": "22",
+            "context": "age >=75",
+            "n": "",
+            "quote": "q",
+        }
     ]
     assert model.model_validate({"pooled": [], "arms": arms})
+    del arms["arm_1"]["pfs_rate_12_mo"]["n"]  # a rate states its denominator
+    with pytest.raises(ValueError):
+        model.model_validate({"pooled": [], "arms": arms})
+    arms["arm_1"]["pfs_rate_12_mo"]["n"] = ""
     arms["arm_1"]["extra"][0]["field"] = "not_a_field"
     with pytest.raises(ValueError):
         model.model_validate({"pooled": [], "arms": arms})
@@ -163,6 +177,8 @@ def test_family_prompt_states_rules_fields_and_arms():
         "hr_pfs (HR PFS)",
         "arm_1: Drug X (experimental)",
         "EXAMPLE 2 (invented)",
+        "the abstract gives it only for subgroups",
+        "each drug in a combination",
     ):
         assert needle in prompt
     assert "Grade 3+" not in prompt  # melanoma table rules are gone
@@ -176,7 +192,13 @@ def test_arm_prompt_and_schema():
     assert "Dose levels" in ARM_PROMPT
     assert "even when the abstract itself calls the groups arms" in ARM_PROMPT
     assert "Donor type is a subgroup" in ARM_PROMPT
+    assert "the dose in dose_level" in ARM_PROMPT
     to_strict_schema(ArmList)
+    dl2 = Arm("arm_2", "Drug X", "experimental", "DL2, 160 mg")
+    assert dl2.label == "Drug X [DL2, 160 mg]" and ARMS[0].label == "Drug X"
+    assert "arm_2: Drug X [DL2, 160 mg] (experimental)" in family_prompt(
+        _family("survival_pfs_os"), [ARMS[0], dl2]
+    )
 
 
 def test_judge_items_number_fields_and_extras():

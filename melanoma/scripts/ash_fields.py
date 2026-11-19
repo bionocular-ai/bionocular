@@ -74,6 +74,13 @@ class Arm:
     arm_id: str
     arm_name: str
     role: str  # experimental | control | single arm
+    dose_level: str = ""  # set when one regimen is reported per dose level
+
+    @property
+    def label(self) -> str:
+        return (
+            f"{self.arm_name} [{self.dose_level}]" if self.dose_level else self.arm_name
+        )
 
 
 def _slug(name: str) -> str:
@@ -141,8 +148,13 @@ class Cell(BaseModel):
     derived: bool
 
 
+class RateCell(Cell):
+    n: str  # patients the rate is over, when the abstract states it
+
+
 class ArmItem(BaseModel):
     arm_name: str
+    dose_level: str
     role: Literal["experimental", "control", "single arm"]
     n: str
     source_text: str
@@ -176,7 +188,7 @@ class JudgeVerdict(BaseModel):
 
 def _cell_type(family: Family, f: SheetField) -> Any:
     if not f.allowed:
-        return Cell
+        return RateCell if f.value_type == "percent" else Cell
     # Any: Literal built from workbook data
     values: Any = Literal[(*f.allowed, "")]  # type: ignore[valid-type]
     return create_model(
@@ -221,6 +233,7 @@ def response_model(
             value=(str, ...),
             context=(str, ...),
             detail=(str, ...),
+            n=(str, ...),
             quote=(str, ...),
             derived=(bool, ...),
         )
@@ -235,6 +248,7 @@ def response_model(
             field=(_keys_literal(fields), ...),
             value=(str, ...),
             context=(str, ...),
+            n=(str, ...),
             quote=(str, ...),
         )
         defs: dict[str, Any] = {f.key: (_cell_type(family, f), ...) for f in fields}
@@ -279,7 +293,7 @@ def _fields_block(family: Family) -> str:
 
 
 def _arms_block(arms: list[Arm]) -> str:
-    return "\n".join(f"{a.arm_id}: {a.arm_name} ({a.role})" for a in arms)
+    return "\n".join(f"{a.arm_id}: {a.label} ({a.role})" for a in arms)
 
 
 ARM_PROMPT = """TASK: List the treatment arms in this hematology trial abstract.
@@ -291,21 +305,24 @@ ARE arms:
 2. Groups that get different drugs, even in one study: "DrugA + DrugB" and "DrugA + DrugC" are two arms, also when the abstract reports their results pooled.
 3. Risk-stratified groups that get different regimens (standard-risk gets X, high-risk gets X + Y).
 4. A single-arm study has exactly one arm.
+5. Dose levels or schedules of the same drugs (DL1 vs DL2, 100 mg vs 200 mg, daily vs twice daily) when patients were randomized between them or the abstract gives any outcome per dose level. List one row per dose level: the same arm_name on each, the dose in dose_level.
 
 Are NOT arms (never list them):
-5. Dose levels or dose-escalation cohorts of the same drugs (DL1, DL2, 100 mg vs 200 mg).
-6. Expansion cohorts, step-up cohorts, outpatient subsets of the same drugs.
-7. Subgroups by age, risk, mutation, prior therapy, response.
-8. Phases given to the same patients (induction, consolidation, maintenance).
+6. Dose levels whose outcomes the abstract gives only for all of them together: one arm, dose_level "".
+7. Expansion cohorts, step-up cohorts, outpatient subsets of the same drugs at the same dose.
+8. Subgroups by age, risk, mutation, prior therapy, response.
+9. Phases given to the same patients (induction, consolidation, maintenance).
 
-If two groups get the same drugs, they are ONE arm. These rules hold even when the abstract itself calls the groups arms.
+If two groups get the same drugs at the same dose, they are ONE arm. These rules hold even when the abstract itself calls the groups arms.
 
 EXAMPLES (invented)
-- "The study has two arms by donor type: matched (n=30) and mismatched (n=6). The first 12 patients received drug A + drug B. The next 24 received drug A + drug C, the last 10 of them at a lower dose of drug C." -> two arms: "drug A + drug B" and "drug A + drug C". Donor type is a subgroup; the lower dose is a dose level.
-- "Patients received zorvacel at 1x10^6 (n=3), 2x10^6 (n=6) or 1.5x10^6 cells/kg (n=1)." -> one arm: "zorvacel".
+- "The study has two arms by donor type: matched (n=30) and mismatched (n=6). The first 12 patients received drug A + drug B. The next 24 received drug A + drug C, the last 10 of them at a lower dose of drug C." -> two arms: "drug A + drug B" and "drug A + drug C". Donor type is a subgroup; the lower dose has no outcomes of its own, so it is no row.
+- "Patients received zorvacel at 1x10^6 (n=3), 2x10^6 (n=6) or 1.5x10^6 cells/kg (n=1). ORR was 80%." -> one arm: "zorvacel", dose_level "".
+- "Telnotug + CHOP was given at 40 mg (DL1, n=9) or 80 mg (DL2, n=13). ORR was 78% at DL1 and 100% at DL2." -> two rows: "telnotug + CHOP" with dose_level "DL1, 40 mg" and "telnotug + CHOP" with dose_level "DL2, 80 mg".
 
 For each arm:
-- arm_name: the drugs or regimen as the abstract names them. No outside knowledge.
+- arm_name: the drugs or regimen as the abstract names them, without the dose that sets dose-level rows apart. No outside knowledge.
+- dose_level: for dose-level rows (rule 5), the dose or schedule as the abstract states it ("DL1, 80 mg", "200 mg twice daily"); else "".
   A placebo or control arm is named by what it receives when the abstract says so: "placebo + dexamethasone", "placebo + standard of care", "lenalidomide maintenance". Use "placebo" or "control" alone only when the abstract names nothing more.
 - role: experimental, control, or single arm.
 - n: patients in this arm if stated, else "".
@@ -325,7 +342,8 @@ _RULES = """RULES
 5. A value on an arm is for that arm only. A value the abstract gives only for all arms together (a rate across cohorts, the median age of the whole study) goes once in 'pooled', with context saying which population if it is not all patients; leave that field empty on every arm. Never copy a pooled value onto an arm. A median follow-up for the whole study or analysis is not an endpoint follow-up: leave every median_follow_up_<endpoint> field empty for it (median_follow_up_overall holds it). A value the abstract says holds in each arm ("in both arms, the median age was 67") goes on each arm. A trial total of patients goes in patients_enrolled_trial_total, not in pooled. With a single arm there is no 'pooled': everything goes on the arm.
 6. Extract the analysis this abstract reports. Ignore results from an earlier analysis that the abstract quotes as background ("in the primary analysis", "previously reported").
 7. One measure, one field. Never put EFS in a PFS field, a CR rate in ORR, or an MRD rate in a response field. If no field fits, leave it out.
-8. extra: further values of THESE fields that the field cannot hold: a subgroup, a dose level, a second population (evaluable vs ITT), a second analysis. Give field, value, context (who or when), and quote. Never drop a second value; never put a first value here. An extra must be the SAME measure as its field and, for a field with a timepoint, the SAME timepoint: a 30-month PFS rate is not a "PFS rate 24 mo" or "PFS rate 36 mo" value, one adverse event's rate is not a "Grade >=3 AEs" value, PFS is not TTP or EFS. If no field is that exact measure, leave the value out."""
+8. extra: further values of THESE fields that the field cannot hold: a subgroup, a second population (evaluable vs ITT), a second analysis, the dose or schedule of each drug in a combination (context names the drug). Give field, value, context (who or when), n, and quote. Never drop a second value; never put the arm's own value here. If the abstract gives a field only for subgroups (therapy-related vs de novo, by mutation, by age) and never for the whole arm, leave the field empty and put each subgroup's value in extra with its context. An extra must be the SAME measure as its field and, for a field with a timepoint, the SAME timepoint: a 30-month PFS rate is not a "PFS rate 24 mo" or "PFS rate 36 mo" value, one adverse event's rate is not a "Grade >=3 AEs" value, PFS is not TTP or EFS. If no field is that exact measure, leave the value out.
+9. n: for a percent value (on an arm, in pooled or in extra), the number of patients the rate is over, when the abstract states it for that rate or its population ("8 of 21" -> "21", "among 20 evaluable patients, ..." -> "20"). Never work it out from the percent. "" when the abstract does not state it and for every other kind of field."""
 
 _EXAMPLES = """EXAMPLE 1 (invented)
 Text: "In the primary analysis (median follow-up 18 months) PFS HR was 0.60 (P<0.001). Here we report the final analysis. At a median follow-up of 40 months, median PFS was 30.1 months with zorvamab vs 14.2 months with placebo (HR 0.55; 95% CI 0.41-0.74). In patients aged >=75, median PFS was 22.0 vs 11.0 months."
@@ -334,7 +352,11 @@ arm_2 placebo: median_pfs {value "14.2", ...}; no hazard ratio fields.
 
 EXAMPLE 2 (invented)
 Text: "Twelve patients received telnotug + drug A and nine received telnotug + drug B. Results combine both cohorts. CRS occurred in 8 of 21 patients. No ICANS was observed."
-pooled: [{field "crs_any_grade", value "38.1", context "", quote "CRS occurred in 8 of 21 patients", derived true}, {field "icans_any_grade", value "0", context "", quote "No ICANS was observed", derived true}]. On both arms crs_any_grade and icans_any_grade stay empty. patients_treated: arm_1 "12", arm_2 "9"."""
+pooled: [{field "crs_any_grade", value "38.1", context "", n "21", quote "CRS occurred in 8 of 21 patients", derived true}, {field "icans_any_grade", value "0", context "", n "", quote "No ICANS was observed", derived true}]. On both arms crs_any_grade and icans_any_grade stay empty. patients_treated: arm_1 "12", arm_2 "9".
+
+EXAMPLE 3 (invented)
+Text: "Of 300 patients given intensive chemotherapy, 40 had secondary AML. 3-year OS was 45% in secondary AML vs 60% in de novo AML (p=0.02)."
+arm_1 intensive chemotherapy: os_rate_36_mo {value "", quote ""} because the abstract gives it only for subgroups; extra [{field "os_rate_36_mo", value "45", context "secondary AML", n "40", quote "3-year OS was 45% in secondary AML vs 60% in de novo AML"}, {field "os_rate_36_mo", value "60", context "de novo AML", n "", quote "3-year OS was 45% in secondary AML vs 60% in de novo AML"}]."""
 
 
 def family_prompt(family: Family, arms: list[Arm]) -> str:
@@ -362,7 +384,7 @@ def judge_items(
     family: Family, extracted: dict[str, Any], arms: list[Arm]
 ) -> list[dict[str, Any]]:
     """Every filled value (fields and extras) as a flat, numbered list for the judge."""
-    names = {a.arm_id: a.arm_name for a in arms} | {
+    names = {a.arm_id: a.label for a in arms} | {
         "trial": "whole trial",
         "pooled": "all arms together",
     }

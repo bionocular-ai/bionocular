@@ -20,6 +20,7 @@ from ash_test_run import (  # noqa: E402
     _drop_unsupported_extras,
     _flags,
     _truly_missed,
+    find_arms,
     fingerprint,
     parse_md,
     run,
@@ -66,7 +67,12 @@ class FakeLLM:
             if op == self.fail_op:
                 raise RuntimeError("boom")
             if response_schema is ArmList:
-                arm = {"role": "experimental", "n": "", "source_text": "s"}
+                arm = {
+                    "role": "experimental",
+                    "dose_level": "",
+                    "n": "",
+                    "source_text": "s",
+                }
                 return ArmList.model_validate(
                     {
                         "results_reported": "per_arm",
@@ -275,3 +281,28 @@ async def test_spend_cap_skips_abstracts_not_started(tmp_path: Path) -> None:
     await run(md, out, llm, FAMILIES, costs=costs, max_cost=25.0)  # type: ignore[arg-type]
     assert not out.exists()  # nothing ran; a rerun with a higher cap starts fresh
     assert not llm.calls
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reported", ["per_arm", "pooled_only"])
+async def test_dose_levels_are_rows_only_with_per_dose_outcomes(reported: str) -> None:
+    class ArmsLLM:
+        async def generate_structured(self, **kw: Any) -> ArmList:
+            row = {"role": "experimental", "n": "", "source_text": "s"}
+            return ArmList.model_validate(
+                {
+                    "results_reported": reported,
+                    "arms": [
+                        {"arm_name": "Odro-CHOP", "dose_level": "DL1, 80 mg", **row},
+                        {"arm_name": "Odro-CHOP", "dose_level": "DL2, 160 mg", **row},
+                        {"arm_name": "odro-CHOP", "dose_level": "dl2,  160 mg", **row},
+                    ],
+                }
+            )
+
+    arms, _ = await find_arms("text", ArmsLLM())  # type: ignore[arg-type]
+    rows = [(a.arm_id, a.dose_level) for a in arms]
+    if reported == "pooled_only":
+        assert rows == [("arm_1", "")]
+    else:
+        assert rows == [("arm_1", "DL1, 80 mg"), ("arm_2", "DL2, 160 mg")]
