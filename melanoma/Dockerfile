@@ -2,7 +2,7 @@
 # This Dockerfile is optimized for Render's free tier (512MB RAM)
 # PDF processing dependencies are excluded - processing should be done externally
 
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 

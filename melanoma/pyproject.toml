@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 # Core API dependencies (lightweight for production)
 fastapi = "^0.162.0"
 uvicorn = {extras = ["standard"], version = "^0.24.0"}
@@ -48,7 +48,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 88
-target-version = ['py39']
+target-version = ['py311']
 include = '\.pyi?$'
 extend-exclude = '''
 /(
@@ -86,7 +86,7 @@ ignore = [
 "__init__.py" = ["F401"]
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
