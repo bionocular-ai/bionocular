@@ -93,7 +93,9 @@ async def find_arms(text: str, llm: StructuredLLMService) -> tuple[list[Arm], st
     seen: set[tuple[str, str]] = set()
     for item in found.arms:
         name = " ".join(item.arm_name.split())
-        dose = " ".join(item.dose_level.split())
+        # dose-level rows only when outcomes come per dose level
+        pooled = found.results_reported == "pooled_only"
+        dose = "" if pooled else " ".join(item.dose_level.split())
         if not name or (name.lower(), dose.lower()) in seen:  # same drugs twice
             continue
         seen.add((name.lower(), dose.lower()))

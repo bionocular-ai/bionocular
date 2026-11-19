@@ -177,6 +177,8 @@ def test_family_prompt_states_rules_fields_and_arms():
         "hr_pfs (HR PFS)",
         "arm_1: Drug X (experimental)",
         "EXAMPLE 2 (invented)",
+        "the abstract gives it only for subgroups",
+        "each drug in a combination",
     ):
         assert needle in prompt
     assert "Grade 3+" not in prompt  # melanoma table rules are gone

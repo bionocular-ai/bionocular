@@ -284,13 +284,14 @@ async def test_spend_cap_skips_abstracts_not_started(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_dose_levels_stay_separate_rows() -> None:
+@pytest.mark.parametrize("reported", ["per_arm", "pooled_only"])
+async def test_dose_levels_are_rows_only_with_per_dose_outcomes(reported: str) -> None:
     class ArmsLLM:
         async def generate_structured(self, **kw: Any) -> ArmList:
             row = {"role": "experimental", "n": "", "source_text": "s"}
             return ArmList.model_validate(
                 {
-                    "results_reported": "per_arm",
+                    "results_reported": reported,
                     "arms": [
                         {"arm_name": "Odro-CHOP", "dose_level": "DL1, 80 mg", **row},
                         {"arm_name": "Odro-CHOP", "dose_level": "DL2, 160 mg", **row},
@@ -300,7 +301,8 @@ async def test_dose_levels_stay_separate_rows() -> None:
             )
 
     arms, _ = await find_arms("text", ArmsLLM())  # type: ignore[arg-type]
-    assert [(a.arm_id, a.dose_level) for a in arms] == [
-        ("arm_1", "DL1, 80 mg"),
-        ("arm_2", "DL2, 160 mg"),
-    ]
+    rows = [(a.arm_id, a.dose_level) for a in arms]
+    if reported == "pooled_only":
+        assert rows == [("arm_1", "")]
+    else:
+        assert rows == [("arm_1", "DL1, 80 mg"), ("arm_2", "DL2, 160 mg")]
