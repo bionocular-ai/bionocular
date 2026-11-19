@@ -306,6 +306,7 @@ EXAMPLES (invented)
 
 For each arm:
 - arm_name: the drugs or regimen as the abstract names them. No outside knowledge.
+  A placebo or control arm is named by what it receives when the abstract says so: "placebo + dexamethasone", "placebo + standard of care", "lenalidomide maintenance". Use "placebo" or "control" alone only when the abstract names nothing more.
 - role: experimental, control, or single arm.
 - n: patients in this arm if stated, else "".
 - source_text: the sentence that defines the arm, copied exactly.

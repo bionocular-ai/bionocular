@@ -291,6 +291,8 @@ async def run(
     ids: list[str] | None = None,
     indications: dict[str, str] | None = None,
     missed_pass: bool = True,
+    costs: CostCalculator | None = None,
+    max_cost: float | None = None,
 ) -> None:
     texts = parse_md(md_path)
     if ids:
@@ -313,8 +315,14 @@ async def run(
     sem = asyncio.Semaphore(concurrency)
     lock = asyncio.Lock()
 
+    def spent() -> float:
+        return costs.get_summary().total_cost if costs else 0.0
+
     async def one(number: str) -> None:
         async with sem:
+            if max_cost is not None and spent() >= max_cost:
+                print(f"{number}: skipped, spend cap ${max_cost:.2f} reached")
+                return
             r = await run_abstract(
                 number,
                 texts[number],
@@ -332,6 +340,7 @@ async def run(
         bad = r["errors"] + [k for k, f in r["families"].items() if f["error"]]
         print(
             f"{number}: {len(r['arms'])} arms, {'errors ' + str(bad) if bad else 'ok'}"
+            f" (spend ${spent():.2f})"
         )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -350,11 +359,19 @@ def main() -> None:
         default=_root / "resources" / "ash" / "test_run_selection.csv",
         help="CSV with abstract,indication; fields are filtered by indication",
     )
-    p.add_argument("--ids", help="comma-separated abstract numbers (default: all)")
+    p.add_argument(
+        "--ids", help="comma-separated abstract numbers (default: the selection)"
+    )
     p.add_argument("--concurrency", type=int, default=5)
     p.add_argument("--family-concurrency", type=int, default=6)
     p.add_argument(
         "--no-missed-pass", action="store_true", help="skip the missed-value calls"
+    )
+    p.add_argument(
+        "--max-cost",
+        type=float,
+        default=25.0,
+        help="USD; abstracts not yet started are skipped once spend reaches it",
     )
     args = p.parse_args()
 
@@ -369,7 +386,7 @@ def main() -> None:
     families = load_families(_root / "resources" / "ash" / "book1_sheet2.csv")
     with args.selection.open(encoding="utf-8", newline="") as f:
         indications = {r["abstract"]: r["indication"] for r in csv.DictReader(f)}
-    ids = args.ids.split(",") if args.ids else None
+    ids = args.ids.split(",") if args.ids else list(indications)
     start = time.monotonic()
 
     async def _run_and_close() -> None:
@@ -384,6 +401,8 @@ def main() -> None:
                 ids,
                 indications,
                 not args.no_missed_pass,
+                costs,
+                args.max_cost,
             )
         finally:
             await llm.aclose()

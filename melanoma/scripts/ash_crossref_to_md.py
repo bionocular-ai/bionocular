@@ -56,13 +56,29 @@ def _clean(fragment: str) -> str:
     return " ".join(html.unescape(html.unescape(text)).split())
 
 
+# Section titles whose paragraphs are lists, not abstract text.
+_SKIP_SECTION = re.compile(r"^(?:references?|refs?|key ?words?)$", re.I)
+
+
 def jats_to_sections(jats: str) -> list[tuple[str | None, str]]:
-    """Return (heading or None, text) per paragraph; trailing reference list dropped."""
+    """Return (heading or None, text) per paragraph; reference lists and keywords dropped.
+
+    A <jats:title> is kept as written and heads the next paragraph; the outer "Abstract"
+    title is not a heading.
+    """
     out: list[tuple[str | None, str]] = []
-    pending: str | None = None  # heading-only paragraph, applies to the next one
-    for raw in re.findall(r"<jats:p>(.*?)</jats:p>", jats, re.S):
+    # a heading-only paragraph or a section title; applies to the next paragraph
+    pending: str | None = None
+    skipping = False
+    for tag, raw in re.findall(r"<jats:(title|p)>(.*?)</jats:\1>", jats, re.S):
         text = _clean(raw)
-        if not text:
+        if tag == "title":
+            title = text.rstrip(" .:：")
+            skipping = bool(_SKIP_SECTION.match(title))
+            if title.lower() != "abstract" and not skipping:
+                pending = title or pending
+            continue
+        if not text or skipping:
             continue
         m = _COMPOUND.match(text) or _OPENER.match(text)
         heading = m and HEADINGS.get(m.group(1).lower(), m.group(1))

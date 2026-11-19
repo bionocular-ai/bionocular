@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 from ash_registry_run import (  # noqa: E402
     RecordMatch,
+    done,
     drop_unsupported,
     flags,
     record_text,
@@ -140,3 +141,13 @@ def test_a_cited_trial_record_is_not_used(tmp_path: Path) -> None:
     assert out["error"] == "no record of this study"
     assert out["record_matches"][0]["nct_id"] == "NCT01234567"
     assert llm.ops == ["ash_registry_match"]  # no fill call
+
+
+def test_resume_redoes_errors_and_changed_arms() -> None:
+    run = {"arms": [{"arm_id": "arm_1", "arm_name": "A", "role": "single arm"}]}
+    ok = {"arms": run["arms"], "error": None}
+    assert done(ok, run)
+    assert done({**ok, "error": "no arms"}, run)
+    assert not done(None, run)
+    assert not done({**ok, "error": "OpenRouterTruncatedError: cut off"}, run)
+    assert not done({**ok, "arms": []}, run)

@@ -16,8 +16,10 @@ goes to Supabase.
 import argparse
 import asyncio
 import difflib
+import hashlib
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -321,7 +323,12 @@ async def run_one(
     cache: Path,
     client: ClinicalTrialsGovAPIClient,
 ) -> dict[str, Any]:
-    out: dict[str, Any] = {"nct_ids": run["nct_ids"], "missing": [], "error": None}
+    out: dict[str, Any] = {
+        "nct_ids": run["nct_ids"],
+        "arms": run["arms"],
+        "missing": [],
+        "error": None,
+    }
     studies = []
     for nct in run["nct_ids"]:
         study = await asyncio.to_thread(fetch, nct, cache, client)
@@ -353,6 +360,22 @@ async def run_one(
     return out
 
 
+def fingerprint(family: Family) -> str:
+    """Changes whenever this script's prompts or the registry fields do."""
+    h = hashlib.sha256(repr(family).encode())
+    h.update(Path(__file__).read_bytes())
+    return h.hexdigest()[:16]
+
+
+def done(prev: dict[str, Any] | None, run: dict[str, Any]) -> bool:
+    """A finished abstract whose arms still match the abstract run is not redone."""
+    return (
+        prev is not None
+        and prev.get("arms") == run["arms"]
+        and prev["error"] in (None, "no arms")
+    )
+
+
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--arms", type=Path, required=True)
@@ -381,25 +404,42 @@ def main() -> None:
     )
     client = ClinicalTrialsGovAPIClient()
     sem = asyncio.Semaphore(5)
+    lock = asyncio.Lock()
     start = time.monotonic()
+    results: dict[str, Any] = (
+        json.loads(args.out.read_text(encoding="utf-8")) if args.out.exists() else {}
+    )
+    mark = fingerprint(family)
+    if results and results.get(META, {}).get("fingerprint") != mark:
+        raise SystemExit(
+            f"{args.out} was written with different prompts or fields; "
+            "use a new --out or delete it"
+        )
+    results[META] = {"fingerprint": mark}
+    todo = [n for n in runs if not done(results.get(n), runs[n])]
+    print(f"{len(runs) - len(todo)} already done, {len(todo)} to run")
 
-    async def go() -> dict[str, Any]:
-        async def one(n: str) -> tuple[str, dict[str, Any]]:
+    async def go() -> None:
+        async def one(n: str) -> None:
             async with sem:
                 r = await run_one(n, texts[n], runs[n], family, llm, cache, client)
+            async with lock:
+                results[n] = r
+                tmp = args.out.with_suffix(".tmp")
+                tmp.write_text(json.dumps(results, indent=1), encoding="utf-8")
+                os.replace(tmp, args.out)
             print(
                 f"{n}: {r['error'] or 'ok'}"
                 + (f" missing {r['missing']}" if r["missing"] else "")
+                + f" (spend ${costs.get_summary().total_cost:.2f})"
             )
-            return n, r
 
         try:
-            return dict(await asyncio.gather(*(one(n) for n in runs)))
+            await asyncio.gather(*(one(n) for n in todo))
         finally:
             await llm.aclose()
 
-    results = asyncio.run(go())
-    args.out.write_text(json.dumps(results, indent=1), encoding="utf-8")
+    asyncio.run(go())
     s = costs.get_summary()
     print(
         f"wrote {args.out}: spend ${s.total_cost:.4f} over {s.total_requests} calls, "
