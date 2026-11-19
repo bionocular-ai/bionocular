@@ -135,8 +135,10 @@ def record_text(study: dict[str, Any]) -> str:
     ident, desc = p.get("identificationModule", {}), p.get("descriptionModule", {})
     design, arms = p.get("designModule", {}), p.get("armsInterventionsModule", {})
     elig = p.get("eligibilityModule", {})
+    aliases = ", ".join(ident.get("nctIdAliases", []))  # merged duplicate registrations
     lines = [
-        f"NCT: {ident.get('nctId', '')}",
+        f"NCT: {ident.get('nctId', '')}"
+        + (f" (also registered as {aliases})" if aliases else ""),
         f"Title: {ident.get('officialTitle') or ident.get('briefTitle', '')}",
         f"Acronym: {ident.get('acronym', '')}",
         f"Conditions: {', '.join(p.get('conditionsModule', {}).get('conditions', []))}",

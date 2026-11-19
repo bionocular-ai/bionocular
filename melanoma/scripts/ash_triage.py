@@ -50,6 +50,7 @@ class Triage(BaseModel):
         "patient_reported_only",
         "review_or_meta_analysis",
         "case_report",
+        "preclinical",
         "other_no_outcomes",
     ]
     evidence: str
@@ -62,7 +63,8 @@ kind is "treatment_outcomes" when the abstract reports its own results for patie
 - efficacy: response rates, CR, MRD negativity, PFS, OS, EFS, duration of response, transfusion independence, relapse, GVHD rates;
 - safety: adverse event rates, CRS, ICANS, deaths, discontinuations.
 This holds for any design: randomized or single-arm trials, dose escalation, a subgroup or longer follow-up of a trial, a pooled analysis of trials, and observational cohorts that report how treated patients did.
-If the abstract has such results anywhere, it is "treatment_outcomes", even when most of it is about something else.
+Patients are people: results in animals, cell lines or patient cells treated in the lab are not treatment outcomes.
+If the abstract has such results for patients anywhere, it is "treatment_outcomes", even when most of it is about something else.
 Exception: a substudy whose outcome numbers are only split by a marker, mutation or other lab finding (outcome by marker status), with no result for the treated group or arm as a whole, is "biomarker_or_translational".
 
 Otherwise pick the kind that fits:
@@ -71,6 +73,7 @@ Otherwise pick the kind that fits:
 - patient_reported_only: only quality of life or other patient-reported scores.
 - review_or_meta_analysis: a systematic review or meta-analysis of published studies.
 - case_report: one to three individual patients.
+- preclinical: results only in animal models, cell lines or patient cells treated in the lab, even when the abstract mentions a clinical trial of the drug.
 - other_no_outcomes: anything else without treatment results (methods, cost, epidemiology, prognostic models without treatment results).
 
 evidence: for treatment_outcomes, the sentence with the first such result, copied exactly; else "".
