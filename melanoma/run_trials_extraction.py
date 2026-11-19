@@ -89,7 +89,7 @@ def _configure_logging(verbose: bool) -> None:
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
     # Silence noisy third-party loggers
-    for noisy in ("httpx", "httpcore", "openai", "langchain", "google_genai"):
+    for noisy in ("httpx", "httpcore", "google_genai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
@@ -381,7 +381,6 @@ def main() -> None:
     )
     service = TrialParameterExtractionService.from_config(
         config,
-        api_key="",
         llm_service=llm,
         cost_calculator=cost_calculator,
     )
