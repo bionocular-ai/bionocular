@@ -15,6 +15,7 @@ import pytest
 
 from src.infrastructure.gemini_service import (
     _REQUEST_TIMEOUT_MS,
+    _SERVER_TIMEOUT_SECONDS,
     GeminiLLMService,
     is_retryable_error,
 )
@@ -63,6 +64,10 @@ def test_client_built_with_request_timeout(monkeypatch: pytest.MonkeyPatch) -> N
     http_options = captured.get("http_options")
     assert http_options is not None, "client built without http_options"
     assert http_options.timeout == _REQUEST_TIMEOUT_MS
+    # Without our own header the SDK would send the 90s read timeout as the
+    # server's total deadline and cut off long streamed generations.
+    assert http_options.headers == {"X-Server-Timeout": str(_SERVER_TIMEOUT_SECONDS)}
+    assert _SERVER_TIMEOUT_SECONDS * 1000 > _REQUEST_TIMEOUT_MS
 
 
 def test_request_timeout_is_bounded_and_sane() -> None:

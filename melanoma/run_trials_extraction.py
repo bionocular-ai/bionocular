@@ -89,7 +89,7 @@ def _configure_logging(verbose: bool) -> None:
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
     # Silence noisy third-party loggers
-    for noisy in ("httpx", "httpcore", "google_genai"):
+    for noisy in ("httpx", "httpcore", "httpx2", "httpcore2", "google_genai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
