@@ -510,9 +510,6 @@ coreCanvas(document.getElementById('core'));
     [0, 25, 50, 75, 100].forEach(p => { el('line', { x1: x0, x2: x1, y1: Y(p), y2: Y(p), stroke: '#EEF4F1' }, ax); txt(ax, x0 - 10, Y(p) + 4, p + '%', { 'text-anchor': 'end' }); });
     el('path', { d: `M${x0},${y0} V${y1} H${x1}`, fill: 'none', stroke: '#C8E0D8', 'stroke-width': 1.2 }, ax);
     txt(ax, (x0 + x1) / 2, y1 + 44, 'Months', { 'text-anchor': 'middle', style: 'font-family:Poppins;font-size:12px' });
-    // Other trials' twins (step 5)
-    const bg = g('Lbg');
-    KM.bg.forEach(b => el('path', { d: step(b.pts), fill: 'none', stroke: '#9DB8AD', 'stroke-width': 1.3, opacity: .55 }, bg));
     // The source figure as ingested: grey, slightly skewed and soft (steps 1-2)
     const src = g('Lsrc'); src.classList.add('on'); src.style.transformOrigin = `${x0}px ${y1}px`;
     el('rect', { x: x0 - 30, y: y0 - 34, width: x1 - x0 + 54, height: y1 - y0 + 66, rx: 6, fill: '#FBFCFB', stroke: '#D3DCD9', class: 'cap' }, src);
@@ -540,7 +537,7 @@ coreCanvas(document.getElementById('core'));
   const L = id => document.getElementById(id), meta = [...document.querySelectorAll('#meta span')];
   const show = n => {
     L('Lsrc').classList.toggle('norm', n >= 2); L('Lsrc').classList.toggle('dim', n >= 3);
-    L('Lax').classList.toggle('on', n >= 2); L('Ltwin').classList.toggle('on', n >= 3); L('Lbg').classList.toggle('on', n >= 5); L('Lmed').classList.toggle('on', n >= 6);
+    L('Lax').classList.toggle('on', n >= 2); L('Ltwin').classList.toggle('on', n >= 3); L('Lmed').classList.toggle('on', n >= 6);
     meta.forEach(m => m.classList.toggle('on', n >= +m.dataset.from));
   };
   const scroller = document.getElementById('svScroll'), stage = scroller.firstElementChild, bar = document.getElementById('svBar');
