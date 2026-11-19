@@ -1,13 +1,13 @@
 """Hold-out evaluation harness for the extraction-v2 pipeline.
 
-Runs the new (or legacy) extraction pipeline against a curated set of
+Runs the extraction pipeline against a curated set of
 publication / abstract fixtures and scores precision / recall / cost / latency
 against expected arm-attribute labels.
 
 Usage::
 
     poetry run python3 scripts/eval_holdout.py --pipeline=new   [--out /tmp/new.json]
-    poetry run python3 scripts/eval_holdout.py --pipeline=legacy [--out /tmp/legacy.json]
+    poetry run python3 scripts/eval_holdout.py --pipeline=legacy-cached [--out /tmp/legacy.json]
     poetry run python3 scripts/eval_holdout.py --dry-run
 
 The ``--dry-run`` mode validates that fixtures + expected JSONs are present
@@ -33,7 +33,6 @@ import argparse
 import asyncio
 import datetime
 import json
-import os
 import subprocess
 import time
 from pathlib import Path
@@ -266,22 +265,15 @@ def _score_doc(
 # --- Pipeline wiring (mirrors run_publication_pipeline.py) ---------------- #
 
 
-async def _build_services() -> tuple[Any, Any, Any]:
+async def _build_services() -> tuple[Any, Any]:
     """Wire EnhancedExtractionService for eval.
 
-    Returns (extraction_service, cost_calculator, vector_store_service).
+    Returns (extraction_service, cost_calculator).
     """
     from src.app.enhanced_extraction_service import EnhancedExtractionService
-    from src.domain.models import ChunkingConfiguration
-    from src.infrastructure.arm_aware_rag_provider import ArmAwareRAGContextProvider
-    from src.infrastructure.attribute_extractor import LLMAttributeExtractor
     from src.infrastructure.cost_calculator import CostCalculator, ModelType
     from src.infrastructure.family_extractor import FamilyExtractor
     from src.infrastructure.gemini_service import GeminiLLMService, vertex_env
-    from src.infrastructure.langchain.chunking import LangChainChunkingService
-    from src.infrastructure.langchain.embeddings import LangChainEmbeddingService
-    from src.infrastructure.langchain.vector_store import LangChainVectorStore
-    from src.infrastructure.prompt_templates import ExtractionPromptTemplateProvider
     from src.infrastructure.treatment_arm_separator import TreatmentArmSeparator
 
     project, location = vertex_env()
@@ -296,93 +288,15 @@ async def _build_services() -> tuple[Any, Any, Any]:
         cost_calculator=cost_calculator,
     )
 
-    embedding_service = LangChainEmbeddingService()
-    vector_store_service = LangChainVectorStore(
-        embedding_service=embedding_service,
-        collection_name="holdout_eval_trials",
-        persist_directory=None,
-    )
-    chunking_config = ChunkingConfiguration(
-        max_chunk_size=1000,
-        chunk_overlap=200,
-        preserve_tables=True,
-        include_headers=True,
-    )
-    chunking_strategy = LangChainChunkingService(chunking_config)
-    rag_provider = ArmAwareRAGContextProvider(
-        vector_store=vector_store_service,
-        embedding_service=embedding_service,
-    )
-
-    arm_separator = TreatmentArmSeparator(llm_service=llm_service)
-    prompt_provider = ExtractionPromptTemplateProvider()
-    attribute_extractor = LLMAttributeExtractor(
-        llm_service=llm_service,
-        prompt_provider=prompt_provider,
-    )
-    family_extractor = FamilyExtractor(gemini=llm_service)
-
     extraction_service = EnhancedExtractionService(
-        treatment_arm_separator=arm_separator,
-        arm_aware_rag_provider=rag_provider,
-        attribute_extractor=attribute_extractor,
-        llm_service=llm_service,
+        treatment_arm_separator=TreatmentArmSeparator(llm_service=llm_service),
         clinical_trials_api_service=None,
         enable_cost_tracking=False,
-        max_concurrent_attributes=20,
-        family_extractor=family_extractor,
+        family_extractor=FamilyExtractor(gemini=llm_service),
         gemini=llm_service,
     )
 
-    # Stash chunking deps on the service so the runner can pre-embed legacy
-    # paths if needed. The new path doesn't need RAG embedding.
-    extraction_service._eval_chunking_strategy = chunking_strategy  # type: ignore[attr-defined]
-    extraction_service._eval_embedding_service = embedding_service  # type: ignore[attr-defined]
-    extraction_service._eval_chunking_config = chunking_config  # type: ignore[attr-defined]
-
-    return extraction_service, cost_calculator, vector_store_service
-
-
-async def _embed_for_legacy(
-    extraction_service: Any,
-    vector_store_service: Any,
-    text: str,
-    doc_id: str,
-) -> None:
-    """Embed a doc into the vector store (needed for the legacy RAG path)."""
-    from src.domain.models import ChunkWithEmbedding, EmbeddingConfiguration
-
-    chunking_strategy = extraction_service._eval_chunking_strategy
-    embedding_service = extraction_service._eval_embedding_service
-    chunking_config = extraction_service._eval_chunking_config
-
-    chunks = await chunking_strategy.chunk_content(
-        content=text,
-        configuration=chunking_config,
-        document_id=doc_id,
-        filename=doc_id,
-    )
-    if not chunks:
-        return
-    embedding_config = EmbeddingConfiguration()
-    embeddings = await embedding_service.generate_embeddings_batch(
-        [c.content for c in chunks], embedding_config
-    )
-    chunks_with_embeddings = [
-        ChunkWithEmbedding(
-            id=c.id,
-            document_id=c.document_id,
-            content=c.content,
-            chunk_type=c.chunk_type,
-            metadata=c.metadata,
-            sequence_number=c.sequence_number,
-            token_count=c.token_count,
-            created_at=c.created_at,
-            embedding=emb,
-        )
-        for c, emb in zip(chunks, embeddings)
-    ]
-    await vector_store_service.upsert_chunks(chunks_with_embeddings)
+    return extraction_service, cost_calculator
 
 
 def _serialize_arm_results(arm_results: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -543,13 +457,8 @@ async def _run_eval(
 
     from src.domain.models import DocumentType
 
-    if pipeline == "legacy":
-        os.environ["USE_LEGACY_RAG_EXTRACTION"] = "1"
-    else:
-        os.environ.pop("USE_LEGACY_RAG_EXTRACTION", None)
-
     fixtures = _load_manifest()
-    extraction_service, cost_calculator, vector_store_service = await _build_services()
+    extraction_service, cost_calculator = await _build_services()
 
     per_doc: list[dict[str, Any]] = []
     per_family_totals: dict[str, dict[str, int]] = {}
@@ -575,11 +484,6 @@ async def _run_eval(
 
         # Snapshot cost calculator before this fixture
         before_calls = len(cost_calculator.api_calls)
-
-        if pipeline == "legacy":
-            await _embed_for_legacy(
-                extraction_service, vector_store_service, text, doc_id
-            )
 
         t0 = time.perf_counter()
         try:
@@ -639,12 +543,6 @@ async def _run_eval(
         total_tokens_out += tokens_out
         total_cost += cost_usd
 
-        # Reset vector store between docs to avoid cross-contamination
-        try:
-            await vector_store_service.clear_store()
-        except (RuntimeError, AttributeError):
-            pass
-
     _emit_output(
         pipeline,
         per_family_totals,
@@ -703,7 +601,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--pipeline",
-        choices=["new", "legacy", "legacy-cached"],
+        choices=["new", "legacy-cached"],
         default="new",
         help="Which extraction path to run. 'legacy-cached' scores pre-extracted deployed data without LLM calls.",
     )

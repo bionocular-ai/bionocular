@@ -22,8 +22,7 @@ RUN poetry config virtualenvs.create false
 COPY pyproject.toml poetry.lock ./
 
 # Install dependencies (production only)
-# Excludes: dev dependencies and optional processing group (PyTorch, transformers, etc.)
-# This keeps the image size under 300MB instead of 3-4GB
+# Excludes: dev dependencies
 RUN poetry install --only main --no-interaction --no-ansi --no-root
 
 # Copy application code

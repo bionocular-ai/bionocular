@@ -44,7 +44,6 @@ from ..domain.trials_extraction_prompts import (
 )
 from ..infrastructure.clinical_trials.snapshot_source import SnapshotTrialSource
 from ..infrastructure.cost_calculator import CostCalculator
-from ..infrastructure.openrouter_service import OpenRouterLLMService
 
 _MODALITY_SET = set(MODALITY_VALUES)
 _BIOMARKER_SET = set(BIOMARKER_VALUES)
@@ -567,7 +566,7 @@ class TrialParameterExtractionService:
 
     Usage::
 
-        service = TrialParameterExtractionService.from_config(config, api_key)
+        service = TrialParameterExtractionService.from_config(config, llm_service)
         await service.run()
     """
 
@@ -601,24 +600,18 @@ class TrialParameterExtractionService:
     def from_config(
         cls,
         config: ExtractionConfig,
-        api_key: str,
-        llm_service: Optional[LLMService] = None,
+        llm_service: LLMService,
         cost_calculator: Optional[CostCalculator] = None,
     ) -> "TrialParameterExtractionService":
-        """Construct a fully wired service from config and API key.
+        """Construct a fully wired service from config and an LLM service.
 
         Args:
             config: Extraction run configuration.
-            api_key: API key for the LLM provider.
-            llm_service: Pre-built LLMService instance.  When supplied the
-                         api_key argument is ignored and no service is created
-                         internally.  Pass None to auto-create an
-                         OpenRouterLLMService (legacy behaviour).
+            llm_service: Pre-built LLMService instance.
             cost_calculator: CostCalculator instance to use for cost tracking.
                              **Must be the same instance that was injected into
                              llm_service**, otherwise the cost report will be
-                             empty.  When omitted, a new instance is created and
-                             passed to the internally-built OpenRouterLLMService.
+                             empty.
 
         Returns:
             Configured TrialParameterExtractionService ready to run.
@@ -626,17 +619,11 @@ class TrialParameterExtractionService:
         config.output_dir.mkdir(parents=True, exist_ok=True)
 
         _cost_calculator = cost_calculator or CostCalculator()
-        if llm_service is not None:
-            llm = llm_service
-        else:
-            llm = OpenRouterLLMService(
-                api_key=api_key,
-                model=config.model,
-                cost_calculator=_cost_calculator,
-            )
         loader = TrialLoader()
         cancer_repo = CancerTypeRepository(config.trials_db_path)
-        extractor = TrialParameterExtractor(llm, modality_only=config.modality_only)
+        extractor = TrialParameterExtractor(
+            llm_service, modality_only=config.modality_only
+        )
         checkpoint = CheckpointManager(config.output_dir / "checkpoint.json")
         writer = ResultWriter(config.output_dir)
 
@@ -647,7 +634,7 @@ class TrialParameterExtractionService:
 
         return cls(
             config=config,
-            llm=llm,
+            llm=llm_service,
             loader=loader,
             cancer_repo=cancer_repo,
             extractor=extractor,

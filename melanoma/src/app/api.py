@@ -24,12 +24,11 @@ from ..infrastructure.database import (
     get_db_session,
     init_database,
 )
+from ..infrastructure.null_processor import NullPDFProcessor
 from ..infrastructure.repository import SQLAlchemyDocumentRepository
 from ..infrastructure.storage import LocalFileStorage
-from .clinical_api import router as clinical_router
 from .ingestion_service import IngestionService
 from .json_trials_service import JSONTrialsService
-from .langchain_api import router as langchain_router
 from .sqlite_trials_service import SQLiteTrialsService
 from .trials_api import (
     TrialResponse,
@@ -155,50 +154,12 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-# Include routers
-app.include_router(langchain_router)
-app.include_router(clinical_router)
-
-
 def get_ingestion_service(db: Session = Depends(get_db_session)) -> IngestionService:
     """Dependency to get the ingestion service."""
     storage = LocalFileStorage()
     repository = SQLAlchemyDocumentRepository(db)
 
-    # Check if PDF processing is disabled (for free tier deployments)
-    disable_pdf_processing = (
-        os.getenv("DISABLE_PDF_PROCESSING", "false").lower() == "true"
-    )
-
-    if disable_pdf_processing:
-        # Use null processor when PDF processing is disabled
-        from ..infrastructure.null_processor import NullPDFProcessor
-
-        logger.info("PDF processing disabled - using NullPDFProcessor")
-        pdf_processor = NullPDFProcessor()
-    else:
-        # Use Marker processor for superior accuracy (requires heavy dependencies)
-        # Import lazily to avoid import errors if marker-pdf is not installed
-        use_llm = os.getenv("MARKER_USE_LLM", "false").lower() == "true"
-        extract_images = os.getenv("MARKER_EXTRACT_IMAGES", "true").lower() == "true"
-
-        try:
-            from ..infrastructure.marker_processor import MarkerPDFProcessor
-
-            pdf_processor = MarkerPDFProcessor(
-                use_llm=use_llm, extract_images=extract_images
-            )
-        except ImportError as e:
-            logger.warning(
-                f"MarkerPDFProcessor not available ({e}). "
-                "Falling back to NullPDFProcessor. "
-                "Set DISABLE_PDF_PROCESSING=true to suppress this warning."
-            )
-            from ..infrastructure.null_processor import NullPDFProcessor
-
-            pdf_processor = NullPDFProcessor()
-
-    return IngestionService(storage, repository, pdf_processor)
+    return IngestionService(storage, repository, NullPDFProcessor())
 
 
 @app.on_event("startup")
@@ -240,9 +201,6 @@ async def root() -> dict:
         "status": "running",
         "capabilities": [
             "Document Ingestion",
-            "RAG Query Processing",
-            "Clinical Data Extraction",
-            "Semantic Search",
         ],
         "endpoints": {
             "ingestion": {
@@ -252,21 +210,6 @@ async def root() -> dict:
                 "local_batch": "/ingest/local/batch",
                 "stats": "/stats",
                 "documents": "/documents",
-            },
-            "rag": {
-                "query": "/langchain/query",
-                "clinical": "/langchain/clinical",
-                "health": "/langchain/health",
-                "info": "/langchain/info",
-            },
-            "clinical_extraction": {
-                "extract": "/clinical/extract",
-                "extract_batch": "/clinical/extract/batch",
-                "validate": "/clinical/validate",
-                "export": "/clinical/export",
-                "process_document": "/clinical/process-document",
-                "statistics": "/clinical/statistics",
-                "health": "/clinical/health",
             },
         },
     }
