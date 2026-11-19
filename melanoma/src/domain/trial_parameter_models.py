@@ -7,7 +7,6 @@ pipeline, independent of the LLM or storage backend used.
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Optional
 
 
 class ExtractionStatus(str, Enum):
@@ -51,7 +50,7 @@ class TrialParameterResult:
     cancer_type: list[str] = field(default_factory=list)
 
     # Linked to treatment (from officialTitle + briefSummary)
-    treatment_name: Optional[str] = None
+    treatment_name: str | None = None
     modality: list[str] = field(default_factory=list)
 
     # Linked to trial (from full text)
@@ -61,7 +60,7 @@ class TrialParameterResult:
     previous_treatment_criteria: list[str] = field(default_factory=list)
 
     extraction_status: ExtractionStatus = ExtractionStatus.DONE
-    error_message: Optional[str] = None
+    error_message: str | None = None
     extracted_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict:
@@ -96,8 +95,8 @@ class ExtractionRunSummary:
     total_tokens: int = 0
     # Provenance of the source snapshot (snapshot mode only). Lets the validation
     # pipeline assert it grades against the exact source the extractor saw.
-    snapshot_path: Optional[str] = None
-    snapshot_sha256: Optional[str] = None
+    snapshot_path: str | None = None
+    snapshot_sha256: str | None = None
 
     def to_dict(self) -> dict:
         return {

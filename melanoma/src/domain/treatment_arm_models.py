@@ -6,7 +6,7 @@ identification, separation, and management in clinical trial extraction.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, validator
 
@@ -40,10 +40,10 @@ class TreatmentArm(BaseModel):
     arm_id: str = Field(..., description="Unique identifier for the treatment arm")
     arm_name: str = Field(..., description="Descriptive name of the treatment arm")
     generic_name: str = Field(..., description="Generic drug name(s)")
-    brand_name: Optional[str] = Field(None, description="Brand name if available")
-    dose: Optional[str] = Field(None, description="Dose information")
-    dosing_schedule: Optional[str] = Field(None, description="Dosing schedule")
-    patient_count: Optional[int] = Field(
+    brand_name: str | None = Field(None, description="Brand name if available")
+    dose: str | None = Field(None, description="Dose information")
+    dosing_schedule: str | None = Field(None, description="Dosing schedule")
+    patient_count: int | None = Field(
         None, description="Number of patients in this arm"
     )
     line_of_treatment: LineOfTreatment = Field(
@@ -58,7 +58,7 @@ class TreatmentArm(BaseModel):
     confidence_score: float = Field(
         ge=0.0, le=1.0, default=0.0, description="Confidence in arm separation"
     )
-    source_text: Optional[str] = Field(
+    source_text: str | None = Field(
         None, description="Source text used for arm identification"
     )
     arm_metadata: dict[str, Any] = Field(
@@ -128,7 +128,7 @@ class TreatmentArmSeparationResult(BaseModel):
         """Check if there are any processing warnings."""
         return len(self.warnings) > 0
 
-    def get_arm_by_id(self, arm_id: str) -> Optional[TreatmentArm]:
+    def get_arm_by_id(self, arm_id: str) -> TreatmentArm | None:
         """Get treatment arm by ID."""
         for arm in self.treatment_arms:
             if arm.arm_id == arm_id:
@@ -149,8 +149,8 @@ class TreatmentArmSchemaItem(BaseModel):
     combination_drugs: list[str] = Field(default_factory=list)
     arm_type: ArmType = ArmType.UNKNOWN
     line_of_treatment: LineOfTreatment = LineOfTreatment.UNKNOWN
-    dose: Optional[str] = None
-    dosing_schedule: Optional[str] = None
+    dose: str | None = None
+    dosing_schedule: str | None = None
     patient_count: int = 0
     nct_number: str = ""
     source_text: str = ""
@@ -250,7 +250,7 @@ class TreatmentArmExtractionResult(BaseModel):
         )
         return successful_arms / total_arms
 
-    def get_arm_result(self, arm_id: str) -> Optional[dict[str, Any]]:
+    def get_arm_result(self, arm_id: str) -> dict[str, Any] | None:
         """Get extraction result for a specific arm."""
         return self.arm_results.get(arm_id)
 
@@ -268,13 +268,11 @@ class TreatmentArmValidationRule(BaseModel):
 
     field_name: str = Field(..., description="Field to validate")
     required: bool = Field(default=False, description="Whether field is required")
-    pattern: Optional[str] = Field(None, description="Regex pattern for validation")
-    min_value: Optional[float] = Field(None, description="Minimum value")
-    max_value: Optional[float] = Field(None, description="Maximum value")
-    allowed_values: Optional[list[str]] = Field(None, description="Allowed values")
-    custom_validator: Optional[str] = Field(
-        None, description="Custom validation function"
-    )
+    pattern: str | None = Field(None, description="Regex pattern for validation")
+    min_value: float | None = Field(None, description="Minimum value")
+    max_value: float | None = Field(None, description="Maximum value")
+    allowed_values: list[str] | None = Field(None, description="Allowed values")
+    custom_validator: str | None = Field(None, description="Custom validation function")
 
 
 class TreatmentArmQualityAssessment(BaseModel):

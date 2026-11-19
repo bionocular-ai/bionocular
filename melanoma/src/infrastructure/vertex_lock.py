@@ -15,7 +15,7 @@ from __future__ import annotations
 import atexit
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 LOCK_DIR = Path.home() / ".bionocular"
@@ -43,7 +43,7 @@ def hold_vertex_lock(project: str, workload: str, lock_dir: Path = LOCK_DIR) -> 
         {
             "pid": os.getpid(),
             "workload": workload,
-            "startedAt": datetime.now(timezone.utc).isoformat(),
+            "startedAt": datetime.now(UTC).isoformat(),
         }
     )
     for _ in range(2):

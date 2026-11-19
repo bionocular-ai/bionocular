@@ -12,7 +12,7 @@ and every one already reachable through another term.
 """
 
 from datetime import date
-from typing import Any, Optional
+from typing import Any
 
 from src.infrastructure.clinical_trials.api_client import ClinicalTrialsGovAPIClient
 from src.infrastructure.clinical_trials.cancer_type_mapping import (
@@ -60,8 +60,8 @@ def _client(payloads: list[dict[str, Any]]) -> ClinicalTrialsGovAPIClient:
 def _search(
     payloads: list[dict[str, Any]],
     condition: str = "Cutaneous melanoma",
-    status_list: Optional[list[str]] = None,
-    last_update_after: Optional[date] = None,
+    status_list: list[str] | None = None,
+    last_update_after: date | None = None,
 ) -> tuple[list[str], list[dict[str, Any]]]:
     client = _client(payloads)
     ncts = client.search_trials_by_condition(

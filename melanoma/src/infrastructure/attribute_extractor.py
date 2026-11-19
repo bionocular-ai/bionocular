@@ -8,7 +8,7 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import Any, Optional, Union
+from typing import Any
 
 from tenacity import (
     retry,
@@ -256,7 +256,7 @@ class LLMAttributeExtractor(AttributeExtractor):
         attribute_type: AttributeType,
         context: list[str],
         document_id: str,
-        arm_info: Optional[dict] = None,
+        arm_info: dict | None = None,
     ) -> ExtractedAttribute:
         """Extract a specific attribute from context.
 
@@ -510,7 +510,7 @@ class LLMAttributeExtractor(AttributeExtractor):
             logger.warning(f"Failed to parse response for {attribute_type}: {e}")
             return None
 
-    def _parse_abstract_number(self, response: str) -> Optional[str]:
+    def _parse_abstract_number(self, response: str) -> str | None:
         """Parse abstract number from response.
 
         Returns the abstract number as a string (not float).
@@ -531,7 +531,7 @@ class LLMAttributeExtractor(AttributeExtractor):
 
         return None
 
-    def _parse_nct_number(self, response: str) -> Optional[str]:
+    def _parse_nct_number(self, response: str) -> str | None:
         """Parse clinical trial identifier from response.
 
         Priority: NCT number > EudraCT > Other identifiers
@@ -584,7 +584,7 @@ class LLMAttributeExtractor(AttributeExtractor):
 
         return None
 
-    def _extract_trial_id_from_context(self, context: list[str]) -> Optional[str]:
+    def _extract_trial_id_from_context(self, context: list[str]) -> str | None:
         """Extract clinical trial identifier directly from context chunks.
 
         This is a fallback when LLM extraction fails. It searches through
@@ -616,7 +616,7 @@ class LLMAttributeExtractor(AttributeExtractor):
 
         return None
 
-    def _parse_generic_name(self, response: str) -> Optional[str]:
+    def _parse_generic_name(self, response: str) -> str | None:
         """Parse generic drug name from response."""
         # Clean up response
         response = response.strip()
@@ -632,7 +632,7 @@ class LLMAttributeExtractor(AttributeExtractor):
         # Return the response as-is (should be drug name)
         return response if response else "Not found"
 
-    def _parse_p_value(self, response: str) -> Optional[Union[float, str]]:
+    def _parse_p_value(self, response: str) -> float | str | None:
         """Parse p-value from response."""
         # Look for numeric p-value
         p_match = re.search(
@@ -665,7 +665,7 @@ class LLMAttributeExtractor(AttributeExtractor):
 
         return None
 
-    def _parse_percentage(self, response: str) -> Optional[float]:
+    def _parse_percentage(self, response: str) -> float | None:
         """Parse percentage value from response."""
         # First try to clean the response using the utility function
         cleaned_value = clean_numeric_value(

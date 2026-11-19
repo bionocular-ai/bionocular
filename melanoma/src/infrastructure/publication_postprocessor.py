@@ -8,7 +8,6 @@ import csv
 import io
 import logging
 import re
-from typing import Optional
 
 from domain.constants import PublicationPostprocessingPatterns
 
@@ -287,7 +286,7 @@ class PublicationPostprocessor:
 
         return "\n".join(repaired_lines)
 
-    def _convert_csv_to_markdown(self, csv_lines: list[str]) -> Optional[str]:
+    def _convert_csv_to_markdown(self, csv_lines: list[str]) -> str | None:
         """Convert CSV lines to Markdown table format.
 
         Args:

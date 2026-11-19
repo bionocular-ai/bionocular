@@ -1,6 +1,5 @@
 """SQLAlchemy-based document repository implementation."""
 
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -47,7 +46,7 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
             metadata=db_document.doc_metadata or {},  # type: ignore
         )
 
-    async def find_by_hash(self, content_hash: str) -> Optional[Document]:
+    async def find_by_hash(self, content_hash: str) -> Document | None:
         """Find a document by its content hash."""
         db_document = (
             self.db.query(DocumentModel)
@@ -69,7 +68,7 @@ class SQLAlchemyDocumentRepository(DocumentRepositoryInterface):
             metadata=db_document.doc_metadata or {},  # type: ignore
         )
 
-    async def find_by_id(self, document_id: str) -> Optional[Document]:
+    async def find_by_id(self, document_id: str) -> Document | None:
         """Find a document by its ID."""
         try:
             uuid_id = UUID(document_id)

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -94,7 +94,7 @@ class OpenRouterStructuredService(StructuredLLMService):
     def _log(self, **fields: Any) -> None:
         if self.call_log_path is None:
             return
-        row = {"ts": datetime.now(timezone.utc).isoformat(), **fields}
+        row = {"ts": datetime.now(UTC).isoformat(), **fields}
         with self.call_log_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(row) + "\n")
 

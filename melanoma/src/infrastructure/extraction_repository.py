@@ -6,7 +6,6 @@ PostgreSQL and SQLAlchemy.
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import and_, desc
 from sqlalchemy.orm import Session
@@ -100,7 +99,7 @@ class ExtractionRepositoryImpl(ExtractionRepository):
             logger.error(f"Failed to save extraction result: {e}")
             raise
 
-    async def get_extraction_result(self, result_id: str) -> Optional[ExtractionResult]:
+    async def get_extraction_result(self, result_id: str) -> ExtractionResult | None:
         """Retrieve extraction result by ID.
 
         Args:

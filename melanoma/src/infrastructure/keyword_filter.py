@@ -12,13 +12,12 @@ Key features:
 
 import logging
 import re
-from typing import Union
 
 logger = logging.getLogger(__name__)
 
 
 def chunk_contains_keywords(
-    chunk_content: str, keywords: Union[list[str], list[list[str]]]
+    chunk_content: str, keywords: list[str] | list[list[str]]
 ) -> bool:
     """Check if chunk contains required keywords (whole word matching).
 
@@ -77,7 +76,7 @@ def chunk_contains_keywords(
         return False
 
 
-def validate_keywords(keywords: Union[list[str], list[list[str]]]) -> bool:
+def validate_keywords(keywords: list[str] | list[list[str]]) -> bool:
     """Validate keyword structure.
 
     Args:

@@ -8,7 +8,6 @@ and arm characteristics.
 import json
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 try:
     import yaml
@@ -33,9 +32,7 @@ class TherapyStatus(str, Enum):
 class TherapyClassifier:
     """Classifier for therapy approval status."""
 
-    def __init__(
-        self, config_path: Optional[Path] = None, config: Optional[dict] = None
-    ):
+    def __init__(self, config_path: Path | None = None, config: dict | None = None):
         """Initialize the classifier with therapy status configuration.
 
         Args:
@@ -180,9 +177,9 @@ class TherapyClassifier:
     def classify_arm(
         self,
         arm_name: str,
-        generic_name: Optional[str] = None,
-        title: Optional[str] = None,
-        cancer_type: Optional[str] = None,
+        generic_name: str | None = None,
+        title: str | None = None,
+        cancer_type: str | None = None,
     ) -> TherapyStatus:
         """Classify a treatment arm as approved, investigational, control, or unknown.
 
@@ -264,7 +261,7 @@ class TherapyClassifier:
 
         return TherapyStatus.UNKNOWN
 
-    def get_therapy_details(self, arm_name: str) -> Optional[dict]:
+    def get_therapy_details(self, arm_name: str) -> dict | None:
         """Get detailed information about a therapy if available.
 
         Args:

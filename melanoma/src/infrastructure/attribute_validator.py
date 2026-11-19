@@ -6,7 +6,7 @@ using the validation rules from the database.
 
 import logging
 import re
-from typing import Any, Optional
+from typing import Any
 
 from ..domain.extraction_interfaces import AttributeValidator
 from ..domain.extraction_models import (
@@ -197,7 +197,7 @@ class AttributeValidatorImpl(AttributeValidator):
             return False
 
     def _validate_numeric_range(
-        self, value: Any, min_value: Optional[float], max_value: Optional[float]
+        self, value: Any, min_value: float | None, max_value: float | None
     ) -> bool:
         """Validate numeric value is within range.
 

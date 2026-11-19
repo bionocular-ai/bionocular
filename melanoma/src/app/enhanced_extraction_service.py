@@ -17,7 +17,7 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from ..domain.extraction_interfaces import AttributeExtractor, LLMService
 from ..domain.extraction_models import (
@@ -96,14 +96,14 @@ class EnhancedExtractionService:
     def __init__(
         self,
         treatment_arm_separator: TreatmentArmSeparator,
-        arm_aware_rag_provider: Optional[ArmAwareRAGContextProvider] = None,
-        attribute_extractor: Optional[AttributeExtractor] = None,
-        llm_service: Optional[LLMService] = None,
-        clinical_trials_api_service: Optional[ClinicalTrialsAPIService] = None,
+        arm_aware_rag_provider: ArmAwareRAGContextProvider | None = None,
+        attribute_extractor: AttributeExtractor | None = None,
+        llm_service: LLMService | None = None,
+        clinical_trials_api_service: ClinicalTrialsAPIService | None = None,
         enable_cost_tracking: bool = True,
         max_concurrent_attributes: int = 20,
-        family_extractor: Optional[FamilyExtractor] = None,
-        gemini: Optional[GeminiLLMService] = None,
+        family_extractor: FamilyExtractor | None = None,
+        gemini: GeminiLLMService | None = None,
     ):
         """Initialize enhanced extraction service.
 
@@ -140,7 +140,7 @@ class EnhancedExtractionService:
         # llm_service is wired).
         if enable_cost_tracking and llm_service is not None:
             self.cost_calculator = CostCalculator()
-            self.llm_service: Optional[LLMService] = CostTrackingLLMService(
+            self.llm_service: LLMService | None = CostTrackingLLMService(
                 llm_service, self.cost_calculator
             )
             self.cost_tracking_enabled = True
@@ -156,7 +156,7 @@ class EnhancedExtractionService:
         # Get preferred model from environment or use default
         preferred_model = os.getenv("EXTRACTION_MODEL", "gpt-4o")
 
-        self.batch_extractor: Optional[BatchAttributeExtractor] = (
+        self.batch_extractor: BatchAttributeExtractor | None = (
             BatchAttributeExtractor(
                 cast(CostTrackingLLMService, self.llm_service),
                 self.prompt_provider,
@@ -280,7 +280,7 @@ class EnhancedExtractionService:
                 return_exceptions=True,
             )
             transient_errors: list[str] = []
-            for fam, fr in zip(families, family_results):
+            for fam, fr in zip(families, family_results, strict=True):
                 if isinstance(fr, BaseException):
                     logger.error(
                         "family_extraction_failed doc_id=%s family=%s error=%s",
@@ -539,7 +539,7 @@ class EnhancedExtractionService:
     # Legacy detection helpers (used by both paths' arm separation step)
     # ------------------------------------------------------------------ #
 
-    def _is_publication(self, content: str, file_path: Optional[str] = None) -> bool:
+    def _is_publication(self, content: str, file_path: str | None = None) -> bool:
         """Detect if content is a full publication (not an abstract).
 
         Args:
@@ -574,7 +574,7 @@ class EnhancedExtractionService:
         # Publication if it has main sections, no abstract ID, and is long
         return has_main_sections and not has_abstract_id and is_long
 
-    def _extract_results_section(self, content: str) -> Optional[str]:
+    def _extract_results_section(self, content: str) -> str | None:
         """Extract the Results section from publication content.
 
         For publications, treatment arms are typically described in the Results section,
@@ -718,7 +718,7 @@ class EnhancedExtractionService:
         context_chunks_per_arm: int = 5,
         similarity_threshold: float = 0.1,
         include_api_data: bool = True,
-        file_path: Optional[str] = None,
+        file_path: str | None = None,
     ) -> TreatmentArmExtractionResult:
         """Extract attributes from abstract using enhanced workflow.
 
@@ -880,7 +880,7 @@ class EnhancedExtractionService:
         context_chunks_per_arm: int = 5,
         similarity_threshold: float = 0.1,
         include_api_data: bool = True,
-        file_path: Optional[str] = None,
+        file_path: str | None = None,
     ) -> TreatmentArmExtractionResult:
         """Extract attributes from abstract using batch processing for efficiency.
 
@@ -1727,7 +1727,7 @@ class EnhancedExtractionService:
         self,
         extracted_attributes: dict[AttributeType, Any],
         arm: TreatmentArm,
-        nct_number: Optional[str],
+        nct_number: str | None,
     ) -> dict[AttributeType, Any]:
         """Handle special cases and optimizations for attribute extraction.
 
@@ -1887,7 +1887,7 @@ class EnhancedExtractionService:
         arms: list[TreatmentArm],
         abstract_id: str,
         similarity_threshold: float,
-        file_path: Optional[str] = None,
+        file_path: str | None = None,
     ) -> dict[AttributeType, dict[str, ExtractedAttribute]]:
         """Extract abstract-level attributes (same value for all arms).
 
@@ -2008,7 +2008,7 @@ class EnhancedExtractionService:
         abstract_id: str,
         context_chunks_per_arm: int,
         similarity_threshold: float,
-        file_path: Optional[str] = None,
+        file_path: str | None = None,
     ) -> dict[AttributeType, dict[str, ExtractedAttribute]]:
         """Extract attributes with per-attribute RAG retrieval (3-tier filtering).
 
@@ -2101,7 +2101,7 @@ class EnhancedExtractionService:
     def _extract_file_path_attributes_batch(
         self,
         attributes: list[AttributeType],
-        file_path: Optional[str],
+        file_path: str | None,
     ) -> dict[AttributeType, dict[str, Any]]:
         """Extract file path attributes in batch.
 
@@ -2149,7 +2149,7 @@ class EnhancedExtractionService:
         arms: list[TreatmentArm],
         attributes: list[AttributeType],
         abstract_id: str,
-        nct_number_override: Optional[str] = None,
+        nct_number_override: str | None = None,
     ) -> dict[AttributeType, dict[str, Any]]:
         """Extract API attributes in batch.
 

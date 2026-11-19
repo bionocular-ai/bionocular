@@ -1,6 +1,5 @@
 """Factory for creating clinical trials service components."""
 
-from typing import Optional
 
 from ...app.clinical_trials_service import ClinicalTrialsService
 from ...domain.clinical_trial_interfaces import (
@@ -15,7 +14,7 @@ from ..config import CLINICAL_TRIAL_DB_PATH
 
 
 def create_clinical_trials_service(
-    cache_db_path: Optional[str] = CLINICAL_TRIAL_DB_PATH,
+    cache_db_path: str | None = CLINICAL_TRIAL_DB_PATH,
     api_base_url: str = "https://clinicaltrials.gov/api/v2/studies/",
 ) -> ClinicalTrialsService:
     """Create a configured ClinicalTrialsService instance.

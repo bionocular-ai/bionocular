@@ -3,7 +3,6 @@
 import hashlib
 import os
 from pathlib import Path
-from typing import Optional
 from uuid import uuid4
 
 from ..domain.interfaces import StorageInterface
@@ -53,7 +52,7 @@ class LocalFileStorage(StorageInterface):
         # you'd want to check the database for the hash
         return False
 
-    async def get_document_path(self, content_hash: str) -> Optional[str]:
+    async def get_document_path(self, content_hash: str) -> str | None:
         """Get the storage path of an existing document."""
         # This would typically query the database
         # For now, return None as we're not implementing full duplicate detection

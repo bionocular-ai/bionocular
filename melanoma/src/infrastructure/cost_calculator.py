@@ -9,7 +9,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 import tiktoken
 
@@ -60,9 +60,9 @@ class APICall:
     completion_tokens: int
     cost: float
     operation: str  # e.g., "arm_separation", "attribute_extraction", "api_lookup"
-    attribute_type: Optional[str] = None
+    attribute_type: str | None = None
     success: bool = True
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
 
 @dataclass
@@ -268,9 +268,9 @@ class CostCalculator:
         completion_tokens: int,
         model: str,
         operation: str,
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
         success: bool = True,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> APICall:
         """Record an API call for cost tracking.
 

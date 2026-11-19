@@ -11,7 +11,7 @@ optimized context retrieval for attribute extraction with support for:
 import asyncio
 import hashlib
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from ..domain.extraction_interfaces import RAGContextProvider
 from ..domain.extraction_models import AttributeType
@@ -215,11 +215,11 @@ class RAGContextProviderImpl(RAGContextProvider):
 
     async def get_context_for_attribute(
         self,
-        document_id: Optional[str],
+        document_id: str | None,
         attribute_type: AttributeType,
         context_chunks: int = 5,
         similarity_threshold: float = 0.1,
-        metadata_filters: Optional[dict[str, Any]] = None,
+        metadata_filters: dict[str, Any] | None = None,
     ) -> list[str]:
         """Get relevant context chunks for attribute extraction.
 
@@ -314,7 +314,7 @@ class RAGContextProviderImpl(RAGContextProvider):
         document_id: str,
         context_chunks: int,
         similarity_threshold: float,
-        metadata_filters: Optional[dict[str, Any]],
+        metadata_filters: dict[str, Any] | None,
         attribute_type: AttributeType,
     ) -> list[SearchResult]:
         """Process multiple queries in parallel for better performance.
@@ -364,10 +364,10 @@ class RAGContextProviderImpl(RAGContextProvider):
     async def _search_single_query(
         self,
         query_text: str,
-        document_id: Optional[str],
+        document_id: str | None,
         context_chunks: int,
         similarity_threshold: float,
-        metadata_filters: Optional[dict[str, Any]],
+        metadata_filters: dict[str, Any] | None,
     ) -> list[SearchResult]:
         """Execute a single search query.
 

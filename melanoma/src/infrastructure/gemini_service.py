@@ -8,7 +8,7 @@ import os
 import random
 import re
 import sys
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
@@ -311,13 +311,13 @@ class GeminiLLMService(LLMService, StructuredLLMService):
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         model: str = _DEFAULT_MODEL,
         temperature: float = 0.0,
         max_tokens: int = 16384,
-        cost_calculator: Optional[CostCalculator] = None,
-        project: Optional[str] = None,
-        location: Optional[str] = None,
+        cost_calculator: CostCalculator | None = None,
+        project: str | None = None,
+        location: str | None = None,
     ) -> None:
         if not api_key and not project:
             raise ValueError(
@@ -405,9 +405,9 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         usage_metadata: Any,
         model: str,
         operation: str,
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
         success: bool = True,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ) -> None:
         # Capture into a local so static analysers can narrow Optional → concrete type.
         # Instance attributes cannot be safely narrowed through if-guards because
@@ -432,9 +432,9 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         prompt: str,
         temperature: float = 0.0,
         max_tokens: int = 1024,
-        model_name: Optional[str] = None,
+        model_name: str | None = None,
         operation: str = "trial_extraction",
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
         max_retries: int = 6,
     ) -> str:
         self._raise_if_quota_tripped()
@@ -457,7 +457,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                 config=config,
             )
 
-        last_exc: Optional[Exception] = None
+        last_exc: Exception | None = None
         for attempt in range(max_retries):
             try:
                 response = await asyncio.to_thread(_sync_call)
@@ -523,9 +523,9 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         response_schema: type[T],
         temperature: float = 0.0,
         max_tokens: int = 4096,
-        model_name: Optional[str] = None,
+        model_name: str | None = None,
         operation: str = "structured_extraction",
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
         max_retries: int = 6,
         cache_id: str | None = None,
     ) -> T:
@@ -573,7 +573,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
                     finish_reason = reason
             return "".join(text_parts), usage, finish_reason
 
-        last_exc: Optional[Exception] = None
+        last_exc: Exception | None = None
         for attempt in range(max_retries):
             try:
                 text, usage_metadata, finish_reason = await asyncio.to_thread(
@@ -737,7 +737,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         prompt: str,
         expected_format: str,
         operation: str = "structured_extraction",
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
     ) -> dict[str, Any]:
         full_prompt = (
             f"{prompt}\n\nReturn ONLY valid JSON. No prose, no markdown fences.\n"
@@ -752,7 +752,7 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         self,
         prompt: str,
         operation: str = "extraction",
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
         max_retries: int = 1,
     ) -> dict[str, Any]:
         for attempt in range(1 + max_retries):

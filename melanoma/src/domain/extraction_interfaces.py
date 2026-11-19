@@ -5,7 +5,7 @@ must implement, following the Dependency Inversion Principle.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from .extraction_models import (
     AttributeType,
@@ -21,11 +21,11 @@ class RAGContextProvider(ABC):
     @abstractmethod
     async def get_context_for_attribute(
         self,
-        document_id: Optional[str],
+        document_id: str | None,
         attribute_type: AttributeType,
         context_chunks: int = 5,
         similarity_threshold: float = 0.1,
-        metadata_filters: Optional[dict[str, Any]] = None,
+        metadata_filters: dict[str, Any] | None = None,
     ) -> list[str]:
         """Get relevant context chunks for attribute extraction.
 
@@ -51,7 +51,7 @@ class AttributeExtractor(ABC):
         attribute_type: AttributeType,
         context: list[str],
         document_id: str,
-        arm_info: Optional[dict] = None,
+        arm_info: dict | None = None,
     ) -> ExtractedAttribute:
         """Extract a specific attribute from context.
 
@@ -101,7 +101,7 @@ class ExtractionRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_extraction_result(self, result_id: str) -> Optional[ExtractionResult]:
+    async def get_extraction_result(self, result_id: str) -> ExtractionResult | None:
         """Retrieve extraction result by ID.
 
         Args:
@@ -204,7 +204,7 @@ class LLMService(ABC):
         self,
         prompt: str,
         operation: str = "extraction",
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
         max_retries: int = 1,
     ) -> dict[str, Any]:
         """Generate a response expected to be pure JSON and parse it.

@@ -65,7 +65,7 @@ extend-exclude = '''
 '''
 
 [tool.ruff]
-target-version = "py39"
+target-version = "py311"
 line-length = 88
 select = [
     "E",  # pycodestyle errors
@@ -80,6 +80,7 @@ ignore = [
     "E501",  # line too long, handled by black
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
+    "UP038", # isinstance(x, A | B) is slower than a tuple; deprecated upstream
 ]
 
 [tool.ruff.per-file-ignores]

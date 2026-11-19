@@ -1,7 +1,7 @@
 """Domain interfaces for clinical trials API operations."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from .clinical_trial_models import ClinicalTrialData
 
@@ -10,7 +10,7 @@ class ClinicalTrialsAPIClient(ABC):
     """Interface for fetching clinical trial data from external API."""
 
     @abstractmethod
-    def fetch_trial_data(self, nct_number: str) -> Optional[dict]:
+    def fetch_trial_data(self, nct_number: str) -> dict | None:
         """Fetch raw trial data from API.
 
         Args:
@@ -23,7 +23,7 @@ class ClinicalTrialsAPIClient(ABC):
 
     @abstractmethod
     def search_trials_by_condition(
-        self, condition: str, status_list: Optional[list[str]] = None
+        self, condition: str, status_list: list[str] | None = None
     ) -> list[str]:
         """Search for trials by condition and optional status filter.
 
@@ -42,7 +42,7 @@ class ClinicalTrialRepository(ABC):
     """Interface for caching clinical trial data."""
 
     @abstractmethod
-    def get_cached_trial(self, nct_number: str) -> Optional[ClinicalTrialData]:
+    def get_cached_trial(self, nct_number: str) -> ClinicalTrialData | None:
         """Retrieve trial data from cache if available and not expired.
 
         Args:
@@ -64,7 +64,7 @@ class ClinicalTrialRepository(ABC):
         pass
 
     @abstractmethod
-    def clear_cache(self, nct_number: Optional[str] = None) -> int:
+    def clear_cache(self, nct_number: str | None = None) -> int:
         """Clear cache entries.
 
         Args:
@@ -116,7 +116,7 @@ class ClinicalTrialRepository(ABC):
         pass
 
     @abstractmethod
-    def get_cached_api_json(self, nct_number: str) -> Optional[dict]:
+    def get_cached_api_json(self, nct_number: str) -> dict | None:
         """Get raw API JSON from cache without parsing.
 
         Args:
@@ -128,7 +128,7 @@ class ClinicalTrialRepository(ABC):
         pass
 
     @abstractmethod
-    def get_cached_trial_api_json(self, nct_number: str) -> Optional[dict]:
+    def get_cached_trial_api_json(self, nct_number: str) -> dict | None:
         """Get full ClinicalTrials.gov API response JSON from cache for a single trial.
 
         Args:
@@ -143,24 +143,22 @@ class ClinicalTrialRepository(ABC):
     def get_dashboard_trials(
         self,
         cancer_type_tag: str,
-        phase_filter: Optional[list[str]] = None,
+        phase_filter: list[str] | None = None,
         has_abstracts_only: bool = False,
-        status_filter: Optional[list[str]] = None,
-        sponsor_type_filter: Optional[list[str]] = None,
+        status_filter: list[str] | None = None,
+        sponsor_type_filter: list[str] | None = None,
         skip: int = 0,
         limit: int = 500,
         balance_by_modality: bool = False,
         per_group: int = 15,
-        modality_filter: Optional[str] = None,
+        modality_filter: str | None = None,
         modality_skip: int = 0,
         modality_limit: int = 15,
-        balance_by_group: Optional[str] = None,
-        category_filter: Optional[str] = None,
+        balance_by_group: str | None = None,
+        category_filter: str | None = None,
         category_skip: int = 0,
         category_limit: int = 15,
-    ) -> tuple[
-        list[dict[str, Any]], int, Optional[dict[str, int]], Optional[dict[str, int]]
-    ]:
+    ) -> tuple[list[dict[str, Any]], int, dict[str, int] | None, dict[str, int] | None]:
         """Get trial card DTOs for dashboard by cancer type.
 
         Args:

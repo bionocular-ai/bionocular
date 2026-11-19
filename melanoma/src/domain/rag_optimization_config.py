@@ -8,7 +8,7 @@ including:
 """
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from .extraction_models import AttributeConfigurationFactory, AttributeType
 
@@ -288,7 +288,7 @@ class RAGOptimizationConfig:
     def should_include_chunk(
         chunk_content: str,
         attribute_type: AttributeType,
-        chunk_metadata: Optional[dict[str, Any]] = None,
+        chunk_metadata: dict[str, Any] | None = None,
     ) -> bool:
         """Determine if a chunk should be included for an attribute.
 
