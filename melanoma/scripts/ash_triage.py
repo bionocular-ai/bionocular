@@ -129,7 +129,7 @@ async def run(
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     outcome = await asyncio.gather(*(one(n) for n in todo), return_exceptions=True)
-    for number, err in zip(todo, outcome):
+    for number, err in zip(todo, outcome, strict=True):
         if isinstance(err, Exception):
             print(f"{number}: failed ({err}); rerun to retry")
     return results
