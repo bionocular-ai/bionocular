@@ -1,7 +1,7 @@
 """Domain interfaces for the ingestion system."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from .models import (
     Chunk,
@@ -39,7 +39,7 @@ class StorageInterface(ABC):
         pass
 
     @abstractmethod
-    async def get_document_path(self, content_hash: str) -> Optional[str]:
+    async def get_document_path(self, content_hash: str) -> str | None:
         """Get the storage path of an existing document."""
         pass
 
@@ -63,12 +63,12 @@ class DocumentRepositoryInterface(ABC):
         pass
 
     @abstractmethod
-    async def find_by_hash(self, content_hash: str) -> Optional[Document]:
+    async def find_by_hash(self, content_hash: str) -> Document | None:
         """Find a document by its content hash."""
         pass
 
     @abstractmethod
-    async def find_by_id(self, document_id: str) -> Optional[Document]:
+    async def find_by_id(self, document_id: str) -> Document | None:
         """Find a document by its ID."""
         pass
 
@@ -126,7 +126,7 @@ class ChunkingStrategyInterface(ABC):
         self,
         content: str,
         configuration: ChunkingConfiguration,
-        document_id: Optional[str] = None,
+        document_id: str | None = None,
         filename: str = "",
     ) -> list[Chunk]:
         """Chunk content according to the strategy."""
@@ -255,7 +255,7 @@ class VectorStoreInterface(ABC):
         pass
 
     @abstractmethod
-    async def get_chunk_by_id(self, chunk_id: str) -> Optional[ChunkWithEmbedding]:
+    async def get_chunk_by_id(self, chunk_id: str) -> ChunkWithEmbedding | None:
         """Get a specific chunk by ID."""
         pass
 

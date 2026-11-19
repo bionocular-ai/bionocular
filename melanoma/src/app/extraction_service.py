@@ -6,7 +6,6 @@ between domain entities and infrastructure services.
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from ..domain.extraction_interfaces import (
     AttributeExtractor,
@@ -38,9 +37,9 @@ class ExtractionService:
         rag_context_provider: RAGContextProvider,
         attribute_extractor: AttributeExtractor,
         attribute_validator: AttributeValidator,
-        extraction_repository: Optional[ExtractionRepository] = None,
-        prompt_template_provider: Optional[PromptTemplateProvider] = None,
-        llm_service: Optional[LLMService] = None,
+        extraction_repository: ExtractionRepository | None = None,
+        prompt_template_provider: PromptTemplateProvider | None = None,
+        llm_service: LLMService | None = None,
     ):
         """Initialize extraction service with dependencies.
 
@@ -160,7 +159,7 @@ class ExtractionService:
             logger.error(f"Extraction failed for document {request.document_id}: {e}")
             raise RuntimeError(f"Extraction failed: {e}") from e
 
-    async def get_extraction_result(self, result_id: str) -> Optional[ExtractionResult]:
+    async def get_extraction_result(self, result_id: str) -> ExtractionResult | None:
         """Retrieve extraction result by ID.
 
         Args:

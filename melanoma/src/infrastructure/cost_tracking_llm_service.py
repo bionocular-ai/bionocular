@@ -5,7 +5,7 @@ and usage statistics.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from ..domain.extraction_interfaces import LLMService
 from .cost_calculator import CostCalculator
@@ -32,7 +32,7 @@ class CostTrackingLLMService(LLMService):
         prompt: str,
         model: str = None,
         operation: str = "text_generation",
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
         **kwargs,
     ) -> str:
         """Generate text with cost tracking.
@@ -216,7 +216,7 @@ class CostTrackingLLMService(LLMService):
         self,
         prompt: str,
         operation: str = "extraction",
-        attribute_type: Optional[str] = None,
+        attribute_type: str | None = None,
         max_retries: int = 1,
     ) -> dict[str, Any]:
         """Extract JSON data with cost tracking."""

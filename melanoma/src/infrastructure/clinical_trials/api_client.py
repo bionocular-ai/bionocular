@@ -4,7 +4,6 @@ import logging
 import re
 import time
 from datetime import date
-from typing import Optional
 
 import requests  # type: ignore[import-untyped]
 
@@ -64,7 +63,7 @@ class ClinicalTrialsGovAPIClient(ClinicalTrialsAPIClient):
             return False
         return bool(NCT_PATTERN.match(nct_number.upper()))
 
-    def fetch_trial_data(self, nct_number: str) -> Optional[dict]:
+    def fetch_trial_data(self, nct_number: str) -> dict | None:
         """Fetch raw trial data from API with robust error handling and retries.
 
         Args:
@@ -175,8 +174,8 @@ class ClinicalTrialsGovAPIClient(ClinicalTrialsAPIClient):
     def search_trials_by_condition(
         self,
         condition: str,
-        status_list: Optional[list[str]] = None,
-        last_update_after: Optional[date] = None,
+        status_list: list[str] | None = None,
+        last_update_after: date | None = None,
     ) -> list[str]:
         """Search for trials by condition and optional status / update-date filters.
 
@@ -192,7 +191,7 @@ class ClinicalTrialsGovAPIClient(ClinicalTrialsAPIClient):
             List of NCT numbers matching the search criteria
         """
         nct_numbers: list[str] = []
-        page_token: Optional[str] = None
+        page_token: str | None = None
 
         try:
             while True:

@@ -6,7 +6,6 @@ a clean interface for fetching clinical trial data with caching.
 
 import logging
 import time
-from typing import Optional, Union
 
 from ..domain.clinical_trial_interfaces import (
     ClinicalTrialParser,
@@ -46,7 +45,7 @@ class ClinicalTrialsService:
             AttributeConfigurationFactory.get_api_sourced_attributes()
         )
 
-    def get_trial_data(self, nct_number: str) -> Optional[ClinicalTrialData]:
+    def get_trial_data(self, nct_number: str) -> ClinicalTrialData | None:
         """Get clinical trial data for a given NCT number.
 
         Implements caching strategy:
@@ -87,7 +86,7 @@ class ClinicalTrialsService:
 
     def get_attribute_value(
         self, nct_number: str, attribute_type: AttributeType
-    ) -> Optional[Union[str, bool, int, float]]:
+    ) -> str | bool | int | float | None:
         """Get a specific attribute value for a given NCT number.
 
         Args:
@@ -111,8 +110,8 @@ class ClinicalTrialsService:
         self,
         nct_number: str,
         attribute_types: list[AttributeType],
-        arm_info: Optional[dict] = None,
-    ) -> dict[AttributeType, Optional[Union[str, bool, int, float]]]:
+        arm_info: dict | None = None,
+    ) -> dict[AttributeType, str | bool | int | float | None]:
         """Get multiple attribute values for a given NCT number.
 
         Args:
@@ -143,7 +142,7 @@ class ClinicalTrialsService:
                 if 0 <= arm_index < len(trial_data.treatment_arms):
                     selected_arm = trial_data.treatment_arms[arm_index]
 
-        results: dict[AttributeType, Optional[Union[str, bool, int, float]]] = {}
+        results: dict[AttributeType, str | bool | int | float | None] = {}
         for attribute_type in attribute_types:
             if attribute_type in self.api_sourced_attributes:
                 if self._is_arm_specific_attribute(attribute_type):
@@ -174,7 +173,7 @@ class ClinicalTrialsService:
 
     def _get_attribute_from_arm(
         self, arm: TreatmentArm, attribute_type: AttributeType
-    ) -> Optional[Union[str, bool, int, float]]:
+    ) -> str | bool | int | float | None:
         """Get attribute value from a TreatmentArm object.
 
         Args:
@@ -211,7 +210,7 @@ class ClinicalTrialsService:
 
     def _get_arm_specific_attribute(
         self, attribute_type: AttributeType, arm_info: dict
-    ) -> Optional[str]:
+    ) -> str | None:
         """Get arm-specific attribute value from arm_info."""
         mapping = {
             AttributeType.GENERIC_NAME: arm_info.get("generic_name"),
@@ -229,11 +228,9 @@ class ClinicalTrialsService:
         self,
         trial_data: ClinicalTrialData,
         attribute_type: AttributeType,
-    ) -> Optional[Union[str, bool, int, float]]:
+    ) -> str | bool | int | float | None:
         """Map an attribute type to a field on ClinicalTrialData."""
-        attribute_mapping: dict[
-            AttributeType, Optional[Union[str, bool, int, float]]
-        ] = {
+        attribute_mapping: dict[AttributeType, str | bool | int | float | None] = {
             AttributeType.NCT_NUMBER: trial_data.nct_number,
             AttributeType.TRIAL_NAME: trial_data.trial_name,
             AttributeType.CANCER_TYPE: trial_data.cancer_type,
@@ -278,7 +275,7 @@ class ClinicalTrialsService:
 
         return attribute_mapping.get(attribute_type)
 
-    def clear_cache(self, nct_number: Optional[str] = None) -> int:
+    def clear_cache(self, nct_number: str | None = None) -> int:
         """Clear cache entries."""
         return self.repository.clear_cache(nct_number)
 
@@ -287,7 +284,7 @@ class ClinicalTrialsService:
         return self.repository.get_cache_stats()
 
     def sync_cancer_type_universe(
-        self, cancer_type_tag: str, status_list: Optional[list[str]] = None
+        self, cancer_type_tag: str, status_list: list[str] | None = None
     ) -> dict[str, any]:
         """Sync trials for a cancer type from ClinicalTrials.gov API.
 

@@ -4,7 +4,6 @@ This module normalizes various cancer type names to the standard 8 categories
 used in the bionocular pipeline.
 """
 
-from typing import Optional
 
 # Standard cancer types in the pipeline
 STANDARD_CANCER_TYPES = [
@@ -64,7 +63,7 @@ CANCER_TYPE_MAPPING = {
 }
 
 
-def normalize_cancer_type(cancer_type: str) -> Optional[str]:
+def normalize_cancer_type(cancer_type: str) -> str | None:
     """Normalize a cancer type to one of the 8 standard categories.
 
     Args:

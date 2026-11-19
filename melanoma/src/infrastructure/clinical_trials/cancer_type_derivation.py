@@ -208,7 +208,7 @@ def _derive_cutaneous_scc(
     """
     squamous = [
         (original, full, text)
-        for original, full, text in zip(originals, normalised, positives)
+        for original, full, text in zip(originals, normalised, positives, strict=True)
         if SQUAMOUS.search(text) and CARCINOMA_OR_CANCER.search(text)
     ]
     if not squamous:

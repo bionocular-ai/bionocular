@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 from ...domain.cancer_type_normalizer import get_primary_cancer_type
 from ...domain.clinical_trial_interfaces import ClinicalTrialParser
@@ -210,9 +210,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             anti_pd1_failure=eligibility_data.get("anti_pd1_failure"),
             braf_mutation=eligibility_data.get("braf_mutation"),
             nras_mutation=eligibility_data.get("nras_mutation"),
-            mutation_status=cast(
-                Optional[str], eligibility_data.get("mutation_status")
-            ),
+            mutation_status=cast(str | None, eligibility_data.get("mutation_status")),
             biomarker_inclusion=biomarker_inclusion,
             biomarkers_inclusion_criteria=biomarkers_inclusion_criteria,
             biomarkers_exclusion_criteria=biomarkers_exclusion_criteria,
@@ -248,8 +246,8 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             return "UNKNOWN"
 
     def _check_trial_location(
-        self, locations_str: Optional[str], target_country: str
-    ) -> Optional[bool]:
+        self, locations_str: str | None, target_country: str
+    ) -> bool | None:
         """Check if trial runs in specific country/region.
 
         Args:
@@ -273,7 +271,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
 
     def _parse_conditions_from_list(
         self, conditions_list: list[str]
-    ) -> tuple[Optional[str], Optional[bool]]:
+    ) -> tuple[str | None, bool | None]:
         """Parse conditions list to extract normalized cancer type and biomarker inclusion.
 
         Args:
@@ -436,7 +434,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
 
     def _parse_intervention_details(
         self, intervention_text: str
-    ) -> dict[str, Optional[str]]:
+    ) -> dict[str, str | None]:
         """Comprehensively parse intervention text to extract all drug-related attributes.
 
         Args:
@@ -881,7 +879,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
             nras_mutation = False
 
         # Mutation status (combined)
-        mutation_status: Optional[str] = None
+        mutation_status: str | None = None
         if braf_mutation is True:
             mutation_status = "BRAF-mutant"
         elif nras_mutation is True:
@@ -902,8 +900,8 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
         }
 
     def _determine_line_of_treatment(
-        self, eligibility_text: str, arm_description: Optional[str] = None
-    ) -> Optional[str]:
+        self, eligibility_text: str, arm_description: str | None = None
+    ) -> str | None:
         """Determine line of treatment for a specific arm.
 
         Returns one of: "Neoadjuvant", "First Line", "2nd Line", "3rd Line+"
@@ -1018,7 +1016,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
 
     def _extract_biomarker_inclusion_criteria(
         self, eligibility_text: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Extract biomarker inclusion criteria from eligibility text.
 
         Args:
@@ -1065,7 +1063,7 @@ class ClinicalTrialDataParser(ClinicalTrialParser):
 
     def _extract_biomarker_exclusion_criteria(
         self, eligibility_text: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Extract biomarker exclusion criteria from eligibility text.
 
         Args:

@@ -5,7 +5,7 @@ providing targeted context for each arm and attribute combination.
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 from ..domain.extraction_interfaces import RAGContextProvider
 from ..domain.extraction_models import AttributeType
@@ -105,7 +105,7 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
         logger.info("Arm-aware RAG context provider initialized")
 
     def _is_publication_from_metadata(
-        self, chunk_metadata: Optional[dict[str, Any]]
+        self, chunk_metadata: dict[str, Any] | None
     ) -> bool:
         """Detect if a chunk is from a publication based on metadata.
 
@@ -131,7 +131,7 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
         abstract_id: str,
         context_chunks: int = 5,
         similarity_threshold: float = 0.1,
-        metadata_filters: Optional[dict[str, Any]] = None,
+        metadata_filters: dict[str, Any] | None = None,
     ) -> ArmSpecificContext:
         """Get RAG context for a specific treatment arm and attribute.
 
@@ -356,11 +356,11 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
 
     async def get_context_for_attribute(
         self,
-        document_id: Optional[str],
+        document_id: str | None,
         attribute_type: AttributeType,
         context_chunks: int = 5,
         similarity_threshold: float = 0.1,
-        metadata_filters: Optional[dict[str, Any]] = None,
+        metadata_filters: dict[str, Any] | None = None,
     ) -> list[str]:
         """Get context for attribute extraction (legacy interface).
 
@@ -608,7 +608,7 @@ class ArmAwareRAGContextProvider(RAGContextProvider):
         self,
         arm: TreatmentArm,
         abstract_id: str,
-        base_filters: Optional[dict[str, Any]] = None,
+        base_filters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Create search filters for arm-specific context retrieval."""
         filters = base_filters or {}

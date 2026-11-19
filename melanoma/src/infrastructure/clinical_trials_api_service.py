@@ -8,7 +8,6 @@ DEPRECATED: This module is kept for backward compatibility only.
 """
 
 import logging
-from typing import Optional, Union
 
 from ..app.clinical_trials_service import ClinicalTrialsService
 from ..domain.clinical_trial_models import ClinicalTrialData
@@ -33,8 +32,8 @@ class ClinicalTrialsAPIService:
 
     def __init__(
         self,
-        db_path: Optional[str] = DB_PATH,
-        cache_db_path: Optional[str] = CLINICAL_TRIAL_DB_PATH,
+        db_path: str | None = DB_PATH,
+        cache_db_path: str | None = CLINICAL_TRIAL_DB_PATH,
     ):
         """Initialize the service (backward compatibility wrapper).
 
@@ -53,13 +52,13 @@ class ClinicalTrialsAPIService:
             "Use ClinicalTrialsService or create_clinical_trials_service() instead."
         )
 
-    def get_trial_data(self, nct_number: str) -> Optional[ClinicalTrialData]:
+    def get_trial_data(self, nct_number: str) -> ClinicalTrialData | None:
         """Get clinical trial data for a given NCT number."""
         return self._service.get_trial_data(nct_number)
 
     def get_attribute_value(
         self, nct_number: str, attribute_type: AttributeType
-    ) -> Optional[Union[str, bool, int, float]]:
+    ) -> str | bool | int | float | None:
         """Get a specific attribute value for a given NCT number."""
         return self._service.get_attribute_value(nct_number, attribute_type)
 
@@ -67,8 +66,8 @@ class ClinicalTrialsAPIService:
         self,
         nct_number: str,
         attribute_types: list[AttributeType],
-        arm_info: Optional[dict] = None,
-    ) -> dict[AttributeType, Optional[Union[str, bool, int, float]]]:
+        arm_info: dict | None = None,
+    ) -> dict[AttributeType, str | bool | int | float | None]:
         """Get multiple attribute values for a given NCT number."""
         return self._service.get_multiple_attributes(
             nct_number, attribute_types, arm_info
@@ -81,7 +80,7 @@ class ClinicalTrialsAPIService:
         result = self._service.get_trial_data(test_nct)
         return result is not None
 
-    def clear_cache(self, nct_number: Optional[str] = None) -> int:
+    def clear_cache(self, nct_number: str | None = None) -> int:
         """Clear cache entries."""
         return self._service.clear_cache(nct_number)
 
@@ -92,7 +91,7 @@ class ClinicalTrialsAPIService:
     # Legacy methods that may not be needed but kept for compatibility
     def _get_abstracts_fallback(
         self, nct_number: str, attribute_types: list[AttributeType]
-    ) -> dict[AttributeType, Optional[Union[str, bool, int, float]]]:
+    ) -> dict[AttributeType, str | bool | int | float | None]:
         """Fallback to abstracts table (legacy method, returns empty dict)."""
         logger.warning("_get_abstracts_fallback is deprecated and returns empty dict")
         return {}

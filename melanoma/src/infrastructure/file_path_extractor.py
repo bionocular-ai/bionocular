@@ -7,7 +7,6 @@ determined from file paths, avoiding the need for LLM calls.
 import logging
 import re
 from pathlib import Path
-from typing import Optional
 
 from ..domain.extraction_models import AttributeType
 
@@ -26,7 +25,7 @@ class FilePathExtractor:
         self.year_pattern = r"(\d{4})"
         logger.info("File path extractor initialized")
 
-    def extract_conference_from_path(self, file_path: str) -> Optional[str]:
+    def extract_conference_from_path(self, file_path: str) -> str | None:
         """Extract conference from file path.
 
         Args:
@@ -54,7 +53,7 @@ class FilePathExtractor:
             logger.error(f"Error extracting conference from path {file_path}: {e}")
             return None
 
-    def extract_year_from_path(self, file_path: str) -> Optional[str]:
+    def extract_year_from_path(self, file_path: str) -> str | None:
         """Extract year from file path.
 
         Args:
@@ -83,7 +82,7 @@ class FilePathExtractor:
             logger.error(f"Error extracting year from path {file_path}: {e}")
             return None
 
-    def extract_pdf_number_from_path(self, file_path: str) -> Optional[str]:
+    def extract_pdf_number_from_path(self, file_path: str) -> str | None:
         """Extract PDF number (markdown filename without extension) from file path.
 
         Args:
@@ -109,7 +108,7 @@ class FilePathExtractor:
 
     def extract_attribute_from_path(
         self, attribute_type: AttributeType, file_path: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Extract attribute value from file path.
 
         Args:

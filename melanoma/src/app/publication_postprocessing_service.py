@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 from infrastructure.publication_postprocessor import PublicationPostprocessor
 
@@ -19,7 +18,7 @@ class PublicationPostprocessingResult:
         output_path: str,
         lines_removed: int = 0,
         tables_repaired: int = 0,
-        errors: Optional[list[str]] = None,
+        errors: list[str] | None = None,
     ):
         """Initialize postprocessing result.
 
@@ -58,7 +57,7 @@ class PublicationPostprocessingService:
         self.processor = PublicationPostprocessor()
 
     def process_file(
-        self, input_path: str, output_path: Optional[str] = None
+        self, input_path: str, output_path: str | None = None
     ) -> PublicationPostprocessingResult:
         """Process a single publication markdown file.
 
@@ -134,7 +133,7 @@ class PublicationPostprocessingService:
             )
 
     def process_batch(
-        self, input_paths: list[str], output_dir: Optional[str] = None
+        self, input_paths: list[str], output_dir: str | None = None
     ) -> list[PublicationPostprocessingResult]:
         """Process multiple publication markdown files.
 

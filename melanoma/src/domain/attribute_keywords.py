@@ -8,7 +8,6 @@ Format:
 - List[List[str]] for grouped AND matching (all groups must match)
 """
 
-from typing import Union
 
 from .extraction_models import AttributeType
 
@@ -33,7 +32,7 @@ _GRADE3_AE_REPORTING_TERMS: list[str] = [
 # Keyword mappings for filtering
 # Format: List[str] for simple OR matching
 #         List[List[str]] for grouped AND matching (all groups must match)
-ATTRIBUTE_KEYWORDS: dict[AttributeType, Union[list[str], list[list[str]]]] = {
+ATTRIBUTE_KEYWORDS: dict[AttributeType, list[str] | list[list[str]]] = {
     # PFS Family
     AttributeType.MEDIAN_PFS: [
         "pfs",
@@ -1036,7 +1035,7 @@ ATTRIBUTE_KEYWORDS: dict[AttributeType, Union[list[str], list[list[str]]]] = {
 
 def get_keywords_for_attribute(
     attribute_type: AttributeType,
-) -> Union[list[str], list[list[str]], None]:
+) -> list[str] | list[list[str]] | None:
     """Get keyword list for an attribute type.
 
     Args:

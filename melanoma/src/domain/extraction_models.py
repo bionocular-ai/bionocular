@@ -6,7 +6,7 @@ for the extraction system, following clean architecture principles.
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, validator
 
@@ -641,11 +641,11 @@ class AttributeConfiguration(BaseModel):
     value_kind: ValueKind
     required: bool = False
     critical: bool = False
-    validation_pattern: Optional[str] = None
-    validation_range: Optional[tuple[float, float]] = None
-    controlled_vocabulary: Optional[list[str]] = None
-    special_values: Optional[list[str]] = None
-    calculation_formula: Optional[str] = None
+    validation_pattern: str | None = None
+    validation_range: tuple[float, float] | None = None
+    controlled_vocabulary: list[str] | None = None
+    special_values: list[str] | None = None
+    calculation_formula: str | None = None
     extraction_priority: int = 1
     api_source: bool = False
 
@@ -2430,7 +2430,7 @@ class ExtractedAttribute(BaseModel):
     """Core entity representing an extracted attribute."""
 
     attribute_type: AttributeType
-    value: Union[str, float, int, None]
+    value: str | float | int | None
     confidence: float = Field(
         ge=0.0, le=1.0, description="Confidence score between 0 and 1"
     )
@@ -2638,11 +2638,11 @@ class ValidationRule(BaseModel):
 
     attribute_type: AttributeType
     required: bool = False
-    pattern: Optional[str] = None
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
-    allowed_values: Optional[list[str]] = None
-    custom_validator: Optional[str] = None  # Function name for custom validation
+    pattern: str | None = None
+    min_value: float | None = None
+    max_value: float | None = None
+    allowed_values: list[str] | None = None
+    custom_validator: str | None = None  # Function name for custom validation
 
 
 # The set of attributes extracted from full journal publications.

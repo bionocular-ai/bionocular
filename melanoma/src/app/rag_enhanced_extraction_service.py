@@ -7,7 +7,7 @@ combining treatment arm separation with targeted attribute extraction.
 import logging
 import re
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from ..domain.extraction_interfaces import AttributeExtractor, LLMService
 from ..domain.extraction_models import AttributeType
@@ -59,7 +59,7 @@ class RAGEnhancedExtractionService:
 
         logger.info("RAG-enhanced extraction service initialized")
 
-    def _is_publication(self, content: str, file_path: Optional[str] = None) -> bool:
+    def _is_publication(self, content: str, file_path: str | None = None) -> bool:
         """Detect if content is a full publication (not an abstract).
 
         Args:
@@ -94,7 +94,7 @@ class RAGEnhancedExtractionService:
         # Publication if it has main sections, no abstract ID, and is long
         return has_main_sections and not has_abstract_id and is_long
 
-    def _extract_results_section(self, content: str) -> Optional[str]:
+    def _extract_results_section(self, content: str) -> str | None:
         """Extract the Results section from publication content.
 
         For publications, treatment arms are typically described in the Results section,
@@ -173,7 +173,7 @@ class RAGEnhancedExtractionService:
         attributes: list[AttributeType],
         context_chunks_per_arm: int = 5,
         similarity_threshold: float = 0.1,
-        file_path: Optional[str] = None,
+        file_path: str | None = None,
     ) -> TreatmentArmExtractionResult:
         """Extract attributes from abstract using RAG-enhanced workflow.
 

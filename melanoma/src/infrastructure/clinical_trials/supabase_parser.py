@@ -6,7 +6,7 @@ sync pipeline and the legacy uploader share a single source of truth.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from .cancer_type_derivation import derive_cancer_types
 
@@ -40,7 +40,7 @@ CANCER_TYPE_MAP: dict[str, str] = {
 
 # Multi-indication trial labels that map to multiple canonical cancer types.
 # `None` value = intentionally excluded (too broad to be useful as a tag).
-MULTI_CANCER_TYPE_MAP: dict[str, Optional[list[str]]] = {
+MULTI_CANCER_TYPE_MAP: dict[str, list[str] | None] = {
     "uveal / mucosal / acral melanoma": [
         "Uveal Melanoma",
         "Mucosal Melanoma",
@@ -57,7 +57,7 @@ MULTI_CANCER_TYPE_MAP: dict[str, Optional[list[str]]] = {
 }
 
 
-def normalize_cancer_type(raw_type: Optional[str]) -> list[str]:
+def normalize_cancer_type(raw_type: str | None) -> list[str]:
     """Map a raw cancer-type label to canonical names. Empty list if unmappable."""
     if not raw_type:
         return []
@@ -71,7 +71,7 @@ def normalize_cancer_type(raw_type: Optional[str]) -> list[str]:
     return [single] if single else []
 
 
-def parse_age_to_years(age_str: Optional[str]) -> Optional[float]:
+def parse_age_to_years(age_str: str | None) -> float | None:
     """Convert strings like '18 Years' or '6 Months' to a float number of years."""
     if not age_str:
         return None
@@ -89,7 +89,7 @@ def parse_age_to_years(age_str: Optional[str]) -> Optional[float]:
     return val
 
 
-def sanitize_date(date_str: Optional[str]) -> Optional[str]:
+def sanitize_date(date_str: str | None) -> str | None:
     """Coerce ClinicalTrials.gov partial dates into Postgres-friendly YYYY-MM-DD."""
     if not date_str:
         return None

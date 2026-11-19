@@ -5,9 +5,9 @@ import logging
 import re as _re
 import sqlite3
 from collections import OrderedDict
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from ...domain.clinical_trial_interfaces import (
     ClinicalTrialParser,
@@ -113,7 +113,7 @@ _MODALITY_ALIASES = {
 }
 
 
-def _normalize_modality(raw: Optional[str]) -> str:
+def _normalize_modality(raw: str | None) -> str:
     """Normalize modality to one of MODALITY_HEADERS or Other (matches frontend)."""
     if not raw or not str(raw).strip():
         return _MODALITY_OTHER
@@ -126,7 +126,7 @@ def _normalize_modality(raw: Optional[str]) -> str:
     return _MODALITY_OTHER
 
 
-def _parse_modalities(raw: Optional[str]) -> list[str]:
+def _parse_modalities(raw: str | None) -> list[str]:
     """Split a potentially semicolon-delimited modality string into normalized buckets.
 
     E.g. "Vaccine; Immunostimulant/Cytokine" → ["Vaccine", "Immunostimulant/Cytokine"]
@@ -185,7 +185,7 @@ _LINE_OF_THERAPY_ORDER = ["1L", "2L", "3L", "R/R", "Adjuvant", "Neoadjuvant"]
 _PREVIOUS_TREATMENT_ORDER = ["Failed IO", "No prior BRAFi", "IO Naive"]
 
 
-def _parse_group_values(raw: Optional[str]) -> list[str]:
+def _parse_group_values(raw: str | None) -> list[str]:
     """Split semicolon- or comma-separated category string; return ['Unspecified'] if empty."""
     if not raw or not str(raw).strip():
         return [_GROUP_UNSPECIFIED]
@@ -299,8 +299,8 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
 
     def __init__(
         self,
-        db_path: Optional[str] = CLINICAL_TRIAL_DB_PATH,
-        parser: Optional[ClinicalTrialParser] = None,
+        db_path: str | None = CLINICAL_TRIAL_DB_PATH,
+        parser: ClinicalTrialParser | None = None,
     ):
         """Initialize the repository.
 
@@ -481,7 +481,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         except sqlite3.Error as e:
             logger.error(f"Failed to initialize cache database: {e}")
 
-    def get_cached_trial(self, nct_number: str) -> Optional[ClinicalTrialData]:
+    def get_cached_trial(self, nct_number: str) -> ClinicalTrialData | None:
         """Retrieve trial data from cache if available and not expired."""
         if not self.db_path or not self.parser:
             return None
@@ -571,7 +571,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         except (sqlite3.Error, Exception) as e:
             logger.warning(f"Error saving to cache for {nct_number}: {e}")
 
-    def clear_cache(self, nct_number: Optional[str] = None) -> int:
+    def clear_cache(self, nct_number: str | None = None) -> int:
         """Clear cache entries."""
         if not self.db_path:
             return 0
@@ -655,19 +655,15 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             window_end_iso, window_start_iso.
         """
 
-        def _parse_api_date(s: Optional[str]) -> Optional[datetime]:
+        def _parse_api_date(s: str | None) -> datetime | None:
             if not s or not str(s).strip():
                 return None
             s = str(s).strip()
             try:
                 if len(s) >= 10:
-                    return datetime.strptime(s[:10], "%Y-%m-%d").replace(
-                        tzinfo=timezone.utc
-                    )
+                    return datetime.strptime(s[:10], "%Y-%m-%d").replace(tzinfo=UTC)
                 if len(s) >= 7:
-                    return datetime.strptime(s[:7], "%Y-%m").replace(
-                        tzinfo=timezone.utc, day=1
-                    )
+                    return datetime.strptime(s[:7], "%Y-%m").replace(tzinfo=UTC, day=1)
             except ValueError:
                 pass
             return None
@@ -695,10 +691,10 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                 try:
                     window_end = datetime.fromisoformat(row[0].replace("Z", "+00:00"))
                     if window_end.tzinfo is None:
-                        window_end = window_end.replace(tzinfo=timezone.utc)
+                        window_end = window_end.replace(tzinfo=UTC)
                 except ValueError:
                     window_end = datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S").replace(
-                        tzinfo=timezone.utc
+                        tzinfo=UTC
                     )
 
                 window_start = window_end - timedelta(days=days)
@@ -762,19 +758,15 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         Sorted by date descending; show up to `limit` trials.
         """
 
-        def _parse_api_date(s: Optional[str]) -> Optional[datetime]:
+        def _parse_api_date(s: str | None) -> datetime | None:
             if not s or not str(s).strip():
                 return None
             s = str(s).strip()
             try:
                 if len(s) >= 10:
-                    return datetime.strptime(s[:10], "%Y-%m-%d").replace(
-                        tzinfo=timezone.utc
-                    )
+                    return datetime.strptime(s[:10], "%Y-%m-%d").replace(tzinfo=UTC)
                 if len(s) >= 7:
-                    return datetime.strptime(s[:7], "%Y-%m").replace(
-                        tzinfo=timezone.utc, day=1
-                    )
+                    return datetime.strptime(s[:7], "%Y-%m").replace(tzinfo=UTC, day=1)
             except ValueError:
                 pass
             return None
@@ -802,7 +794,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             return []
 
         api_jsons = self._get_cached_api_json_batch(nct_numbers)
-        window_end = datetime.now(timezone.utc)
+        window_end = datetime.now(UTC)
         window_start = window_end - timedelta(days=30)
         rows: list[dict[str, Any]] = []
 
@@ -917,7 +909,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         except sqlite3.Error as e:
             logger.error(f"Error batch upserting discovery records: {e}")
 
-    def get_cached_api_json(self, nct_number: str) -> Optional[dict]:
+    def get_cached_api_json(self, nct_number: str) -> dict | None:
         """Get raw API JSON from cache without parsing.
 
         Args:
@@ -965,7 +957,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             logger.warning(f"Error reading cached JSON for {nct_number}: {e}")
             return None
 
-    def _get_cached_api_json_ignore_expiry(self, nct_number: str) -> Optional[dict]:
+    def _get_cached_api_json_ignore_expiry(self, nct_number: str) -> dict | None:
         """Get raw API JSON from cache without expiration check (for dashboard display).
 
         Checks the in-process LRU cache before hitting SQLite.
@@ -1052,7 +1044,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
             logger.warning(f"Error batch reading cached JSON: {e}")
         return out
 
-    def get_cached_trial_api_json(self, nct_number: str) -> Optional[dict]:
+    def get_cached_trial_api_json(self, nct_number: str) -> dict | None:
         """Get full ClinicalTrials.gov API response JSON from cache for a single trial.
 
         Returns the raw API response (protocolSection, resultsSection, etc.) for
@@ -1555,10 +1547,10 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
         api_json: dict[str, Any],
         nct_number: str,
         nct_abstract_map: dict[str, dict],
-        phase_filter: Optional[list[str]],
-        status_filter: Optional[list[str]],
+        phase_filter: list[str] | None,
+        status_filter: list[str] | None,
         has_abstracts_only: bool,
-        sponsor_type_filter: Optional[list[str]],
+        sponsor_type_filter: list[str] | None,
     ) -> bool:
         """Return True if this trial passes the dashboard phase/status/abstracts/sponsor filters."""
         if not self.parser:
@@ -1600,24 +1592,22 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
     def get_dashboard_trials(
         self,
         cancer_type_tag: str,
-        phase_filter: Optional[list[str]] = None,
+        phase_filter: list[str] | None = None,
         has_abstracts_only: bool = False,
-        status_filter: Optional[list[str]] = None,
-        sponsor_type_filter: Optional[list[str]] = None,
+        status_filter: list[str] | None = None,
+        sponsor_type_filter: list[str] | None = None,
         skip: int = 0,
         limit: int = 500,
         balance_by_modality: bool = False,
         per_group: int = 15,
-        modality_filter: Optional[str] = None,
+        modality_filter: str | None = None,
         modality_skip: int = 0,
         modality_limit: int = 15,
-        balance_by_group: Optional[str] = None,
-        category_filter: Optional[str] = None,
+        balance_by_group: str | None = None,
+        category_filter: str | None = None,
         category_skip: int = 0,
         category_limit: int = 15,
-    ) -> tuple[
-        list[dict[str, Any]], int, Optional[dict[str, int]], Optional[dict[str, int]]
-    ]:
+    ) -> tuple[list[dict[str, Any]], int, dict[str, int] | None, dict[str, int] | None]:
         """Get trial card DTOs for dashboard by cancer type.
 
         Args:
@@ -1693,7 +1683,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
 
         # Single-category pagination: return trials for one category only ("Load more" in Stage/Biomarker/etc. column)
         use_category_pagination = False
-        totals_by_group: Optional[dict[str, int]] = None
+        totals_by_group: dict[str, int] | None = None
         group_field = {
             "stage": "stage",
             "biomarker": "biomarker",
@@ -1778,7 +1768,7 @@ class SQLiteClinicalTrialRepository(ClinicalTrialRepository):
                         totals_by_group[k] += 1
 
         # Optionally restrict to a balanced set (up to per_group per modality) so each column has trials
-        totals_by_modality: Optional[dict[str, int]] = None
+        totals_by_modality: dict[str, int] | None = None
         if not use_modality_pagination and not use_category_pagination:
             if balance_by_modality and nct_categorization_map:
                 by_modality_bal: dict[str, list[str]] = {}

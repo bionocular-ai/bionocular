@@ -24,7 +24,6 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Optional
 
 from ..domain.extraction_interfaces import LLMService
 from ..domain.trial_parameter_models import (
@@ -97,14 +96,14 @@ class ExtractionConfig:
     exports_dir: Path
     output_dir: Path
     model: str = "google/gemini-3.1-pro-preview"
-    limit: Optional[int] = 50
+    limit: int | None = 50
     offset: int = 0
     last: bool = False
     resume: bool = True
     dry_run: bool = False
-    cancer_type_filter: Optional[list[str]] = None
-    nct_allowlist: Optional[list[str]] = None
-    snapshot_path: Optional[Path] = None
+    cancer_type_filter: list[str] | None = None
+    nct_allowlist: list[str] | None = None
+    snapshot_path: Path | None = None
     modality_only: bool = False
     concurrency: int = 5
 
@@ -215,7 +214,7 @@ class CancerTypeRepository:
             return []
 
     def get_all_nct_numbers(
-        self, cancer_type_filter: Optional[list[str]] = None
+        self, cancer_type_filter: list[str] | None = None
     ) -> list[str]:
         """Return distinct NCT numbers from api_discovery.
 
@@ -580,7 +579,7 @@ class TrialParameterExtractionService:
         checkpoint: CheckpointManager,
         writer: ResultWriter,
         cost_calculator: CostCalculator,
-        snapshot_source: Optional[SnapshotTrialSource] = None,
+        snapshot_source: SnapshotTrialSource | None = None,
     ) -> None:
         self._config = config
         self._llm = llm
@@ -601,7 +600,7 @@ class TrialParameterExtractionService:
         cls,
         config: ExtractionConfig,
         llm_service: LLMService,
-        cost_calculator: Optional[CostCalculator] = None,
+        cost_calculator: CostCalculator | None = None,
     ) -> "TrialParameterExtractionService":
         """Construct a fully wired service from config and an LLM service.
 
@@ -627,7 +626,7 @@ class TrialParameterExtractionService:
         checkpoint = CheckpointManager(config.output_dir / "checkpoint.json")
         writer = ResultWriter(config.output_dir)
 
-        snapshot_source: Optional[SnapshotTrialSource] = None
+        snapshot_source: SnapshotTrialSource | None = None
         if config.snapshot_path is not None:
             snapshot = json.loads(config.snapshot_path.read_text(encoding="utf-8"))
             snapshot_source = SnapshotTrialSource(snapshot)
@@ -775,7 +774,7 @@ class TrialParameterExtractionService:
     # Helpers
     # ------------------------------------------------------------------
 
-    async def _extract_one(self, nct_number: str) -> Optional[TrialParameterResult]:
+    async def _extract_one(self, nct_number: str) -> TrialParameterResult | None:
         """Load one trial and run extraction on it.
 
         Args:

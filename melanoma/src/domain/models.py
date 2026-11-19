@@ -1,8 +1,8 @@
 """Domain models for the ingestion system."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -35,7 +35,7 @@ class Document(BaseModel):
     type: DocumentType = Field(
         ..., description="Type of document (abstract or publication)"
     )
-    upload_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    upload_date: datetime = Field(default_factory=lambda: datetime.now(UTC))
     hash: str = Field(
         ..., description="SHA-256 hash of the PDF content for duplicate detection"
     )
@@ -51,7 +51,7 @@ class IngestionRequest(BaseModel):
     """Request model for document ingestion."""
 
     type: DocumentType = Field(..., description="Type of document being ingested")
-    metadata: Optional[dict[str, Any]] = Field(default_factory=dict)
+    metadata: dict[str, Any] | None = Field(default_factory=dict)
 
 
 class IngestionResponse(BaseModel):
@@ -202,10 +202,8 @@ class Chunk(BaseModel):
     sequence_number: int = Field(
         ..., description="Order of this chunk within the document"
     )
-    token_count: Optional[int] = Field(
-        None, description="Number of tokens in this chunk"
-    )
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    token_count: int | None = Field(None, description="Number of tokens in this chunk")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ChunkingConfiguration(BaseModel):
@@ -272,16 +270,16 @@ class EmbeddingConfiguration(BaseModel):
 class ChunkWithEmbedding(Chunk):
     """Chunk with embedding vector."""
 
-    embedding: Optional[list[float]] = Field(
+    embedding: list[float] | None = Field(
         default=None, description="Vector embedding of the chunk content"
     )
-    embedding_model: Optional[str] = Field(
+    embedding_model: str | None = Field(
         default=None, description="Model used to generate the embedding"
     )
-    embedding_dimension: Optional[int] = Field(
+    embedding_dimension: int | None = Field(
         default=None, description="Dimension of the embedding vector", ge=1
     )
-    embedding_generated_at: Optional[datetime] = Field(
+    embedding_generated_at: datetime | None = Field(
         default=None, description="When the embedding was generated"
     )
 
@@ -312,10 +310,10 @@ class SearchQuery(BaseModel):
     metadata_filters: dict[str, Any] = Field(
         default_factory=dict, description="Filters to apply to metadata"
     )
-    chunk_types: Optional[list[ChunkType]] = Field(
+    chunk_types: list[ChunkType] | None = Field(
         default=None, description="Filter by specific chunk types"
     )
-    embedding: Optional[list[float]] = Field(
+    embedding: list[float] | None = Field(
         default=None, description="Pre-computed query embedding"
     )
 
@@ -399,7 +397,7 @@ class RAGResponse(BaseModel):
     sources: list[dict[str, Any]] = Field(
         ..., description="Source information for citations"
     )
-    processing_time_ms: Optional[int] = Field(
+    processing_time_ms: int | None = Field(
         default=None,
         description="Time taken to process the query in milliseconds",
         ge=0,
