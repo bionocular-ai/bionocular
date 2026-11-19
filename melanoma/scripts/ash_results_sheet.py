@@ -51,6 +51,11 @@ def _tone(cell: dict[str, Any]) -> str:
     return "yellow" if cell.get("value_ok") == "unsure" else ""
 
 
+def _shown(cell: dict[str, Any]) -> str:
+    """The value, with the patients a rate is over when the abstract states them."""
+    return cell["value"] + (f" (n={cell['n']})" if cell.get("n") else "")
+
+
 def _note(cell: dict[str, Any]) -> str:
     parts = [f"quote: {cell['quote']}"]
     for key in ("detail", "flags", "error"):
@@ -155,6 +160,7 @@ def build(args: argparse.Namespace) -> None:
         "indication",
         "arm_id",
         "arm",
+        "dose_level",
         "role",
         *fields,
         OTHER,
@@ -175,16 +181,16 @@ def build(args: argparse.Namespace) -> None:
             cells = {**trial, **wide[number].get(arm["arm_id"], {})}
             arms_ws.append(
                 [number, sel["doi"], sel["indication"], arm["arm_id"], arm["arm_name"],
-                 arm["role"]]
-                + [cells[f]["value"] if f in cells else None for f in fields]
+                 arm.get("dose_level") or None, arm["role"]]
+                + [_shown(cells[f]) if f in cells else None for f in fields]
                 + ["; ".join(
-                    f"{r['field']}: {r['value']} ({r['context']})"
+                    f"{r['field']}: {_shown(r)} ({r['context']})"
                     for r in mine
                     if r["kind"] == "extra" and _arm_id(r["arm"]) == arm["arm_id"]
                 ) or None]
             )  # fmt: skip
             row = arms_ws.max_row
-            for i, f in enumerate(fields, start=7):
+            for i, f in enumerate(fields, start=8):
                 if f not in cells:
                     continue
                 c = arms_ws.cell(row, i)
@@ -206,7 +212,7 @@ def build(args: argparse.Namespace) -> None:
         if pooled:
             pooled_ws.append(
                 [number, sel["indication"], "; ".join(
-                    f"{r['field']}: {r['value']}" + (f" ({r['context']})" if r["context"] else "")
+                    f"{r['field']}: {_shown(r)}" + (f" ({r['context']})" if r["context"] else "")
                     for r in pooled
                 )]
             )  # fmt: skip
@@ -225,7 +231,7 @@ def build(args: argparse.Namespace) -> None:
         )  # fmt: skip
 
     for ws in (ov, arms_ws, pooled_ws):
-        ws.freeze_panes = "F2" if ws is arms_ws else "A2"
+        ws.freeze_panes = "G2" if ws is arms_ws else "A2"
         ws.auto_filter.ref = ws.dimensions
     args.out.parent.mkdir(parents=True, exist_ok=True)
     wb.save(args.out)

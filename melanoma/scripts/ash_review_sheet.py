@@ -25,7 +25,7 @@ sys.path.insert(0, str(_root))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from ash_checks import quote_found  # noqa: E402
-from ash_fields import Family, applies, load_families  # noqa: E402
+from ash_fields import Arm, Family, applies, load_families  # noqa: E402
 from ash_test_run import META, parse_md  # noqa: E402
 
 COLUMNS = [
@@ -38,6 +38,7 @@ COLUMNS = [
     "kind",
     "context",
     "value",
+    "n",
     "detail",
     "derived",
     "quote",
@@ -81,7 +82,7 @@ def _row(
     family: str, arm: str, field: str, kind: str, cols: dict[str, Any]
 ) -> dict[str, Any]:
     blank = dict.fromkeys(
-        ("context", "value", "detail", "derived", "quote", "flags"), ""
+        ("context", "value", "n", "detail", "derived", "quote", "flags"), ""
     )
     return {
         "arm": arm,
@@ -122,7 +123,7 @@ def build_rows(
     rows: list[dict[str, Any]] = []
     for number in [n for n in selection if n in results]:
         res, sel, text = results[number], selection[number], texts[number]
-        names = {a["arm_id"]: f"{a['arm_id']}: {a['arm_name']}" for a in res["arms"]}
+        names = {a["arm_id"]: f"{a['arm_id']}: {Arm(**a).label}" for a in res["arms"]}
         names["trial"] = "trial"
         names["pooled"] = "pooled (all arms)"
 
@@ -151,6 +152,7 @@ def build_rows(
                     "pooled",
                     value=p["value"],
                     context=p["context"],
+                    n=p.get("n", ""),
                     detail=p["detail"],
                     derived="yes" if p["derived"] else "",
                     quote=p["quote"],
@@ -170,6 +172,7 @@ def build_rows(
                         name_of[key],
                         "field",
                         value=cell["value"],
+                        n=cell.get("n", ""),
                         detail=cell["detail"],
                         derived="yes" if cell["derived"] else "",
                         quote=cell["quote"],
@@ -184,6 +187,7 @@ def build_rows(
                         "extra",
                         value=ex["value"],
                         context=ex["context"],
+                        n=ex.get("n", ""),
                         quote=ex["quote"],
                         flags=", ".join(got["flags"].get(f"{arm_id}.extra.{i}", [])),
                         **judged.get(("extra", arm_id, ex["field"], ex["context"]), {}),

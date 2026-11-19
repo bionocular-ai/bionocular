@@ -18,6 +18,7 @@ import os
 import re
 import sys
 import time
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
@@ -89,13 +90,14 @@ async def find_arms(text: str, llm: StructuredLLMService) -> tuple[list[Arm], st
         operation="ash_arms",
     )
     arms: list[Arm] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, str]] = set()
     for item in found.arms:
         name = " ".join(item.arm_name.split())
-        if not name or name.lower() in seen:  # same drugs twice is one arm
+        dose = " ".join(item.dose_level.split())
+        if not name or (name.lower(), dose.lower()) in seen:  # same drugs twice
             continue
-        seen.add(name.lower())
-        arms.append(Arm(f"arm_{len(arms) + 1}", name, item.role))
+        seen.add((name.lower(), dose.lower()))
+        arms.append(Arm(f"arm_{len(arms) + 1}", name, item.role, dose))
     return arms, found.results_reported
 
 
@@ -261,9 +263,7 @@ async def run_abstract(
     if not arms:
         out["errors"].append("arms: none found")
         return out
-    out["arms"] = [
-        {"arm_id": a.arm_id, "arm_name": a.arm_name, "role": a.role} for a in arms
-    ]
+    out["arms"] = [asdict(a) for a in arms]
     asked = [g for g in (fields_for(f, indication) for f in families) if g.fields]
     results = await asyncio.gather(
         *(_run_family(f, arms, text, llm, family_sem, missed_pass) for f in asked)
