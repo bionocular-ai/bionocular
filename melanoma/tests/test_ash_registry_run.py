@@ -59,6 +59,10 @@ def test_record_text_keeps_arms_interventions_and_criteria() -> None:
     text = record_text(STUDY)
     assert "- Arm A [EXPERIMENTAL]: Drug X orally until progression" in text
     assert "other names: Xbrand" in text and "At least 3 prior lines" in text
+    assert "NCT: NCT01234567\n" in text
+    merged = {"protocolSection": {"identificationModule": {
+        "nctId": "NCT05289167", "nctIdAliases": ["NCT06681922"]}}}  # fmt: skip
+    assert "NCT: NCT05289167 (also registered as NCT06681922)" in record_text(merged)
 
 
 def test_flags() -> None:
