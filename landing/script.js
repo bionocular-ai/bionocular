@@ -51,7 +51,7 @@ const pillSprings = pills => {
 (() => {
   const hdr = document.getElementById('hdr'), nav = document.getElementById('nav');
   const links = [...nav.querySelectorAll('a')], btn = document.getElementById('menuBtn'), sheet = document.getElementById('sheet');
-  // The footer is too short to reach the middle of the viewport, so the page bottom counts as Contact.
+  // The contact section sits too low to reach the middle of the viewport, so the page bottom counts as Contact.
   // The band only reports crossings, so remember which section is in it and re-apply on every scroll:
   // that clears Contact again when the reader scrolls back up from the bottom.
   const atBottom = () => innerHeight + scrollY >= document.documentElement.scrollHeight - 2;
@@ -510,9 +510,6 @@ coreCanvas(document.getElementById('core'));
     [0, 25, 50, 75, 100].forEach(p => { el('line', { x1: x0, x2: x1, y1: Y(p), y2: Y(p), stroke: '#EEF4F1' }, ax); txt(ax, x0 - 10, Y(p) + 4, p + '%', { 'text-anchor': 'end' }); });
     el('path', { d: `M${x0},${y0} V${y1} H${x1}`, fill: 'none', stroke: '#C8E0D8', 'stroke-width': 1.2 }, ax);
     txt(ax, (x0 + x1) / 2, y1 + 44, 'Months', { 'text-anchor': 'middle', style: 'font-family:Poppins;font-size:12px' });
-    // Other trials' twins (step 5)
-    const bg = g('Lbg');
-    KM.bg.forEach(b => el('path', { d: step(b.pts), fill: 'none', stroke: '#9DB8AD', 'stroke-width': 1.3, opacity: .55 }, bg));
     // The source figure as ingested: grey, slightly skewed and soft (steps 1-2)
     const src = g('Lsrc'); src.classList.add('on'); src.style.transformOrigin = `${x0}px ${y1}px`;
     el('rect', { x: x0 - 30, y: y0 - 34, width: x1 - x0 + 54, height: y1 - y0 + 66, rx: 6, fill: '#FBFCFB', stroke: '#D3DCD9', class: 'cap' }, src);
@@ -540,7 +537,7 @@ coreCanvas(document.getElementById('core'));
   const L = id => document.getElementById(id), meta = [...document.querySelectorAll('#meta span')];
   const show = n => {
     L('Lsrc').classList.toggle('norm', n >= 2); L('Lsrc').classList.toggle('dim', n >= 3);
-    L('Lax').classList.toggle('on', n >= 2); L('Ltwin').classList.toggle('on', n >= 3); L('Lbg').classList.toggle('on', n >= 5); L('Lmed').classList.toggle('on', n >= 6);
+    L('Lax').classList.toggle('on', n >= 2); L('Ltwin').classList.toggle('on', n >= 3); L('Lmed').classList.toggle('on', n >= 6);
     meta.forEach(m => m.classList.toggle('on', n >= +m.dataset.from));
   };
   const scroller = document.getElementById('svScroll'), stage = scroller.firstElementChild, bar = document.getElementById('svBar');
@@ -591,6 +588,18 @@ coreCanvas(document.getElementById('core'));
     const d = KM.main[k].reduce((d, [t, p], i) => i ? d + ` H${X(t).toFixed(1)} V${Y(p).toFixed(1)}` : `M${X(t)},${Y(p)}`, '') + ` H${X(60)}`;
     const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     p.setAttribute('d', d); p.setAttribute('fill', 'none'); p.setAttribute('stroke', c); p.setAttribute('stroke-width', '1.6'); sv.append(p);
+  });
+})();
+
+// ── Contact: copy the address, confirm for two seconds ──
+(() => {
+  const btn = document.getElementById('copyMail'), label = btn.querySelector('span');
+  let timer;
+  btn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(btn.dataset.copy); } catch { label.textContent = 'Copy failed'; return; }
+    label.textContent = 'Copied'; btn.toggleAttribute('data-done', true);
+    clearTimeout(timer);
+    timer = setTimeout(() => { label.textContent = 'Copy'; btn.removeAttribute('data-done'); }, 2000);
   });
 })();
 
