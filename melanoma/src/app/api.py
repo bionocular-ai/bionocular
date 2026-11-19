@@ -5,6 +5,8 @@ import logging
 import os
 import re
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import psutil
@@ -109,8 +111,17 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+
 # Create FastAPI app
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Run startup work before the app serves requests."""
+    await startup_event()
+    yield
+
+
 app = FastAPI(
+    lifespan=lifespan,
     title="Bionocular Melanoma Research API",
     description="API for ingesting and querying scientific PDFs about melanoma treatments with RAG capabilities",
     version="0.2.0",
@@ -162,7 +173,6 @@ def get_ingestion_service(db: Session = Depends(get_db_session)) -> IngestionSer
     return IngestionService(storage, repository, NullPDFProcessor())
 
 
-@app.on_event("startup")
 async def startup_event() -> None:
     """Initialize the application on startup."""
     try:

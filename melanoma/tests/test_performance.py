@@ -4,80 +4,20 @@ Tests memory usage, response times, concurrent request handling, and
 verifies that optimizations (singleton pattern, pagination, compression) work correctly.
 """
 
-import asyncio
 import os
 import time
 
-import httpx
 import psutil
 import pytest
-from httpx import ASGITransport
+from fastapi.testclient import TestClient
 
 from src.app.api import app
 
 
-class AsyncTestClient:
-    """Compatibility wrapper for TestClient that works with httpx 0.28+.
-
-    Uses AsyncClient with ASGITransport and runs async requests in sync context.
-    This is needed because httpx 0.28+ changed the API and Starlette 0.27.0's
-    TestClient is incompatible.
-    """
-
-    def __init__(self, app):
-        self.transport = ASGITransport(app=app)
-        self.client = httpx.AsyncClient(
-            transport=self.transport, base_url="http://testserver"
-        )
-
-    def _run_async(self, coro):
-        """Run async coroutine in sync context."""
-        try:
-            # Try to get existing event loop
-            loop = asyncio.get_running_loop()
-            # If we're in an async context, we can't use run_until_complete
-            # This shouldn't happen in pytest sync tests, but handle it gracefully
-            raise RuntimeError("Cannot run async in already running loop")
-        except RuntimeError as e:
-            # Check if this is the "no running event loop" error
-            if (
-                "no running event loop" in str(e).lower()
-                or "no current event loop" in str(e).lower()
-            ):
-                # No event loop, create one
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                try:
-                    return loop.run_until_complete(coro)
-                finally:
-                    loop.close()
-            else:
-                # Re-raise if it's a different RuntimeError
-                raise
-
-    def get(self, url, **kwargs):
-        return self._run_async(self.client.get(url, **kwargs))
-
-    def post(self, url, **kwargs):
-        return self._run_async(self.client.post(url, **kwargs))
-
-    def put(self, url, **kwargs):
-        return self._run_async(self.client.put(url, **kwargs))
-
-    def delete(self, url, **kwargs):
-        return self._run_async(self.client.delete(url, **kwargs))
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *args):
-        self._run_async(self.client.aclose())
-
-
 @pytest.fixture
 def client():
-    """Create a test client compatible with httpx 0.28+."""
-    return AsyncTestClient(app)
+    """Create a test client for the API."""
+    return TestClient(app)
 
 
 def test_analytics_endpoint_response_time(client):
