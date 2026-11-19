@@ -31,8 +31,10 @@ _VERIFIED_CONFIDENCE = 0.6
 class VerifierSchema(BaseModel):
     """Structured response shape returned by the verifier LLM call."""
 
-    value: str = ""
+    # Gemini generates properties in declaration order, so the verbatim quote
+    # comes first and the value is read off it.
     quote: str = ""
+    value: str = ""
 
 
 async def verify_low_confidence(

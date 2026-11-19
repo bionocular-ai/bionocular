@@ -50,6 +50,12 @@ _BACKOFF_CAP_SECONDS = 30.0
 # time - so a long response is free to take as long as it needs.
 _REQUEST_TIMEOUT_MS = 90_000
 
+# google-genai sends the request timeout to Vertex as X-Server-Timeout, a total
+# deadline on the server side, which would reimpose the 90s cap that streaming
+# exists to avoid. The SDK keeps a header we set ourselves, so give the server a
+# ceiling sized for the longest generation instead.
+_SERVER_TIMEOUT_SECONDS = 600
+
 _RETRYABLE_TOKENS = (
     "429",
     "RESOURCE_EXHAUSTED",
@@ -388,7 +394,10 @@ class GeminiLLMService(LLMService, StructuredLLMService):
         from google import genai
         from google.genai import types
 
-        http_options = types.HttpOptions(timeout=_REQUEST_TIMEOUT_MS)
+        http_options = types.HttpOptions(
+            timeout=_REQUEST_TIMEOUT_MS,
+            headers={"X-Server-Timeout": str(_SERVER_TIMEOUT_SECONDS)},
+        )
         if self._api_key:
             return genai.Client(
                 vertexai=True, api_key=self._api_key, http_options=http_options

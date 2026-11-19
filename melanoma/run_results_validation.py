@@ -162,7 +162,7 @@ def _configure_logging(verbose: bool) -> None:
         format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
         datefmt="%Y-%m-%dT%H:%M:%S",
     )
-    for noisy in ("httpx", "httpcore", "google_genai"):
+    for noisy in ("httpx", "httpcore", "httpx2", "httpcore2", "google_genai"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 

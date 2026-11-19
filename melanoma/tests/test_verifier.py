@@ -15,6 +15,11 @@ from src.infrastructure.verifier import (
 )
 
 
+def test_schema_asks_for_the_quote_before_the_value() -> None:
+    """Gemini generates fields in declaration order; evidence must come first."""
+    assert list(VerifierSchema.model_json_schema()["properties"]) == ["quote", "value"]
+
+
 def _make_arm() -> TreatmentArm:
     return TreatmentArm(
         arm_id="arm-1",
