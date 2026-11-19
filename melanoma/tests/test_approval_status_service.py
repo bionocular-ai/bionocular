@@ -6,7 +6,6 @@ from pathlib import Path
 
 # Add parent directories to path
 parent_dir = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(parent_dir / "src"))
 sys.path.insert(0, str(parent_dir))
 
 from src.app.approval_status_service import ApprovalStatusService  # noqa: E402

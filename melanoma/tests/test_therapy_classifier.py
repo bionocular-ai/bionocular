@@ -4,10 +4,7 @@
 import sys
 from pathlib import Path
 
-# Add parent to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-
-from domain.therapy_classifier import TherapyClassifier, TherapyStatus  # noqa: E402
+from src.domain.therapy_classifier import TherapyClassifier, TherapyStatus
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "deployed"
 CONFIG_PATH = DATA_DIR / "therapy_approval_status.json"

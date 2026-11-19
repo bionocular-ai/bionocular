@@ -27,8 +27,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from verify_validation_quotes import normalize, quote_found  # noqa: E402
 
 _root = pathlib.Path(__file__).parent.parent
-sys.path.insert(0, str(_root / "src"))
-from domain.extraction_models import AttributeType  # noqa: E402
+from src.domain.extraction_models import AttributeType  # noqa: E402
 
 DEFAULT_DIR = _root / "data/validation/abstracts_adjudication"
 COLUMNS_CSV = _root / "data/backups/trial_outcomes_rows.csv"

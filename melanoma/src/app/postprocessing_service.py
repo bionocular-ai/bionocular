@@ -4,14 +4,14 @@ import logging
 import re
 from pathlib import Path
 
-from domain.interfaces import PostprocessingServiceInterface, PostprocessorInterface
-from domain.models import (
+from ..domain.interfaces import PostprocessingServiceInterface, PostprocessorInterface
+from ..domain.models import (
     ConferenceType,
     PostprocessingConfiguration,
     PostprocessingResult,
 )
-from infrastructure.asco_postprocessor import ASCOPostprocessor
-from infrastructure.esmo_postprocessor import ESMOPostprocessor
+from ..infrastructure.asco_postprocessor import ASCOPostprocessor
+from ..infrastructure.esmo_postprocessor import ESMOPostprocessor
 
 logger = logging.getLogger(__name__)
 
@@ -671,23 +671,33 @@ class PostprocessingService(PostprocessingServiceInterface):
             expected_ids = None
             if config.conference_type == ConferenceType.ESMO:
                 if "2020" in input_path:
-                    from infrastructure.esmo_postprocessor import ESMO_2020_EXPECTED_IDS
+                    from ..infrastructure.esmo_postprocessor import (
+                        ESMO_2020_EXPECTED_IDS,
+                    )
 
                     expected_ids = ESMO_2020_EXPECTED_IDS
                 elif "2021" in input_path:
-                    from infrastructure.esmo_postprocessor import ESMO_2021_EXPECTED_IDS
+                    from ..infrastructure.esmo_postprocessor import (
+                        ESMO_2021_EXPECTED_IDS,
+                    )
 
                     expected_ids = ESMO_2021_EXPECTED_IDS
                 elif "2022" in input_path:
-                    from infrastructure.esmo_postprocessor import ESMO_2022_EXPECTED_IDS
+                    from ..infrastructure.esmo_postprocessor import (
+                        ESMO_2022_EXPECTED_IDS,
+                    )
 
                     expected_ids = ESMO_2022_EXPECTED_IDS
                 elif "2023" in input_path:
-                    from infrastructure.esmo_postprocessor import ESMO_2023_EXPECTED_IDS
+                    from ..infrastructure.esmo_postprocessor import (
+                        ESMO_2023_EXPECTED_IDS,
+                    )
 
                     expected_ids = ESMO_2023_EXPECTED_IDS
                 elif "2024" in input_path:
-                    from infrastructure.esmo_postprocessor import ESMO_2024_EXPECTED_IDS
+                    from ..infrastructure.esmo_postprocessor import (
+                        ESMO_2024_EXPECTED_IDS,
+                    )
 
                     expected_ids = ESMO_2024_EXPECTED_IDS
 
@@ -797,7 +807,7 @@ class PostprocessingService(PostprocessingServiceInterface):
                 )
                 and tables_by_id
             ):
-                from infrastructure.esmo_postprocessor import ESMOPostprocessor
+                from ..infrastructure.esmo_postprocessor import ESMOPostprocessor
 
                 esmo_processor = ESMOPostprocessor()
 

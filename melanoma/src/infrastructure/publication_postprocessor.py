@@ -9,7 +9,7 @@ import io
 import logging
 import re
 
-from domain.constants import PublicationPostprocessingPatterns
+from ..domain.constants import PublicationPostprocessingPatterns
 
 logger = logging.getLogger(__name__)
 

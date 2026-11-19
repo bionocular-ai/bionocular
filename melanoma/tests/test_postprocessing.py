@@ -1,21 +1,16 @@
 """Tests for postprocessing system."""
 
-import sys
-from pathlib import Path
 
 import pytest
 
-# Add src to path for testing
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from app.postprocessing_service import PostprocessingService  # noqa: E402
-from domain.models import (  # noqa: E402
+from src.app.postprocessing_service import PostprocessingService
+from src.domain.models import (
     ConferenceType,
     ParsedAbstract,
     PostprocessingConfiguration,
 )
-from infrastructure.asco_postprocessor import ASCOPostprocessor  # noqa: E402
-from infrastructure.esmo_postprocessor import ESMOPostprocessor  # noqa: E402
+from src.infrastructure.asco_postprocessor import ASCOPostprocessor
+from src.infrastructure.esmo_postprocessor import ESMOPostprocessor
 
 
 class TestASCOPostprocessor:

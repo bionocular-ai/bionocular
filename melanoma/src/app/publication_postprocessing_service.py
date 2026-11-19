@@ -3,7 +3,7 @@
 import logging
 from pathlib import Path
 
-from infrastructure.publication_postprocessor import PublicationPostprocessor
+from ..infrastructure.publication_postprocessor import PublicationPostprocessor
 
 logger = logging.getLogger(__name__)
 

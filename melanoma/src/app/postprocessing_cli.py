@@ -11,8 +11,8 @@ except ImportError:
     print("Click is required for the CLI. Install with: poetry add click")
     sys.exit(1)
 
-from app.postprocessing_service import PostprocessingService
-from domain.models import ConferenceType, PostprocessingConfiguration
+from ..domain.models import ConferenceType, PostprocessingConfiguration
+from .postprocessing_service import PostprocessingService
 
 # Configure logging
 logging.basicConfig(
