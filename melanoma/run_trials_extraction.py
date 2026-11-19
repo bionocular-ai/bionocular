@@ -57,8 +57,8 @@ from src.app.trials_parameter_extraction_service import (  # noqa: E402
     ExtractionConfig,
     TrialParameterExtractionService,
 )
-from src.infrastructure.gemini_service import GeminiLLMService  # noqa: E402
 from src.infrastructure.cost_calculator import CostCalculator  # noqa: E402
+from src.infrastructure.gemini_service import GeminiLLMService  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -229,7 +229,8 @@ def _build_parser() -> argparse.ArgumentParser:
         "number and would otherwise blank out a full run's fields.",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="Enable DEBUG-level logging.",
     )
@@ -292,9 +293,7 @@ def _collect_nct_numbers(
     return list(dict.fromkeys(n.upper() for n in collected))
 
 
-def _validate_paths(
-    trials_db: Path, exports_dir: Path
-) -> None:
+def _validate_paths(trials_db: Path, exports_dir: Path) -> None:
     errors = []
     if not trials_db.exists():
         errors.append(f"trials.db not found: {trials_db}")
