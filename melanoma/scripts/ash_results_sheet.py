@@ -140,7 +140,9 @@ def build(args: argparse.Namespace) -> None:
     selection = load_selection(args.selection)
     results = json.loads(args.results.read_text(encoding="utf-8"))
     results.pop(META, None)
-    registry = json.loads(args.registry.read_text(encoding="utf-8"))
+    registry: dict[str, Any] = {}
+    for path in args.registry:  # a later file's entry replaces an earlier one
+        registry.update(json.loads(path.read_text(encoding="utf-8")))
     registry.pop(META, None)
     texts = parse_md(args.md)
     rows = build_rows(results, texts, families, selection)
@@ -251,7 +253,13 @@ def build(args: argparse.Namespace) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--results", type=Path, required=True)
-    p.add_argument("--registry", type=Path, required=True)
+    p.add_argument(
+        "--registry",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="registry results; a later file's entry replaces an earlier one",
+    )
     p.add_argument("--md", type=Path, required=True)
     p.add_argument("--selection", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
