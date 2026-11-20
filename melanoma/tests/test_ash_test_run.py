@@ -306,3 +306,19 @@ async def test_dose_levels_are_rows_only_with_per_dose_outcomes(reported: str) -
         assert rows == [("arm_1", "")]
     else:
         assert rows == [("arm_1", "DL1, 80 mg"), ("arm_2", "DL2, 160 mg")]
+
+
+@pytest.mark.asyncio
+async def test_known_arms_are_reused_without_an_arm_call() -> None:
+    llm = FakeLLM()
+    known = {
+        "arms": [{"arm_id": "arm_1", "arm_name": "Drug Y", "role": "single arm"}],
+        "results_reported": "per_arm",
+    }
+    out = await run_abstract(
+        "94", _abstract("94"), llm, FAMILIES, asyncio.Semaphore(4), known=known
+    )
+    assert not _ops(llm, "ash_arms")
+    assert [a["arm_name"] for a in out["arms"]] == ["Drug Y"]
+    assert out["arms"][0]["dose_level"] == ""
+    assert out["results_reported"] == "per_arm" and out["errors"] == []
