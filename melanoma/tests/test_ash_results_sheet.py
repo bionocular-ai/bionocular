@@ -39,3 +39,7 @@ def test_rates_show_their_denominator():
     assert _shown({"value": "77.8", "n": "9"}) == "77.8 (n=9)"
     assert _shown({"value": "77.8", "n": ""}) == "77.8"
     assert _shown(_cell("CD38")) == "CD38"  # registry cells carry no n
+    assert _shown({"value": "40", "n": "21", "detail": "lymphopenia; TEAE"}) == (
+        "40 (n=21) TEAE"
+    )
+    assert _shown({"value": "40", "detail": "not stated"}) == "40"

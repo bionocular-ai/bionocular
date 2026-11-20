@@ -128,3 +128,25 @@ def test_a_mean_is_not_a_median():
     assert "mean_not_median" in cell_flags(f, _cell("5.2", q), q)
     q = "median 4 prior lines (mean 5.2)"
     assert "mean_not_median" not in cell_flags(f, _cell("4", q), q)
+
+
+def test_ae_class_tag_must_be_fixed_and_worded_in_the_abstract():
+    from dataclasses import replace
+
+    field = replace(_f("Grade >=3 neutropenia", "percent"), detail="AE class")
+    text = "Grade >=3 treatment-emergent neutropenia occurred in 40%."
+    quote = "neutropenia occurred in 40%"
+
+    def flags(detail: str, source: str = text) -> list[str]:
+        return cell_flags(field, _cell("40", quote, detail=detail), source)
+
+    assert flags("TEAE") == []
+    assert flags("not stated") == []
+    assert flags("lymphopenia; TEAE") == []
+    assert flags("") == ["bad_ae_class"]
+    assert flags("treatment-emergent") == ["bad_ae_class"]
+    assert flags("TRAE") == ["ae_class_not_in_abstract"]  # never assumed
+    no_class = "Grade >=3 neutropenia occurred in 40%."
+    assert flags("TEAE", no_class) == ["ae_class_not_in_abstract"]
+    # extras carry no detail, so no class check
+    assert cell_flags(field, {"value": "40", "quote": quote}, text) == []

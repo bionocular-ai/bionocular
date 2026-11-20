@@ -28,6 +28,7 @@ _root = Path(__file__).parent.parent
 sys.path.insert(0, str(_root))
 sys.path.insert(0, str(Path(__file__).parent))
 
+from ash_checks import AE_CLASS  # noqa: E402
 from ash_fields import load_families  # noqa: E402
 from ash_registry_run import registry_family  # noqa: E402
 from ash_review_sheet import build_rows, load_selection  # noqa: E402
@@ -52,8 +53,14 @@ def _tone(cell: dict[str, Any]) -> str:
 
 
 def _shown(cell: dict[str, Any]) -> str:
-    """The value, with the patients a rate is over when the abstract states them."""
-    return cell["value"] + (f" (n={cell['n']})" if cell.get("n") else "")
+    """The value, with the patients a rate is over when the abstract states them and
+    the AE class when the field carries one."""
+    tag = AE_CLASS.search(str(cell.get("detail") or "").strip())
+    return (
+        cell["value"]
+        + (f" (n={cell['n']})" if cell.get("n") else "")
+        + (f" {tag.group(1)}" if tag and tag.group(1) != "not stated" else "")
+    )
 
 
 def _note(cell: dict[str, Any]) -> str:

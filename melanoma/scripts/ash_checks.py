@@ -23,6 +23,14 @@ _OVERALL_AE_FIELD = re.compile(r"^Grade >=3 (?:AEs|TEAEs|TRAEs)$")
 _OVERALL_AE_QUOTE = re.compile(
     r"\bT?[RE]?AEs?\b|adverse (?:events?|reactions?)|toxicit", re.I
 )
+# Fields tagged with an AE class end their detail with one of these; a class must be
+# worded in the abstract, never assumed.
+AE_CLASS = re.compile(r"(?:^|; )(TEAE|TRAE|AE|not stated)$")
+_CLASS_WORDS = {
+    "TEAE": re.compile(r"TEAE|treatment[- ]emergent", re.I),
+    "TRAE": re.compile(r"TRAE|(?:treatment|drug)[- ]related|related to", re.I),
+    "AE": re.compile(r"\bAEs?\b|adverse event", re.I),
+}
 # Flags that remove an extra value instead of only marking it.
 DROP_EXTRA = {"timepoint_not_in_quote", "not_overall_ae", "mean_not_median"}
 # The words a quote must contain for a field about that measure.
@@ -76,6 +84,14 @@ def cell_flags(field: SheetField, cell: dict[str, Any], text: str) -> list[str]:
         flags.append("timepoint_not_in_quote")
     if _OVERALL_AE_FIELD.match(field.name) and not _OVERALL_AE_QUOTE.search(quote):
         flags.append("not_overall_ae")
+    if "AE class" in field.detail and "detail" in cell:
+        tag = AE_CLASS.search(cell["detail"].strip())
+        if not tag:
+            flags.append("bad_ae_class")
+        elif tag.group(1) in _CLASS_WORDS and not _CLASS_WORDS[tag.group(1)].search(
+            text
+        ):
+            flags.append("ae_class_not_in_abstract")
     if (
         field.name.startswith("Median")
         and re.search(r"\bmean\b", quote, re.I)
