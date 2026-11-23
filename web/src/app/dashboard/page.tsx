@@ -10,7 +10,7 @@ import { Search, ArrowUpRight } from 'lucide-react';
 import { ROUTES } from '@/lib/constants';
 
 const CANCER_TYPES = [
-  { name: 'Cutaneous Melanoma',                        slug: 'cutaneous-melanoma',                           accent: '#1B4F65' },
+  { name: 'Cutaneous / Metastatic Melanoma',           slug: 'cutaneous-melanoma',                           accent: '#1B4F65' },
   { name: 'Cutaneous Squamous Cell Carcinoma (cSCC)',  slug: 'cutaneous-squamous-cell-carcinoma',            accent: '#2D7D5A' },
   { name: 'Cutaneous Melanoma (Brain/CNS Metastases)', slug: 'cutaneous-melanoma-with-brain-cns-metastasis', accent: '#5B3E8F' },
   { name: 'Uveal Melanoma',                            slug: 'uveal-melanoma',                               accent: '#1A4A8A' },
