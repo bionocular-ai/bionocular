@@ -529,7 +529,7 @@ export default function CategoryAnalyticsPage() {
     const filters: Parameters<typeof analyticsApi.getData>[0] = {
       resource_type: resourceType as 'all' | 'conference' | 'publication',
       // Pass the URL slug, not the display name — getDbCancerType() maps slugs to DB values.
-      // e.g. 'cutaneous-melanoma' → 'Cutaneous Melanoma' (not 'Cutaneous/Metastatic Melanoma')
+      // e.g. 'cutaneous-melanoma' → 'Cutaneous Melanoma' (not 'Cutaneous / Metastatic Melanoma')
       cancer_type: categorySlug || undefined,
       modality: modality !== 'all' ? modality : undefined,
       funding_type: fundingType as 'all' | 'industry' | 'non-industry',
