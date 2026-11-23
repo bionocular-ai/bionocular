@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from ash_results_sheet import _shown, wide_rows  # noqa: E402
+from ash_results_sheet import _shown, _tone, apply_judge, wide_rows  # noqa: E402
 
 
 def _cell(value: str) -> dict:
@@ -43,3 +43,21 @@ def test_rates_show_their_denominator():
         "40 (n=21) TEAE"
     )
     assert _shown({"value": "40", "detail": "not stated"}) == "40"
+
+
+def test_apply_judge_takes_right_values_quoted_from_the_abstract() -> None:
+    text = "ORR was 62% (31 of 50). CR rate 20%."
+    base = {"abstract": "1", "value": "80", "quote": "q", "n": "50", "flags": "x"}
+    rows = [
+        {**base, "value_ok": "no", "error": "wrong_number", "right_value": "62",
+         "right_quote": "ORR was 62%"},
+        {**base, "value_ok": "no", "right_value": "70", "right_quote": "ORR was 70%"},
+        {**base, "value_ok": "no", "right_value": "", "right_quote": ""},
+        {**base, "value_ok": "yes", "right_value": "62", "right_quote": "ORR was 62%"},
+    ]  # fmt: skip
+    assert apply_judge(rows, {"1": text}) == 1
+    assert rows[0]["value"] == "62" and rows[0]["n"] == "" and rows[0]["flags"] == ""
+    assert rows[0]["judge_patched"] == "80 (judge: wrong_number)"
+    assert _tone(rows[0]) == "patched"
+    assert [r["value"] for r in rows[1:]] == ["80", "80", "80"]  # unquoted, none, ok
+    assert _tone(rows[1]) == _tone(rows[2]) == "red"
