@@ -53,7 +53,12 @@ def apply_judge(rows: list[dict[str, Any]], texts: dict[str, str]) -> int:
     count = 0
     for r in rows:
         right, quote = r.get("right_value", ""), r.get("right_quote", "")
-        if r.get("value_ok") != "no" or not right or not r["value"]:
+        if (
+            r.get("value_ok") != "no"
+            or not right
+            or right == r["value"]
+            or not r["value"]
+        ):
             continue
         if not quote_found(quote, texts[r["abstract"]]):
             continue

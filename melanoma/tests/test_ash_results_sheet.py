@@ -54,10 +54,11 @@ def test_apply_judge_takes_right_values_quoted_from_the_abstract() -> None:
         {**base, "value_ok": "no", "right_value": "70", "right_quote": "ORR was 70%"},
         {**base, "value_ok": "no", "right_value": "", "right_quote": ""},
         {**base, "value_ok": "yes", "right_value": "62", "right_quote": "ORR was 62%"},
+        {**base, "value_ok": "no", "right_value": "80", "right_quote": "ORR was 62%"},
     ]  # fmt: skip
     assert apply_judge(rows, {"1": text}) == 1
     assert rows[0]["value"] == "62" and rows[0]["n"] == "" and rows[0]["flags"] == ""
     assert rows[0]["judge_patched"] == "80 (judge: wrong_number)"
     assert _tone(rows[0]) == "patched"
-    assert [r["value"] for r in rows[1:]] == ["80", "80", "80"]  # unquoted, none, ok
+    assert [r["value"] for r in rows[1:]] == ["80"] * 4  # unquoted, none, ok, same
     assert _tone(rows[1]) == _tone(rows[2]) == "red"
