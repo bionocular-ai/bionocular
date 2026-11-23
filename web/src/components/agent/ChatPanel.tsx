@@ -312,7 +312,7 @@ export function ChatPanel({
                   <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-96">
+              <DropdownMenuContent align="end" className="w-[26rem]">
                 {DASHBOARD_CANCER_TYPES.map(({ value, label }, i) => (
                   <Fragment key={value}>
                     {/* Melanomas first, then the other skin cancers. */}
