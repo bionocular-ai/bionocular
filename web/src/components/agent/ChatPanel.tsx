@@ -1,11 +1,19 @@
 'use client';
 
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { Fragment, useState, useEffect, useRef, type ReactNode } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport, type UIMessage } from 'ai';
-import { ArrowUp, Square, RotateCcw, FlaskConical, Activity, Layers, Newspaper, type LucideIcon } from 'lucide-react';
+import { ArrowUp, Check, ChevronDown, Square, RotateCcw, FlaskConical, Activity, Layers, Newspaper, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { agentFeedbackApi, type FeedbackRating } from '@/lib/api';
+import { DASHBOARD_CANCER_TYPES, slugToCategory } from '@/lib/dashboard-constants';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { UserBubble } from './UserBubble';
 import { AssistantTurn, type TurnPart, type TurnTextPart } from './AssistantTurn';
 
@@ -284,6 +292,48 @@ export function ChatPanel({
                 'text-(--brand-text) placeholder:text-(--brand-text-muted) focus:outline-none'
               )}
             />
+            {/* ponytail: placeholder for the demo film, picking an item only closes
+                the menu. Making it real means deciding whether a switch navigates
+                or rescopes the chat. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'mb-0.5 hidden h-8 max-w-[45%] sm:inline-flex shrink-0 items-center gap-1 rounded-full px-2.5',
+                    'text-[13px] text-(--brand-text-muted) transition hover:bg-(--brand-text)/5 hover:text-(--brand-text)',
+                    'active:scale-[0.97] active:duration-100',
+                    'data-[state=open]:bg-(--brand-text)/5 data-[state=open]:text-(--brand-text)',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
+                  )}
+                  aria-label={`Cancer type: ${slugToCategory(cancerType)}`}
+                >
+                  <span className="truncate">{slugToCategory(cancerType)}</span>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-96">
+                {DASHBOARD_CANCER_TYPES.map(({ value, label }, i) => (
+                  <Fragment key={value}>
+                    {/* Melanomas first, then the other skin cancers. */}
+                    {i > 0 &&
+                      DASHBOARD_CANCER_TYPES[i - 1].value.includes('melanoma') &&
+                      !value.includes('melanoma') && <DropdownMenuSeparator />}
+                    <DropdownMenuItem
+                      className={cn(
+                        'cursor-pointer gap-3',
+                        value === cancerType && 'font-medium text-(--brand-text)'
+                      )}
+                    >
+                      <span className="flex-1">{label}</span>
+                      {value === cancerType && (
+                        <Check className="h-4 w-4 shrink-0 text-(--brand-primary)" aria-label="Selected" />
+                      )}
+                    </DropdownMenuItem>
+                  </Fragment>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             {isBusy ? (
               <button
                 type="button"
