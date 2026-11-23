@@ -7,7 +7,7 @@
 // scripts/capture-agent.sh, all coordinates their CSS px.
 // Each beat is a pure function of its own local time t; the master places them.
 
-import { clamp, lerp, sp, track, track2, window01, easeInOutCubic } from './lib/motion.js';
+import { clamp, lerp, sp, track, track2, window01, easeInOutCubic, easeOutCubic } from './lib/motion.js';
 import { rrect, risingText, riseWords, drawCursor, font } from './lib/draw.js';
 import { C } from './film.js';
 import * as pages from './pages.js';
@@ -28,6 +28,10 @@ const LOGIN = {
 const APP = {
   effHover: image('eff-agent-hover'), // the Efficacy hub at 1440x1500, AI Agent hovered on the rail
   empty: image('agent-empty'),
+  // The cancer-type menu in the composer: its chip hovered, the menu open, its ticked item hovered.
+  pickerHover: image('picker-hover'),
+  pickerOpen: image('picker-open'),
+  pickerItem: image('picker-item-hover'),
   q2Thread: image('q2-thread'),
   kmHover: image('q2-thread-km-hover'),
 };
@@ -36,9 +40,11 @@ const band = (dir, n) => Array.from({ length: n }, (_, i) => image(`${dir}c/${St
 const ASK = {
   q1: {
     words: band('q1', 27), hover: image('q1c/hover'), base: APP.empty,
-    band: [376, 340, 792, 192],
-    pill: [[382, 419, 780, 50], [382, 409, 780, 70]], // one line, then two from word 15 (it grows both ways)
-    wrap: 15, send: [[1119, 426, 36, 36], [1119, 436, 36, 36]],
+    band: [376, 312, 792, 248],
+    // The question on one line, then two from word 15 (it grows both ways); the cancer type and
+    // Send sit on the row under it.
+    pill: [[382, 401, 780, 86], [382, 391, 780, 106]], r: 24,
+    wrap: 15, send: [[1119, 444, 36, 36], [1119, 454, 36, 36]],
   },
 };
 // /dashboard's eight disease portfolios (scripts/capture-portfolio.sh): each hover is a crop of its
@@ -102,6 +108,53 @@ function label(g, title, aside, t, tIn, q) {
   g.font = font(400, 48, 'display');
   riseWords(g, aside, x, 170, t, tIn + 0.06 * title.split(' ').length, q, C.muted);
   g.letterSpacing = '0px';
+  g.restore();
+}
+
+// The next franchise as the landing page names it: the title in muted Onest, then its
+// "Coming soon" pill (seafoam ring, Plex Mono capitals), over a wash rising from the frame's foot.
+// It just appears, nothing threw it, so every spring is critically damped; it leaves the way it
+// came, sinking back down as it fades.
+function soon(g, title, tag, base0, t, tIn, q) {
+  const a = clamp(sp(t - tIn, 'ui')) * (1 - clamp(q));
+  if (a <= 0) return;
+  const base = base0 + clamp(q) * 12;
+  const wash = g.createLinearGradient(0, H - 220, 0, H);
+  wash.addColorStop(0, 'rgba(247, 250, 249, 0)');
+  wash.addColorStop(0.45, 'rgba(247, 250, 249, 0.9)');
+  wash.addColorStop(1, 'rgba(247, 250, 249, 0.97)');
+  g.save();
+  g.globalAlpha = a;
+  g.fillStyle = wash;
+  g.fillRect(0, H - 220, W, 220);
+  g.restore();
+  g.save();
+  g.letterSpacing = '-1.5px';
+  g.font = font(600, 50, 'display');
+  riseWords(g, title, 160, base, t, tIn, q, C.muted, { spring: 'crisp' });
+  const x = 160 + g.measureText(title).width + 30;
+  g.letterSpacing = '0px';
+  g.restore();
+  // The pill lands after the title's last word, growing from its left edge, the title's side.
+  const p = clamp(sp(t - tIn - 0.06 * title.split(' ').length - 0.12, 'crisp'));
+  if (p <= 0) return;
+  g.save();
+  g.font = font(500, 24, 'mono');
+  g.letterSpacing = '2px';
+  const tw = g.measureText(tag).width - 2;
+  const [pw, ph] = [tw + 44, 46];
+  const cy = base - 18;
+  const k = 0.92 + 0.08 * p;
+  g.globalAlpha = clamp(p * 1.6) * (1 - clamp(q));
+  g.translate(x, cy);
+  g.scale(k, k);
+  g.strokeStyle = C.accent;
+  g.lineWidth = 2;
+  rrect(g, 1, -ph / 2, pw, ph, ph / 2);
+  g.stroke();
+  g.fillStyle = '#287758'; // the landing's --accent-text
+  g.textBaseline = 'middle';
+  g.fillText(tag, 23, 1);
   g.restore();
 }
 
@@ -220,7 +273,7 @@ export function login(g, t) {
 // and clicks Cutaneous Melanoma as the camera leans in. Its Trial Updates wipes in, rail and
 // all, the camera and pointer flowing straight into the tour's first lean. The cards start while
 // the login card is still growing, so t runs from before 0 there.
-const PICK = { walk: 0.6, step: 0.24, up: 0.12, click: 2.8 };
+const PICK = { walk: 1.0, step: 0.24, up: 0.12, click: 3.2, caption: 0.3 };
 PICK.order = [4, 5, 6, 7, 3, 2, 1, 0]; // card indices, in the order the pointer reaches them
 PICK.at = PICK.order.map((_, i) => PICK.walk + i * PICK.step + (i >= 4 ? PICK.up : 0));
 PICK.lean = PICK.at[4] - 0.2;
@@ -298,6 +351,8 @@ export function pick(g, t) {
   ], 'ui');
   const [sx, sy] = pages.onScreen(c, [px, py]);
   drawCursor(g, sx, sy, clamp(1 - Math.abs(t - PICK.click) / 0.14), clamp((t - 0.15) / 0.12));
+  // The next franchise, named while every card is in view; it goes as the camera leans in.
+  soon(g, 'Hematology Franchise', 'COMING SOON', 1010, t, PICK.caption, easeInOutCubic((t - PICK.lean) / 0.3));
 }
 
 // ---------------------------------------------------------------- the agent composer
@@ -313,10 +368,10 @@ const twoLines = (q, t, tType, tHover) => t >= tHover || (t >= tType && Math.flo
 const typeEnd = (q, tType) => tType + (q.words.length - 1) * STEP;
 
 // The pill in screen px, for camera c.
-function pillOnScreen(c, [x, y, w, h]) {
+function pillOnScreen(c, [x, y, w, h], r = h / 2) {
   const [sx, sy] = pages.onScreen(c, [x, y]);
   const S = pages.B * c.z;
-  return { x: sx, y: sy, w: w * S, h: h * S, r: (h / 2) * S };
+  return { x: sx, y: sy, w: w * S, h: h * S, r: r * S };
 }
 
 // A sheet beat's camera, cursor and frame. keys: camera [t, [cx, cy, z]]; the sheet paints
@@ -340,13 +395,13 @@ function askBeat(g, t, { q, keys, paint, tType, tHover, tSend, chip, title, asid
       // Once sent, the composer leaves the page: it is the chip now.
       if (tm >= 0) {
         x.fillStyle = C.bg;
-        rrect(x, pill[0] - 8, pill[1] - 8, pill[2] + 16, pill[3] + 16, pill[3] / 2 + 8);
+        rrect(x, pill[0] - 8, pill[1] - 8, pill[2] + 16, pill[3] + 16, (q.r ?? pill[3] / 2) + 8);
         x.fill();
       }
     });
   });
   label(g, title, aside, t, labelIn, easeInOutCubic((tm + 0.1) / 0.35));
-  if (tm >= 0) morph(g, tm, pillOnScreen(c, pill), chip);
+  if (tm >= 0) morph(g, tm, pillOnScreen(c, pill, q.r), chip);
 
   const [px, py] = track2(t, path(two), 'snappy');
   const press = Math.max(0, ...presses.map((t0) => 1 - Math.abs(t - t0) / 0.14));
@@ -359,7 +414,9 @@ function askBeat(g, t, { q, keys, paint, tType, tHover, tSend, chip, title, asid
 // its hover (the rail opens), click: the agent page wipes in like every tour page. The
 // camera pushes in on the composer, Question 1 types in, Send, and the composer shrinks
 // into Question 1's chip as the app falls back out of focus.
-const A1 = { hover: 0.55, click: 0.95, field: 1.75, type: 1.95 };
+// Before typing, the pointer opens the cancer-type menu in the composer, rests on the ticked
+// Cutaneous / Metastatic Melanoma and picks it again, so the menu closes on the same scope.
+const A1 = { hover: 0.55, click: 0.95, chip: 1.45, open: 1.7, item: 2.15, pick: 2.95, field: 3.4, type: 3.6 };
 A1.hoverSend = typeEnd(ASK.q1, A1.type) + 0.3;
 A1.send = A1.hoverSend + 0.22;
 export const TO_Q1_DUR = A1.send + 0.15 + 0.6;
@@ -367,6 +424,10 @@ cue('toQ1', 0.05, 'whoosh', 0.25);
 cue('toQ1', A1.hover, 'tick', 0.35);
 cue('toQ1', A1.click, 'click', 0.85);
 cue('toQ1', A1.click + 0.05, 'whoosh', 0.35);
+cue('toQ1', A1.chip, 'tick', 0.3);
+cue('toQ1', A1.open, 'click', 0.6);
+cue('toQ1', A1.item, 'tick', 0.3);
+cue('toQ1', A1.pick, 'click', 0.6);
 cue('toQ1', A1.field, 'click', 0.6);
 for (let i = 0; i < ASK.q1.words.length; i += 3) cue('toQ1', A1.type + i * STEP, 'tick', 0.2);
 cue('toQ1', A1.hoverSend, 'tick', 0.35);
@@ -379,23 +440,59 @@ function effHover(g, p) {
   pages.clipped(g, [0, 56, 56 + 206 * clamp(p), 844], () => pages.blit(g, APP.effHover, [0, 56, 262, 844]));
 }
 
+// The menu as Radix draws it: it grows from the chip's right edge (scale 0.96 -> 1, 160 ms) and
+// shrinks back into it (100 ms), its shadow cropped with it.
+const MENU = { crop: [683, 474, 448, 343], origin: [1115, 482] };
+const PICKER_CHIP = [850, 446, 265, 32];
+function pickerMenu(g, t) {
+  const inP = clamp((t - A1.open) / 0.16), outP = clamp((t - A1.pick - 0.08) / 0.1);
+  if (inP <= 0 || outP >= 1) return;
+  const e = easeOutCubic(inP) * (1 - easeInOutCubic(outP));
+  const s = 0.96 + 0.04 * e;
+  const [ox, oy] = MENU.origin;
+  const src = t >= A1.item ? APP.pickerItem : APP.pickerOpen;
+  g.save();
+  g.globalAlpha = e;
+  g.translate(ox, oy);
+  g.scale(s, s);
+  g.translate(-ox, -oy);
+  pages.blit(g, src, MENU.crop);
+  if (t >= A1.item && t < A1.item + 0.1) { // the row's highlight comes in over 100 ms
+    g.globalAlpha = e * (1 - (t - A1.item) / 0.1);
+    pages.blit(g, APP.pickerOpen, MENU.crop);
+  }
+  g.restore();
+}
+// The chip takes its hover from the pointer's arrival until the menu has closed and the pointer left.
+function pickerChip(g, t) {
+  const a = window01(t, A1.chip, A1.pick + 0.2, 0.1, 0.15);
+  if (a <= 0) return;
+  g.save();
+  g.globalAlpha = a;
+  pages.blit(g, APP.pickerHover, [PICKER_CHIP[0] - 4, PICKER_CHIP[1] - 4, PICKER_CHIP[2] + 8, PICKER_CHIP[3] + 8]);
+  g.restore();
+}
+
 export function toQ1(g, t, chipText) {
   const c0 = pages.camAt(pages.T_DONE);
   askBeat(g, t, {
     q: ASK.q1, chip: chipText, title: 'Question 1', aside: '(Simple)', labelIn: 1.35,
     tType: A1.type, tHover: A1.hoverSend, tSend: A1.send,
-    keys: [[0, [c0.cx, c0.cy, c0.z]], [0.1, [560, 420, 1.15]], [A1.click + 0.25, [772, 440, 1.3]], [A1.field - 0.2, [772, 448, 1.8]]],
+    keys: [[0, [c0.cx, c0.cy, c0.z]], [0.1, [560, 420, 1.15]], [A1.click + 0.25, [772, 440, 1.3]],
+      [A1.chip, [800, 560, 1.4]], [A1.pick + 0.1, [772, 448, 1.8]]],
     paint: (x, tt) => {
       const open = sp(tt - A1.hover, 'snappy') - sp(tt - A1.click, 'snappy');
       const from = (y) => { pages.efficacyDone(y); effHover(y, open); };
       if (tt < A1.click) return from(x);
       pages.pageIn(x, from, APP.empty, A1.click, tt);
+      if (tt < A1.type - 0.4) { pickerChip(x, tt); pickerMenu(x, tt); }
     },
     path: (two) => [
       [0, [1100, 700]], [0.1, [1100, 700]], [A1.hover - 0.3, pages.RAIL.agent], [A1.click + 0.3, [700, 600]],
-      [A1.field - 0.3, [560, 444]], [A1.type + 0.15, [760, 560]], [A1.hoverSend - 0.25, center(ASK.q1.send[1])],
+      [A1.chip - 0.1, center(PICKER_CHIP, 0.55)], [A1.item - 0.1, [1020, 507]], [A1.pick + 0.05, [1020, 507]],
+      [A1.field - 0.3, [560, 426]], [A1.type + 0.15, [760, 580]], [A1.hoverSend - 0.25, center(ASK.q1.send[1])],
     ],
-    presses: [A1.click, A1.field, A1.send],
+    presses: [A1.click, A1.open, A1.pick, A1.field, A1.send],
   });
 }
 

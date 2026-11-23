@@ -4,7 +4,10 @@
 # empty agent page with Question 1 typed into its composer one word per frame (Question 2 is typed into
 # master v2's canvas composer, assets/screens/composer/).
 # Needs the web dev server on :3000 and the logged-in profile. Headless, 2x, pointer parked, caret hidden.
+# Pass one section (login, hub, agent, thread) to retake only that; no argument takes them all.
 set -euo pipefail
+ONLY=${1:-all}
+want() { [[ $ONLY == all || $ONLY == "$1" ]]; }
 cd "$(dirname "$0")/.."
 OUT=assets/screens/agent
 mkdir -p "$OUT/q1"
@@ -21,6 +24,7 @@ shot() { ab wait 400; ab screenshot "$OUT/$1@2x.png"; echo "$OUT/$1@2x.png"; }
 rail_hover() { ab find role link hover --name "$1" --exact; ab wait 600; }
 
 # ---------------------------------------------------------------- login: a fresh session, never submitted
+if want login; then
 export AGENT_BROWSER_SESSION=login-capture
 ab open about:blank
 ab set viewport 1440 900 2
@@ -36,12 +40,14 @@ ab click "#password"
 for n in 3 6 10; do ab fill "#password" "$(printf 'x%.0s' $(seq 1 $n))"; park; shot "login-pass-$n"; done
 ab find role button hover --name "Login"; shot login-hover
 agent-browser close
+fi
 
 # ---------------------------------------------------------------- the app, logged in
 export AGENT_BROWSER_SESSION=agent-capture
 ab --profile ~/.claude/chrome-profile-bionocular open about:blank
 
 # The Efficacy hub at Phase 3, the AI Agent rail icon hovered (the pages chapter's viewport).
+if want hub; then
 ab set viewport 1440 1500 2
 ab open "$BASE/dashboard/cutaneous-melanoma/analytics?mode=efficacy"
 ab wait --text "treatments"
@@ -49,6 +55,7 @@ clean
 ab find role button click --name "Phase 3" --exact
 ab wait --fn "!document.body.innerText.includes('Loading analytics')"; ab wait 2500
 rail_hover "AI Agent"; shot eff-agent-hover
+fi
 
 ab set viewport 1440 900 2
 # A thread's composer: one frame per word typed, then the Send hover.
@@ -68,16 +75,27 @@ history() { ab eval "[...document.querySelectorAll('button')].find(b => b.getAtt
 open_chat() { ab wait --text "$2"; ab eval "[...document.querySelectorAll('button')].find(b => b.innerText.startsWith('$1') && b.innerText.includes('$2')).click()"; }
 composer_rect() { agent-browser eval "JSON.stringify(document.querySelector('textarea').closest('div.flex').getBoundingClientRect())"; }
 
-# The empty agent page, history hidden: at rest, then Question 1 typed in.
+# The empty agent page, history hidden: at rest, the cancer-type menu hovered, open, and its
+# ticked item hovered, then Question 1 typed in.
+if want agent; then
+PICKER="Cancer type: Cutaneous / Metastatic Melanoma"
 ab open "$BASE/dashboard/cutaneous-melanoma/agent"
 ab wait --text "What do you want to know?"
 clean
 history Hide
 park; shot agent-empty
 echo "empty composer: $(composer_rect)"
+ab find label "$PICKER" hover; shot picker-hover
+ab find label "$PICKER" click; ab wait --text "Basal Cell Carcinoma"; park; shot picker-open
+echo "menu: $(agent-browser eval "JSON.stringify(document.querySelector('[role=menu]').getBoundingClientRect())")"
+ab find role menuitem hover --name "Cutaneous / Metastatic Melanoma"; shot picker-item-hover
+ab press Escape; ab wait 400
 type_words q1 "show me all published efficacy parameters (ORR, DCR and CR) in metastatic /cutaneous melanoma for active treatments. strict rule: only treatments which are in phase 1 trial."
 
+fi
+
 # The Question 2 thread (2026-10-20) at its foot, then the KM Curves Intelligence rail icon hovered.
+if want thread; then
 ab open "$BASE/dashboard/cutaneous-melanoma/agent"
 ab wait --text "What do you want to know?"
 clean
@@ -88,6 +106,7 @@ history Hide
 ab wait 1500
 park; shot q2-thread
 rail_hover "KM Curves Intelligence"; shot q2-thread-km-hover
+fi
 
 agent-browser close
 
@@ -98,4 +117,4 @@ crop_dir() {
   for f in "$OUT/$1"/*@2x.png; do ffmpeg -hide_banner -loglevel error -y -i "$f" -vf "crop=$2" "$OUT/$1c/$(basename "$f")"; done
   echo "$OUT/$1c: $(ls "$OUT/$1c" | wc -l | tr -d ' ') crops"
 }
-crop_dir q1 1584:384:752:680   # CSS [376, 340, 792, 192]: the title through the suggestion chips
+want agent && crop_dir q1 1584:496:752:624   # CSS [376, 312, 792, 248]: the title through the suggestion chips
