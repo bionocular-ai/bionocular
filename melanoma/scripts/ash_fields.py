@@ -29,6 +29,7 @@ FAMILY_TITLES = {
     "response_rates": "Response and disease-specific rates",
     "population": "Population and study design",
     "regimen_drug": "Regimen and drug profile",
+    "ae_reporting": "AE reporting threshold",
 }
 TYPE_TEXT = {
     "percent": "percent, bare number 0-100",

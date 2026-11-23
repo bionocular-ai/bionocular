@@ -10,6 +10,8 @@ Usage (from melanoma/):
 Abstract values come first; a registry value fills a field the abstract left empty.
 Each filled cell carries its quote as a comment. Red: the judge says the value is wrong.
 Yellow: a code check flagged it, the quote is not in the source, or the judge is unsure.
+--apply-judge writes the judge's right value where it says a value is wrong and quotes
+the abstract for it (green, the old value in the comment); other red cells stay red.
 """
 
 import argparse
@@ -28,12 +30,14 @@ _root = Path(__file__).parent.parent
 sys.path.insert(0, str(_root))
 sys.path.insert(0, str(Path(__file__).parent))
 
+from ash_checks import AE_CLASS, quote_found  # noqa: E402
 from ash_fields import load_families  # noqa: E402
 from ash_registry_run import registry_family  # noqa: E402
 from ash_review_sheet import build_rows, load_selection  # noqa: E402
 from ash_test_run import META, parse_md  # noqa: E402
 
 RED = PatternFill("solid", fgColor="FFF8D7DA")
+GREEN = PatternFill("solid", fgColor="FFD4EDDA")
 YELLOW = PatternFill("solid", fgColor="FFFFF3CD")
 OTHER = "Other values (field: value, context)"
 SETTING = "Setting (line of therapy)"
@@ -43,7 +47,32 @@ def _arm_id(label: str) -> str:
     return label.split(":", 1)[0]
 
 
+def apply_judge(rows: list[dict[str, Any]], texts: dict[str, str]) -> int:
+    """Replace a value the judge calls wrong with its right value, only when the judge
+    quotes the abstract for it. Returns how many were replaced."""
+    count = 0
+    for r in rows:
+        right, quote = r.get("right_value", ""), r.get("right_quote", "")
+        if (
+            r.get("value_ok") != "no"
+            or not right
+            or right == r["value"]
+            or not r["value"]
+        ):
+            continue
+        if not quote_found(quote, texts[r["abstract"]]):
+            continue
+        r.update(
+            judge_patched=f"{r['value']} (judge: {r.get('error') or 'wrong'})",
+            value=right, quote=quote, n="", flags="", value_ok="",
+        )  # fmt: skip
+        count += 1
+    return count
+
+
 def _tone(cell: dict[str, Any]) -> str:
+    if cell.get("judge_patched"):
+        return "patched"
     if cell.get("value_ok") == "no":
         return "red"
     if cell.get("flags") or cell.get("quote_found") is False:
@@ -52,12 +81,20 @@ def _tone(cell: dict[str, Any]) -> str:
 
 
 def _shown(cell: dict[str, Any]) -> str:
-    """The value, with the patients a rate is over when the abstract states them."""
-    return cell["value"] + (f" (n={cell['n']})" if cell.get("n") else "")
+    """The value, with the patients a rate is over when the abstract states them and
+    the AE class when the field carries one."""
+    tag = AE_CLASS.search(str(cell.get("detail") or "").strip())
+    return (
+        cell["value"]
+        + (f" (n={cell['n']})" if cell.get("n") else "")
+        + (f" {tag.group(1)}" if tag and tag.group(1) != "not stated" else "")
+    )
 
 
 def _note(cell: dict[str, Any]) -> str:
     parts = [f"quote: {cell['quote']}"]
+    if cell.get("judge_patched"):
+        parts.append(f"was: {cell['judge_patched']}")
     for key in ("detail", "flags", "error"):
         if cell.get(key):
             parts.append(f"{key}: {cell[key]}")
@@ -133,10 +170,14 @@ def build(args: argparse.Namespace) -> None:
     selection = load_selection(args.selection)
     results = json.loads(args.results.read_text(encoding="utf-8"))
     results.pop(META, None)
-    registry = json.loads(args.registry.read_text(encoding="utf-8"))
+    registry: dict[str, Any] = {}
+    for path in args.registry:  # a later file's entry replaces an earlier one
+        registry.update(json.loads(path.read_text(encoding="utf-8")))
     registry.pop(META, None)
     texts = parse_md(args.md)
     rows = build_rows(results, texts, families, selection)
+    if args.apply_judge:
+        print(f"judge values applied: {apply_judge(rows, texts)}")
     wide = wide_rows(results, registry, rows, registry_names)
 
     with csv_path.open(newline="", encoding="utf-8") as f:
@@ -175,7 +216,7 @@ def build(args: argparse.Namespace) -> None:
         res, sel = results[number], selection[number]
         mine = [r for r in rows if r["abstract"] == number]
         trial = wide[number].get("trial", {})
-        tones = {"red": 0, "yellow": 0}
+        tones = {"red": 0, "yellow": 0, "patched": 0}
         filled = {"abstract": 0, "registry": 0}
         for arm in res["arms"]:
             cells = {**trial, **wide[number].get(arm["arm_id"], {})}
@@ -197,7 +238,7 @@ def build(args: argparse.Namespace) -> None:
                 c.comment = Comment(_note(cells[f]), "pipeline")
                 tone = _tone(cells[f])
                 if tone:
-                    c.fill = RED if tone == "red" else YELLOW
+                    c.fill = {"red": RED, "yellow": YELLOW, "patched": GREEN}[tone]
             for cell in wide[number].get(arm["arm_id"], {}).values():
                 filled[cell["source"]] += 1
                 tone = _tone(cell)
@@ -244,10 +285,21 @@ def build(args: argparse.Namespace) -> None:
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--results", type=Path, required=True)
-    p.add_argument("--registry", type=Path, required=True)
+    p.add_argument(
+        "--registry",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="registry results; a later file's entry replaces an earlier one",
+    )
     p.add_argument("--md", type=Path, required=True)
     p.add_argument("--selection", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
+    p.add_argument(
+        "--apply-judge",
+        action="store_true",
+        help="write the judge's right value over values it calls wrong",
+    )
     build(p.parse_args())
 
 

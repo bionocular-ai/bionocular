@@ -56,10 +56,10 @@ def _cell(value: str = "", quote: str = "", **kw: object) -> dict[str, object]:
 def test_only_abstract_rows_are_asked():
     with CSV_PATH.open(newline="", encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
-    assert len(rows) == 150
+    assert len(rows) == 151
     asked = [r["field"] for r in rows if r["source"] in ("abstract", "both")]
     got = [f.name for f in ALL_FIELDS]
-    assert len(got) == len(set(got)) == 137
+    assert len(got) == len(set(got)) == 138
     assert sorted(got) == sorted(asked)
     for moved in ("Route", "Modality", "Target", "Arm label"):
         assert moved not in BY_NAME
@@ -69,7 +69,7 @@ def test_every_asked_row_has_family_scope_and_type():
     for f in ALL_FIELDS:
         assert f.scope in ("arm", "comparison", "trial"), f.name
         assert f.value_type, f.name
-        assert f.key.isidentifier() and len({x.key for x in ALL_FIELDS}) == 137
+        assert f.key.isidentifier() and len({x.key for x in ALL_FIELDS}) == 138
     assert BY_NAME["HR PFS"].scope == "comparison"
     assert BY_NAME["Biomarker"].scope == "trial"
     assert BY_NAME["Non-relapse mortality"].family == "duration_transplant"

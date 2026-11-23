@@ -4,6 +4,8 @@ Usage (from melanoma/):
   poetry run python3 scripts/ash_test_run.py --ids 94 --out data/ash_test_run/probe.json
 
 Results go to --out after each abstract; a rerun skips abstracts that finished cleanly.
+--arms-from reuses the arms of an earlier run (no arm call); --families asks only those
+families, e.g. to add a new field to an earlier run without redoing the rest.
 The results file records a fingerprint of the prompts and fields; a rerun with
 different prompts or fields refuses to resume into it.
 """
@@ -248,7 +250,9 @@ async def run_abstract(
     family_sem: asyncio.Semaphore,
     indication: str | None = None,
     missed_pass: bool = True,
+    known: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    """known: an earlier run's entry whose arms are reused instead of finding them."""
     out: dict[str, Any] = {
         "abstract": number,
         "nct_ids": sorted(set(_NCT.findall(text))),
@@ -257,8 +261,12 @@ async def run_abstract(
         "errors": [],
     }
     try:
-        async with family_sem:
-            arms, out["results_reported"] = await find_arms(text, llm)
+        if known is not None:
+            arms = [Arm(**a) for a in known["arms"]]
+            out["results_reported"] = known.get("results_reported")
+        else:
+            async with family_sem:
+                arms, out["results_reported"] = await find_arms(text, llm)
     except Exception as e:
         out["errors"].append(f"arms: {type(e).__name__}: {e}")
         return out
@@ -295,6 +303,7 @@ async def run(
     missed_pass: bool = True,
     costs: CostCalculator | None = None,
     max_cost: float | None = None,
+    arms_from: dict[str, Any] | None = None,
 ) -> None:
     texts = parse_md(md_path)
     if ids:
@@ -333,6 +342,7 @@ async def run(
                 asyncio.Semaphore(family_concurrency),
                 (indications or {}).get(number),
                 missed_pass,
+                (arms_from or {}).get(number),
             )
         async with lock:
             results[number] = r
@@ -364,6 +374,14 @@ def main() -> None:
     p.add_argument(
         "--ids", help="comma-separated abstract numbers (default: the selection)"
     )
+    p.add_argument(
+        "--arms-from",
+        type=Path,
+        help="results file whose arms to reuse; abstracts not in it get new arms",
+    )
+    p.add_argument(
+        "--families", help="comma-separated family keys to ask (default: all)"
+    )
     p.add_argument("--concurrency", type=int, default=5)
     p.add_argument("--family-concurrency", type=int, default=6)
     p.add_argument(
@@ -386,6 +404,17 @@ def main() -> None:
         call_log_path=args.out.parent / "calls.jsonl",
     )
     families = load_families(_root / "resources" / "ash" / "book1_sheet2.csv")
+    if args.families:
+        wanted = args.families.split(",")
+        unknown = set(wanted) - {f.key for f in families}
+        if unknown:
+            raise SystemExit(f"unknown families: {sorted(unknown)}")
+        families = tuple(f for f in families if f.key in wanted)
+    arms_from = (
+        json.loads(args.arms_from.read_text(encoding="utf-8"))
+        if args.arms_from
+        else None
+    )
     with args.selection.open(encoding="utf-8", newline="") as f:
         indications = {r["abstract"]: r["indication"] for r in csv.DictReader(f)}
     ids = args.ids.split(",") if args.ids else list(indications)
@@ -405,6 +434,7 @@ def main() -> None:
                 not args.no_missed_pass,
                 costs,
                 args.max_cost,
+                arms_from,
             )
         finally:
             await llm.aclose()
