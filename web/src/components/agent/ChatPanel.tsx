@@ -262,13 +262,13 @@ export function ChatPanel({
             there is a transcript it spans the thread's width. */}
         <div className={cn('mx-auto', isEmpty ? 'max-w-[780px]' : 'max-w-[1080px]')}>
           {/* The box is the bordered control; the textarea inside it is bare,
-              so the send button reads as part of the same field. Half the
-              one-line height makes it a pill; a fixed radius rather than
-              rounded-full keeps a grown multi-line box from turning oval. */}
+              so the controls row below reads as part of the same field. The
+              question gets the full width and the cancer type and send button
+              sit under it, so a long cancer name never squeezes the text. */}
           <div
             className={cn(
-              'flex items-end gap-2 rounded-[24px] border border-(--brand-border) bg-(--brand-surface)',
-              'py-1.5 pr-1.5 pl-5',
+              'flex flex-col rounded-[24px] border border-(--brand-border) bg-(--brand-surface)',
+              'pt-1.5 pr-1.5 pb-1.5 pl-5',
               'focus-within:border-(--brand-primary) focus-within:ring-3 focus-within:ring-(--brand-primary)/12'
             )}
           >
@@ -288,78 +288,80 @@ export function ChatPanel({
               placeholder="Ask about a trial, drug, or target…"
               rows={1}
               className={cn(
-                'flex-1 resize-none border-0 bg-transparent py-2 text-sm',
+                'w-full resize-none border-0 bg-transparent py-2 pr-3.5 text-sm',
                 'text-(--brand-text) placeholder:text-(--brand-text-muted) focus:outline-none'
               )}
             />
-            {/* ponytail: placeholder for the demo film, picking an item only closes
-                the menu. Making it real means deciding whether a switch navigates
-                or rescopes the chat. */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <div className="flex items-center justify-end gap-1">
+              {/* ponytail: placeholder for the demo film, picking an item only closes
+                  the menu. Making it real means deciding whether a switch navigates
+                  or rescopes the chat. */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      'inline-flex h-8 min-w-0 items-center gap-1 rounded-full px-2.5',
+                      'text-[13px] text-(--brand-text-muted) transition hover:bg-(--brand-text)/5 hover:text-(--brand-text)',
+                      'active:scale-[0.97] active:duration-100',
+                      'data-[state=open]:bg-(--brand-text)/5 data-[state=open]:text-(--brand-text)',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
+                    )}
+                    aria-label={`Cancer type: ${slugToCategory(cancerType)}`}
+                  >
+                    <span className="truncate">{slugToCategory(cancerType)}</span>
+                    <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[26rem]">
+                  {DASHBOARD_CANCER_TYPES.map(({ value, label }, i) => (
+                    <Fragment key={value}>
+                      {/* Melanomas first, then the other skin cancers. */}
+                      {i > 0 &&
+                        DASHBOARD_CANCER_TYPES[i - 1].value.includes('melanoma') &&
+                        !value.includes('melanoma') && <DropdownMenuSeparator />}
+                      <DropdownMenuItem
+                        className={cn(
+                          'cursor-pointer gap-3',
+                          value === cancerType && 'font-medium text-(--brand-text)'
+                        )}
+                      >
+                        <span className="flex-1">{label}</span>
+                        {value === cancerType && (
+                          <Check className="h-4 w-4 shrink-0 text-(--brand-primary)" aria-label="Selected" />
+                        )}
+                      </DropdownMenuItem>
+                    </Fragment>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {isBusy ? (
                 <button
                   type="button"
+                  onClick={stop}
                   className={cn(
-                    'mb-0.5 hidden h-8 max-w-[45%] sm:inline-flex shrink-0 items-center gap-1 rounded-full px-2.5',
-                    'text-[13px] text-(--brand-text-muted) transition hover:bg-(--brand-text)/5 hover:text-(--brand-text)',
-                    'active:scale-[0.97] active:duration-100',
-                    'data-[state=open]:bg-(--brand-text)/5 data-[state=open]:text-(--brand-text)',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--brand-primary)'
+                    'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
+                    'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)'
                   )}
-                  aria-label={`Cancer type: ${slugToCategory(cancerType)}`}
+                  aria-label="Stop generating"
                 >
-                  <span className="truncate">{slugToCategory(cancerType)}</span>
-                  <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  <Square className="h-3.5 w-3.5 fill-current" />
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[26rem]">
-                {DASHBOARD_CANCER_TYPES.map(({ value, label }, i) => (
-                  <Fragment key={value}>
-                    {/* Melanomas first, then the other skin cancers. */}
-                    {i > 0 &&
-                      DASHBOARD_CANCER_TYPES[i - 1].value.includes('melanoma') &&
-                      !value.includes('melanoma') && <DropdownMenuSeparator />}
-                    <DropdownMenuItem
-                      className={cn(
-                        'cursor-pointer gap-3',
-                        value === cancerType && 'font-medium text-(--brand-text)'
-                      )}
-                    >
-                      <span className="flex-1">{label}</span>
-                      {value === cancerType && (
-                        <Check className="h-4 w-4 shrink-0 text-(--brand-primary)" aria-label="Selected" />
-                      )}
-                    </DropdownMenuItem>
-                  </Fragment>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {isBusy ? (
-              <button
-                type="button"
-                onClick={stop}
-                className={cn(
-                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-                  'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)'
-                )}
-                aria-label="Stop generating"
-              >
-                <Square className="h-3.5 w-3.5 fill-current" />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!input.trim()}
-                className={cn(
-                  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-                  'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)',
-                  'disabled:cursor-not-allowed disabled:opacity-50'
-                )}
-                aria-label="Send"
-              >
-                <ArrowUp className="h-4.5 w-4.5" strokeWidth={2.25} />
-              </button>
-            )}
+              ) : (
+                <button
+                  type="submit"
+                  disabled={!input.trim()}
+                  className={cn(
+                    'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
+                    'bg-(--brand-primary) text-white transition hover:bg-(--brand-primary-hover)',
+                    'disabled:cursor-not-allowed disabled:opacity-50'
+                  )}
+                  aria-label="Send"
+                >
+                  <ArrowUp className="h-4.5 w-4.5" strokeWidth={2.25} />
+                </button>
+              )}
+            </div>
           </div>
           {isEmpty && (
             <Suggestions
