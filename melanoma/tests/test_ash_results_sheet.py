@@ -5,7 +5,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from ash_results_sheet import _shown, _tone, apply_judge, wide_rows  # noqa: E402
+from ash_results_sheet import (  # noqa: E402
+    _listed,
+    _shown,
+    _tone,
+    apply_judge,
+    apply_reviewed,
+    wide_rows,
+)
 
 
 def _cell(value: str) -> dict:
@@ -58,7 +65,32 @@ def test_apply_judge_takes_right_values_quoted_from_the_abstract() -> None:
     ]  # fmt: skip
     assert apply_judge(rows, {"1": text}) == 1
     assert rows[0]["value"] == "62" and rows[0]["n"] == "" and rows[0]["flags"] == ""
-    assert rows[0]["judge_patched"] == "80 (judge: wrong_number)"
+    assert rows[0]["patched"] == "80 (judge: wrong_number)"
     assert _tone(rows[0]) == "patched"
     assert [r["value"] for r in rows[1:]] == ["80"] * 4  # unquoted, none, ok, same
     assert _tone(rows[1]) == _tone(rows[2]) == "red"
+
+
+def test_apply_reviewed_writes_fixes_matched_by_cell() -> None:
+    cell = {"abstract": "1", "arm": "arm_1: X", "field": "Median age", "kind": "field",
+            "context": "", "value": "51-69", "quote": "q", "n": "", "flags": "bad_type",
+            "value_ok": "yes"}  # fmt: skip
+    rows = [cell, {**cell, "arm": "arm_2: Y"}]
+    reviewed = [
+        {**{k: cell[k] for k in ("abstract", "arm", "field", "kind", "context", "value")},
+         "verdict": "fix", "correct_value": "58.5", "quote": "median aged 58.5"},
+        {**{k: cell[k] for k in ("abstract", "field", "kind", "context", "value")},
+         "arm": "arm_2: Y", "verdict": "wrong", "correct_value": ""},
+    ]  # fmt: skip
+    assert apply_reviewed(rows, reviewed, "expert") == 1
+    assert rows[0]["value"] == "58.5" and rows[0]["quote"] == "median aged 58.5"
+    assert rows[0]["patched"] == "51-69 (expert)" and _tone(rows[0]) == "patched"
+    assert rows[1]["value"] == "51-69"  # only fixes are written
+
+
+def test_listed_names_the_old_value_of_a_patched_extra() -> None:
+    r = {"field": "ORR rate", "value": "62", "n": "", "context": "R/R only"}
+    assert _listed(r) == "ORR rate: 62 (R/R only)"
+    assert _listed({**r, "context": "", "patched": "80 (expert)"}) == (
+        "ORR rate: 62 [was 80 (expert)]"
+    )
