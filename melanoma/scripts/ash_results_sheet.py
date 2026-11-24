@@ -12,6 +12,8 @@ Each filled cell carries its quote as a comment. Red: the judge says the value i
 Yellow: a code check flagged it, the quote is not in the source, or the judge is unsure.
 --apply-judge writes the judge's right value where it says a value is wrong and quotes
 the abstract for it (green, the old value in the comment); other red cells stay red.
+--apply-reviewed FILE writes the fixes from a reviewed-values file (expert or manual
+verdicts) the same way, after any judge values.
 """
 
 import argparse
@@ -63,15 +65,41 @@ def apply_judge(rows: list[dict[str, Any]], texts: dict[str, str]) -> int:
         if not quote_found(quote, texts[r["abstract"]]):
             continue
         r.update(
-            judge_patched=f"{r['value']} (judge: {r.get('error') or 'wrong'})",
+            patched=f"{r['value']} (judge: {r.get('error') or 'wrong'})",
             value=right, quote=quote, n="", flags="", value_ok="",
         )  # fmt: skip
         count += 1
     return count
 
 
+_CELL = ("abstract", "arm", "field", "kind", "context", "value")
+
+
+def apply_reviewed(
+    rows: list[dict[str, Any]], reviewed: list[dict[str, Any]], who: str
+) -> int:
+    """Write the corrected value of every 'fix' verdict in a reviewed-values file (the
+    verify page's download format), matched by cell. Returns how many were replaced."""
+    fixes = {
+        tuple(v.get(k, "") for k in _CELL): v
+        for v in reviewed
+        if v["verdict"] == "fix" and v["correct_value"]
+    }
+    count = 0
+    for r in rows:
+        fix = fixes.get(tuple(r.get(k, "") or "" for k in _CELL))
+        if not fix:
+            continue
+        r.update(
+            patched=f"{r['value']} ({who})", value=fix["correct_value"],
+            quote=fix.get("quote") or r["quote"], n="", flags="", value_ok="",
+        )  # fmt: skip
+        count += 1
+    return count
+
+
 def _tone(cell: dict[str, Any]) -> str:
-    if cell.get("judge_patched"):
+    if cell.get("patched"):
         return "patched"
     if cell.get("value_ok") == "no":
         return "red"
@@ -91,10 +119,18 @@ def _shown(cell: dict[str, Any]) -> str:
     )
 
 
+def _listed(r: dict[str, Any]) -> str:
+    """An extra or pooled value in a list cell; a patched one names its old value."""
+    was = f" [was {r['patched']}]" if r.get("patched") else ""
+    return f"{r['field']}: {_shown(r)}{was}" + (
+        f" ({r['context']})" if r["context"] else ""
+    )
+
+
 def _note(cell: dict[str, Any]) -> str:
     parts = [f"quote: {cell['quote']}"]
-    if cell.get("judge_patched"):
-        parts.append(f"was: {cell['judge_patched']}")
+    if cell.get("patched"):
+        parts.append(f"was: {cell['patched']}")
     for key in ("detail", "flags", "error"):
         if cell.get(key):
             parts.append(f"{key}: {cell[key]}")
@@ -178,6 +214,12 @@ def build(args: argparse.Namespace) -> None:
     rows = build_rows(results, texts, families, selection)
     if args.apply_judge:
         print(f"judge values applied: {apply_judge(rows, texts)}")
+    if args.apply_reviewed:
+        reviewed = json.loads(args.apply_reviewed.read_text(encoding="utf-8"))
+        got = apply_reviewed(rows, reviewed, args.reviewed_by)
+        print(
+            f"reviewed fixes applied: {got} of {sum(v['verdict'] == 'fix' for v in reviewed)}"
+        )
     wide = wide_rows(results, registry, rows, registry_names)
 
     with csv_path.open(newline="", encoding="utf-8") as f:
@@ -220,17 +262,20 @@ def build(args: argparse.Namespace) -> None:
         filled = {"abstract": 0, "registry": 0}
         for arm in res["arms"]:
             cells = {**trial, **wide[number].get(arm["arm_id"], {})}
+            extras = [
+                r
+                for r in mine
+                if r["kind"] == "extra" and _arm_id(r["arm"]) == arm["arm_id"]
+            ]
             arms_ws.append(
                 [number, sel["doi"], sel["indication"], arm["arm_id"], arm["arm_name"],
                  arm.get("dose_level") or None, arm["role"]]
                 + [_shown(cells[f]) if f in cells else None for f in fields]
-                + ["; ".join(
-                    f"{r['field']}: {_shown(r)} ({r['context']})"
-                    for r in mine
-                    if r["kind"] == "extra" and _arm_id(r["arm"]) == arm["arm_id"]
-                ) or None]
+                + ["; ".join(_listed(r) for r in extras) or None]
             )  # fmt: skip
             row = arms_ws.max_row
+            if any(r.get("patched") for r in extras):
+                arms_ws.cell(row, arms_ws.max_column).fill = GREEN
             for i, f in enumerate(fields, start=8):
                 if f not in cells:
                     continue
@@ -252,11 +297,10 @@ def build(args: argparse.Namespace) -> None:
         pooled = [r for r in mine if r["kind"] == "pooled" and r["value"]]
         if pooled:
             pooled_ws.append(
-                [number, sel["indication"], "; ".join(
-                    f"{r['field']}: {_shown(r)}" + (f" ({r['context']})" if r["context"] else "")
-                    for r in pooled
-                )]
-            )  # fmt: skip
+                [number, sel["indication"], "; ".join(_listed(r) for r in pooled)]
+            )
+            if any(r.get("patched") for r in pooled):
+                pooled_ws.cell(pooled_ws.max_row, 3).fill = GREEN
         errors = list(res.get("errors") or []) + [
             f"{k}: {f['error']}" for k, f in res["families"].items() if f["error"]
         ]
@@ -300,6 +344,12 @@ def main() -> None:
         action="store_true",
         help="write the judge's right value over values it calls wrong",
     )
+    p.add_argument(
+        "--apply-reviewed",
+        type=Path,
+        help="reviewed-values JSON (verify page format); its 'fix' values are written",
+    )
+    p.add_argument("--reviewed-by", default="reviewed", help="label in the cell note")
     build(p.parse_args())
 
 

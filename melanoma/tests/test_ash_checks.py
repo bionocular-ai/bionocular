@@ -150,3 +150,26 @@ def test_ae_class_tag_must_be_fixed_and_worded_in_the_abstract():
     assert flags("TEAE", no_class) == ["ae_class_not_in_abstract"]
     # extras carry no detail, so no class check
     assert cell_flags(field, {"value": "40", "quote": quote}, text) == []
+
+
+def test_evidence_needs_a_stated_cut_off_per_part():
+    f = _f("Evidence", "text", "trial")
+    q = "The most common TEAEs (\u2265 20%) were anemia (31%) and grade \u22653 TEAEs in \u22655% of pts"
+
+    def flags(value: str, quote: str = q) -> list[str]:
+        return cell_flags(f, _cell(value, quote), quote)
+
+    assert flags("TEAEs >=20%") == []
+    assert flags("TEAEs >=20%; grade >=3 TEAEs >=5%") == []
+    assert flags("TEAEs in >1 patient", "TEAEs in >1 patient were rash") == []
+    listed = "The most common TEAEs were anemia (31%) and nausea (20%)"
+    assert flags("TEAEs >=20%", listed) == ["threshold_not_in_quote"]  # a listed rate
+    assert flags("most common TEAEs", listed) == ["threshold_not_in_quote"]
+    assert flags("TEAEs >=20%; grade 3-4 TEAEs") == ["threshold_not_in_quote"]
+
+
+def test_an_nct_number_is_not_a_trial_name():
+    f = _f("Trial name", "text", "trial")
+    q = "CARTITUDE-4 (NCT04181827) randomized patients"
+    assert cell_flags(f, _cell("CARTITUDE-4", q), q) == []
+    assert cell_flags(f, _cell("NCT04181827", q), q) == ["nct_as_trial_name"]

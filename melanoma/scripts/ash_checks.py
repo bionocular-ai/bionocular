@@ -31,6 +31,12 @@ _CLASS_WORDS = {
     "TRAE": re.compile(r"TRAE|(?:treatment|drug)[- ]related|related to", re.I),
     "AE": re.compile(r"\bAEs?\b|adverse event", re.I),
 }
+# An Evidence cut-off (20%, 1 patient) and how the abstract must write it: as a
+# threshold, not as one of the listed rates.
+_CUT = re.compile(rf"({_NUM})\s*(?:%|pts?\b|patients?\b)", re.I)
+_NCT = re.compile(r"\bNCT\d{8}\b", re.I)
+# Separators a model sometimes leaves around a value (Arabic and CJK commas too).
+_STRAY = " \t\n,;:\u060c\u061b\u3001\uff0c"
 # Flags that remove an extra value instead of only marking it.
 DROP_EXTRA = {"timepoint_not_in_quote", "not_overall_ae", "mean_not_median"}
 # The words a quote must contain for a field about that measure.
@@ -50,6 +56,33 @@ _MEASURES = (
 def _norm(s: str) -> str:
     s = unicodedata.normalize("NFKC", s).translate(_DASHES)
     return _WS.sub(" ", s).strip()
+
+
+def clean_value(value: str) -> str:
+    """The value without stray separators around it; "" when nothing real is left."""
+    v = value.strip(_STRAY)
+    return v if re.search(r"\w", v) else ""
+
+
+def threshold_in_quote(value: str, quote: str) -> bool:
+    """Every '; ' part of an Evidence value needs a cut-off that the quote writes as a
+    threshold (>=20%, in >1 patient), not a rate that only appears in the list."""
+    q = _norm(quote).replace("\u2265", ">=").replace("\u2267", ">=")
+    for part in _norm(value).replace("\u2265", ">=").split(";"):
+        cuts = _CUT.findall(part)
+        if not cuts:
+            return False
+        for n in cuts:
+            n = re.escape(n)
+            unit = r"\s*(?:%|pts?\b|patients?\b)"
+            if not re.search(
+                rf"(?:>=?|at least|more than|over|exceeding)\s*{n}{unit}"
+                rf"|{n}\s*%\s*or (?:more|greater|higher)",
+                q,
+                re.I,
+            ):
+                return False
+    return True
 
 
 def quote_found(quote: str, text: str) -> bool:
@@ -92,6 +125,10 @@ def cell_flags(field: SheetField, cell: dict[str, Any], text: str) -> list[str]:
             text
         ):
             flags.append("ae_class_not_in_abstract")
+    if field.name == "Evidence" and not threshold_in_quote(value, quote):
+        flags.append("threshold_not_in_quote")
+    if field.name == "Trial name" and _NCT.search(value):
+        flags.append("nct_as_trial_name")
     if (
         field.name.startswith("Median")
         and re.search(r"\bmean\b", quote, re.I)
