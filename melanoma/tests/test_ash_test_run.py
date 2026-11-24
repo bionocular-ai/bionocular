@@ -122,6 +122,17 @@ def test_missed_items_must_target_an_empty_asked_field() -> None:
     assert _truly_missed(items, extracted) == [items[4]]
 
 
+def test_missed_values_lose_stray_separators_and_junk_is_dropped() -> None:
+    extracted = {"arms": {"arm_1": {"cr": {"value": ""}, "orr": {"value": ""}}}}
+    items = [
+        {"arm_id": "arm_1", "field": "cr", "value": "\u060c ", "quote": ""},
+        {"arm_id": "arm_1", "field": "orr", "value": "\u060c 63", "quote": "q"},
+    ]
+    assert _truly_missed(items, extracted) == [
+        {"arm_id": "arm_1", "field": "orr", "value": "63", "quote": "q"}
+    ]
+
+
 @pytest.mark.asyncio
 async def test_run_abstract_arms_families_checks_and_passes() -> None:
     llm = FakeLLM()

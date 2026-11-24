@@ -12,6 +12,8 @@ Usage (from melanoma/):
       --selection S --out full_v2/results.json
   # 4. n (patients a rate is over) for every percent value written before n existed
   poetry run python3 scripts/ash_patch.py n --results full_v2/results.json
+  # 5. after a code-check change: redo the flags and clean missed values (no LLM)
+  poetry run python3 scripts/ash_patch.py recheck --results full_v2/results.json
 
 Steps 1 and 4 save after each abstract and resume.
 """
@@ -35,7 +37,7 @@ sys.path.insert(0, str(_root))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from ash_fields import Arm, Family, load_families  # noqa: E402
-from ash_test_run import META, find_arms, parse_md  # noqa: E402
+from ash_test_run import META, _flags, _truly_missed, find_arms, parse_md  # noqa: E402
 
 from src.domain.structured_llm_interfaces import StructuredLLMService  # noqa: E402
 from src.infrastructure.cost_calculator import CostCalculator, ModelType  # noqa: E402
@@ -268,6 +270,29 @@ def cmd_n(args: argparse.Namespace) -> None:
     asyncio.run(go())
 
 
+def recheck(entry: dict[str, Any], text: str, families: dict[str, Family]) -> None:
+    """Redo the code-check flags and the missed-value filter on stored values."""
+    for key, result in entry.get("families", {}).items():
+        if not result.get("extracted"):
+            continue
+        result["flags"] = _flags(families[key], result["extracted"], text)
+        if result.get("missed"):
+            result["missed"]["items"] = _truly_missed(
+                result["missed"]["items"], result["extracted"]
+            )
+
+
+def cmd_recheck(args: argparse.Namespace) -> None:
+    texts = parse_md(args.md)
+    results = json.loads(args.results.read_text(encoding="utf-8"))
+    families = {f.key: f for f in load_families(CSV)}
+    for n, entry in results.items():
+        if n != META:
+            recheck(entry, texts[n], families)
+    _save(args.results, results)
+    print(f"rechecked {len(results) - (META in results)} abstracts in {args.results}")
+
+
 def main() -> None:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -286,8 +311,12 @@ def main() -> None:
     n = sub.add_parser("n")
     n.add_argument("--results", type=Path, required=True)
     n.add_argument("--md", type=Path, default=MD)
+    r = sub.add_parser("recheck")
+    r.add_argument("--results", type=Path, required=True)
+    r.add_argument("--md", type=Path, default=MD)
     args = p.parse_args()
-    {"arms": cmd_arms, "merge": cmd_merge, "n": cmd_n}[args.cmd](args)
+    cmds = {"arms": cmd_arms, "merge": cmd_merge, "n": cmd_n, "recheck": cmd_recheck}
+    cmds[args.cmd](args)
 
 
 if __name__ == "__main__":

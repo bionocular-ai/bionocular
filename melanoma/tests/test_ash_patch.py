@@ -9,7 +9,16 @@ import pytest
 _root = Path(__file__).parent.parent
 sys.path.insert(0, str(_root / "scripts"))
 
-from ash_patch import NList, fill_n, merge, pending_n, stated_n  # noqa: E402
+from ash_fields import load_families  # noqa: E402
+from ash_patch import (  # noqa: E402
+    CSV,
+    NList,
+    fill_n,
+    merge,
+    pending_n,
+    recheck,
+    stated_n,
+)
 
 ARMS = [{"arm_id": "arm_1", "arm_name": "Drug X", "role": "single arm"}]
 
@@ -123,3 +132,29 @@ def test_merge_refuses_families_run_on_other_arms() -> None:
         merge({"1": _entry()}, {}, fam_run, ["1"])
     with pytest.raises(ValueError, match="in no input"):
         merge({}, {}, {}, ["9"])
+
+
+def test_recheck_reflags_and_cleans_missed_values_without_the_llm() -> None:
+    fam = next(f for f in load_families(CSV) if f.key == "population")
+    text = "CARTITUDE-4 (NCT04181827) enrolled 419 patients."
+    q = "CARTITUDE-4 (NCT04181827)"
+    entry = {
+        "families": {
+            "population": {
+                "extracted": {
+                    "trial": {"trial_name": {"value": "NCT04181827", "quote": q}}
+                },
+                "flags": {},
+                "missed": {
+                    "items": [
+                        {"arm_id": "trial", "field": "trial_name", "value": "\u060c"}
+                    ]
+                },
+            },
+            "gone": {"extracted": None, "flags": {}, "missed": None},
+        }
+    }
+    recheck(entry, text, {fam.key: fam})
+    got = entry["families"]["population"]
+    assert got["flags"] == {"trial.trial_name": ["nct_as_trial_name"]}
+    assert got["missed"]["items"] == []

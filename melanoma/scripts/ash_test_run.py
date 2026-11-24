@@ -30,7 +30,7 @@ _root = Path(__file__).parent.parent
 sys.path.insert(0, str(_root))
 sys.path.insert(0, str(Path(__file__).parent))
 
-from ash_checks import DROP_EXTRA, cell_flags, same_on_arms  # noqa: E402
+from ash_checks import DROP_EXTRA, cell_flags, clean_value, same_on_arms  # noqa: E402
 from ash_fields import (  # noqa: E402
     ARM_PROMPT,
     Arm,
@@ -158,17 +158,18 @@ def _truly_missed(
     """Keep only items for a field the extraction asked for and left empty.
 
     The model tends to repeat values that are already filled, or to put a pooled
-    value back on an arm.
+    value back on an arm, and sometimes answers with a lone separator such as "،".
     """
     cells = {"trial": extracted.get("trial", {}), **extracted.get("arms", {})}
     pooled = {(p["field"], p["value"].strip()) for p in extracted.get("pooled", [])}
+    items = [{**i, "value": clean_value(i["value"])} for i in items]
     return [
         i
         for i in items
-        if i["value"].strip()
+        if i["value"]
         and i["field"] in cells.get(i["arm_id"], {})
         and not cells[i["arm_id"]][i["field"]]["value"]
-        and (i["field"], i["value"].strip()) not in pooled
+        and (i["field"], i["value"]) not in pooled
     ]
 
 
