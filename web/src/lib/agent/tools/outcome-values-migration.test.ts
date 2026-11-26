@@ -83,6 +83,7 @@ function val(abstract: number, armId: string | null, field: string, value: strin
 // Abstract 2: one arm but only a pooled value (the 31 pooled-only abstracts).
 // Abstract 3: one arm, no NCT id, no pooled value.
 // Abstract 4: no arm rows at all, only abstract-level values (e.g. abstract 1075).
+// Abstract 5: one arm, trial values (one outside the arm-row subset) but no pooled value.
 const ABSTRACTS: Record<number, { arms: Row[]; vals: Row[] }> = {
   1: {
     arms: [arm(1, 'a', 'Venetoclax'), arm(1, 'b', 'Azacitidine')],
@@ -107,6 +108,15 @@ const ABSTRACTS: Record<number, { arms: Row[]; vals: Row[] }> = {
     vals: [
       val(4, null, 'generic_name', 'Ziftomenib', { value_num: null }),
       val(4, null, 'orr_rate', '35'),
+    ],
+  },
+  5: {
+    arms: [arm(5, 'a', 'Revumenib')],
+    vals: [
+      val(5, 'a', 'orr_rate', '40'),
+      val(5, null, 'response_criteria', 'ELN 2022', { value_num: null, detail: 'modified' }),
+      val(5, null, 'disease_subtype', 'NPM1m', { value_num: null, detail: 'per protocol', derived: true }),
+      val(5, null, 'disease_subtype', 'KMT2Ar', { value_num: null, context: 'b', detail: 'per protocol' }),
     ],
   },
 };
@@ -148,7 +158,8 @@ beforeEach(async () => {
     insert into clinical_trials values ('NCT00000001');
     insert into outcome_fields (key, label, family, scope, value_type, definition, sort_order) values
       ('orr_rate', 'ORR', 'response_rates', 'arm', 'percent', 'Overall response rate.', 1),
-      ('response_criteria', 'Response criteria', 'trial_design', 'trial', 'text', 'Criteria used.', 1);
+      ('response_criteria', 'Response criteria', 'trial_design', 'trial', 'text', 'Criteria used.', 1),
+      ('disease_subtype', 'Disease subtype', 'trial_design', 'trial', 'text', 'Subtype enrolled.', 2);
     insert into outcome_fields (key, label, family, scope, value_type, definition, wide_column, sort_order)
       values ('generic_name', 'Generic name', 'regimen_drug', 'arm', 'text', 'Drug.', 'generic_name', 1);
     -- A melanoma row: it must never show up in the view.
@@ -171,6 +182,8 @@ describe('outcome_values migration', () => {
       ['abstract_ASH_2025_2_all', 'All arms (pooled or trial-level)'],
       ['abstract_ASH_2025_3_a', 'Arm a'],
       ['abstract_ASH_2025_4_all', 'All arms (pooled or trial-level)'],
+      ['abstract_ASH_2025_5_a', 'Arm a'],
+      ['abstract_ASH_2025_5_all', 'All arms (pooled or trial-level)'],
     ]);
     const all1 = rows.find((r) => r.id === 'abstract_ASH_2025_1_all')!;
     expect(all1).toMatchObject({
@@ -225,6 +238,27 @@ describe('outcome_values migration', () => {
     expect((await view(`source_id = 'ASH_2025_3'`))[0].trial).toBeNull();
   });
 
+  it('arm rows carry the criteria subset of trial; the All arms row carries all of it', async () => {
+    const [armRow, all] = await view(`source_id = 'ASH_2025_5'`);
+    const criteria = { value: 'ELN 2022', detail: 'modified' };
+    expect(armRow.id).toBe('abstract_ASH_2025_5_a');
+    expect(armRow.trial).toEqual({ 'Response criteria': criteria });
+    // A trial-only abstract still gets its All arms row, with no values of its own.
+    expect(all).toMatchObject({
+      id: 'abstract_ASH_2025_5_all',
+      source_url: 'https://doi.org/10.1182/blood-2025-5',
+      nct_id: 'NCT00000001',
+      cancer_type: AML,
+      abstract_drugs: 'Revumenib',
+      values: null,
+    });
+    // A repeated label joins its values; detail is kept once, derived when any is.
+    expect(all.trial).toEqual({
+      'Response criteria': criteria,
+      'Disease subtype': { value: 'NPM1m; KMT2Ar', detail: 'per protocol', derived: true },
+    });
+  });
+
   it('duplicate field and context are both kept', async () => {
     const [b] = await view(`id = 'abstract_ASH_2025_1_b'`);
     expect(b.values).toEqual({
@@ -265,7 +299,7 @@ describe('outcome_values migration', () => {
   it('delete_ash_abstracts_except removes dropped abstracts', async () => {
     const { rows } = await asRole('service_role', () =>
       db.query<{ removed: number }>(
-        `select delete_ash_abstracts_except(array['ASH_2025_1', 'ASH_2025_2', 'ASH_2025_4']) as removed`,
+        `select delete_ash_abstracts_except(array['ASH_2025_1', 'ASH_2025_2', 'ASH_2025_4', 'ASH_2025_5']) as removed`,
       ),
     );
     expect(rows[0].removed).toBe(1);
@@ -285,7 +319,7 @@ describe('outcome_values migration', () => {
       ).rejects.toThrow(/empty keep list/);
     }
     const { rows } = await db.query<Row>(`select count(*)::int as n from trial_outcomes`);
-    expect(rows[0].n).toBe(5);
+    expect(rows[0].n).toBe(6);
   });
 
   it('values keyed by family support a json path select', async () => {

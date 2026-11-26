@@ -59,11 +59,14 @@ CREATE POLICY "outcome_fields_read" ON outcome_fields FOR SELECT TO authenticate
 CREATE POLICY "outcome_values_read" ON outcome_values FOR SELECT TO authenticated USING (true);
 
 -- One row per arm of a source that has long values, plus one "All arms" row
--- per source with pooled (arm-less, non-trial) values. `trial` carries the
--- source's trial-scope values on every row, so a response rate never arrives
--- without its criteria. `values` is keyed by family so a reader can select
--- only some families (values->response_rates). security_invoker makes the
--- caller's RLS and grants apply, not the view owner's.
+-- per source with pooled (arm-less, non-trial) or trial-scope values. Arm rows
+-- carry `trial` cut to the labels that qualify their values (response
+-- criteria, assessment, analysis type, trial name), so a response rate never
+-- arrives without its criteria; the All arms row carries every trial-scope
+-- value, which keeps a whole-cancer read inside the agent's budget. `values`
+-- is keyed by family so a reader can select only some families
+-- (values->response_rates). security_invoker makes the caller's RLS and
+-- grants apply, not the view owner's.
 -- ponytail: aggregates per query; materialize past ~1M outcome_values rows
 CREATE VIEW arm_outcomes WITH (security_invoker = true) AS
 WITH v AS (
@@ -71,19 +74,23 @@ WITH v AS (
   FROM outcome_values ov
   JOIN outcome_fields f ON f.key = ov.field_key
 ),
--- Per source: its DOI link and every drug named on its arms or in its
--- abstract-level generic-name values, so an abstract with no arm rows still
--- carries both and the drug filter finds its "All arms" row.
+-- Per source: its type, NCT id, cancer type, DOI link and every drug named on
+-- its arms or in its abstract-level generic-name values, so an abstract with
+-- no arm rows still carries them and the drug filter finds its "All arms" row.
 sources AS (
   SELECT source_id,
+         min(source_type) AS source_type,
+         min(nct_id) AS nct_id,
+         min(cancer_type) AS cancer_type,
          string_agg(DISTINCT drug, '; ') AS abstract_drugs,
          max(source_url) AS source_url
   FROM (
-    SELECT t.abstract_id AS source_id, t.generic_name AS drug, t.source_url
+    SELECT t.abstract_id AS source_id, NULL AS source_type, NULL AS nct_id,
+           NULL::text[] AS cancer_type, t.generic_name AS drug, t.source_url
     FROM trial_outcomes t
     WHERE t.abstract_id IN (SELECT source_id FROM outcome_values)
     UNION ALL
-    SELECT source_id,
+    SELECT source_id, source_type, nct_id, cancer_type,
            CASE WHEN trial_outcome_id IS NULL AND wide_column = 'generic_name' THEN value_text END,
            source_url
     FROM v
@@ -91,31 +98,30 @@ sources AS (
   GROUP BY source_id
 ),
 trial AS (
-  SELECT source_id, jsonb_object_agg(label, jsonb_strip_nulls(jsonb_build_object(
-           'value', value_text, 'origin', origin, 'caveat', caveat))) AS trial
+  SELECT source_id,
+         jsonb_object_agg(label, entry) AS trial,
+         jsonb_object_agg(label, entry) FILTER (
+           WHERE field_key IN ('response_criteria', 'assessment_by', 'analysis_type', 'trial_name')
+         ) AS arm_trial
   FROM (
-    -- A repeated label joins its values; registry origin and caveats are kept
-    -- when any of its entries has them.
-    SELECT source_id, label,
-           string_agg(value_text, '; ' ORDER BY context, id) AS value_text,
-           max(nullif(origin, 'abstract')) AS origin,
-           string_agg(DISTINCT nullif(caveat, ''), '; ') AS caveat
+    -- A repeated label joins its values; registry origin, caveats, details
+    -- and derived are kept when any of its entries has them.
+    SELECT source_id, label, field_key, jsonb_strip_nulls(jsonb_build_object(
+             'value', string_agg(value_text, '; ' ORDER BY context, id),
+             'origin', max(nullif(origin, 'abstract')),
+             'caveat', string_agg(DISTINCT nullif(caveat, ''), '; '),
+             'detail', string_agg(DISTINCT nullif(detail, ''), '; '),
+             'derived', nullif(bool_or(derived), false))) AS entry
     FROM v
     WHERE scope = 'trial'
-    GROUP BY source_id, label
+    GROUP BY source_id, label, field_key
   ) per_label
   GROUP BY source_id
 ),
 grouped AS (
-  SELECT source_id, trial_outcome_id,
-         min(source_type) AS source_type,
-         min(nct_id) AS nct_id,
-         min(cancer_type) AS cancer_type,
-         jsonb_object_agg(family, entries) AS "values"
+  SELECT source_id, trial_outcome_id, jsonb_object_agg(family, entries) AS "values"
   FROM (
     SELECT source_id, trial_outcome_id, family,
-           min(source_type) AS source_type, min(nct_id) AS nct_id,
-           min(cancer_type) AS cancer_type,
            jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
              'field', label,
              'value', value_text,
@@ -135,20 +141,20 @@ grouped AS (
 SELECT t.id, t.id AS trial_outcome_id, t.source_type, t.abstract_id AS source_id,
        coalesce(t.source_url, s.source_url) AS source_url, t.nct_id, t.cancer_type, t.arm_name, t.generic_name,
        t.num_patients, t.line_of_treatment, t.expert_review,
-       s.abstract_drugs, tr.trial, g."values"
+       s.abstract_drugs, tr.arm_trial AS trial, g."values"
 FROM trial_outcomes t
 JOIN sources s ON s.source_id = t.abstract_id
 LEFT JOIN trial tr ON tr.source_id = t.abstract_id
 LEFT JOIN grouped g ON g.trial_outcome_id = t.id
 UNION ALL
-SELECT 'abstract_' || g.source_id || '_all', NULL, g.source_type, g.source_id,
-       s.source_url, g.nct_id, g.cancer_type, 'All arms (pooled or trial-level)', NULL,
+SELECT 'abstract_' || s.source_id || '_all', NULL, s.source_type, s.source_id,
+       s.source_url, s.nct_id, s.cancer_type, 'All arms (pooled or trial-level)', NULL,
        NULL, NULL, NULL,
        s.abstract_drugs, tr.trial, g."values"
-FROM grouped g
-LEFT JOIN sources s ON s.source_id = g.source_id
-LEFT JOIN trial tr ON tr.source_id = g.source_id
-WHERE g.trial_outcome_id IS NULL;
+FROM sources s
+LEFT JOIN grouped g ON g.source_id = s.source_id AND g.trial_outcome_id IS NULL
+LEFT JOIN trial tr ON tr.source_id = s.source_id
+WHERE g.source_id IS NOT NULL OR tr.source_id IS NOT NULL;
 
 GRANT SELECT ON outcome_fields, outcome_values, arm_outcomes TO authenticated;
 GRANT ALL ON outcome_fields, outcome_values, arm_outcomes TO service_role;
