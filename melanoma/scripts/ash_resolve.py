@@ -2,7 +2,8 @@
 
 Usage (from melanoma/):
   poetry run python3 scripts/ash_resolve.py --run data/ash_test_run/full_v2 \\
-      [--check-xlsx data/ash_test_run/full_v2/ash_full_v2_results_resolved.xlsx]
+      [--check-xlsx data/ash_test_run/full_v2/ash_full_v2_results_resolved.xlsx] \\
+      [--no-registry-criteria]
 
 Port of the two .lavish/ash-integration/tools scripts of 2026-11-24
 (adjudication_merge, then resolve_judge_expert), with the resolution order unchanged:
@@ -410,12 +411,14 @@ def _registry_criteria(run: Path, records: list[dict]) -> list[dict]:
     added = filled[len(records) :]
     rows = spot_check_rows(added, studies)
     with (run / "spot_check.csv").open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, [*rows[0], "ok", "why"])
+        cols = ["abstract", "nct", "set", "indication", "sentence", "ok", "why"]
+        w = csv.DictWriter(f, cols)
         w.writeheader()
         w.writerows(rows)
     print(
         f"registry criteria: {len(added)} filled",
         dict(Counter(r["value_text"] for r in added)),
+        "" if rows else "(spot_check.csv has its header only)",
     )
     return filled
 
@@ -434,20 +437,15 @@ def main() -> None:
         "--check-xlsx", type=Path, help="resolved sheet to compare every value with"
     )
     p.add_argument(
-        "--registry-criteria",
+        "--no-registry-criteria",
         action="store_true",
-        help="fill a missing response criteria from the trial registry (one set only)",
+        help="do not fill a missing response criteria from the trial registry",
     )
     args = p.parse_args()
     tally: Counter = Counter()
     records = resolve_run(args.run, tally)
-    out = args.run / "resolved.json"
-    out.write_text(json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8")
     for k in sorted(tally):
         print(k, tally[k])
-    print(
-        f"wrote {out}: {len(records)} records, {len({r['abstract'] for r in records})} abstracts"
-    )
     if args.check_xlsx:
         bad, count = check_xlsx(records, args.check_xlsx)
         print("\n".join(bad[:50]))
@@ -455,13 +453,15 @@ def main() -> None:
             f"{len(bad)} mismatches; "
             + ", ".join(f"{k} {v}" for k, v in sorted(count.items()))
         )
-        if bad:
+        if bad:  # the previous resolved.json stays
             sys.exit(1)
-    if args.registry_criteria:
+    if not args.no_registry_criteria:
         records = _registry_criteria(args.run, records)
-        out.write_text(
-            json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8"
-        )
+    out = args.run / "resolved.json"
+    out.write_text(json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(
+        f"wrote {out}: {len(records)} records, {len({r['abstract'] for r in records})} abstracts"
+    )
 
 
 if __name__ == "__main__":

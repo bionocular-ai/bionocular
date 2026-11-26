@@ -1,12 +1,17 @@
 """Tests for the tracked ASH resolver (resolved.json)."""
 
+import csv
+import json
+import shutil
 import sys
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
+import ash_resolve  # noqa: E402
 from ash_resolve import resolve_run  # noqa: E402
 
 RUN = Path(__file__).parent / "fixtures" / "ash_supabase" / "run"
@@ -88,3 +93,67 @@ def test_nct_ids_in_citation_order(records):
     assert {tuple(r["nct_ids"]) for r in records if r["abstract"] == "104"} == {
         ("NCT00000104", "NCT00000050", "NCT00000070")
     }
+
+
+IMWG = {
+    "protocolSection": {
+        "outcomesModule": {"primaryOutcomes": [{"measure": "CR rate per IMWG"}]}
+    }
+}
+
+
+def _cli(monkeypatch, tmp_path, *flags, studies=None) -> Path:
+    """Runs the CLI on a copy of the fixture run, with the registry served from
+    `studies` instead of ClinicalTrials.gov. Returns the copy."""
+    run = tmp_path / "run"
+    if not run.exists():
+        shutil.copytree(RUN, run)
+    monkeypatch.setattr(
+        ash_resolve, "fetch", lambda nct, cache, client: (studies or {}).get(nct)
+    )
+    monkeypatch.setattr(sys, "argv", ["ash_resolve.py", "--run", str(run), *flags])
+    ash_resolve.main()
+    return run
+
+
+def test_registry_criteria_filled_by_default(monkeypatch, tmp_path):
+    run = _cli(monkeypatch, tmp_path, studies={"NCT00000103": IMWG})
+    out = json.loads((run / "resolved.json").read_text())
+    [crit] = [
+        r
+        for r in out
+        if r["origin"] == "registry" and r["field_key"] == "response_criteria"
+    ]
+    assert (crit["abstract"], crit["value_text"]) == ("103", "IMWG")
+    run = _cli(
+        monkeypatch, tmp_path, "--no-registry-criteria", studies={"NCT00000103": IMWG}
+    )
+    out = json.loads((run / "resolved.json").read_text())
+    assert not [
+        r
+        for r in out
+        if r["field_key"] == "response_criteria" and r["origin"] == "registry"
+    ]
+
+
+def test_failed_check_leaves_resolved_json(monkeypatch, tmp_path):
+    run = tmp_path / "run"
+    shutil.copytree(RUN, run)
+    (run / "resolved.json").write_text("previous")
+    monkeypatch.setattr(
+        ash_resolve, "check_xlsx", lambda records, path: (["bad"], Counter())
+    )
+    with pytest.raises(SystemExit) as e:
+        _cli(monkeypatch, tmp_path, "--check-xlsx", "sheet.xlsx")
+    assert e.value.code == 1
+    assert (run / "resolved.json").read_text() == "previous"
+
+
+def test_zero_registry_fills(monkeypatch, tmp_path, capsys):
+    run = _cli(monkeypatch, tmp_path)
+    assert json.loads((run / "resolved.json").read_text()) == resolve_run(RUN)
+    with (run / "spot_check.csv").open() as f:
+        assert list(csv.reader(f)) == [
+            ["abstract", "nct", "set", "indication", "sentence", "ok", "why"]
+        ]
+    assert "registry criteria: 0 filled" in capsys.readouterr().out
