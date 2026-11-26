@@ -22,7 +22,7 @@ COLUMNS = dict(
     for line in (FIX / "trial_outcomes_columns.txt").read_text().splitlines()
 )
 VAL_KEYS = {
-    "trial_outcome_id", "source_type", "source_id", "nct_id", "cancer_type",
+    "trial_outcome_id", "source_type", "source_id", "source_url", "nct_id", "cancer_type",
     "field_key", "context", "value_text", "value_num", "qualifier", "n", "detail",
     "derived", "origin", "caveat",
 }  # fmt: skip
@@ -74,6 +74,13 @@ def test_payload_pooled_only():
     arms, vals = _payload("2")
     assert arms == []
     assert vals and all(v["trial_outcome_id"] is None for v in vals)
+
+
+def test_vals_carry_source_url():
+    _, vals = _payload("2")
+    assert vals and {v["source_url"] for v in vals} == {
+        "https://doi.org/10.1182/blood-2025-2"
+    }
 
 
 def test_payload_without_nct():

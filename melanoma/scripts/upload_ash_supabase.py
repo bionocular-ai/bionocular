@@ -191,6 +191,7 @@ def abstract_payload(records: list[dict]) -> tuple[list[dict], list[dict]]:
     abstract_id = f"ASH_2025_{first['abstract']}"
     nct_id = first["nct_ids"][0] if first["nct_ids"] else None
     cancer_type = [first["indication"]]
+    source_url = f"https://doi.org/{first['doi']}"
 
     arms: dict[str, dict] = {}
     for r in records:
@@ -200,7 +201,7 @@ def abstract_payload(records: list[dict]) -> tuple[list[dict], list[dict]]:
                 "source_type": "abstract",
                 "source_name": SOURCE_NAME,
                 "abstract_id": abstract_id,
-                "source_url": f"https://doi.org/{first['doi']}",
+                "source_url": source_url,
                 "nct_id": nct_id,
                 "arm_id": r["arm_id"],
                 "arm_name": r["arm_name"],
@@ -218,6 +219,7 @@ def abstract_payload(records: list[dict]) -> tuple[list[dict], list[dict]]:
             "trial_outcome_id": arms[r["arm_id"]]["id"] if r["arm_id"] else None,
             "source_type": "abstract",
             "source_id": abstract_id,
+            "source_url": source_url,
             "nct_id": nct_id,
             "cancer_type": cancer_type,
             "field_key": r["field_key"],
