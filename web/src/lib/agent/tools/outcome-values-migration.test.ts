@@ -195,7 +195,8 @@ describe('outcome_values migration', () => {
     const rows = await view(`source_id = 'ASH_2025_1'`);
     expect(rows).toHaveLength(3);
     for (const row of rows) {
-      expect(row.trial).toEqual({ 'Response criteria': 'ELN 2022' });
+      // Registry provenance survives, so the agent can say where the criteria came from.
+      expect(row.trial).toEqual({ 'Response criteria': { value: 'ELN 2022', origin: 'registry' } });
       expect(row.values).not.toHaveProperty('trial_design');
     }
     expect((await view(`source_id = 'ASH_2025_3'`))[0].trial).toBeNull();
@@ -278,8 +279,31 @@ describe('outcome_values migration', () => {
     );
   });
 
-  it('refuses an empty abstract and arms of another abstract', async () => {
-    await expect(replace(1, [], [])).rejects.toThrow(/nothing to load/);
-    await expect(replace(2, [arm(1, 'a', 'Venetoclax')], [])).rejects.toThrow(/another abstract/);
+  it('refuses an empty abstract and rows outside its ASH abstract', async () => {
+    const refuse = async (abstractId: string, arms: Row[], vals: Row[], error: RegExp) =>
+      expect(
+        asRole('service_role', () =>
+          db.query('select replace_ash_abstract($1, $2, $3)', [
+            abstractId,
+            JSON.stringify(arms),
+            JSON.stringify(vals),
+          ]),
+        ),
+      ).rejects.toThrow(error);
+    const melanoma = async () =>
+      (await db.query<Row>(`select * from trial_outcomes where id = 'abstract_ASCO_1_a'`)).rows;
+    await db.exec(`update trial_outcomes set expert_review = 'good' where id = 'abstract_ASCO_1_a'`);
+    const before = await melanoma();
+
+    await refuse('ASH_2025_1', [], [], /nothing to load/);
+    await refuse('ASH_2025_2', [arm(1, 'a', 'Venetoclax')], [], /another abstract/);
+    // An arm claiming this abstract but carrying a melanoma row's id.
+    await refuse('ASH_2025_9', [{ ...arm(9, 'a', 'Venetoclax'), id: 'abstract_ASCO_1_a' }], [], /another abstract/);
+    await refuse('ASH_2025_9', [{ ...arm(9, 'a', 'Venetoclax'), source_name: 'extraction_results_ASCO_2025' }], [], /another abstract/);
+    await refuse('ASH_2025_9', [], [{ ...val(9, null, 'orr_rate', '1'), source_id: 'ASH_2025_1' }], /another abstract/);
+    // A non-ASH abstract id would let the arm delete reach melanoma rows.
+    await refuse('ASCO_1', [], [{ ...val(9, null, 'orr_rate', '1'), source_id: 'ASCO_1' }], /not an ASH/);
+
+    expect(await melanoma()).toEqual(before);
   });
 });

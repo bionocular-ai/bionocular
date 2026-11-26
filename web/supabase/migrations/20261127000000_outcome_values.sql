@@ -79,9 +79,15 @@ sources AS (
   GROUP BY t.abstract_id
 ),
 trial AS (
-  SELECT source_id, jsonb_object_agg(label, value_text) AS trial
+  SELECT source_id, jsonb_object_agg(label, jsonb_strip_nulls(jsonb_build_object(
+           'value', value_text, 'origin', origin, 'caveat', caveat))) AS trial
   FROM (
-    SELECT source_id, label, string_agg(value_text, '; ' ORDER BY context, id) AS value_text
+    -- A repeated label joins its values; registry origin and caveats are kept
+    -- when any of its entries has them.
+    SELECT source_id, label,
+           string_agg(value_text, '; ' ORDER BY context, id) AS value_text,
+           max(nullif(origin, 'abstract')) AS origin,
+           string_agg(DISTINCT nullif(caveat, ''), '; ') AS caveat
     FROM v
     WHERE scope = 'trial'
     GROUP BY source_id, label
@@ -106,7 +112,7 @@ grouped AS (
              'detail', nullif(detail, ''),
              'derived', nullif(derived, false),
              'origin', nullif(origin, 'abstract'),
-             'caveat', caveat
+             'caveat', nullif(caveat, '')
            )) ORDER BY sort_order, context, id) AS entries
     FROM v
     WHERE scope <> 'trial'
@@ -155,8 +161,18 @@ BEGIN
   IF coalesce(jsonb_array_length(arms), 0) = 0 AND coalesce(jsonb_array_length(vals), 0) = 0 THEN
     RAISE EXCEPTION 'replace_ash_abstract(%): nothing to load', abstract_id;
   END IF;
+  -- Scope every write to this one ASH abstract: the abstract id must be an ASH
+  -- id, and each arm's id must be the one derived from it, so the upsert can
+  -- never land on another source's row (melanoma rows included) and the
+  -- deletes below never reach outside ASH.
+  IF abstract_id NOT LIKE 'ASH\_2025\_%' THEN
+    RAISE EXCEPTION 'replace_ash_abstract(%): not an ASH 2025 abstract id', abstract_id;
+  END IF;
   IF EXISTS (SELECT 1 FROM jsonb_array_elements(arms) a
-             WHERE a->>'abstract_id' IS DISTINCT FROM replace_ash_abstract.abstract_id)
+             WHERE a->>'abstract_id' IS DISTINCT FROM replace_ash_abstract.abstract_id
+                OR a->>'source_name' IS DISTINCT FROM 'extraction_results_ASH_2025'
+                OR a->>'id' IS DISTINCT FROM
+                   'abstract_' || replace_ash_abstract.abstract_id || '_' || (a->>'arm_id'))
      OR EXISTS (SELECT 1 FROM jsonb_array_elements(vals) v
                 WHERE v->>'source_id' IS DISTINCT FROM replace_ash_abstract.abstract_id) THEN
     RAISE EXCEPTION 'replace_ash_abstract(%): payload holds rows of another abstract', abstract_id;
