@@ -5,10 +5,12 @@ arms, values and abstract-level groups per cancer type, and the drift check
 (each wide trial_outcomes column against its long value). --write seeds
 outcome_fields, replaces each abstract in one transaction
 (replace_ash_abstract) and then deletes ASH abstracts no longer in the run
-(delete_ash_abstracts_except). Needs SUPABASE_SECRET_KEY.
+(delete_ash_abstracts_except). Before any write it refuses NCT ids missing from
+clinical_trials, and, without --prune, removing an expert-reviewed abstract or
+more than 5 abstracts. Needs SUPABASE_SECRET_KEY.
 
 Usage (from melanoma/):
-  poetry run python3 scripts/upload_ash_supabase.py --run data/ash_test_run/full_v2 [--write]
+  poetry run python3 scripts/upload_ash_supabase.py --run data/ash_test_run/full_v2 [--write [--prune]]
 """
 
 from __future__ import annotations
@@ -269,6 +271,68 @@ def drift(arms: list[dict], vals: list[dict]) -> list[str]:
     return out
 
 
+def _paged(query: Any) -> list[dict]:
+    """Every row of query(), a page at a time (PostgREST caps a response at 1000)."""
+    rows: list[dict] = []
+    while True:
+        page = query().range(len(rows), len(rows) + 999).execute().data
+        rows += page
+        if len(page) < 1000:
+            return rows
+
+
+def missing_ncts(sb: Client, payloads: dict[str, tuple[list, list]]) -> list[str]:
+    """The payloads' NCT ids that clinical_trials lacks (the foreign key would fail
+    mid-load)."""
+    ncts = sorted(
+        {r["nct_id"] for arms, vals in payloads.values() for r in arms + vals} - {None}
+    )
+    found = sb.table("clinical_trials").select("nct_id").in_("nct_id", ncts).execute()
+    return sorted(set(ncts) - {r["nct_id"] for r in found.data})
+
+
+def prune_refusal(
+    sb: Client, payloads: dict[str, tuple[list, list]], prune: bool
+) -> str | None:
+    """Prints the live ASH abstracts the load would remove and each reviewed arm whose
+    name would change; the reason to refuse, unless prune: a removed abstract carries
+    an expert review, or more than 5 would go."""
+    live_arms = _paged(
+        lambda: sb.table("trial_outcomes")
+        .select("id, abstract_id, arm_name, expert_review")
+        .eq("source_name", SOURCE_NAME)
+        .order("id")
+    )
+    live_vals = _paged(
+        lambda: sb.table("outcome_values")
+        .select("source_id")
+        .like("source_id", "ASH\\_2025\\_%")
+        .order("id")
+    )
+    keep = {f"ASH_2025_{a}" for a in payloads}
+    live = {r["abstract_id"] for r in live_arms} | {r["source_id"] for r in live_vals}
+    gone = sorted(live - keep)
+    names = {
+        arm["id"]: arm["arm_name"] for arms, _ in payloads.values() for arm in arms
+    }
+    reviewed = [r for r in live_arms if r["expert_review"] is not None]
+    print(f"would remove {len(gone)} ASH abstracts no longer in the run: {gone}")
+    for r in reviewed:
+        if names.get(r["id"]) != r["arm_name"]:
+            new = repr(names[r["id"]]) if r["id"] in names else "removed"
+            print(
+                f"reviewed arm {r['id']} ({r['expert_review']}): {r['arm_name']!r} -> {new}"
+            )
+    if prune:
+        return None
+    lost = sorted({r["abstract_id"] for r in reviewed} & set(gone))
+    if lost:
+        return f"refusing to remove reviewed abstracts {lost} (pass --prune to allow)"
+    if len(gone) > 5:
+        return f"refusing to remove {len(gone)} abstracts (pass --prune to allow)"
+    return None
+
+
 def _client() -> Client:
     load_dotenv(_MELANOMA_ROOT / ".env")
     url = os.environ.get("SUPABASE_URL")
@@ -285,9 +349,16 @@ def main() -> None:
     )
     p.add_argument("--run", type=Path, required=True, help="run dir with resolved.json")
     p.add_argument("--write", action="store_true", help="write to Supabase")
+    p.add_argument(
+        "--prune",
+        action="store_true",
+        help="allow removing reviewed abstracts, or more than 5, no longer in the run",
+    )
     args = p.parse_args()
 
     records = json.loads((args.run / "resolved.json").read_text(encoding="utf-8"))
+    if not records:  # an empty keep list would delete every ASH abstract
+        sys.exit("refusing to load: no abstracts in the run")
     unknown = {r["field_key"] for r in records} - {f["key"] for f in _fields()}
     if unknown:
         sys.exit(
@@ -336,6 +407,12 @@ def main() -> None:
         return
 
     sb = _client()
+    missing = missing_ncts(sb, payloads)
+    if missing:
+        sys.exit(f"refusing to load: NCT ids not in clinical_trials: {missing}")
+    refusal = prune_refusal(sb, payloads, args.prune)
+    if refusal:
+        sys.exit(refusal)
     sb.table("outcome_fields").upsert(field_rows()).execute()
     for a, (arms, vals) in payloads.items():
         sb.rpc(
@@ -343,8 +420,6 @@ def main() -> None:
             {"abstract_id": f"ASH_2025_{a}", "arms": arms, "vals": vals},
         ).execute()
     keep = [f"ASH_2025_{a}" for a in payloads]
-    if not keep:  # an empty keep list would delete every ASH abstract
-        sys.exit("refusing to delete: no abstracts in the run")
     removed = sb.rpc("delete_ash_abstracts_except", {"keep": keep}).execute().data
     print(f"loaded {len(payloads)} abstracts; removed {removed} no longer in the run")
 

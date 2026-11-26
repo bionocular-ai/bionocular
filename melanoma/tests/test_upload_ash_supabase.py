@@ -5,8 +5,11 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
+import upload_ash_supabase  # noqa: E402
 from upload_ash_supabase import (  # noqa: E402
     WIDE_COLUMNS,
     abstract_payload,
@@ -213,3 +216,134 @@ def test_drift_detects_mismatch():
     out = drift(bad, vals)
     assert len(out) == 2
     assert any("abstract_ASH_2025_1_arm_2" in m and "median_pfs" in m for m in out)
+
+
+class FakeSupabase:
+    """The client --write talks to: serves canned rows per table (filtered by in_,
+    paged by range) and records every write instead of sending it."""
+
+    def __init__(self, tables: dict[str, list[dict]]):
+        self.tables, self.writes = tables, []
+
+    def table(self, name):
+        return _Query(self, name)
+
+    def rpc(self, name, params):
+        self.writes.append((name, params))
+        return _Result(1 if name == "delete_ash_abstracts_except" else None)
+
+
+class _Result:
+    def __init__(self, data):
+        self.data = data
+
+    def execute(self):
+        return self
+
+
+class _Query:
+    def __init__(self, sb, name):
+        self.sb, self.name, self.rows = sb, name, list(sb.tables.get(name, []))
+
+    def select(self, *_):
+        return self
+
+    def eq(self, *_):
+        return self
+
+    def like(self, *_):
+        return self
+
+    def order(self, *_):
+        return self
+
+    def in_(self, col, values):
+        self.rows = [r for r in self.rows if r[col] in values]
+        return self
+
+    def range(self, start, end):
+        self.rows = self.rows[start : end + 1]
+        return self
+
+    def upsert(self, rows):
+        self.sb.writes.append((self.name, rows))
+        return self
+
+    def execute(self):
+        return _Result(self.rows)
+
+
+def _arm_row(abstract, arm="arm_1", name="old name", review=None):
+    return {"id": f"abstract_ASH_2025_{abstract}_{arm}", "abstract_id": f"ASH_2025_{abstract}",
+            "arm_name": name, "expert_review": review}  # fmt: skip
+
+
+def _fake(arms=(), vals=(), ncts=("NCT00000001", "NCT00000003")) -> FakeSupabase:
+    return FakeSupabase(
+        {
+            "trial_outcomes": list(arms),
+            "outcome_values": [{"source_id": s} for s in vals],
+            "clinical_trials": [{"nct_id": n} for n in ncts],
+        }
+    )
+
+
+def _write(monkeypatch, sb, *flags, run=FIX) -> FakeSupabase:
+    monkeypatch.setattr(upload_ash_supabase, "_client", lambda: sb)
+    argv = ["upload_ash_supabase.py", "--run", str(run), "--write", *flags]
+    monkeypatch.setattr(sys, "argv", argv)
+    upload_ash_supabase.main()
+    return sb
+
+
+def _refused(monkeypatch, sb, *flags) -> str:
+    """Runs a --write that must refuse; returns its message. Nothing is written."""
+    with pytest.raises(SystemExit) as e:
+        _write(monkeypatch, sb, *flags)
+    assert e.value.code not in (0, None)
+    assert sb.writes == []
+    return str(e.value.code)
+
+
+def _rpcs(sb):
+    return [w[0] for w in sb.writes if w[0] != "outcome_fields"]
+
+
+LOAD = ["replace_ash_abstract"] * 3
+
+
+def test_write_refuses_to_prune_a_reviewed_abstract(monkeypatch, capsys):
+    arms = [_arm_row(1), _arm_row(9, review="good")]
+    assert "reviewed" in _refused(monkeypatch, _fake(arms))
+    assert "ASH_2025_9" in capsys.readouterr().out
+    sb = _write(monkeypatch, _fake(arms), "--prune")
+    assert _rpcs(sb) == [*LOAD, "delete_ash_abstracts_except"]
+
+
+def test_write_refuses_to_prune_more_than_five(monkeypatch):
+    vals = ["ASH_2025_1", *(f"ASH_2025_{n}" for n in range(10, 16))]
+    assert "6 abstracts" in _refused(monkeypatch, _fake(vals=vals))
+    sb = _write(monkeypatch, _fake(vals=vals), "--prune")
+    assert _rpcs(sb) == [*LOAD, "delete_ash_abstracts_except"]
+    sb = _write(monkeypatch, _fake(vals=vals[:-1]))  # five is allowed
+    assert _rpcs(sb) == [*LOAD, "delete_ash_abstracts_except"]
+
+
+def test_write_reports_reviewed_arm_renamed(monkeypatch, capsys):
+    arms = [_arm_row(1, review="good"), _arm_row(1, "arm_9", "gone", "bad")]
+    _write(monkeypatch, _fake(arms))
+    out = capsys.readouterr().out
+    assert "abstract_ASH_2025_1_arm_1 (good): 'old name' -> 'drug A plus drug B'" in out
+    assert "abstract_ASH_2025_1_arm_9 (bad): 'gone' -> removed" in out
+
+
+def test_write_refuses_unknown_nct(monkeypatch):
+    assert "NCT00000003" in _refused(monkeypatch, _fake(ncts=["NCT00000001"]))
+
+
+def test_empty_run_exits_with_a_message(monkeypatch, tmp_path):
+    (tmp_path / "resolved.json").write_text("[]")
+    monkeypatch.setattr(sys, "argv", ["x", "--run", str(tmp_path)])
+    with pytest.raises(SystemExit) as e:
+        upload_ash_supabase.main()
+    assert "no abstracts" in str(e.value.code)
