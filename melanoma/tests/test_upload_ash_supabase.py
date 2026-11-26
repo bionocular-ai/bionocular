@@ -347,3 +347,10 @@ def test_empty_run_exits_with_a_message(monkeypatch, tmp_path):
     with pytest.raises(SystemExit) as e:
         upload_ash_supabase.main()
     assert "no abstracts" in str(e.value.code)
+
+
+def test_dry_run_counts_all_arms_rows_like_the_view(monkeypatch, capsys):
+    # abstract 1 has only trial-scope arm-less values, 2 is pooled-only, 3 neither
+    monkeypatch.setattr(sys, "argv", ["x", "--run", str(FIX)])
+    upload_ash_supabase.main()
+    assert "3 abstracts, 3 arms, 21 values, 2 All arms rows" in capsys.readouterr().out

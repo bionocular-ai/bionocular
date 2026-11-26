@@ -1,7 +1,7 @@
 """Load a resolved ASH run into Supabase: outcome_fields, trial_outcomes arms, outcome_values.
 
 Reads <run>/resolved.json (scripts/ash_resolve.py). Dry run by default: prints
-arms, values and abstract-level groups per cancer type, and the drift check
+arms, values and "All arms" view rows per cancer type, and the drift check
 (each wide trial_outcomes column against its long value). --write seeds
 outcome_fields, replaces each abstract in one transaction
 (replace_ash_abstract) and then deletes ASH abstracts no longer in the run
@@ -376,13 +376,8 @@ def main() -> None:
         c["abstracts"] += 1
         c["arms"] += len(arms)
         c["values"] += len(vals)
-        pooled = {"trial": False, "pooled": False}
-        for v in vals:
-            if v["trial_outcome_id"] is None:
-                pooled[
-                    "trial" if _field(v["field_key"])["scope"] == "trial" else "pooled"
-                ] = True
-        c["all_arms_rows"] += pooled["pooled"]  # abstract-level (pooled) groups
+        # the view's "All arms" row: any arm-less value, pooled or trial scope
+        c["all_arms_rows"] += any(v["trial_outcome_id"] is None for v in vals)
         problems += drift(arms, vals)
 
     width = max(map(len, per_cancer))
@@ -396,7 +391,7 @@ def main() -> None:
     print(
         f"{len(per_cancer)} cancer types, {total['abstracts']} abstracts, "
         f"{total['arms']} arms, {total['values']} values, "
-        f"{total['all_arms_rows']} abstract-level groups, {len(field_rows())} fields"
+        f"{total['all_arms_rows']} All arms rows, {len(field_rows())} fields"
     )
     print("\n".join(problems[:50]))
     print(f"drift: {len(problems)} mismatches")
