@@ -1,0 +1,167 @@
+{
+ "_meta": {},
+ "101": {
+  "abstract": "101",
+  "nct_ids": [
+   "NCT00000101"
+  ],
+  "arms": [
+   {
+    "arm_id": "arm_1",
+    "arm_name": "drug A",
+    "role": "experimental"
+   },
+   {
+    "arm_id": "arm_2",
+    "arm_name": "drug B",
+    "role": "control"
+   }
+  ],
+  "families": {
+   "response_rates": {
+    "extracted": {
+     "pooled": [
+      {
+       "field": "cr_rate",
+       "value": "30",
+       "context": "all patients",
+       "n": "",
+       "detail": "",
+       "derived": false,
+       "quote": "CR 30% overall"
+      }
+     ],
+     "arms": {
+      "arm_1": {
+       "cr_rate": {
+        "value": "85",
+        "quote": "CR 85%",
+        "n": "",
+        "detail": "",
+        "derived": false
+       },
+       "extra": [
+        {
+         "field": "cr_rate",
+         "value": "90",
+         "context": "del17p",
+         "n": "10",
+         "quote": "CR 90% in del17p"
+        }
+       ]
+      },
+      "arm_2": {
+       "cr_rate": {
+        "value": "50",
+        "quote": "CR 50%",
+        "n": "40",
+        "detail": "",
+        "derived": false
+       }
+      }
+     }
+    },
+    "flags": {},
+    "items": [],
+    "judge": null,
+    "missed": null,
+    "error": null
+   },
+   "population": {
+    "extracted": {
+     "trial": {
+      "response_criteria": {
+       "value": "iwCLL",
+       "quote": "per iwCLL",
+       "n": "",
+       "detail": "",
+       "derived": false
+      }
+     },
+     "arms": {}
+    },
+    "flags": {},
+    "items": [],
+    "judge": null,
+    "missed": null,
+    "error": null
+   }
+  },
+  "errors": [],
+  "results_reported": "per_arm"
+ },
+ "102": {
+  "abstract": "102",
+  "nct_ids": [],
+  "arms": [
+   {
+    "arm_id": "arm_1",
+    "arm_name": "drug C",
+    "role": "single arm"
+   }
+  ],
+  "families": {
+   "response_rates": {
+    "extracted": {
+     "pooled": [],
+     "arms": {
+      "arm_1": {
+       "cr_rate": {
+        "value": "40",
+        "quote": "CR 40%",
+        "n": "",
+        "detail": "",
+        "derived": false
+       }
+      }
+     }
+    },
+    "flags": {},
+    "items": [],
+    "judge": null,
+    "missed": null,
+    "error": null
+   }
+  },
+  "errors": [],
+  "results_reported": "per_arm"
+ },
+ "103": {
+  "abstract": "103",
+  "nct_ids": [
+   "NCT00000103"
+  ],
+  "arms": [
+   {
+    "arm_id": "arm_1",
+    "arm_name": "drug D",
+    "role": "single arm"
+   }
+  ],
+  "families": {
+   "response_rates": {
+    "extracted": {
+     "pooled": [],
+     "arms": {
+      "arm_1": {
+       "cr_rate": {
+        "value": "60",
+        "quote": "CR 60%",
+        "n": "",
+        "detail": "",
+        "derived": false
+       }
+      }
+     }
+    },
+    "flags": {},
+    "items": [],
+    "judge": null,
+    "missed": null,
+    "error": null
+   }
+  },
+  "errors": [],
+  "results_reported": "per_arm"
+ }
+}

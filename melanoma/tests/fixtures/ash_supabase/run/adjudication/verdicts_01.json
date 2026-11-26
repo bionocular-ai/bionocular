@@ -1,0 +1,35 @@
+[
+ {
+  "id": 0,
+  "side": "judge",
+  "final": "wrong",
+  "right_value": "",
+  "right_quote": "",
+  "error": "",
+  "policy": "",
+  "confidence": "high",
+  "reason": "test"
+ },
+ {
+  "id": 1,
+  "side": "judge",
+  "final": "correct",
+  "right_value": "",
+  "right_quote": "",
+  "error": "",
+  "policy": "",
+  "confidence": "high",
+  "reason": "test"
+ },
+ {
+  "id": 2,
+  "side": "judge",
+  "final": "correct",
+  "right_value": "",
+  "right_quote": "",
+  "error": "",
+  "policy": "",
+  "confidence": "high",
+  "reason": "test"
+ }
+]

@@ -1,0 +1,20 @@
+[
+ {
+  "id": 1,
+  "policy_call": "best_value",
+  "final": "wrong",
+  "right_value": "42",
+  "right_quote": "The CR rate was 42%",
+  "error": "",
+  "reason": "policy"
+ },
+ {
+  "id": 2,
+  "policy_call": "contradiction",
+  "final": "unclear",
+  "right_value": "",
+  "right_quote": "",
+  "error": "",
+  "reason": "policy"
+ }
+]

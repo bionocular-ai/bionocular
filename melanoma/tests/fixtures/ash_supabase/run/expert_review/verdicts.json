@@ -1,0 +1,47 @@
+[
+ {
+  "id": 0,
+  "abstract": "101",
+  "arm": "arm_1: drug A",
+  "field": "CR rate",
+  "kind": "field",
+  "value": "85",
+  "judge": "yes",
+  "judge_error": "",
+  "judge_right_value": "",
+  "expert": "wrong",
+  "expert_right_value": "",
+  "expert_right_quote": "",
+  "expert_reason": "test"
+ },
+ {
+  "id": 1,
+  "abstract": "102",
+  "arm": "arm_1: drug C",
+  "field": "CR rate",
+  "kind": "field",
+  "value": "40",
+  "judge": "yes",
+  "judge_error": "",
+  "judge_right_value": "",
+  "expert": "wrong",
+  "expert_right_value": "45",
+  "expert_right_quote": "",
+  "expert_reason": "test"
+ },
+ {
+  "id": 2,
+  "abstract": "103",
+  "arm": "arm_1: drug D",
+  "field": "CR rate",
+  "kind": "field",
+  "value": "60",
+  "judge": "yes",
+  "judge_error": "",
+  "judge_right_value": "",
+  "expert": "correct",
+  "expert_right_value": "",
+  "expert_right_quote": "",
+  "expert_reason": "test"
+ }
+]
