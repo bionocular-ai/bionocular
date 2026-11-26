@@ -36,7 +36,7 @@ sys.path.insert(0, str(_root))
 sys.path.insert(0, str(Path(__file__).parent))
 
 from ash_checks import quote_found  # noqa: E402
-from ash_fields import full_names, load_families  # noqa: E402
+from ash_fields import Arm, full_names, load_families  # noqa: E402
 from ash_registry_run import registry_family  # noqa: E402
 from ash_results_sheet import OTHER, _arm_id, _shown, registry_cells  # noqa: E402
 from ash_review_sheet import build_rows, load_selection  # noqa: E402
@@ -235,7 +235,7 @@ def resolve_run(run_dir: Path, tally: Counter | None = None) -> list[dict]:
                 {
                     **base,
                     "arm_id": arm and arm["arm_id"],
-                    "arm_name": arm and arm["arm_name"],
+                    "arm_name": arm and Arm(**arm).label,  # with any dose level
                     "arm_role": arm and arm["role"],
                     "field_key": keys[c["field"]],
                     "context": c.get("context") or "",
@@ -302,10 +302,13 @@ def check_xlsx(records: list[dict], path: Path) -> tuple[list[str], Counter]:
     ]
     scope, labels = {f.key: f.scope for f in fields}, {f.key: f.name for f in fields}
     main: dict[tuple, dict] = {}
+    arm_names: dict[tuple, set[str]] = defaultdict(set)
     extras: dict[tuple, list[dict]] = defaultdict(list)
     pooled: dict[str, list[dict]] = defaultdict(list)
     for r in records:
         k = (r["abstract"], r["arm_id"], r["field_key"])
+        if r["arm_id"]:
+            arm_names[(r["abstract"], r["arm_id"])].add(r["arm_name"])
         if r["arm_id"] is None and scope[r["field_key"]] != "trial":
             pooled[r["abstract"]].append(r)
         elif r["context"] == "" and k not in main:
@@ -323,6 +326,12 @@ def check_xlsx(records: list[dict], path: Path) -> tuple[list[str], Counter]:
     for row in it:
         a, arm = str(row[cols["abstract"]]), row[cols["arm_id"]]
         count["arm rows"] += 1
+        dose = row[cols["dose_level"]]
+        label = f"{row[cols['arm']]} [{dose}]" if dose else row[cols["arm"]]
+        bad += [
+            f"{a} | {arm} | arm_name {n!r}, sheet {label!r}"
+            for n in arm_names.pop((a, arm), set()) - {label}
+        ]
         for label, i in cols.items():
             if label not in keys:
                 continue

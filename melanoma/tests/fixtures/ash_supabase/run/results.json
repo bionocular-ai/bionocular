@@ -163,5 +163,59 @@
   },
   "errors": [],
   "results_reported": "per_arm"
+ },
+ "104": {
+  "abstract": "104",
+  "nct_ids": [
+   "NCT00000104"
+  ],
+  "arms": [
+   {
+    "arm_id": "arm_1",
+    "arm_name": "drug E",
+    "role": "experimental",
+    "dose_level": "10 mg"
+   },
+   {
+    "arm_id": "arm_2",
+    "arm_name": "drug E",
+    "role": "experimental",
+    "dose_level": "20 mg"
+   }
+  ],
+  "families": {
+   "response_rates": {
+    "extracted": {
+     "pooled": [],
+     "arms": {
+      "arm_1": {
+       "cr_rate": {
+        "value": "20",
+        "quote": "CR 20%",
+        "n": "",
+        "detail": "",
+        "derived": false
+       }
+      },
+      "arm_2": {
+       "cr_rate": {
+        "value": "35",
+        "quote": "CR 35%",
+        "n": "",
+        "detail": "",
+        "derived": false
+       }
+      }
+     }
+    },
+    "flags": {},
+    "items": [],
+    "judge": null,
+    "missed": null,
+    "error": null
+   }
+  },
+  "errors": [],
+  "results_reported": "per_arm"
  }
 }

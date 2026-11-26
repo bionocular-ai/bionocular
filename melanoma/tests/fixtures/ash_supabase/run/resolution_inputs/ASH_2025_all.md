@@ -12,3 +12,8 @@ The CR rate was 42% (reported elsewhere as CR 40%).
 #### Title:
 Drug D
 CR 60%.
+
+### Abstract ID: 104
+#### Title:
+Drug E dose levels
+CR 20% at 10 mg. CR 35% at 20 mg.

@@ -75,3 +75,8 @@ def test_pooled_and_extra(records):
     }
     [extra] = [r for r in records if r["context"] == "del17p"]
     assert (extra["arm_id"], extra["value_text"], extra["n"]) == ("arm_1", "90", 10)
+
+
+def test_dose_levels_named_apart(records):
+    names = {r["arm_id"]: r["arm_name"] for r in records if r["abstract"] == "104"}
+    assert names == {"arm_1": "drug E [10 mg]", "arm_2": "drug E [20 mg]"}
