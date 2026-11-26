@@ -189,6 +189,14 @@ BEGIN
                 WHERE v->>'source_id' IS DISTINCT FROM replace_ash_abstract.abstract_id) THEN
     RAISE EXCEPTION 'replace_ash_abstract(%): payload holds rows of another abstract', abstract_id;
   END IF;
+  -- A value hangs off an arm sent with it, or off none (abstract level), so it
+  -- can never attach to another source's arm or to one the reload drops.
+  IF EXISTS (SELECT 1 FROM jsonb_array_elements(vals) v
+             WHERE v->>'trial_outcome_id' IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(arms) a
+                               WHERE a->>'id' = v->>'trial_outcome_id')) THEN
+    RAISE EXCEPTION 'replace_ash_abstract(%): a value points at an arm not in the payload', abstract_id;
+  END IF;
 
   IF jsonb_array_length(arms) > 0 THEN
     SELECT string_agg(format('%I', k), ', '),
@@ -221,6 +229,7 @@ $$;
 -- Deletes the ASH abstracts the loader no longer sends: their arms (values
 -- follow by cascade) and their abstract-level values, matched by the ASH
 -- abstract id prefix so an abstract left with no arm row is caught too.
+-- An empty or null keep list would delete every ASH abstract, so it raises.
 -- Returns how many abstracts were removed.
 CREATE FUNCTION delete_ash_abstracts_except(keep text[]) RETURNS integer
 LANGUAGE plpgsql
@@ -229,6 +238,9 @@ AS $$
 DECLARE
   removed integer;
 BEGIN
+  IF coalesce(cardinality(keep), 0) = 0 THEN
+    RAISE EXCEPTION 'delete_ash_abstracts_except: empty keep list would delete every ASH abstract';
+  END IF;
   WITH gone_arms AS (
     DELETE FROM trial_outcomes
      WHERE source_name = 'extraction_results_ASH_2025' AND abstract_id <> ALL (keep)

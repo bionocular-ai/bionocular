@@ -278,6 +278,16 @@ describe('outcome_values migration', () => {
     expect(left[0]).toEqual({ arms: 0, vals: 0, melanoma: 1 });
   });
 
+  it('delete_ash_abstracts_except refuses an empty or null keep list', async () => {
+    for (const keep of ['{}', null]) {
+      await expect(
+        asRole('service_role', () => db.query('select delete_ash_abstracts_except($1)', [keep])),
+      ).rejects.toThrow(/empty keep list/);
+    }
+    const { rows } = await db.query<Row>(`select count(*)::int as n from trial_outcomes`);
+    expect(rows[0].n).toBe(5);
+  });
+
   it('values keyed by family support a json path select', async () => {
     const { rows } = await asRole('authenticated', () =>
       db.query<{ rr: unknown }>(
@@ -324,6 +334,9 @@ describe('outcome_values migration', () => {
     await refuse('ASH_2025_9', [{ ...arm(9, 'a', 'Venetoclax'), id: 'abstract_ASCO_1_a' }], [], /another abstract/);
     await refuse('ASH_2025_9', [{ ...arm(9, 'a', 'Venetoclax'), source_name: 'extraction_results_ASCO_2025' }], [], /another abstract/);
     await refuse('ASH_2025_9', [], [{ ...val(9, null, 'orr_rate', '1'), source_id: 'ASH_2025_1' }], /another abstract/);
+    // A value may only hang off an arm sent in the same payload.
+    await refuse('ASH_2025_9', [], [val(9, null, 'orr_rate', '1', { trial_outcome_id: 'abstract_ASCO_1_a' })], /arm not in the payload/);
+    await refuse('ASH_2025_1', [arm(1, 'a', 'Venetoclax')], [val(1, 'b', 'orr_rate', '1')], /arm not in the payload/);
     // A non-ASH abstract id would let the arm delete reach melanoma rows.
     await refuse('ASCO_1', [], [{ ...val(9, null, 'orr_rate', '1'), source_id: 'ASCO_1' }], /not an ASH/);
 
