@@ -15,6 +15,7 @@ from upload_ash_supabase import (  # noqa: E402
     abstract_payload,
     drift,
     field_rows,
+    missing_ncts,
     parse_value,
 )
 
@@ -223,7 +224,7 @@ class FakeSupabase:
     paged by range) and records every write instead of sending it."""
 
     def __init__(self, tables: dict[str, list[dict]]):
-        self.tables, self.writes = tables, []
+        self.tables, self.writes, self.in_calls = tables, [], []
 
     def table(self, name):
         return _Query(self, name)
@@ -258,6 +259,7 @@ class _Query:
         return self
 
     def in_(self, col, values):
+        self.sb.in_calls.append(list(values))
         self.rows = [r for r in self.rows if r[col] in values]
         return self
 
@@ -354,3 +356,13 @@ def test_dry_run_counts_all_arms_rows_like_the_view(monkeypatch, capsys):
     monkeypatch.setattr(sys, "argv", ["x", "--run", str(FIX)])
     upload_ash_supabase.main()
     assert "3 abstracts, 3 arms, 21 values, 2 All arms rows" in capsys.readouterr().out
+
+
+def test_nct_check_queries_in_chunks_of_200():
+    ncts = [f"NCT{n:08d}" for n in range(450)]
+    payloads = {"1": ([{"nct_id": n} for n in ncts[:300]], [{"nct_id": None}])}
+    payloads["2"] = ([], [{"nct_id": n} for n in ncts[300:]])
+    sb = _fake(ncts=[n for n in ncts if n not in ("NCT00000007", "NCT00000420")])
+    assert missing_ncts(sb, payloads) == ["NCT00000007", "NCT00000420"]
+    assert len(sb.in_calls) == 3 and all(len(c) <= 200 for c in sb.in_calls)
+    assert sorted(n for c in sb.in_calls for n in c) == ncts

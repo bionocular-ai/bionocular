@@ -37,6 +37,8 @@ from ash_registry_run import registry_family  # noqa: E402
 
 CSV = _MELANOMA_ROOT / "resources" / "ash" / "book1_sheet2.csv"
 SOURCE_NAME = "extraction_results_ASH_2025"
+# ids per clinical_trials query: 200 encode to ~2.8 KB, under an 8 KiB request line
+NCT_CHUNK = 200
 NUMERIC_TYPES = {"percent", "months", "months_or_nr", "count", "number", "p_value"}
 
 # Field key -> the trial_outcomes column it also fills (spec 5.2). Only fields
@@ -283,12 +285,20 @@ def _paged(query: Any) -> list[dict]:
 
 def missing_ncts(sb: Client, payloads: dict[str, tuple[list, list]]) -> list[str]:
     """The payloads' NCT ids that clinical_trials lacks (the foreign key would fail
-    mid-load)."""
+    mid-load), asked NCT_CHUNK at a time to stay under the request-line limit."""
     ncts = sorted(
         {r["nct_id"] for arms, vals in payloads.values() for r in arms + vals} - {None}
     )
-    found = sb.table("clinical_trials").select("nct_id").in_("nct_id", ncts).execute()
-    return sorted(set(ncts) - {r["nct_id"] for r in found.data})
+    found = {
+        r["nct_id"]
+        for i in range(0, len(ncts), NCT_CHUNK)
+        for r in sb.table("clinical_trials")
+        .select("nct_id")
+        .in_("nct_id", ncts[i : i + NCT_CHUNK])
+        .execute()
+        .data
+    }
+    return sorted(set(ncts) - found)
 
 
 def prune_refusal(
