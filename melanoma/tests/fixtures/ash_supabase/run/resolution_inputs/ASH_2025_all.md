@@ -16,4 +16,4 @@ CR 60%.
 ### Abstract ID: 104
 #### Title:
 Drug E dose levels
-CR 20% at 10 mg. CR 35% at 20 mg.
+Trial NCT00000104 extends NCT00000050. CR 20% at 10 mg. CR 35% at 20 mg.

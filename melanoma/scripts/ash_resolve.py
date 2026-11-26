@@ -66,6 +66,12 @@ def _key(a: str, arm: str, f: str, k: str, ctx: str | None, v: str) -> tuple:
     return (a, arm, f, k, ctx or "", v)
 
 
+def cited_order(nct_ids: list[str], text: str) -> list[str]:
+    """The ids by first appearance in the text, so the first is the primary trial;
+    ids the text does not name keep their order, after the rest."""
+    return sorted(nct_ids, key=lambda n: (n not in text, text.find(n)))
+
+
 def adjudications(run: Path, values: dict[str, dict]) -> list[dict]:
     """The Opus verdicts (context rerun and post-rerun batches win over the first pass),
     with the product-owner policy overrides on top."""
@@ -219,7 +225,7 @@ def resolve_run(run_dir: Path, tally: Counter | None = None) -> list[dict]:
             "abstract": number,
             "doi": sel["doi"],
             "indication": full[sel["indication"]],
-            "nct_ids": res["nct_ids"],
+            "nct_ids": cited_order(res["nct_ids"], texts[number]),
         }
         mine = by_abstract[number]
         # as the sheet does: abstract values first, a registry value fills an empty field

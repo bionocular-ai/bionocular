@@ -80,3 +80,11 @@ def test_pooled_and_extra(records):
 def test_dose_levels_named_apart(records):
     names = {r["arm_id"]: r["arm_name"] for r in records if r["abstract"] == "104"}
     assert names == {"arm_1": "drug E [10 mg]", "arm_2": "drug E [20 mg]"}
+
+
+def test_nct_ids_in_citation_order(records):
+    # 104 cites NCT00000104 before the numerically lower NCT00000050; NCT00000070
+    # is not in the text, so it goes last, in its existing order
+    assert {tuple(r["nct_ids"]) for r in records if r["abstract"] == "104"} == {
+        ("NCT00000104", "NCT00000050", "NCT00000070")
+    }
