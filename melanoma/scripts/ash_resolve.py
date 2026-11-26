@@ -22,6 +22,7 @@ run/resolution_inputs/ once (2026-11-26, from melanoma/):
 """
 
 import argparse
+import csv
 import json
 import re
 import sys
@@ -37,7 +38,12 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from ash_checks import quote_found  # noqa: E402
 from ash_fields import Arm, full_names, load_families  # noqa: E402
-from ash_registry_run import registry_family  # noqa: E402
+from ash_registry_criteria import fill_criteria, spot_check_rows  # noqa: E402
+from ash_registry_run import (  # noqa: E402
+    ClinicalTrialsGovAPIClient,
+    fetch,
+    registry_family,
+)
 from ash_results_sheet import OTHER, _arm_id, _shown, registry_cells  # noqa: E402
 from ash_review_sheet import build_rows, load_selection  # noqa: E402
 from ash_test_run import META, parse_md  # noqa: E402
@@ -377,6 +383,37 @@ def check_xlsx(records: list[dict], path: Path) -> tuple[list[str], Counter]:
     return bad, count
 
 
+def _registry_criteria(run: Path, records: list[dict]) -> list[dict]:
+    """The records with the registry criteria filled (the sheet has no such cells, so
+    this runs after the xlsx check)."""
+    cache = run / "records"
+    cache.mkdir(exist_ok=True)
+    client = None
+    studies: dict[str, dict] = {}
+    for nct in sorted({n for r in records for n in r["nct_ids"]}):
+        if client is None and not (cache / f"{nct}.json").exists():
+            client = ClinicalTrialsGovAPIClient()
+        studies[nct] = fetch(nct, cache, client) or {}
+    keys = {
+        f.key
+        for fam in load_families(CSV)
+        if fam.key == "response_rates"
+        for f in fam.fields
+    }
+    filled = fill_criteria(records, studies, keys)
+    added = filled[len(records) :]
+    rows = spot_check_rows(added, studies)
+    with (run / "spot_check.csv").open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, [*rows[0], "ok", "why"])
+        w.writeheader()
+        w.writerows(rows)
+    print(
+        f"registry criteria: {len(added)} filled",
+        dict(Counter(r["value_text"] for r in added)),
+    )
+    return filled
+
+
 def main() -> None:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
@@ -389,6 +426,11 @@ def main() -> None:
     )
     p.add_argument(
         "--check-xlsx", type=Path, help="resolved sheet to compare every value with"
+    )
+    p.add_argument(
+        "--registry-criteria",
+        action="store_true",
+        help="fill a missing response criteria from the trial registry (one set only)",
     )
     args = p.parse_args()
     tally: Counter = Counter()
@@ -407,7 +449,13 @@ def main() -> None:
             f"{len(bad)} mismatches; "
             + ", ".join(f"{k} {v}" for k, v in sorted(count.items()))
         )
-        sys.exit(1 if bad else 0)
+        if bad:
+            sys.exit(1)
+    if args.registry_criteria:
+        records = _registry_criteria(args.run, records)
+        out.write_text(
+            json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8"
+        )
 
 
 if __name__ == "__main__":
