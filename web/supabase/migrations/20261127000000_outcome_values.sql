@@ -32,6 +32,7 @@ CREATE TABLE outcome_values (
   trial_outcome_id TEXT REFERENCES trial_outcomes(id) ON DELETE CASCADE,  -- null = abstract-level
   source_type      TEXT NOT NULL,         -- 'abstract'
   source_id        TEXT NOT NULL,         -- e.g. ASH_2025_5329 (= trial_outcomes.abstract_id)
+  source_url       TEXT,                  -- the DOI link, so arm-less abstracts keep it
   nct_id           TEXT REFERENCES clinical_trials(nct_id),
   cancer_type      TEXT[] NOT NULL,
   field_key        TEXT NOT NULL REFERENCES outcome_fields(key),
@@ -66,17 +67,28 @@ CREATE POLICY "outcome_values_read" ON outcome_values FOR SELECT TO authenticate
 -- ponytail: aggregates per query; materialize past ~1M outcome_values rows
 CREATE VIEW arm_outcomes WITH (security_invoker = true) AS
 WITH v AS (
-  SELECT ov.*, f.label, f.family, f.scope, f.sort_order
+  SELECT ov.*, f.label, f.family, f.scope, f.sort_order, f.wide_column
   FROM outcome_values ov
   JOIN outcome_fields f ON f.key = ov.field_key
 ),
+-- Per source: its DOI link and every drug named on its arms or in its
+-- abstract-level generic-name values, so an abstract with no arm rows still
+-- carries both and the drug filter finds its "All arms" row.
 sources AS (
-  SELECT t.abstract_id AS source_id,
-         string_agg(DISTINCT t.generic_name, '; ') AS abstract_drugs,
-         max(t.source_url) AS source_url
-  FROM trial_outcomes t
-  WHERE t.abstract_id IN (SELECT source_id FROM outcome_values)
-  GROUP BY t.abstract_id
+  SELECT source_id,
+         string_agg(DISTINCT drug, '; ') AS abstract_drugs,
+         max(source_url) AS source_url
+  FROM (
+    SELECT t.abstract_id AS source_id, t.generic_name AS drug, t.source_url
+    FROM trial_outcomes t
+    WHERE t.abstract_id IN (SELECT source_id FROM outcome_values)
+    UNION ALL
+    SELECT source_id,
+           CASE WHEN trial_outcome_id IS NULL AND wide_column = 'generic_name' THEN value_text END,
+           source_url
+    FROM v
+  ) named
+  GROUP BY source_id
 ),
 trial AS (
   SELECT source_id, jsonb_object_agg(label, jsonb_strip_nulls(jsonb_build_object(
@@ -121,7 +133,7 @@ grouped AS (
   GROUP BY source_id, trial_outcome_id
 )
 SELECT t.id, t.id AS trial_outcome_id, t.source_type, t.abstract_id AS source_id,
-       t.source_url, t.nct_id, t.cancer_type, t.arm_name, t.generic_name,
+       coalesce(t.source_url, s.source_url) AS source_url, t.nct_id, t.cancer_type, t.arm_name, t.generic_name,
        t.num_patients, t.line_of_treatment, t.expert_review,
        s.abstract_drugs, tr.trial, g."values"
 FROM trial_outcomes t
@@ -196,10 +208,10 @@ BEGIN
      AND t.id <> ALL (ARRAY(SELECT a->>'id' FROM jsonb_array_elements(arms) a));
 
   DELETE FROM outcome_values ov WHERE ov.source_id = replace_ash_abstract.abstract_id;
-  INSERT INTO outcome_values (trial_outcome_id, source_type, source_id, nct_id, cancer_type,
-                              field_key, context, value_text, value_num, qualifier, n, detail,
-                              derived, origin, caveat)
-  SELECT trial_outcome_id, source_type, source_id, nct_id, cancer_type,
+  INSERT INTO outcome_values (trial_outcome_id, source_type, source_id, source_url, nct_id,
+                              cancer_type, field_key, context, value_text, value_num, qualifier,
+                              n, detail, derived, origin, caveat)
+  SELECT trial_outcome_id, source_type, source_id, source_url, nct_id, cancer_type,
          field_key, context, value_text, value_num, qualifier, n, detail,
          derived, origin, caveat
     FROM jsonb_populate_recordset(null::outcome_values, vals);

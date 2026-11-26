@@ -62,6 +62,7 @@ function val(abstract: number, armId: string | null, field: string, value: strin
     trial_outcome_id: armId ? `abstract_ASH_2025_${abstract}_${armId}` : null,
     source_type: 'abstract',
     source_id: `ASH_2025_${abstract}`,
+    source_url: `https://doi.org/10.1182/blood-2025-${abstract}`,
     nct_id: abstract === 3 ? null : 'NCT00000001',
     cancer_type: AML,
     field_key: field,
@@ -81,6 +82,7 @@ function val(abstract: number, armId: string | null, field: string, value: strin
 // Abstract 1: two arms, a duplicated value, a pooled value and trial criteria.
 // Abstract 2: one arm but only a pooled value (the 31 pooled-only abstracts).
 // Abstract 3: one arm, no NCT id, no pooled value.
+// Abstract 4: no arm rows at all, only abstract-level values (e.g. abstract 1075).
 const ABSTRACTS: Record<number, { arms: Row[]; vals: Row[] }> = {
   1: {
     arms: [arm(1, 'a', 'Venetoclax'), arm(1, 'b', 'Azacitidine')],
@@ -99,6 +101,13 @@ const ABSTRACTS: Record<number, { arms: Row[]; vals: Row[] }> = {
   3: {
     arms: [arm(3, 'a', 'Ivosidenib')],
     vals: [val(3, 'a', 'orr_rate', '30')],
+  },
+  4: {
+    arms: [],
+    vals: [
+      val(4, null, 'generic_name', 'Ziftomenib', { value_num: null }),
+      val(4, null, 'orr_rate', '35'),
+    ],
   },
 };
 
@@ -140,6 +149,8 @@ beforeEach(async () => {
     insert into outcome_fields (key, label, family, scope, value_type, definition, sort_order) values
       ('orr_rate', 'ORR', 'response_rates', 'arm', 'percent', 'Overall response rate.', 1),
       ('response_criteria', 'Response criteria', 'trial_design', 'trial', 'text', 'Criteria used.', 1);
+    insert into outcome_fields (key, label, family, scope, value_type, definition, wide_column, sort_order)
+      values ('generic_name', 'Generic name', 'regimen_drug', 'arm', 'text', 'Drug.', 'generic_name', 1);
     -- A melanoma row: it must never show up in the view.
     insert into trial_outcomes (id, source_type, source_name, abstract_id, generic_name)
       values ('abstract_ASCO_1_a', 'abstract', 'extraction_results_ASCO_2025', 'ASCO_1', 'Nivolumab');
@@ -159,6 +170,7 @@ describe('outcome_values migration', () => {
       ['abstract_ASH_2025_2_a', 'Arm a'],
       ['abstract_ASH_2025_2_all', 'All arms (pooled or trial-level)'],
       ['abstract_ASH_2025_3_a', 'Arm a'],
+      ['abstract_ASH_2025_4_all', 'All arms (pooled or trial-level)'],
     ]);
     const all1 = rows.find((r) => r.id === 'abstract_ASH_2025_1_all')!;
     expect(all1).toMatchObject({
@@ -178,6 +190,17 @@ describe('outcome_values migration', () => {
       abstract_drugs: 'Ivosidenib',
       values: { response_rates: [{ field: 'ORR', value: '30' }] },
     });
+  });
+
+  it('arm-less abstract keeps its DOI link and drug name on the All arms row', async () => {
+    expect(await view(`source_id = 'ASH_2025_4'`)).toMatchObject([
+      {
+        id: 'abstract_ASH_2025_4_all',
+        source_url: 'https://doi.org/10.1182/blood-2025-4',
+        abstract_drugs: 'Ziftomenib',
+        nct_id: 'NCT00000001',
+      },
+    ]);
   });
 
   it('pooled_only_abstract_has_all_arms_row', async () => {
@@ -242,7 +265,7 @@ describe('outcome_values migration', () => {
   it('delete_ash_abstracts_except removes dropped abstracts', async () => {
     const { rows } = await asRole('service_role', () =>
       db.query<{ removed: number }>(
-        `select delete_ash_abstracts_except(array['ASH_2025_1', 'ASH_2025_2']) as removed`,
+        `select delete_ash_abstracts_except(array['ASH_2025_1', 'ASH_2025_2', 'ASH_2025_4']) as removed`,
       ),
     );
     expect(rows[0].removed).toBe(1);
