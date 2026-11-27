@@ -5,12 +5,11 @@ import { getDbCancerType } from '@/lib/api';
 import { NCT_ID_PATTERN } from '@/lib/constants';
 import {
   AGENT_TABLES,
-  AGENT_TABLE_NAMES,
-  TRIAL_KEYED_TABLES,
   applyCancerScope,
   applyOrder,
   applyTrialKeys,
   projectionFor,
+  tablesFor,
   type AgentTable,
 } from './schema';
 import { runTool } from './logging';
@@ -24,6 +23,9 @@ interface TableHit {
   rows: unknown[];
   caveat?: string;
 }
+
+/** Every table, heme ones included, in a fixed order for tie-breaking. */
+const TABLE_ORDER = Object.keys(AGENT_TABLES) as AgentTable[];
 
 /**
  * Trim the multi-row tables until the whole lookup fits `limitChars`.
@@ -40,7 +42,7 @@ export function fitLookupToBudget(
   const truncated = new Set<AgentTable>();
   while (JSON.stringify(out).length > limitChars) {
     let widest: AgentTable | null = null;
-    for (const table of AGENT_TABLE_NAMES) {
+    for (const table of TABLE_ORDER) {
       const rows = out[table]?.rows.length ?? 0;
       if (rows > 1 && rows > (out[widest!]?.rows.length ?? 0)) widest = table;
     }
@@ -62,6 +64,9 @@ export function fitLookupToBudget(
  */
 export function buildLookupTool({ cancerSlug, traceId, turn }: AgentToolContext) {
   const dbCancerType = getDbCancerType(cancerSlug);
+  // The session's own tables: a heme trial's arms are read from arm_outcomes,
+  // which carries the response criteria trial_outcomes' wide columns lack.
+  const trialKeyed = tablesFor(dbCancerType).filter((name) => AGENT_TABLES[name].trialKey !== null);
 
   return {
     lookup_trial: tool({
@@ -98,7 +103,7 @@ export function buildLookupTool({ cancerSlug, traceId, turn }: AgentToolContext)
         const supabase = createServiceClient();
 
         const results = await Promise.all(
-          TRIAL_KEYED_TABLES.map(async (table): Promise<[AgentTable, TableHit | null]> => {
+          trialKeyed.map(async (table): Promise<[AgentTable, TableHit | null]> => {
             const spec = AGENT_TABLES[table];
             let query = supabase
               .from(table)
@@ -127,8 +132,8 @@ export function buildLookupTool({ cancerSlug, traceId, turn }: AgentToolContext)
         );
 
         const fetched = Object.fromEntries(results) as Partial<Record<AgentTable, TableHit | null>>;
-        const presentIn = TRIAL_KEYED_TABLES.filter((t) => (fetched[t]?.matched ?? 0) > 0);
-        const absentFrom = TRIAL_KEYED_TABLES.filter((t) => fetched[t]?.matched === 0);
+        const presentIn = trialKeyed.filter((t) => (fetched[t]?.matched ?? 0) > 0);
+        const absentFrom = trialKeyed.filter((t) => fetched[t]?.matched === 0);
 
         if (presentIn.length === 0) {
           // Distinguish "we have never heard of this trial" from "we have it, but

@@ -1,0 +1,223 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`lookup_trial per session > melanoma lookup is unchanged 1`] = `
+{
+  "queries": [
+    {
+      "countRequested": true,
+      "filters": [
+        {
+          "column": "cancer_type",
+          "operator": "contains",
+          "value": [
+            "Cutaneous Melanoma",
+          ],
+        },
+        {
+          "column": "nct_id",
+          "operator": "eq",
+          "value": "NCT00006368",
+        },
+      ],
+      "head": false,
+      "limit": 10,
+      "order": [
+        {
+          "ascending": false,
+          "column": "last_update_posted_date",
+          "nullsFirst": false,
+        },
+        {
+          "ascending": true,
+          "column": "nct_id",
+          "nullsFirst": false,
+        },
+      ],
+      "projection": "nct_id, acronym, brief_title, overall_status, phases, lead_sponsor_name, lead_sponsor_class, enrollment_count, primary_completion_date, primary_purpose, is_basket, interventions",
+      "table": "clinical_trials",
+    },
+    {
+      "countRequested": true,
+      "filters": [
+        {
+          "column": "cancer_type",
+          "operator": "contains",
+          "value": [
+            "Cutaneous Melanoma",
+          ],
+        },
+        {
+          "column": "nct_id",
+          "operator": "eq",
+          "value": "NCT00006368",
+        },
+      ],
+      "head": false,
+      "limit": 10,
+      "order": [
+        {
+          "ascending": true,
+          "column": "nct_id",
+          "nullsFirst": false,
+        },
+      ],
+      "projection": "nct_id, treatment_name, modality, biomarker, stage, line_of_therapy",
+      "table": "trial_landscape",
+    },
+    {
+      "countRequested": true,
+      "filters": [
+        {
+          "column": "cancer_type",
+          "operator": "contains",
+          "value": [
+            "Cutaneous Melanoma",
+          ],
+        },
+        {
+          "column": "nct_id",
+          "operator": "eq",
+          "value": "NCT00006368",
+        },
+      ],
+      "head": false,
+      "limit": 10,
+      "order": [
+        {
+          "ascending": true,
+          "column": "nct_id",
+          "nullsFirst": false,
+        },
+        {
+          "ascending": true,
+          "column": "id",
+          "nullsFirst": false,
+        },
+      ],
+      "projection": "id, source_type, source_name, abstract_id, publication_id, source_url, nct_id, arm_name, generic_name, line_of_treatment, num_patients, median_pfs, hr_pfs, median_os, hr_os, orr, dcr, median_dor, grade_3_plus_trae_pct, serious_ae_pct, is_nr, is_lt, expert_review",
+      "table": "trial_outcomes",
+    },
+    {
+      "countRequested": true,
+      "filters": [
+        {
+          "column": "cancer_type",
+          "operator": "eq",
+          "value": "Cutaneous Melanoma",
+        },
+        {
+          "column": "nct_id",
+          "operator": "eq",
+          "value": "NCT00006368",
+        },
+      ],
+      "head": false,
+      "limit": 10,
+      "order": [
+        {
+          "ascending": true,
+          "column": "nct_id",
+          "nullsFirst": false,
+        },
+        {
+          "ascending": true,
+          "column": "id",
+          "nullsFirst": false,
+        },
+      ],
+      "projection": "id, nct_id, publication_id, cancer_type, comparison_label, arm_name, endpoint, published_median, twin_median, rate_timepoint, published_rate, twin_rate, median_follow_up, match_pct, n_points, reference",
+      "table": "km_curves",
+    },
+    {
+      "countRequested": true,
+      "filters": [
+        {
+          "column": "cancer_type",
+          "operator": "contains",
+          "value": [
+            "Cutaneous Melanoma",
+          ],
+        },
+        {
+          "column": "nct_ids",
+          "operator": "overlaps",
+          "value": [
+            "NCT00006368",
+          ],
+        },
+      ],
+      "head": false,
+      "limit": 10,
+      "order": [
+        {
+          "ascending": false,
+          "column": "date",
+          "nullsFirst": false,
+        },
+        {
+          "ascending": true,
+          "column": "url",
+          "nullsFirst": false,
+        },
+      ],
+      "projection": "url, title, date, nct_ids, cancer_type, has_efficacy, has_safety",
+      "table": "news_feed",
+    },
+  ],
+  "result": {
+    "cancerType": "Cutaneous Melanoma",
+    "coverage": {
+      "absentFrom": [
+        "trial_landscape",
+        "km_curves",
+        "news_feed",
+      ],
+      "caveats": [
+        "Observational studies are excluded from this table by design. A trial missing here may still exist in clinical_trials.",
+      ],
+      "presentIn": [
+        "clinical_trials",
+        "trial_outcomes",
+      ],
+    },
+    "found": true,
+    "nctId": "NCT00006368",
+    "tables": {
+      "clinical_trials": {
+        "caveat": undefined,
+        "matched": 1,
+        "rows": [
+          {
+            "brief_title": "A trial",
+            "nct_id": "NCT00006368",
+          },
+        ],
+      },
+      "km_curves": {
+        "matched": 0,
+        "rows": [],
+      },
+      "news_feed": {
+        "matched": 0,
+        "rows": [],
+      },
+      "trial_landscape": {
+        "matched": 0,
+        "rows": [],
+      },
+      "trial_outcomes": {
+        "caveat": "Roughly 44% of rows in this table have no nct_id - they are conference abstracts identified by abstract_id instead. A trial-ID filter cannot see them, so absence from an NCT-filtered result here is not evidence that no outcome data exists.",
+        "matched": 1,
+        "rows": [
+          {
+            "arm_name": "Nivolumab",
+            "id": "o1",
+            "nct_id": "NCT00006368",
+            "orr": 40,
+          },
+        ],
+      },
+    },
+  },
+}
+`;

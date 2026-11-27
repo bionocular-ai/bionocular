@@ -558,9 +558,6 @@ export function tablesFor(dbCancerType: string): [AgentTable, ...AgentTable[]] {
   ] as [AgentTable, ...AgentTable[]];
 }
 
-/** The tables a trial can be looked up in: every one with a trial key. */
-export const TRIAL_KEYED_TABLES = AGENT_TABLE_NAMES.filter((name) => AGENT_TABLES[name].trialKey !== null);
-
 /**
  * Minimal shape of a PostgREST query builder. Structural so the helpers below
  * work against any stage of the chain without importing supabase-js generics.
