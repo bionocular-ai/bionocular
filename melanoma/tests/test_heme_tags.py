@@ -17,7 +17,7 @@ def test_load_heme_tags_splits_names(tmp_path):
 
 def test_committed_file_covers_the_ash_trials():
     tags = load_heme_tags()
-    assert len(tags) == 568
+    assert len(tags) == 679
     assert "NCT06681922" not in tags  # an alias; the resolver swaps it
     assert tags["NCT05289167"] == ["Acute Myeloid Leukemia"]
     assert all(re.fullmatch(r"NCT\d{8}", n) for n in tags)
