@@ -23,12 +23,17 @@ interpreting it; do not guess from the label.
   `response_rates`, `survival_pfs_os`, `survival_other`, `duration_transplant`,
   `safety_overall`, `dose_events_special`, `population`, `regimen_drug`,
   `ae_reporting` and `registry`. Pick only what the question needs.
+- There is no drug-class filter. For a class (BCMA bispecifics, menin
+  inhibitors), query `arm_outcomes` once per drug you know in it, by `drug`;
+  no other table maps drugs to classes.
 - A read over budget comes back partial with `coverage`. Say what was left out.
 
 ## Reading response rates
 
-- Name the response criteria before comparing response rates. Read them from
-  `Response criteria` on the arm's abstract.
+- A response rate is any value in the `response_rates` family,
+  MRD negativity included.
+- Name the response criteria in the answer for every response rate it gives,
+  even a single one. Read them from `Response criteria` on the arm's abstract.
 - When it is empty, say "criteria not stated" and compare anyway, with that
   caveat. Never assume the disease's standard criteria.
 - When its `origin` is registry, say "criteria per the trial registry".

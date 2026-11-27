@@ -42,6 +42,14 @@ describe('skills', () => {
     expect(body).toMatch(/criteria per the trial registry/);
   });
 
+  // Golden case heme-mm-mrd-bcma-bispecifics, 3/3 runs: MRD rates reported
+  // with no criteria, and calls spent hunting for a drug-class filter.
+  it('heme-outcomes applies the criteria rule to MRD and says how to query a drug class', () => {
+    const { body } = loadSkill('heme-outcomes');
+    expect(body).toMatch(/MRD negativity included/);
+    expect(body).toMatch(/no drug-class filter/);
+  });
+
   it('offers heme-outcomes only in heme sessions', () => {
     expect(skillsFor('Multiple Myeloma')).toContain('heme-outcomes');
     expect(skillsFor('Cutaneous Melanoma')).not.toContain('heme-outcomes');
