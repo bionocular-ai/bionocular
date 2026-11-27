@@ -519,6 +519,51 @@ function caveatOf(
   return sentences.length > 0 ? sentences.join(' ') : undefined;
 }
 
+interface HemeEntry {
+  field?: unknown;
+  value?: unknown;
+  context?: unknown;
+  origin?: unknown;
+  caveat?: unknown;
+}
+
+/** The value as written, then what the reader must not lose: registry origin and caveat. */
+function hemeCell({ value, origin, caveat }: HemeEntry): string {
+  const notes = [origin === 'registry' ? 'registry' : null, typeof caveat === 'string' && caveat ? caveat : null];
+  const note = notes.filter(Boolean).join('; ');
+  const text = formatCell(value);
+  return note ? `${text} (${note})` : text;
+}
+
+/**
+ * An `arm_outcomes` row is nested - `trial` keyed by label, `values` keyed by
+ * family - so it is flattened to one column per label before it is drawn. A
+ * label that repeats in one row (two ORR readings) joins with `; `; an entry's
+ * `context` goes into the column name, so "ORR (patients with t(4;14))" is its
+ * own column rather than a second value under "ORR".
+ */
+export function flattenArmOutcome(row: Row): Row {
+  const { trial, values, ...rest } = row;
+  const columns = new Map<string, string[]>();
+  const add = (label: string, cell: string) => columns.set(label, [...(columns.get(label) ?? []), cell]);
+
+  if (typeof trial === 'object' && trial !== null) {
+    for (const [label, entry] of Object.entries(trial)) add(label, hemeCell(entry as HemeEntry));
+  }
+  if (typeof values === 'object' && values !== null) {
+    for (const entries of Object.values(values)) {
+      if (!Array.isArray(entries)) continue;
+      for (const entry of entries as HemeEntry[]) {
+        const context = typeof entry.context === 'string' && entry.context ? ` (${entry.context})` : '';
+        add(`${String(entry.field)}${context}`, hemeCell(entry));
+      }
+    }
+  }
+  const flat: Row = { ...rest };
+  for (const [label, cells] of columns) flat[label] = cells.join('; ');
+  return flat;
+}
+
 function stripFolded(output: unknown, today: string): unknown {
   if (typeof output !== 'object' || output === null) return output;
   const { rows, ...rest } = output as { rows?: unknown };
@@ -534,6 +579,11 @@ function stripFolded(output: unknown, today: string): unknown {
   };
 }
 
+function flattenOutput(output: unknown): unknown {
+  const { rows, ...rest } = output as { rows?: unknown };
+  return Array.isArray(rows) ? { ...rest, rows: rows.map((row) => flattenArmOutcome(row as Row)) } : output;
+}
+
 export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultTable | null {
   const today = now.toISOString().slice(0, 10);
   const successful = outputs.filter(isSuccessful);
@@ -543,7 +593,10 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
   const answer = perArm[perArm.length - 1];
   if (answer && (answer as { table?: unknown }).table === 'trial_outcomes') return toOutcomesTable(answer);
   const drawOne = (output: unknown): ResultTable | null => {
-    const stripped = stripFolded(output, today);
+    const stripped = stripFolded(
+      (output as { table?: unknown }).table === 'arm_outcomes' ? flattenOutput(output) : output,
+      today,
+    );
     const table = toResultTable(stripped);
     return table && withSummary(table, rowsOf(stripped));
   };

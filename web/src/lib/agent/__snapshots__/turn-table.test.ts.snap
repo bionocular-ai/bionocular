@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`arm_outcomes answer tables > trial_outcomes tables are unchanged 1`] = `
+{
+  "columns": [
+    {
+      "key": "treatment_name",
+      "label": "Treatment",
+    },
+    {
+      "key": "nct_id",
+      "label": "NCT",
+    },
+    {
+      "key": "setting",
+      "label": "Setting",
+    },
+    {
+      "key": "num_patients",
+      "label": "N",
+    },
+    {
+      "key": "sponsor_type",
+      "label": "Sponsor",
+    },
+    {
+      "key": "biomarker",
+      "label": "Biomarker",
+    },
+    {
+      "key": "orr",
+      "label": "ORR",
+    },
+    {
+      "key": "median_pfs",
+      "label": "Median PFS (mo)",
+    },
+  ],
+  "parameters": [
+    {
+      "arms": 2,
+      "family": "efficacy",
+      "key": "orr",
+      "label": "ORR",
+    },
+    {
+      "arms": 2,
+      "family": "efficacy",
+      "key": "median_pfs",
+      "label": "Median PFS (mo)",
+    },
+  ],
+  "rows": [
+    [
+      "A",
+      "NCT1",
+      "1L",
+      "10",
+      "—",
+      "—",
+      "40",
+      "5.5",
+    ],
+    [
+      "B",
+      "NCT2",
+      "1L",
+      "20",
+      "—",
+      "—",
+      "30",
+      "7.0",
+    ],
+  ],
+}
+`;

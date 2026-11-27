@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { answerCounts } from './result-table';
 import { toTurnTable, withoutAskedPhase } from './turn-table';
+import { toTurnChart } from './turn-chart';
 
 const trials = {
   ok: true,
@@ -1166,5 +1167,67 @@ describe('answerCounts', () => {
     const landscape = { ok: true, table: 'clinical_trials', rows: [{ nct_id: 'NCT1', phase: 'PHASE1' }] };
 
     expect(answerCounts(toTurnTable([landscape], today)!)).toBeNull();
+  });
+});
+
+describe('arm_outcomes answer tables', () => {
+  const heme = (rows: unknown[]) => ({ ok: true, table: 'arm_outcomes', rows });
+  const row = (over: Record<string, unknown>) => ({
+    id: 1, source_id: 'a', nct_id: 'NCT1', arm_name: 'Tec', ...over,
+  });
+  const keys = (table: ReturnType<typeof toTurnTable>) => table!.columns.map((c) => c.key);
+
+  it('arm_outcomes rows become one column per field label', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [{ field: 'ORR', value: '63' }], survival_pfs_os: [{ field: 'mPFS', value: 'NR' }] } }),
+        row({ id: 2, arm_name: 'Elra', values: { response_rates: [{ field: 'ORR', value: '<0.001' }], survival_pfs_os: [{ field: 'mPFS', value: '9' }] } }),
+      ]),
+    ]);
+    expect(keys(table)).toEqual(expect.arrayContaining(['ORR', 'mPFS']));
+    expect(keys(table)).not.toContain('values');
+    expect(cell(table, 0, 'mPFS')).toBe('NR');
+    expect(cell(table, 1, 'ORR')).toBe('<0.001');
+  });
+
+  it('extras get a context suffix and repeated labels join with a semicolon', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [
+          { field: 'ORR', value: '63' },
+          { field: 'ORR', value: '70', context: 'patients with t(4;14)' },
+          { field: 'ORR', value: '65' },
+        ] } }),
+        row({ id: 2, arm_name: 'Elra', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'ORR')).toBe('63; 65');
+    expect(cell(table, 0, 'ORR (patients with t(4;14))')).toBe('70');
+  });
+
+  it('trial values become columns and registry origin and caveats stay visible', () => {
+    const table = toTurnTable([
+      heme([
+        row({ trial: { 'Response criteria': { value: 'IMWG', origin: 'registry' }, 'Trial name': { value: 'MajesTEC-1', caveat: 'abstract only' } }, values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+        row({ id: 2, arm_name: 'Elra', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'Response criteria')).toBe('IMWG (registry)');
+    expect(cell(table, 0, 'Trial name')).toBe('MajesTEC-1 (abstract only)');
+    expect(cell(table, 1, 'Response criteria')).toBe('IMWG');
+  });
+
+  it('draws no chart for arm_outcomes', () => {
+    const table = toTurnTable([heme([row({ values: { response_rates: [{ field: 'ORR', value: '63' }] } }), row({ id: 2, arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '5' }] } })])])!;
+    expect(table.parameters).toBeUndefined();
+    expect(toTurnChart(table, table.rows, ['ORR'], () => [])).toBeNull();
+  });
+
+  it('trial_outcomes tables are unchanged', () => {
+    const outcomes = { ok: true, table: 'trial_outcomes', rows: [
+      { nct_id: 'NCT1', arm_name: 'A', num_patients: 10, orr: 40, median_pfs: 5.5, line_of_treatment: '1L' },
+      { nct_id: 'NCT2', arm_name: 'B', num_patients: 20, orr: 30, median_pfs: 7, line_of_treatment: '1L' },
+    ] };
+    expect(toTurnTable([outcomes])).toMatchSnapshot();
   });
 });
