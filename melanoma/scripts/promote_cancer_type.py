@@ -49,9 +49,13 @@ from typing import Any, Optional
 from dotenv import load_dotenv
 from supabase import Client, create_client
 
+_MELANOMA_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_MELANOMA_ROOT))
+
+from src.infrastructure.clinical_trials.heme_tags import load_heme_tags  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
-_MELANOMA_ROOT = Path(__file__).resolve().parent.parent
 _TABLE = "clinical_trials"
 _PAGE_SIZE = 1000
 _BACKUP_DIR = _MELANOMA_ROOT / "data" / "backups"
@@ -69,12 +73,19 @@ class IncompleteBackfillError(RuntimeError):
 # ---------------------------------------------------------------------------
 
 
-def plan_promotions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def plan_promotions(
+    rows: list[dict[str, Any]], heme: dict[str, list[str]] | None = None
+) -> list[dict[str, Any]]:
     """The rows whose stored label differs from the reviewed derived one.
+
+    An ASH-cited trial's heme tags (`heme`, from `load_heme_tags`) belong in
+    the label too: the daily sync adds them, so promoting the derived buckets
+    alone would strip them.
 
     Set comparison: the stored arrays are unordered, so a reordering is not a
     change and must not be written.
     """
+    heme = heme or {}
     unbackfilled = [r["nct_id"] for r in rows if r.get("cancer_type_derived") is None]
     if unbackfilled:
         raise IncompleteBackfillError(
@@ -85,7 +96,10 @@ def plan_promotions(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     plan: list[dict[str, Any]] = []
     for row in rows:
         before = row.get("cancer_type") or []
-        after = row["cancer_type_derived"]
+        derived = row["cancer_type_derived"]
+        after = derived + [
+            t for t in heme.get(row["nct_id"], []) if t not in derived
+        ]
         if set(before) == set(after):
             continue
         plan.append(
@@ -298,7 +312,7 @@ def main() -> None:
 
     rows = fetch_all(sb)
     try:
-        plan = plan_promotions(rows)
+        plan = plan_promotions(rows, load_heme_tags())
     except IncompleteBackfillError as exc:
         logger.error("%s", exc)
         sys.exit(1)
