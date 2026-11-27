@@ -125,6 +125,8 @@ def test_registry_criteria_filled_by_default(monkeypatch, tmp_path):
         if r["origin"] == "registry" and r["field_key"] == "response_criteria"
     ]
     assert (crit["abstract"], crit["value_text"]) == ("103", "IMWG")
+    tags = (run / "trial_cancer_types.csv").read_text().splitlines()
+    assert tags[0] == "nct_id,cancer_types" and len(tags) > 1
     run = _cli(
         monkeypatch, tmp_path, "--no-registry-criteria", studies={"NCT00000103": IMWG}
     )
@@ -157,3 +159,41 @@ def test_zero_registry_fills(monkeypatch, tmp_path, capsys):
             ["abstract", "nct", "set", "indication", "sentence", "ok", "why"]
         ]
     assert "registry criteria: 0 filled" in capsys.readouterr().out
+
+
+def _study(nct: str) -> dict:  # a cached ClinicalTrials.gov record
+    return {"protocolSection": {"identificationModule": {"nctId": nct}}}
+
+
+def test_alias_swapped_for_current_id():
+    recs = [{"abstract": "2469", "nct_ids": ["NCT06681922"]}]
+    out = ash_resolve.canonical_ncts(recs, {"NCT06681922": _study("NCT05289167")})
+    assert out[0]["nct_ids"] == ["NCT05289167"]
+
+
+def test_alias_and_current_id_collapse_to_one():
+    recs = [{"abstract": "1", "nct_ids": ["NCT06681922", "NCT05289167"]}]
+    studies = {
+        "NCT06681922": _study("NCT05289167"),
+        "NCT05289167": _study("NCT05289167"),
+    }
+    assert ash_resolve.canonical_ncts(recs, studies)[0]["nct_ids"] == ["NCT05289167"]
+
+
+def test_uncached_id_kept_as_cited():
+    recs = [{"abstract": "1", "nct_ids": ["NCT00000009"]}]
+    assert ash_resolve.canonical_ncts(recs, {"NCT00000009": {}})[0]["nct_ids"] == [
+        "NCT00000009"
+    ]
+    assert ash_resolve.canonical_ncts(recs, {})[0]["nct_ids"] == ["NCT00000009"]
+
+
+def test_trial_tags_union_per_primary_nct():
+    aml, gvhd = "Acute Myeloid Leukemia", "Allogeneic Transplant / GVHD"
+    recs = [
+        {"abstract": "1", "nct_ids": ["NCT1", "NCT2"], "indication": aml},
+        {"abstract": "1", "nct_ids": ["NCT1", "NCT2"], "indication": aml},
+        {"abstract": "2", "nct_ids": ["NCT1"], "indication": gvhd},
+        {"abstract": "3", "nct_ids": [], "indication": "Multiple Myeloma"},
+    ]
+    assert ash_resolve.trial_tags(recs) == {"NCT1": [aml, gvhd]}

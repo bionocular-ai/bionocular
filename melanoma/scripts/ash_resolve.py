@@ -390,9 +390,8 @@ def check_xlsx(records: list[dict], path: Path) -> tuple[list[str], Counter]:
     return bad, count
 
 
-def _registry_criteria(run: Path, records: list[dict]) -> list[dict]:
-    """The records with the registry criteria filled (the sheet has no such cells, so
-    this runs after the xlsx check)."""
+def _studies(run: Path, records: list[dict]) -> dict[str, dict]:
+    """Every cited trial's ClinicalTrials.gov record, from <run>/records when cached."""
     cache = run / "records"
     cache.mkdir(exist_ok=True)
     client = None
@@ -401,6 +400,37 @@ def _registry_criteria(run: Path, records: list[dict]) -> list[dict]:
         if client is None and not (cache / f"{nct}.json").exists():
             client = ClinicalTrialsGovAPIClient()
         studies[nct] = fetch(nct, cache, client) or {}
+    return studies
+
+
+def canonical_ncts(records: list[dict], studies: dict[str, dict]) -> list[dict]:
+    """The records with each cited NCT id swapped for the one ClinicalTrials.gov now
+    serves it as (an alias such as NCT06681922 -> NCT05289167), so the
+    clinical_trials foreign key finds it. A trial with no record keeps its id."""
+
+    def current(nct: str) -> str:
+        ident = studies.get(nct, {}).get("protocolSection", {})
+        return ident.get("identificationModule", {}).get("nctId") or nct
+
+    return [
+        {**r, "nct_ids": list(dict.fromkeys(current(n) for n in r["nct_ids"]))}
+        for r in records
+    ]
+
+
+def trial_tags(records: list[dict]) -> dict[str, list[str]]:
+    """Primary NCT id (the first cited, as the loader uses) -> its heme cancers."""
+    tags: dict[str, set[str]] = defaultdict(set)
+    for r in records:
+        if r["nct_ids"]:
+            tags[r["nct_ids"][0]].add(r["indication"])
+    return {nct: sorted(tags[nct]) for nct in sorted(tags)}
+
+
+def _registry_criteria(run: Path, records: list[dict]) -> list[dict]:
+    """The records with the registry criteria filled (the sheet has no such cells, so
+    this runs after the xlsx check)."""
+    studies = _studies(run, records)
     keys = {
         f.key
         for fam in load_families(CSV)
@@ -457,8 +487,15 @@ def main() -> None:
             sys.exit(1)
     if not args.no_registry_criteria:
         records = _registry_criteria(args.run, records)
+    # after the xlsx check, which compares the ids as the sheet cites them
+    records = canonical_ncts(records, _studies(args.run, records))
     out = args.run / "resolved.json"
     out.write_text(json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8")
+    # the nightly trial sync reads a committed copy: resources/ash/trial_cancer_types.csv
+    with (args.run / "trial_cancer_types.csv").open("w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["nct_id", "cancer_types"])
+        w.writerows([nct, ";".join(c)] for nct, c in trial_tags(records).items())
     print(
         f"wrote {out}: {len(records)} records, {len({r['abstract'] for r in records})} abstracts"
     )
