@@ -443,7 +443,8 @@ export const GOLDEN_CASES: EvalCase[] = [
   },
   {
     // Revumenib reports no criteria, olutasidenib reports IWG: the answer
-    // must say so rather than rank the two as equals.
+    // must say so rather than rank the two as equals, so it needs both the
+    // skill's "not stated" and IWG - the bare word "criteria" is not enough.
     id: 'heme-aml-cr-crh-comparison',
     category: 'clinical-reasoning',
     cancerSlug: AML,
@@ -451,7 +452,7 @@ export const GOLDEN_CASES: EvalCase[] = [
     expect: {
       skills: ['heme-outcomes'],
       filter: { table: 'arm_outcomes', args: { drug: /revumenib|olutasidenib/i } },
-      answer: RESPONSE_CRITERIA,
+      answer: /^(?=[\s\S]*not stated)(?=[\s\S]*\bIWG\b)/i,
       maxToolCalls: 6,
     },
   },
@@ -515,6 +516,9 @@ export const GOLDEN_CASES: EvalCase[] = [
   {
     // ASH_2025_1075, the one abstract in production with values but no
     // per-arm values: its only row is "All arms (pooled or trial-level)".
+    // The answer must not invent an arm ("the single arm", "Arm A", "arm 1").
+    // Case-sensitive on purpose: under /i, `[A-Z]\b` matches the s of "arms".
+    // "All arms", "single-arm design" and "arm-level" stay allowed.
     id: 'heme-pooled-only-abstract',
     category: 'grounding',
     cancerSlug: MM,
@@ -522,7 +526,7 @@ export const GOLDEN_CASES: EvalCase[] = [
     expect: {
       tools: ['lookup_trial'],
       fastPath: 'lookup_trial',
-      answerNot: /arm 1|arm_1/i,
+      answerNot: /\b([Aa]n?|[Tt]he|[Tt]his|[Oo]ne|[Ee]ach)( (single|sole|only))? arm\b(?!-)|\b[Aa]rm[ _]?(\d|[A-Z]\b)/,
       maxToolCalls: 4,
     },
   },
