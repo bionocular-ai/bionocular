@@ -10,7 +10,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 //   RLS, as on Supabase);
 // - trial_outcomes and clinical_trials, which predate the migrations folder,
 //   cut down to the columns the migration reads, with the grants the API
-//   roles hold on them live.
+//   roles hold on them live;
+// - the live default privileges, which hand every API role all rights on each
+//   new table and function, so the migration's own revokes are what is tested.
 const MIGRATION = readFileSync(
   fileURLToPath(
     new URL('../../../../supabase/migrations/20261127000000_outcome_values.sql', import.meta.url),
@@ -33,6 +35,8 @@ const SUPABASE_STUBS = `
   );
   grant select on clinical_trials, trial_outcomes to authenticated;
   grant all on clinical_trials, trial_outcomes to service_role;
+  alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+  alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 `;
 
 const ASH = 'extraction_results_ASH_2025';
@@ -341,9 +345,35 @@ describe('outcome_values migration', () => {
       ).rejects.toThrow(/permission denied/);
     }
     // anon reads nothing at all, matching trial_outcomes.
-    await expect(asRole('anon', () => db.query('select * from arm_outcomes'))).rejects.toThrow(
-      /permission denied/,
+    for (const rel of ['arm_outcomes', 'outcome_values', 'outcome_fields']) {
+      await expect(asRole('anon', () => db.query(`select * from ${rel}`))).rejects.toThrow(
+        /permission denied/,
+      );
+    }
+  });
+
+  it('signed-in users only read; RLS does not stop truncate, so the grant must', async () => {
+    for (const sql of [
+      'truncate outcome_values',
+      'truncate outcome_fields',
+      `delete from outcome_values`,
+      `insert into outcome_fields (key, label, family, scope, value_type, definition, sort_order)
+         values ('x', 'X', 'f', 'arm', 'text', 'd', 1)`,
+    ]) {
+      await expect(asRole('authenticated', () => db.query(sql))).rejects.toThrow(/permission denied/);
+    }
+  });
+
+  it('clinical_trials(arm_outcomes) joins each view row to its trial', async () => {
+    const { rows } = await asRole('authenticated', () =>
+      db.query<{ id: string; nct_id: string }>(
+        `select a.id, c.nct_id from arm_outcomes a cross join lateral clinical_trials(a) c order by a.id`,
+      ),
     );
+    // abstract 3 has no NCT id, so the join drops its rows, as !inner does
+    expect(rows.map((r) => r.id)).not.toContain('abstract_ASH_2025_3_a');
+    expect(rows.length).toBeGreaterThan(0);
+    expect(new Set(rows.map((r) => r.nct_id))).toEqual(new Set(['NCT00000001']));
   });
 
   it('refuses an empty abstract and rows outside its ASH abstract', async () => {

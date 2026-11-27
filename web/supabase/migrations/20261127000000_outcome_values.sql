@@ -156,8 +156,23 @@ LEFT JOIN grouped g ON g.source_id = s.source_id AND g.trial_outcome_id IS NULL
 LEFT JOIN trial tr ON tr.source_id = s.source_id
 WHERE g.source_id IS NOT NULL OR tr.source_id IS NOT NULL;
 
+-- Revoke first: the project's default privileges give every API role all
+-- rights on a new table (anon holds TRUNCATE on trial_outcomes, which RLS does
+-- not stop), so the grants below are the only ones left.
+REVOKE ALL ON outcome_fields, outcome_values, arm_outcomes FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON outcome_fields, outcome_values, arm_outcomes TO authenticated;
 GRANT ALL ON outcome_fields, outcome_values, arm_outcomes TO service_role;
+
+-- PostgREST cannot see foreign keys through a UNION view, so this declares the
+-- arm_outcomes -> clinical_trials relationship by hand (a computed
+-- relationship), giving the view the same clinical_trials!inner embed that
+-- trial_outcomes has. SETOF ... ROWS 1 makes it many-to-one and lets Postgres
+-- inline it; a SET clause would stop the inlining, hence the qualified name.
+CREATE FUNCTION clinical_trials(arm_outcomes) RETURNS SETOF clinical_trials ROWS 1
+LANGUAGE sql STABLE
+AS $$ SELECT * FROM public.clinical_trials WHERE nct_id = $1.nct_id $$;
+REVOKE EXECUTE ON FUNCTION clinical_trials(arm_outcomes) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION clinical_trials(arm_outcomes) TO authenticated, service_role;
 
 -- Replaces one ASH abstract in one transaction: upserts its arms, deletes its
 -- arms no longer sent (their values go with them by cascade), then replaces
