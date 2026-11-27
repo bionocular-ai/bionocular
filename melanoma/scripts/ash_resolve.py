@@ -418,12 +418,49 @@ def canonical_ncts(records: list[dict], studies: dict[str, dict]) -> list[dict]:
     ]
 
 
+def _norm(name: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
+def primary_first(records: list[dict], studies: dict[str, dict]) -> list[dict]:
+    """The records with the cited trial the abstract names (its `trial_name` equals
+    that trial's registry acronym, ignoring case and punctuation) moved to the front
+    of `nct_ids`, since the loader links an abstract to its first NCT id. Without a
+    match the citation order stands. Abstract 3600 (OLYMPIA-2) cites OLYMPIA-1 first."""
+
+    def acronym(nct: str) -> str:
+        ident = studies.get(nct, {}).get("protocolSection", {})
+        return ident.get("identificationModule", {}).get("acronym") or ""
+
+    names = {
+        r["abstract"]: _norm(r["value_text"])
+        for r in records
+        if r["field_key"] == "trial_name"
+    }
+    out = []
+    for r in records:
+        named = [
+            n
+            for n in r["nct_ids"]
+            if _norm(acronym(n)) and _norm(acronym(n)) == names.get(r["abstract"])
+        ]
+        out.append(
+            {
+                **r,
+                "nct_ids": named[:1] + [n for n in r["nct_ids"] if n not in named[:1]],
+            }
+        )
+    return out
+
+
 def trial_tags(records: list[dict]) -> dict[str, list[str]]:
-    """Primary NCT id (the first cited, as the loader uses) -> its heme cancers."""
+    """Every cited NCT id -> the heme cancers of the abstracts citing it. All cited
+    trials, not only the primary one, so a trial stays fresh in the nightly sync
+    and keeps its tags when the primary choice changes."""
     tags: dict[str, set[str]] = defaultdict(set)
     for r in records:
-        if r["nct_ids"]:
-            tags[r["nct_ids"][0]].add(r["indication"])
+        for nct in r["nct_ids"]:
+            tags[nct].add(r["indication"])
     return {nct: sorted(tags[nct]) for nct in sorted(tags)}
 
 
@@ -488,11 +525,14 @@ def main() -> None:
     if not args.no_registry_criteria:
         records = _registry_criteria(args.run, records)
     # after the xlsx check, which compares the ids as the sheet cites them
-    records = canonical_ncts(records, _studies(args.run, records))
+    studies = _studies(args.run, records)
+    records = canonical_ncts(primary_first(records, studies), studies)
     out = args.run / "resolved.json"
     out.write_text(json.dumps(records, ensure_ascii=False, indent=1), encoding="utf-8")
     # the nightly trial sync reads a committed copy: resources/ash/trial_cancer_types.csv
-    with (args.run / "trial_cancer_types.csv").open("w", newline="", encoding="utf-8") as f:
+    with (args.run / "trial_cancer_types.csv").open(
+        "w", newline="", encoding="utf-8"
+    ) as f:
         w = csv.writer(f)
         w.writerow(["nct_id", "cancer_types"])
         w.writerows([nct, ";".join(c)] for nct, c in trial_tags(records).items())

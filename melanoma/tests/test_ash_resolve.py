@@ -188,7 +188,7 @@ def test_uncached_id_kept_as_cited():
     assert ash_resolve.canonical_ncts(recs, {})[0]["nct_ids"] == ["NCT00000009"]
 
 
-def test_trial_tags_union_per_primary_nct():
+def test_trial_tags_cover_every_cited_trial():
     aml, gvhd = "Acute Myeloid Leukemia", "Allogeneic Transplant / GVHD"
     recs = [
         {"abstract": "1", "nct_ids": ["NCT1", "NCT2"], "indication": aml},
@@ -196,4 +196,55 @@ def test_trial_tags_union_per_primary_nct():
         {"abstract": "2", "nct_ids": ["NCT1"], "indication": gvhd},
         {"abstract": "3", "nct_ids": [], "indication": "Multiple Myeloma"},
     ]
-    assert ash_resolve.trial_tags(recs) == {"NCT1": [aml, gvhd]}
+    assert ash_resolve.trial_tags(recs) == {"NCT1": [aml, gvhd], "NCT2": [aml]}
+
+
+def _named(nct: str, acronym: str) -> dict:
+    return {
+        "protocolSection": {"identificationModule": {"nctId": nct, "acronym": acronym}}
+    }
+
+
+def _abstract(nct_ids: list[str], trial_name: str | None) -> list[dict]:
+    rows = [
+        {
+            "abstract": "3600",
+            "nct_ids": nct_ids,
+            "field_key": "orr_rate",
+            "value_text": "88.9",
+        }
+    ]
+    if trial_name:
+        rows.append(
+            {
+                "abstract": "3600",
+                "nct_ids": nct_ids,
+                "field_key": "trial_name",
+                "value_text": trial_name,
+            }
+        )
+    return rows
+
+
+def test_primary_is_the_cited_trial_the_abstract_names():
+    studies = {
+        "NCT06091254": _named("NCT06091254", "OLYMPIA-1"),
+        "NCT06097364": _named("NCT06097364", "OLYMPIA-2"),
+    }
+    out = ash_resolve.primary_first(
+        _abstract(["NCT06091254", "NCT06097364"], "OLYMPIA-2"), studies
+    )
+    assert {tuple(r["nct_ids"]) for r in out} == {("NCT06097364", "NCT06091254")}
+
+
+def test_primary_stays_first_cited_without_a_name_match():
+    studies = {"NCT1": _named("NCT1", "ELM-2"), "NCT2": _named("NCT2", "")}
+    for name in (None, "Unrelated"):
+        out = ash_resolve.primary_first(_abstract(["NCT1", "NCT2"], name), studies)
+        assert {tuple(r["nct_ids"]) for r in out} == {("NCT1", "NCT2")}
+
+
+def test_name_match_ignores_case_and_punctuation():
+    studies = {"NCT1": _named("NCT1", "ACCEPT"), "NCT2": _named("NCT2", "REMoDL A")}
+    out = ash_resolve.primary_first(_abstract(["NCT1", "NCT2"], "REMoDL-A"), studies)
+    assert out[0]["nct_ids"][0] == "NCT2"
