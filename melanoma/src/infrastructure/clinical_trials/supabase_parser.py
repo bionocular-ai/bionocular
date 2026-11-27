@@ -6,6 +6,7 @@ sync pipeline and the legacy uploader share a single source of truth.
 """
 
 import logging
+from collections.abc import Sequence
 from typing import Any
 
 from .cancer_type_derivation import derive_cancer_types
@@ -106,8 +107,13 @@ def extract_processed_trial(
     raw_json: dict[str, Any],
     nct_id: str,
     cancer_types_map: dict[str, list[str]],
+    extra_cancer_types: Sequence[str] = (),
 ) -> dict[str, Any]:
-    """Flatten a v2 API trial JSON into a row matching the `clinical_trials` schema."""
+    """Flatten a v2 API trial JSON into a row matching the `clinical_trials` schema.
+
+    `extra_cancer_types` (the heme tags of an ASH-cited trial) are added to
+    `cancer_type` after the derived buckets; `cancer_type_derived` stays derived only.
+    """
     protocol = raw_json.get("protocolSection", {})
     id_mod = protocol.get("identificationModule", {})
     status_mod = protocol.get("statusModule", {})
@@ -185,7 +191,8 @@ def extract_processed_trial(
         "brief_summary": desc_mod.get("briefSummary"),
         "detailed_description": desc_mod.get("detailedDescription"),
         "eligibility_criteria": elig_mod.get("eligibilityCriteria"),
-        "cancer_type": derived.buckets,
+        "cancer_type": derived.buckets
+        + [t for t in extra_cancer_types if t not in derived.buckets],
         "cancer_type_derived": derived.buckets,
         "cancer_type_evidence": derived.evidence,
         "is_basket": derived.is_basket,

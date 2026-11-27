@@ -456,3 +456,22 @@ def test_the_search_term_map_no_longer_reaches_cancer_type():
         {"NCT00448552": ["Basal Cell Carcinoma"]},
     )
     assert row["cancer_type"] == []
+
+
+def test_extra_cancer_types_join_the_derived_label():
+    """ASH-cited trials carry heme tags the skin rules cannot derive."""
+    row = extract_processed_trial(
+        _raw(["Chronic Lymphocytic Leukaemia", "Melanoma"]),
+        "NCT04763083",
+        {},
+        extra_cancer_types=["Chronic Lymphocytic Leukemia"],
+    )
+    assert row["cancer_type"] == [CUTANEOUS, "Chronic Lymphocytic Leukemia"]
+    assert row["cancer_type_derived"] == [CUTANEOUS]
+
+
+def test_extra_cancer_type_already_derived_is_not_repeated():
+    row = extract_processed_trial(
+        _raw(["Metastatic Uveal Melanoma"]), "NCT06581406", {}, extra_cancer_types=[UVEAL]
+    )
+    assert row["cancer_type"] == [UVEAL]
