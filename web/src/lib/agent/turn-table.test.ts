@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { answerCounts } from './result-table';
-import { toTurnTable, withoutAskedPhase } from './turn-table';
+import { answerCounts, toResultTable } from './result-table';
+import { toStepTable, toTurnTable, withoutAskedPhase } from './turn-table';
 import { toTurnChart } from './turn-chart';
 
 const trials = {
@@ -1349,6 +1349,19 @@ describe('arm_outcomes answer tables', () => {
     expect(cell(table, 0, 'Response criteria')).toBe('not stated');
     expect(cell(table, 1, 'Response criteria')).toBe('IMWG');
     expect(cell(table, 2, 'Response criteria')).toBe('—');
+  });
+
+  it('a tool step draws arm_outcomes rows flattened, and other outputs as before', () => {
+    const outcomes = heme([
+      row({ trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+      row({ id: 2, arm_name: 'X', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+    ]);
+    const step = toStepTable(outcomes)!;
+    expect(keys(step)).not.toContain('values');
+    expect(keys(step)).not.toContain('trial');
+    expect(cell(step, 0, 'ORR')).toBe('63');
+    expect(cell(step, 1, 'Response criteria')).toBe('IMWG');
+    expect(toStepTable(trials)).toEqual(toResultTable(trials));
   });
 
   it('trial_outcomes tables are unchanged', () => {

@@ -618,6 +618,13 @@ function flattenOutput(output: unknown): { output: unknown; labels: string[] } {
 
 const isArmOutcomes = (output: unknown) => (output as { table?: unknown }).table === 'arm_outcomes';
 
+/** One tool step's own rows: `arm_outcomes` flattened like the answer table, anything else as returned. */
+export function toStepTable(output: unknown): ResultTable | null {
+  if (typeof output !== 'object' || output === null || !isArmOutcomes(output)) return toResultTable(output);
+  const heme = flattenOutput(output);
+  return toResultTable(heme.output, heme.labels);
+}
+
 /**
  * Every `arm_outcomes` read of a turn, as one output. A drug class is one read
  * per drug, and narrowed reads (`families`) can return the same arm twice, so
