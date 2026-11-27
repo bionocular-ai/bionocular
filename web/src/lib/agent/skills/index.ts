@@ -13,9 +13,20 @@
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { isHemeCancerType } from '@/lib/heme-cancers';
 
-export const SKILL_NAMES = ['trial-outcomes', 'trial-landscape', 'coverage-and-citation', 'standard-of-care'] as const;
+export const SKILL_NAMES = ['trial-outcomes', 'trial-landscape', 'coverage-and-citation', 'standard-of-care', 'heme-outcomes'] as const;
 export type SkillName = (typeof SKILL_NAMES)[number];
+
+/** Heme sessions swap the melanoma outcomes skill for the heme one, as `tablesFor` swaps the tables. */
+const HEME_SKILLS: readonly SkillName[] = ['heme-outcomes'];
+const MELANOMA_SKILLS: readonly SkillName[] = ['trial-outcomes'];
+
+/** The skills a session may load, by the database cancer type it is pinned to. */
+export function skillsFor(dbCancerType: string): [SkillName, ...SkillName[]] {
+  const heme = isHemeCancerType(dbCancerType);
+  return SKILL_NAMES.filter((name) => !(heme ? MELANOMA_SKILLS : HEME_SKILLS).includes(name)) as [SkillName, ...SkillName[]];
+}
 
 export interface Skill {
   name: SkillName;
@@ -61,8 +72,8 @@ export function loadSkill(name: SkillName): Skill {
 }
 
 /** One line per skill, for the system prompt. */
-export function describeSkills(): string {
-  return SKILL_NAMES.map((name) => {
+export function describeSkills(names: readonly SkillName[] = SKILL_NAMES): string {
+  return names.map((name) => {
     const { description } = loadSkill(name);
     return `- \`${name}\`: ${description}`;
   }).join('\n');

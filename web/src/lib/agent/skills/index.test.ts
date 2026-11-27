@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeSkills, loadSkill, parseSkill, SKILL_NAMES } from './index';
+import { describeSkills, loadSkill, parseSkill, SKILL_NAMES, skillsFor } from './index';
 
 describe('skills', () => {
   it('every registered skill loads from disk with a name, description and body', () => {
@@ -34,6 +34,20 @@ describe('skills', () => {
     // regimens, and the dose text of some carries formulation approval dates.
     expect(body).toContain('May be substituted');
     expect(body).toMatch(/`dose`/);
+  });
+
+  it('heme-outcomes parses and mentions criteria not stated', () => {
+    const { body } = loadSkill('heme-outcomes');
+    expect(body).toMatch(/criteria not stated/);
+    expect(body).toMatch(/criteria per the trial registry/);
+  });
+
+  it('offers heme-outcomes only in heme sessions', () => {
+    expect(skillsFor('Multiple Myeloma')).toContain('heme-outcomes');
+    expect(skillsFor('Cutaneous Melanoma')).not.toContain('heme-outcomes');
+    expect(describeSkills(skillsFor('Cutaneous Melanoma'))).not.toContain('heme-outcomes');
+    expect(skillsFor('Cutaneous Melanoma')).toContain('trial-outcomes');
+    expect(skillsFor('Multiple Myeloma')).not.toContain('trial-outcomes');
   });
 
   it('lists every skill for the system prompt, one line each', () => {

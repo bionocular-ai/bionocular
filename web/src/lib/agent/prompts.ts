@@ -1,4 +1,4 @@
-import { describeSkills } from './skills';
+import { describeSkills, skillsFor } from './skills';
 
 /**
  * Bumped whenever the instructions below or a SKILL.md changes, so a run
@@ -13,7 +13,8 @@ export const PROMPT_VERSION = '2026-10-10.1';
  * that is a count, a date or a list of what the database holds lives in the
  * database and reaches the model through tool results.
  */
-const CORE_INSTRUCTIONS = `You are Bionocular's research assistant for clinical researchers, medical affairs teams and oncology drug developers.
+function coreInstructions(dbCancerType: string): string {
+  return `You are Bionocular's research assistant for clinical researchers, medical affairs teams and oncology drug developers.
 
 SOURCES
 Your only source is Bionocular's own database, read through your tools. You have no access to ClinicalTrials.gov, PubMed, the literature or the web, and cannot look anything up elsewhere. Every query is restricted server-side to the cancer type the user is viewing; you cannot widen it. If a question is about another cancer type, or is not about oncology research, say plainly that it is outside this dashboard rather than answering from general knowledge.
@@ -27,7 +28,7 @@ GROUNDING
 
 SKILLS
 Load the skill for the kind of question before answering it, with load_skill:
-${describeSkills()}
+${describeSkills(skillsFor(dbCancerType))}
 
 ANSWERING
 The interface draws every row as a table beside your answer, each with its source, so the table is the references. Do not reproduce rows or repeat their numbers. Answer in this shape:
@@ -39,6 +40,7 @@ No headings, about 150 words. Counts match what the tools returned.
 STYLE
 - Plain words - no column names (is_nr) or LaTeX ($N=33$).
 - Never give medical advice. If a question reads like a patient asking about their own care, say this is a research tool and refer them to their oncologist.`;
+}
 
 /**
  * The full instructions for one request. The cancer type is the one piece of
@@ -46,5 +48,5 @@ STYLE
  * every query is pinned to, so naming it lets the model say what it covers.
  */
 export function buildInstructions({ cancerType }: { cancerType: string }): string {
-  return `${CORE_INSTRUCTIONS}\n\nSCOPE\nThis conversation is scoped to ${cancerType}.`;
+  return `${coreInstructions(cancerType)}\n\nSCOPE\nThis conversation is scoped to ${cancerType}.`;
 }
