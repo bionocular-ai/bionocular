@@ -240,6 +240,12 @@ export function missingTrialKeys(
   return requested.filter((id) => !present.has(id));
 }
 
+/** The two PostgREST filters `families` narrows rows with. */
+interface FamilyFilterable<Q> {
+  not(column: string, operator: string, value: unknown): Q;
+  or(filters: string): Q;
+}
+
 export interface AgentToolContext {
   userId: string;
   /** Dashboard slug, e.g. `cutaneous-melanoma`. Validated by the caller. */
@@ -442,7 +448,15 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         // a table read: 500 unfiltered `trial_landscape` rows measured 48k
         // tokens and carried 3 that mattered. The default window still allows an
         // unfiltered browse, which is how "what exists here" gets answered.
-        const narrowed = [nctIds, sponsor, phase, status, drug, funding, biomarker].some((f) => f !== undefined);
+        // `families` narrows rows too: only those reporting a selected family
+        // are read (see below), which is what fits a whole-cancer heme read.
+        const narrowed = [nctIds, sponsor, phase, status, drug, funding, biomarker, families].some(
+          (f) => f !== undefined,
+        );
+        const familiesHint =
+          table === 'arm_outcomes'
+            ? ' On arm_outcomes, pass `families` (or fewer of them) to keep only the rows and values the question needs.'
+            : '';
         if (!narrowed && limit > DEFAULT_ROWS && !spec.wholeRead) {
           const filters = supportedFilters(table);
           return {
@@ -458,7 +472,8 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
                   'registry join rather than a column on this table - or find the trials you ' +
                   'want in another table first and pass their NCT numbers as `nctIds`.'
                 : 'Narrow it, or find the trials you want in another table first and pass ' +
-                  'their NCT numbers as `nctIds`.'),
+                  'their NCT numbers as `nctIds`.') +
+              familiesHint,
           };
         }
 
@@ -490,6 +505,16 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         query = applyOrder(query, table);
         query = applyCancerScope(query, table, dbCancerType);
         if (nctIds) query = applyTrialKeys(query, table, nctIds);
+        // A row reporting none of the selected families would come back as
+        // identity columns alone - across a whole cancer type that is most of
+        // the result budget, measured.
+        const reportingFamilies = <Q extends FamilyFilterable<Q>>(q: Q): Q =>
+          !families
+            ? q
+            : families.length === 1
+              ? q.not(`values->${families[0]}`, 'is', null)
+              : q.or(families.map((f) => `values->${f}.not.is.null`).join(','));
+        query = reportingFamilies(query);
 
         const named: Array<[FilterName, string | readonly string[] | undefined]> = [
           ['sponsor', sponsor],
@@ -542,6 +567,8 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
             .from(table)
             .select(trialKeyColumn, { count: 'exact', head: true });
           unlinkedQuery = applyCancerScope(unlinkedQuery, table, dbCancerType);
+          // Counted over the same rows the result was drawn from.
+          unlinkedQuery = reportingFamilies(unlinkedQuery);
           const { count: unlinkedCount, error: unlinkedError } = await unlinkedQuery.is(trialKeyColumn, null);
           if (unlinkedError) {
             console.error('query_proprietary_data via-join count failed', {
@@ -622,7 +649,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
                   truncatedBy === 'turn_budget'
                     ? `Only ${rows.length} of ${matched} rows fit in what remains of this turn's result budget. Answer from what you have and say the result is partial; a narrower query may fit.`
                     : truncatedBy === 'size'
-                      ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.`
+                      ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.${familiesHint}`
                       : `You asked for ${rowLimit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
               }),
           ...(nctIds ? { trialKeyColumn: spec.trialKey?.column } : {}),

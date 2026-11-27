@@ -1372,8 +1372,74 @@ describe('heme sessions', () => {
     expect(coverage.matched).toBe(401);
     expect(coverage.truncatedBy).toBe('size');
     expect(coverage.hint).toBe(
-      `Only ${coverage.returned} of 401 rows fit in one result. Narrow the filters - do not present this as the full set.`,
+      `Only ${coverage.returned} of 401 rows fit in one result. Narrow the filters - do not present this as the full set. ` +
+        'On arm_outcomes, pass `families` (or fewer of them) to keep only the rows and values the question needs.',
     );
+  });
+
+  it('reads a whole cancer type narrowed by one family, keeping only rows that report it', async () => {
+    const tools = hemeTools({ arm_outcomes: { rows: [{ id: 'a1', response_rates: [{ field: 'ORR', value: '63' }] }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'arm_outcomes', families: ['response_rates'], limit: MAX_ROWS },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: true });
+    const query = fake.queries[0];
+    expect(query.limit).toBe(MAX_ROWS);
+    expect(query.filters).toContainEqual({ operator: 'not', column: 'values->response_rates', value: 'is.null' });
+  });
+
+  it('counts unlinked rows over the same family-reporting rows', async () => {
+    const tools = hemeTools({ arm_outcomes: { rows: [{ id: 'a1', nct_id: 'NCT00006368' }] } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'arm_outcomes', families: ['response_rates'], phase: 'PHASE3', limit: MAX_ROWS },
+      RUN_OPTIONS,
+    );
+
+    const unlinked = fake.queries.find((q) => q.head)!;
+    expect(unlinked.filters).toContainEqual({ operator: 'not', column: 'values->response_rates', value: 'is.null' });
+  });
+
+  it('keeps rows that report any of several families', async () => {
+    const tools = hemeTools({ arm_outcomes: { rows: [{ id: 'a1' }] } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'arm_outcomes', families: ['response_rates', 'survival_pfs_os'], limit: MAX_ROWS },
+      RUN_OPTIONS,
+    );
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'or',
+      column: '',
+      value: 'values->response_rates.not.is.null,values->survival_pfs_os.not.is.null',
+    });
+  });
+
+  it('reports a whole-cancer families read that still overflows as partial, pointing at families', async () => {
+    const rows = rowsOfSize(MAX_RESULT_CHARS * 2, 401);
+    const tools = hemeTools({ arm_outcomes: { rows, count: 401 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'arm_outcomes', families: ['regimen_drug'], limit: MAX_ROWS },
+      RUN_OPTIONS,
+    );
+
+    const { coverage } = result as { coverage: { complete: boolean; truncatedBy: string; hint: string } };
+    expect(coverage.complete).toBe(false);
+    expect(coverage.truncatedBy).toBe('size');
+    expect(coverage.hint).toMatch(/families/);
+  });
+
+  it('points an unfiltered arm_outcomes sweep at families', async () => {
+    const tools = hemeTools();
+
+    const result = await tools.query_proprietary_data.execute!({ table: 'arm_outcomes', limit: MAX_ROWS }, RUN_OPTIONS);
+
+    expect(result).toMatchObject({ ok: false, reason: 'unfiltered_sweep' });
+    expect((result as { hint: string }).hint).toMatch(/families/);
   });
 
   it('reads outcome_fields whole, with no cancer scope', async () => {

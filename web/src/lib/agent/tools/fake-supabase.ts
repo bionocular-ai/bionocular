@@ -9,7 +9,7 @@
  */
 
 export interface RecordedFilter {
-  operator: 'eq' | 'neq' | 'in' | 'contains' | 'overlaps' | 'ilike' | 'is';
+  operator: 'eq' | 'neq' | 'in' | 'contains' | 'overlaps' | 'ilike' | 'is' | 'not' | 'or';
   column: string;
   value: unknown;
 }
@@ -68,6 +68,10 @@ interface FakeQuery extends PromiseLike<{ data: unknown[] | null; error: unknown
   overlaps: (column: string, values: readonly unknown[]) => FakeQuery;
   ilike: (column: string, value: string) => FakeQuery;
   is: (column: string, value: null) => FakeQuery;
+  /** Recorded as PostgREST writes it: `not('c', 'is', null)` is value `is.null`. */
+  not: (column: string, operator: string, value: unknown) => FakeQuery;
+  /** Recorded with an empty column; the value is the raw `or=` filter list. */
+  or: (filters: string) => FakeQuery;
   order: (column: string, options: { ascending: boolean; nullsFirst: boolean }) => FakeQuery;
   /** Resolves the first fixture row rather than the array, as PostgREST does. */
   maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
@@ -133,6 +137,14 @@ export function createFakeSupabase(fixtures: Record<string, TableFixture> = {}):
       },
       is(column, value) {
         record.filters.push({ operator: 'is', column, value });
+        return query;
+      },
+      not(column, operator, value) {
+        record.filters.push({ operator: 'not', column, value: `${operator}.${String(value)}` });
+        return query;
+      },
+      or(filters) {
+        record.filters.push({ operator: 'or', column: '', value: filters });
         return query;
       },
       order(column, { ascending, nullsFirst }) {
