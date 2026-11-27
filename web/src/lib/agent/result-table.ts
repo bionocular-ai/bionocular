@@ -421,7 +421,12 @@ function formatEntry(value: unknown, label?: (raw: string) => string): string {
   return label && typeof value === 'string' ? label(value) : String(value);
 }
 
-export function toResultTable(output: unknown): ResultTable | null {
+/**
+ * `verbatim` names columns drawn exactly as keyed: their header is the key, and
+ * they are never pruned for being identical on every row (a shared response
+ * criterion or caveat is what the reader needs to see).
+ */
+export function toResultTable(output: unknown, verbatim: readonly string[] = []): ResultTable | null {
   if (typeof output !== 'object' || output === null) return null;
   const { ok, rows } = output as { ok?: unknown; rows?: unknown };
   if (ok !== true || !Array.isArray(rows) || rows.length === 0) return null;
@@ -456,13 +461,13 @@ export function toResultTable(output: unknown): ResultTable | null {
   const kept =
     rows.length > 1
       ? columns.filter(
-          (column) => ALWAYS_SHOWN.includes(column) || new Set(cells.get(column)).size > 1,
+          (column) => ALWAYS_SHOWN.includes(column) || verbatim.includes(column) || new Set(cells.get(column)).size > 1,
         )
       : columns;
   if (kept.length === 0) return null;
 
   return {
-    columns: kept.map((key) => ({ key, label: humanizeColumn(key) })),
+    columns: kept.map((key) => ({ key, label: verbatim.includes(key) ? key : humanizeColumn(key) })),
     rows: rows.map((_, rowIndex) => kept.map((column) => cells.get(column)![rowIndex])),
   };
 }

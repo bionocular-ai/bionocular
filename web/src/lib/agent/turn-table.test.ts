@@ -1217,6 +1217,39 @@ describe('arm_outcomes answer tables', () => {
     expect(cell(table, 1, 'Response criteria')).toBe('IMWG');
   });
 
+  it('headers are the field labels as written', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { survival_pfs_os: [{ field: 'mPFS', value: '1' }, { field: 'AE discontinuation', value: '2' }] } }),
+        row({ id: 2, arm_name: 'X', values: { survival_pfs_os: [{ field: 'mPFS', value: '3' }, { field: 'AE discontinuation', value: '4' }] } }),
+      ]),
+    ]);
+    const labels = table!.columns.map((c) => c.label);
+    expect(labels).toEqual(expect.arrayContaining(['mPFS', 'AE discontinuation']));
+  });
+
+  it('keeps columns identical on every row: shared criteria and caveats', () => {
+    const shared = { 'Response criteria': { value: 'IMWG', caveat: 'per abstract' } };
+    const table = toTurnTable([
+      heme([
+        row({ trial: shared, values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+        row({ id: 2, arm_name: 'X', trial: shared, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'Response criteria')).toBe('IMWG (per abstract)');
+    expect(cell(table, 1, 'Response criteria')).toBe('IMWG (per abstract)');
+  });
+
+  it('shows n beside the value, before the markers', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [{ field: 'ORR', value: '63', n: 165, origin: 'registry' }] } }),
+        row({ id: 2, arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'ORR')).toBe('63 (n=165) (registry)');
+  });
+
   it('draws no chart for arm_outcomes', () => {
     const table = toTurnTable([heme([row({ values: { response_rates: [{ field: 'ORR', value: '63' }] } }), row({ id: 2, arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '5' }] } })])])!;
     expect(table.parameters).toBeUndefined();

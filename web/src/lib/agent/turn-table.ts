@@ -523,15 +523,16 @@ interface HemeEntry {
   field?: unknown;
   value?: unknown;
   context?: unknown;
+  n?: unknown;
   origin?: unknown;
   caveat?: unknown;
 }
 
-/** The value as written, then what the reader must not lose: registry origin and caveat. */
-function hemeCell({ value, origin, caveat }: HemeEntry): string {
+/** The value as written, its n, then what the reader must not lose: registry origin and caveat. */
+function hemeCell({ value, n, origin, caveat }: HemeEntry): string {
   const notes = [origin === 'registry' ? 'registry' : null, typeof caveat === 'string' && caveat ? caveat : null];
   const note = notes.filter(Boolean).join('; ');
-  const text = formatCell(value);
+  const text = n === null || n === undefined || n === '' ? formatCell(value) : `${formatCell(value)} (n=${String(n)})`;
   return note ? `${text} (${note})` : text;
 }
 
@@ -579,9 +580,14 @@ function stripFolded(output: unknown, today: string): unknown {
   };
 }
 
-function flattenOutput(output: unknown): unknown {
+/** The flattened output and the label columns it added, which are drawn verbatim. */
+function flattenOutput(output: unknown): { output: unknown; labels: string[] } {
   const { rows, ...rest } = output as { rows?: unknown };
-  return Array.isArray(rows) ? { ...rest, rows: rows.map((row) => flattenArmOutcome(row as Row)) } : output;
+  if (!Array.isArray(rows)) return { output, labels: [] };
+  const flat = rows.map((row) => flattenArmOutcome(row as Row));
+  const original = new Set(rows.flatMap((row) => Object.keys(row as Row)));
+  const labels = [...new Set(flat.flatMap((row) => Object.keys(row)))].filter((key) => !original.has(key));
+  return { output: { ...rest, rows: flat }, labels };
 }
 
 export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultTable | null {
@@ -593,11 +599,9 @@ export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultT
   const answer = perArm[perArm.length - 1];
   if (answer && (answer as { table?: unknown }).table === 'trial_outcomes') return toOutcomesTable(answer);
   const drawOne = (output: unknown): ResultTable | null => {
-    const stripped = stripFolded(
-      (output as { table?: unknown }).table === 'arm_outcomes' ? flattenOutput(output) : output,
-      today,
-    );
-    const table = toResultTable(stripped);
+    const heme = (output as { table?: unknown }).table === 'arm_outcomes' ? flattenOutput(output) : null;
+    const stripped = stripFolded(heme ? heme.output : output, today);
+    const table = toResultTable(stripped, heme?.labels);
     return table && withSummary(table, rowsOf(stripped));
   };
   if (answer || successful.length === 1) return drawOne(answer ?? successful[0]);
