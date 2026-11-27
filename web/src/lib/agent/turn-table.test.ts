@@ -1313,6 +1313,44 @@ describe('arm_outcomes answer tables', () => {
     }
   });
 
+  it('hides row ids and keeps what an abstract is cited by', () => {
+    const table = toTurnTable([
+      heme([
+        row({ id: 'abstract_ASH_2025_251_arm_1', trial_outcome_id: 'abstract_ASH_2025_251_arm_1', source_type: 'abstract', abstract_drugs: 'Tec', source_id: 'ASH_2025_251', source_url: 'https://doi.org/1', values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+        row({ id: 'abstract_ASH_2025_252_all', trial_outcome_id: null, source_type: 'poster', abstract_drugs: 'Elra; Tec', source_id: 'ASH_2025_252', source_url: 'https://doi.org/2', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    for (const hidden of ['id', 'trial_outcome_id', 'source_type', 'abstract_drugs']) expect(keys(table)).not.toContain(hidden);
+    expect(cell(table, 0, 'source_id')).toBe('ASH_2025_251');
+    expect(cell(table, 1, 'source_url')).toBe('https://doi.org/2');
+  });
+
+  it('puts Response criteria first among trial labels and every trial label before the values', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [{ field: 'ORR', value: '63' }], survival_pfs_os: [{ field: 'mPFS', value: '9' }] } }),
+        row({ id: 2, arm_name: 'X', trial: { 'Trial name': { value: 'MajesTEC-1' }, 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    const order = keys(table);
+    expect(order.indexOf('Response criteria')).toBeLessThan(order.indexOf('Trial name'));
+    expect(order.indexOf('Trial name')).toBeLessThan(order.indexOf('ORR'));
+    expect(order.indexOf('Trial name')).toBeLessThan(order.indexOf('mPFS'));
+  });
+
+  it('says criteria are not stated for a row with response rates and no criteria', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+        row({ id: 2, arm_name: 'X', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+        row({ id: 3, arm_name: 'Y', values: { survival_pfs_os: [{ field: 'mPFS', value: '9' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'Response criteria')).toBe('not stated');
+    expect(cell(table, 1, 'Response criteria')).toBe('IMWG');
+    expect(cell(table, 2, 'Response criteria')).toBe('—');
+  });
+
   it('trial_outcomes tables are unchanged', () => {
     const outcomes = { ok: true, table: 'trial_outcomes', rows: [
       { nct_id: 'NCT1', arm_name: 'A', num_patients: 10, orr: 40, median_pfs: 5.5, line_of_treatment: '1L' },

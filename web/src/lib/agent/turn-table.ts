@@ -519,6 +519,10 @@ function caveatOf(
   return sentences.length > 0 ? sentences.join(' ') : undefined;
 }
 
+/** Row ids, source type and the drug-filter column: none is cited, so none is drawn. */
+const HIDDEN_ARM_COLUMNS = ['id', 'trial_outcome_id', 'source_type', 'abstract_drugs'];
+const CRITERIA = 'Response criteria';
+
 interface HemeEntry {
   field?: unknown;
   value?: unknown;
@@ -542,15 +546,24 @@ function hemeCell({ value, n, origin, caveat }: HemeEntry): string {
  * label that repeats in one row (two ORR readings) joins with `; `; an entry's
  * `context` goes into the column name, so "ORR (patients with t(4;14))" is its
  * own column rather than a second value under "ORR".
+ *
+ * Row ids are dropped: the skill forbids citing them, and `source_id` and
+ * `source_url` already say which abstract a row is. A row with response rates
+ * but no criteria reads "not stated" rather than the empty mark, since the
+ * reader has to know the rate was not qualified, not that a cell is missing.
  */
 export function flattenArmOutcome(row: Row): Row {
   const { trial, values, ...rest } = row;
+  for (const column of HIDDEN_ARM_COLUMNS) delete rest[column];
   const columns = new Map<string, string[]>();
   const add = (label: string, cell: string) => columns.set(label, [...(columns.get(label) ?? []), cell]);
 
   if (typeof trial === 'object' && trial !== null) {
     for (const [label, entry] of Object.entries(trial)) add(label, hemeCell(entry as HemeEntry));
   }
+  const rates = (values as Row | null | undefined)?.response_rates;
+  const criteria = (trial as Record<string, HemeEntry> | null | undefined)?.[CRITERIA]?.value;
+  if (Array.isArray(rates) && rates.length > 0 && formatCell(criteria) === ABSENT) columns.set(CRITERIA, ['not stated']);
   if (typeof values === 'object' && values !== null) {
     for (const entries of Object.values(values)) {
       if (!Array.isArray(entries)) continue;
@@ -580,14 +593,27 @@ function stripFolded(output: unknown, today: string): unknown {
   };
 }
 
-/** The flattened output and the label columns it added, which are drawn verbatim. */
+/**
+ * The flattened output and the label columns it added, which are drawn verbatim.
+ * Trial labels, Response criteria first, lead the values on every row: column
+ * order is discovered row by row, so one row's values would otherwise land
+ * ahead of the next row's trial labels.
+ */
 function flattenOutput(output: unknown): { output: unknown; labels: string[] } {
   const { rows, ...rest } = output as { rows?: unknown };
   if (!Array.isArray(rows)) return { output, labels: [] };
   const flat = rows.map((row) => flattenArmOutcome(row as Row));
   const original = new Set(rows.flatMap((row) => Object.keys(row as Row)));
-  const labels = [...new Set(flat.flatMap((row) => Object.keys(row)))].filter((key) => !original.has(key));
-  return { output: { ...rest, rows: flat }, labels };
+  const keys = [...new Set(flat.flatMap((row) => Object.keys(row)))];
+  const labels = keys.filter((key) => !original.has(key));
+  const trialLabels = [...new Set([CRITERIA, ...rows.flatMap((row) => Object.keys(((row as Row).trial as Row | null) ?? {}))])];
+  const order = [
+    ...keys.filter((key) => original.has(key)),
+    ...trialLabels.filter((key) => labels.includes(key)),
+    ...labels.filter((key) => !trialLabels.includes(key)),
+  ];
+  const ordered = flat.map((row) => Object.fromEntries(order.map((key) => [key, row[key]])));
+  return { output: { ...rest, rows: ordered }, labels };
 }
 
 const isArmOutcomes = (output: unknown) => (output as { table?: unknown }).table === 'arm_outcomes';
