@@ -1,0 +1,139 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`tool description text > melanoma tool description is byte-identical to main 1`] = `
+"Query Bionocular's own oncology database. This is the only source of data available - there is no live registry or literature lookup. Every query is automatically restricted to the dashboard's cancer type, so do not ask for one.
+
+Tables:
+- \`clinical_trials\`: trial registry mirror - one row per trial, with our cancer-type tagging (trial key: nct_id; filters: sponsor, phase, status, funding)
+- \`trial_landscape\`: curated treatment landscape - interventional trials only, one row per trial, with treatment, modality, biomarker, stage and line of therapy (trial key: nct_id; filters: drug, biomarker (phase, status, funding via clinical_trials))
+- \`trial_outcomes\`: extracted efficacy and safety endpoints, one row per treatment arm, from conference abstracts and publications (trial key: nct_id; filters: sponsor, drug (phase, status, funding via clinical_trials))
+- \`km_curves\`: digitised Kaplan-Meier survival curves reconstructed from published figures (trial key: nct_id; filters: drug (phase, status, funding via clinical_trials))
+- \`news_feed\`: scraped oncology news and conference coverage (trial key: nct_ids; filters: drug)
+- \`approved_therapies\`: NCCN-listed therapies and whether each is FDA-approved for this cancer type (no trial key; filters: drug, biomarker)
+
+Filters are named parameters, not column expressions; one marked "via clinical_trials" above joins through the trial registry instead of reading a column on that table, so it excludes rows with no nct_id - \`coverage.viaJoin\` reports how many that excluded.
+
+Returns at most 500 rows, and every result carries a coverage report: \`matched\` is how many rows exist in total, \`returned\` is how many you got, and \`complete\` says whether you are looking at all of them. When \`complete\` is false, either re-run with a higher \`limit\` or narrow the filters - and never describe a partial result as if it were the full set. To sweep a whole filtered set in one call, ask for limit 500 - a limit above 25 needs at least one filter, because unfiltered it reads the table end to end. The whole turn shares one result budget; once it is spent, further calls return coverage counts but no rows."
+`;
+
+exports[`tool description text > melanoma tool description is byte-identical to main 2`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "biomarker": {
+      "description": "Substring match on the curated biomarker label, e.g. BRAF, PD-L1.",
+      "minLength": 2,
+      "type": "string",
+    },
+    "columns": {
+      "description": "trial_outcomes only: the endpoint columns the question names, in the order it names them (e.g. \`median_pfs\`, \`grade_3_plus_teae_pct\`). The interface draws these first, and draws the same adverse-event measures under AE, TEAE and TRAE when the named class is missing on most arms. Always selected, whatever \`detail\` says.",
+      "items": {
+        "type": "string",
+      },
+      "maxItems": 5,
+      "minItems": 1,
+      "type": "array",
+    },
+    "detail": {
+      "description": "\`concise\` (default) carries the columns an answer is usually built from; \`detailed\` is the table's full column set - on trial_outcomes, every efficacy and safety endpoint.",
+      "enum": [
+        "concise",
+        "detailed",
+      ],
+      "type": "string",
+    },
+    "drug": {
+      "description": "Substring match on the treatment or arm name for this table (on news_feed, the headline).",
+      "minLength": 2,
+      "type": "string",
+    },
+    "endpoints": {
+      "description": "Which half of trial_outcomes the question is about; the other half is left out. Defaults to \`both\`. No effect on the other tables.",
+      "enum": [
+        "efficacy",
+        "safety",
+        "both",
+      ],
+      "type": "string",
+    },
+    "funding": {
+      "description": "Who sponsors the trial, as the registry classes it. Not the same as \`sponsor\`, which matches the sponsor's name as a substring - asking for sponsor "industry" matches nothing. \`industry\` is lead_sponsor_class INDUSTRY; \`non-industry\` is every other class (NIH, NETWORK, OTHER_GOV, FED, OTHER). Direct on clinical_trials; resolved via the join named above on the other tables.",
+      "enum": [
+        "industry",
+        "non-industry",
+      ],
+      "type": "string",
+    },
+    "limit": {
+      "default": 25,
+      "description": "Raise toward 500 when the user asks for a complete set.",
+      "maximum": 500,
+      "minimum": 1,
+      "type": "integer",
+    },
+    "nctIds": {
+      "description": "Restrict to these trials. Pass the whole set at once - this is how you enrich a result from another table (e.g. the NCT numbers of every Phase 3 trial) without reading a table end to end.",
+      "items": {
+        "pattern": "^NCT\\d{8}$",
+        "type": "string",
+      },
+      "maxItems": 100,
+      "minItems": 1,
+      "type": "array",
+    },
+    "phase": {
+      "description": "Direct on clinical_trials; resolved via the join named above on the other tables that support it.",
+      "enum": [
+        "EARLY_PHASE1",
+        "PHASE1",
+        "PHASE2",
+        "PHASE3",
+        "PHASE4",
+        "NA",
+      ],
+      "type": "string",
+    },
+    "sponsor": {
+      "description": "Substring match on the sponsor name.",
+      "minLength": 2,
+      "type": "string",
+    },
+    "status": {
+      "description": "Direct on clinical_trials; resolved via the join named above on the other tables that support it. Recruitment status; several values match any of them. Trials still under way are RECRUITING, ACTIVE_NOT_RECRUITING, NOT_YET_RECRUITING and ENROLLING_BY_INVITATION.",
+      "items": {
+        "enum": [
+          "RECRUITING",
+          "NOT_YET_RECRUITING",
+          "ACTIVE_NOT_RECRUITING",
+          "COMPLETED",
+          "TERMINATED",
+          "SUSPENDED",
+          "WITHDRAWN",
+          "ENROLLING_BY_INVITATION",
+          "UNKNOWN",
+        ],
+        "type": "string",
+      },
+      "minItems": 1,
+      "type": "array",
+    },
+    "table": {
+      "enum": [
+        "clinical_trials",
+        "trial_landscape",
+        "trial_outcomes",
+        "km_curves",
+        "news_feed",
+        "approved_therapies",
+      ],
+      "type": "string",
+    },
+  },
+  "required": [
+    "table",
+    "limit",
+  ],
+  "type": "object",
+}
+`;

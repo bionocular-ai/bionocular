@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
 import { createFakeSupabase, type FakeSupabase, type TableFixture } from './fake-supabase';
 import {
   AGENT_TABLES,
@@ -914,6 +915,16 @@ describe('trial_outcomes projection', () => {
 });
 
 describe('tool description text', () => {
+  // Generated from main before heme sessions existed: a melanoma session must
+  // send the model exactly what it sent then - description, table enum and
+  // every parameter.
+  it('melanoma tool description is byte-identical to main', () => {
+    const tools = toolsWith();
+
+    expect(tools.query_proprietary_data.description).toMatchSnapshot();
+    expect(z.toJSONSchema(tools.query_proprietary_data.inputSchema as unknown as z.ZodType)).toMatchSnapshot();
+  });
+
   it('tells the model a via-filter joins through the registry and what that excludes', () => {
     const tools = toolsWith();
 
@@ -1072,7 +1083,7 @@ describe('via joins', () => {
   });
 
   it('names via-filters distinctly from a table\'s own filters in the tool description', () => {
-    const text = describeTables();
+    const text = describeTables(AGENT_TABLE_NAMES);
 
     expect(text).toContain('filters: sponsor, drug (phase, status, funding via clinical_trials)');
     expect(text).toContain('filters: drug (phase, status, funding via clinical_trials)');
@@ -1247,6 +1258,163 @@ describe('via joins through the real tool entry point', () => {
     const { coverage } = result as { coverage: { viaJoin?: { unlinked?: number; hint: string } } };
     expect(coverage.viaJoin?.unlinked).toBeUndefined();
     expect(coverage.viaJoin?.hint).toMatch(/no nct_id/i);
+  });
+});
+
+describe('heme sessions', () => {
+  // MAX_ROWS in supabase.ts; not exported.
+  const MAX_ROWS = 500;
+
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  function hemeTools(fixtures: Record<string, TableFixture> = {}) {
+    fake = createFakeSupabase(fixtures);
+    return buildSupabaseTools({ ...REQUEST, cancerSlug: 'multiple-myeloma', turn: createTurnState() });
+  }
+
+  const schemaOf = (tools: ReturnType<typeof hemeTools>) =>
+    tools.query_proprietary_data.inputSchema as unknown as z.ZodType;
+
+  it('tool enum rejects trial_outcomes in a heme session', () => {
+    const schema = schemaOf(hemeTools());
+
+    expect(schema.safeParse({ table: 'trial_outcomes' }).success).toBe(false);
+    expect(schema.safeParse({ table: 'km_curves' }).success).toBe(false);
+    expect(schema.safeParse({ table: 'arm_outcomes' }).success).toBe(true);
+    expect(schema.safeParse({ table: 'arm_outcomes', families: ['response_rates', 'registry'] }).success).toBe(true);
+  });
+
+  it('describes arm_outcomes and outcome_fields, not the melanoma outcome tables', () => {
+    const { description } = hemeTools().query_proprietary_data;
+
+    expect(description).toContain('`arm_outcomes`');
+    expect(description).toContain('`outcome_fields`');
+    expect(description).not.toContain('`trial_outcomes`');
+    expect(description).not.toContain('`km_curves`');
+  });
+
+  it('scopes arm_outcomes to the cancer type and resolves phase through the registry join', async () => {
+    const tools = hemeTools({ arm_outcomes: { rows: [{ id: 'a1', nct_id: 'NCT00006368' }] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'arm_outcomes', phase: 'PHASE3', limit: 10 }, RUN_OPTIONS);
+
+    const query = fake.queries[0];
+    expect(query.table).toBe('arm_outcomes');
+    expect(query.filters).toContainEqual({ operator: 'contains', column: 'cancer_type', value: ['Multiple Myeloma'] });
+    expect(query.filters).toContainEqual({ operator: 'contains', column: 'clinical_trials.phases', value: ['PHASE3'] });
+    expect(query.projection).toContain(',clinical_trials!inner(phases)');
+    expect(query.order.map((o) => o.column)).toEqual(['source_id', 'id']);
+  });
+
+  it('filters arm_outcomes by drug on every drug the abstract names', async () => {
+    const tools = hemeTools({ arm_outcomes: { rows: [{ id: 'a1' }] } });
+
+    await tools.query_proprietary_data.execute!({ table: 'arm_outcomes', drug: 'teclistamab', limit: 10 }, RUN_OPTIONS);
+
+    expect(fake.queries[0].filters).toContainEqual({
+      operator: 'ilike',
+      column: 'abstract_drugs',
+      value: '%teclistamab%',
+    });
+  });
+
+  it('families narrows the select', async () => {
+    const tools = hemeTools({ arm_outcomes: { rows: [{ id: 'a1' }] } });
+
+    await tools.query_proprietary_data.execute!(
+      { table: 'arm_outcomes', families: ['response_rates'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    const columns = fake.queries[0].projection.split(',').map((c) => c.trim());
+    expect(columns).toContain('values->response_rates');
+    expect(columns).not.toContain('values');
+    expect(columns).toContain('trial');
+  });
+
+  it('re-nests narrowed families under values, the shape an un-narrowed read has', async () => {
+    // PostgREST returns each `values->family` path as a top-level key.
+    const response = [{ field: 'ORR', value: '63' }];
+    const tools = hemeTools({
+      arm_outcomes: {
+        rows: [
+          { id: 'a1', arm_name: 'Arm A', response_rates: response, safety_overall: null },
+          { id: 'a2', arm_name: 'Arm B', response_rates: null, safety_overall: null },
+        ],
+      },
+    });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'arm_outcomes', families: ['response_rates', 'safety_overall'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect((result as { rows: unknown[] }).rows).toEqual([
+      { id: 'a1', arm_name: 'Arm A', values: { response_rates: response } },
+      { id: 'a2', arm_name: 'Arm B', values: {} },
+    ]);
+  });
+
+  it('arm_outcomes partial read reports coverage', async () => {
+    const rows = rowsOfSize(MAX_RESULT_CHARS * 2, 401);
+    const tools = hemeTools({ arm_outcomes: { rows, count: 401 } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'arm_outcomes', drug: 'teclistamab', limit: MAX_ROWS },
+      RUN_OPTIONS,
+    );
+
+    const { coverage } = result as { coverage: { complete: boolean; matched: number; returned: number; truncatedBy: string; hint: string } };
+    expect(coverage.complete).toBe(false);
+    expect(coverage.matched).toBe(401);
+    expect(coverage.truncatedBy).toBe('size');
+    expect(coverage.hint).toBe(
+      `Only ${coverage.returned} of 401 rows fit in one result. Narrow the filters - do not present this as the full set.`,
+    );
+  });
+
+  it('reads outcome_fields whole, with no cancer scope', async () => {
+    const tools = hemeTools({ outcome_fields: { rows: [{ label: 'ORR', family: 'response_rates' }], count: 1 } });
+
+    const result = await tools.query_proprietary_data.execute!({ table: 'outcome_fields', limit: MAX_ROWS }, RUN_OPTIONS);
+
+    expect(result).toMatchObject({ ok: true });
+    const query = fake.queries[0];
+    expect(query.filters).toEqual([]);
+    expect(query.limit).toBe(MAX_ROWS);
+    expect(query.projection).toBe('label, family, value_type, definition');
+  });
+
+  it('families on trial_outcomes is refused', async () => {
+    const tools = toolsWith({ trial_outcomes: { rows: [{ id: 't1' }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'trial_outcomes', families: ['response_rates'], limit: 10 },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: 'unsupported_filter', filter: 'families' });
+    expect((result as { hint: string }).hint).toMatch(/arm_outcomes/);
+    expect(fake.queries).toHaveLength(0);
+  });
+
+  it.each([
+    ['columns', { columns: ['median_pfs'] }],
+    ['endpoints', { endpoints: 'safety' as const }],
+  ])('refuses %s on arm_outcomes', async (filter, extra) => {
+    const tools = hemeTools({ arm_outcomes: { rows: [{ id: 'a1' }] } });
+
+    const result = await tools.query_proprietary_data.execute!(
+      { table: 'arm_outcomes', limit: 10, ...extra },
+      RUN_OPTIONS,
+    );
+
+    expect(result).toMatchObject({ ok: false, reason: 'unsupported_filter', filter });
+    expect((result as { hint: string }).hint).toMatch(/families/);
+    expect(fake.queries).toHaveLength(0);
   });
 });
 
