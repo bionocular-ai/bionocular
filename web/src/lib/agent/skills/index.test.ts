@@ -57,6 +57,16 @@ describe('skills', () => {
     expect(body).toMatch(/or a family key/);
   });
 
+  // Follicular lymphoma, "all active phase 3 trials": the answer said "All 4"
+  // while the registry holds 29. A heme session's registry rows are only the
+  // trials its abstracts cite.
+  it('heme-outcomes scopes every trial count or list to the abstracts', () => {
+    const { body, description } = loadSkill('heme-outcomes');
+    expect(description).toMatch(/counting or listing trials/);
+    expect(body).toMatch(/only the trials an abstract\s+in `arm_outcomes` cites/);
+    expect(body).toMatch(/Never write "all trials"/);
+  });
+
   it('offers heme-outcomes only in heme sessions', () => {
     expect(skillsFor('Multiple Myeloma')).toContain('heme-outcomes');
     expect(skillsFor('Cutaneous Melanoma')).not.toContain('heme-outcomes');

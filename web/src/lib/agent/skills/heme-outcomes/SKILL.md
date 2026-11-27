@@ -1,6 +1,6 @@
 ---
 name: heme-outcomes
-description: How to read `arm_outcomes` rows in a hematology session - response criteria, denominators, pooled "All arms" rows, contexts, NR and qualifiers, registry origin. Load before answering any question about response, ORR or CR, survival, PFS or OS, adverse events, or comparing arms.
+description: How to read `arm_outcomes` rows in a hematology session - response criteria, denominators, pooled "All arms" rows, contexts, NR and qualifiers, registry origin. Load before answering any question about response, ORR or CR, survival, PFS or OS, adverse events, comparing arms, or counting or listing trials.
 ---
 
 # Heme outcomes
@@ -27,6 +27,16 @@ interpreting it; do not guess from the label.
   inhibitors), query `arm_outcomes` once per drug you know in it, by `drug`;
   no other table maps drugs to classes.
 - A read over budget comes back partial with `coverage`. Say what was left out.
+
+## Trial scope
+
+- In a hematology session `clinical_trials` holds only the trials an abstract
+  in `arm_outcomes` cites, not the whole registry. Every count or list of
+  trials covers those trials only.
+- Whenever the answer counts or lists trials, say so, naming the meeting from
+  the abstracts' `source_id` (ASH_2025_256 is ASH 2025): "4 active Phase 3
+  trials with ASH 2025 data". Never write "all trials" or "all 4 Phase 3
+  trials".
 
 ## Reading response rates
 

@@ -24,6 +24,25 @@ describe('approved-rp1 answerNot', () => {
   });
 });
 
+// Golden case heme-fl-active-phase3-scope: "All 4 active Phase 3 trials" when
+// the registry holds 29 - a heme clinical_trials holds only the trials ASH
+// 2025 abstracts cite.
+describe('heme-fl-active-phase3-scope answer checks', () => {
+  const { answer, answerNot } = byId('heme-fl-active-phase3-scope').expect;
+
+  it('requires the ASH 2025 scope', () => {
+    expect(answer!.test('Four active Phase 3 trials with ASH 2025 data report CR, PFS or OS.')).toBe(true);
+    expect(answer!.test('Trials cited by ASH-2025 abstracts.')).toBe(true);
+    expect(answer!.test('Four active Phase 3 trials report CR, PFS or OS.')).toBe(false);
+  });
+
+  it('rejects an answer that claims every trial', () => {
+    expect(answerNot!.test('All 4 active Phase 3 trials report CR.')).toBe(true);
+    expect(answerNot!.test('all phase 3 trials')).toBe(true);
+    expect(answerNot!.test('4 active Phase 3 trials with ASH 2025 data, not all trials in the registry.')).toBe(false);
+  });
+});
+
 function observed(over: Partial<Observed> = {}): Observed {
   return { calls: [], outputs: [], skillsLoaded: [], answer: 'An answer.', ungrounded: [], fastPath: null, ...over };
 }

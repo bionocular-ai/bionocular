@@ -60,6 +60,7 @@ const CM = 'cutaneous-melanoma';
 const MM = 'multiple-myeloma';
 const AML = 'acute-myeloid-leukemia';
 const DLBCL = 'diffuse-large-b-cell-lymphoma';
+const FL = 'follicular-lymphoma';
 
 export const REFUSAL = /outside|not (cover|part of|within)|only cover|this dashboard|scoped to|cannot help with/i;
 export const ABSENCE = /no (record|rows?|data|results?|outcome|reported|match)|not (in|found|available|reported|present|have)|don't have|do not have|nothing (matched|found)|unavailable/i;
@@ -511,6 +512,22 @@ export const GOLDEN_CASES: EvalCase[] = [
       skills: ['heme-outcomes'],
       filter: { table: 'arm_outcomes', args: { drug: /epcoritamab/i } },
       maxToolCalls: 5,
+    },
+  },
+  {
+    // Pinned from a live run: "All 4 active Phase 3 trials" while the registry
+    // holds 29. A heme session's clinical_trials holds only the trials ASH
+    // 2025 abstracts cite, so every count says that scope.
+    id: 'heme-fl-active-phase3-scope',
+    category: 'grounding',
+    cancerSlug: FL,
+    question: 'show me efficacy CR, PFS, OS for all active phase 3 trials in Follicular Lymphoma',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes' },
+      answer: /ASH(\s|-)?2025/i,
+      answerNot: /\ball (\d+ )?(active )?phase 3 trials\b/i,
+      maxToolCalls: 6,
     },
   },
   {
