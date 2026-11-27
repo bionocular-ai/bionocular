@@ -237,10 +237,10 @@ describe('lookup_trial per session', () => {
 
     const result = await tools.lookup_trial.execute!({ nctId: 'NCT00006368' }, RUN_OPTIONS);
 
-    expect(fake.queries.map((q) => q.table)).toEqual(['clinical_trials', 'trial_landscape', 'news_feed', 'arm_outcomes']);
+    expect(fake.queries.map((q) => q.table)).toEqual(['clinical_trials', 'arm_outcomes']);
     const { coverage } = result as { coverage: { presentIn: string[]; absentFrom: string[] } };
     expect(coverage.presentIn).toEqual(['clinical_trials', 'arm_outcomes']);
-    expect(coverage.absentFrom).toEqual(['trial_landscape', 'news_feed']);
+    expect(coverage.absentFrom).toEqual([]);
   });
 
   it('trims arm_outcomes rows to fit the budget like any other table', () => {

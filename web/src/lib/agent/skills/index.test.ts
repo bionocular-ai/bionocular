@@ -58,6 +58,10 @@ describe('skills', () => {
     expect(skillsFor('Multiple Myeloma')).not.toContain('trial-outcomes');
   });
 
+  it('heme sessions drop the skills for tables they are not offered', () => {
+    expect(skillsFor('Multiple Myeloma')).toEqual(['coverage-and-citation', 'heme-outcomes']);
+  });
+
   it('lists every skill for the system prompt, one line each', () => {
     const lines = describeSkills().split('\n');
     expect(lines).toHaveLength(SKILL_NAMES.length);

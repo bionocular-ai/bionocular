@@ -546,16 +546,17 @@ export const AGENT_TABLE_NAMES = Object.keys(TABLE_DEFINITIONS) as [AgentTable, 
 
 export const HEME_TABLE_NAMES = Object.keys(HEME_TABLE_DEFINITIONS) as AgentTable[];
 
-/** Replaced in heme sessions by the heme outcome tables. */
-const MELANOMA_OUTCOME_TABLES: readonly AgentTable[] = ['trial_outcomes', 'km_curves'];
+/**
+ * The melanoma tables a heme session keeps: only the registry holds heme rows.
+ * The curated landscape, approvals and news hold none, and offering them sent
+ * the model on empty queries. Add a table here once it carries heme data.
+ */
+const HEME_SHARED_TABLES: readonly AgentTable[] = ['clinical_trials'];
 
 /** The tables a session for this cancer type may query. */
 export function tablesFor(dbCancerType: string): [AgentTable, ...AgentTable[]] {
   if (!isHemeCancerType(dbCancerType)) return AGENT_TABLE_NAMES;
-  return [
-    ...AGENT_TABLE_NAMES.filter((name) => !MELANOMA_OUTCOME_TABLES.includes(name)),
-    ...HEME_TABLE_NAMES,
-  ] as [AgentTable, ...AgentTable[]];
+  return [...HEME_SHARED_TABLES, ...HEME_TABLE_NAMES] as [AgentTable, ...AgentTable[]];
 }
 
 /**

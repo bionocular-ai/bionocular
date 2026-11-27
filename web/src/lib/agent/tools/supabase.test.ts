@@ -1283,6 +1283,9 @@ describe('heme sessions', () => {
 
     expect(schema.safeParse({ table: 'trial_outcomes' }).success).toBe(false);
     expect(schema.safeParse({ table: 'km_curves' }).success).toBe(false);
+    for (const table of ['trial_landscape', 'news_feed', 'approved_therapies']) {
+      expect(schema.safeParse({ table }).success, table).toBe(false);
+    }
     expect(schema.safeParse({ table: 'arm_outcomes' }).success).toBe(true);
     expect(schema.safeParse({ table: 'arm_outcomes', families: ['response_rates', 'registry'] }).success).toBe(true);
   });

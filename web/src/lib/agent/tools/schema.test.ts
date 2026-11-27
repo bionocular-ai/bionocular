@@ -2,15 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { AGENT_TABLE_NAMES, describeTables, tablesFor } from './schema';
 
 describe('tablesFor', () => {
-  it('tablesFor heme swaps outcome tables', () => {
-    expect(tablesFor('Multiple Myeloma')).toEqual([
-      'clinical_trials',
-      'trial_landscape',
-      'news_feed',
-      'approved_therapies',
-      'arm_outcomes',
-      'outcome_fields',
-    ]);
+  it('tablesFor heme offers only the tables that hold heme data', () => {
+    expect(tablesFor('Multiple Myeloma')).toEqual(['clinical_trials', 'arm_outcomes', 'outcome_fields']);
   });
 
   it('tablesFor melanoma is unchanged', () => {

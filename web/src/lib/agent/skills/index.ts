@@ -18,14 +18,17 @@ import { isHemeCancerType } from '@/lib/heme-cancers';
 export const SKILL_NAMES = ['trial-outcomes', 'trial-landscape', 'coverage-and-citation', 'standard-of-care', 'heme-outcomes'] as const;
 export type SkillName = (typeof SKILL_NAMES)[number];
 
-/** Heme sessions swap the melanoma outcomes skill for the heme one, as `tablesFor` swaps the tables. */
+/**
+ * Heme sessions drop the skills for tables `tablesFor` does not offer them
+ * (outcomes, landscape, approvals) and gain the heme outcomes skill.
+ */
 const HEME_SKILLS: readonly SkillName[] = ['heme-outcomes'];
-const MELANOMA_SKILLS: readonly SkillName[] = ['trial-outcomes'];
+const MELANOMA_ONLY_SKILLS: readonly SkillName[] = ['trial-outcomes', 'trial-landscape', 'standard-of-care'];
 
 /** The skills a session may load, by the database cancer type it is pinned to. */
 export function skillsFor(dbCancerType: string): [SkillName, ...SkillName[]] {
   const heme = isHemeCancerType(dbCancerType);
-  return SKILL_NAMES.filter((name) => !(heme ? MELANOMA_SKILLS : HEME_SKILLS).includes(name)) as [SkillName, ...SkillName[]];
+  return SKILL_NAMES.filter((name) => !(heme ? MELANOMA_ONLY_SKILLS : HEME_SKILLS).includes(name)) as [SkillName, ...SkillName[]];
 }
 
 export interface Skill {
