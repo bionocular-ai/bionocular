@@ -28,6 +28,20 @@ def _row(
 # --- what counts as a change ----------------------------------------------
 
 
+def test_heme_tags_of_an_ash_cited_trial_are_kept() -> None:
+    """The sync adds them on purpose; promoting derived alone would strip them."""
+    cll = "Chronic Lymphocytic Leukemia"
+    rows = [
+        _row("NCT04763083", ["Cutaneous Melanoma", cll], ["Cutaneous Melanoma"]),
+        _row("NCT05289167", [], []),
+    ]
+    heme = {"NCT04763083": [cll], "NCT05289167": ["Acute Myeloid Leukemia"]}
+    (change,) = plan_promotions(rows, heme)
+    assert change["nct_id"] == "NCT05289167"
+    assert change["after"] == ["Acute Myeloid Leukemia"]
+    assert not change["empties"]
+
+
 def test_a_row_already_agreeing_is_not_a_write() -> None:
     rows = [_row("NCT00000001", ["Uveal Melanoma"], ["Uveal Melanoma"])]
     assert plan_promotions(rows) == []
