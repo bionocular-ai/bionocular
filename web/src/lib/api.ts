@@ -54,10 +54,11 @@ export function getDbCancerType(slug: string): string {
     'basal-cell-carcinoma': 'Basal Cell Carcinoma',
     'merkel-cell-carcinoma': 'Merkel Cell Carcinoma',
   };
-  return map[slug] || slug;
+  return map[slug] || HEME_SLUG_TO_DB[slug] || slug;
 }
 
 import { normalizePhase, normalizeStatus } from './clinical-trials-enums';
+import { HEME_SLUG_TO_DB } from './heme-cancers';
 import { GRADE_3_PLUS_TERMS } from './agent/tools/schema';
 export { PHASE_MAP, STATUS_MAP, normalizePhase, normalizeStatus } from './clinical-trials-enums';
 

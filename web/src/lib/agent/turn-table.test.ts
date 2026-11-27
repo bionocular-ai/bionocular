@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { answerCounts } from './result-table';
-import { toTurnTable, withoutAskedPhase } from './turn-table';
+import { ABSENT, answerCounts, toResultTable } from './result-table';
+import { toStepTable, toTurnTable, withoutAskedPhase } from './turn-table';
+import { toTurnChart } from './turn-chart';
 
 const trials = {
   ok: true,
@@ -1166,5 +1167,264 @@ describe('answerCounts', () => {
     const landscape = { ok: true, table: 'clinical_trials', rows: [{ nct_id: 'NCT1', phase: 'PHASE1' }] };
 
     expect(answerCounts(toTurnTable([landscape], today)!)).toBeNull();
+  });
+});
+
+describe('arm_outcomes answer tables', () => {
+  const heme = (rows: unknown[]) => ({ ok: true, table: 'arm_outcomes', rows });
+  const row = (over: Record<string, unknown>) => ({
+    id: 1, source_id: 'a', nct_id: 'NCT1', arm_name: 'Tec', ...over,
+  });
+  const keys = (table: ReturnType<typeof toTurnTable>) => table!.columns.map((c) => c.key);
+
+  it('arm_outcomes rows become one column per field label', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [{ field: 'ORR', value: '63' }], survival_pfs_os: [{ field: 'mPFS', value: 'NR' }] } }),
+        row({ id: 2, arm_name: 'Elra', values: { response_rates: [{ field: 'ORR', value: '<0.001' }], survival_pfs_os: [{ field: 'mPFS', value: '9' }] } }),
+      ]),
+    ]);
+    expect(keys(table)).toEqual(expect.arrayContaining(['ORR', 'mPFS']));
+    expect(keys(table)).not.toContain('values');
+    expect(cell(table, 0, 'mPFS')).toBe('NR');
+    expect(cell(table, 1, 'ORR')).toBe('<0.001');
+  });
+
+  it('extras get a context suffix and repeated labels join with a semicolon', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [
+          { field: 'ORR', value: '63' },
+          { field: 'ORR', value: '70', context: 'patients with t(4;14)' },
+          { field: 'ORR', value: '65' },
+        ] } }),
+        row({ id: 2, arm_name: 'Elra', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'ORR')).toBe('63; 65');
+    expect(cell(table!.subgroups!, 0, 'ORR (patients with t(4;14))')).toBe('70');
+  });
+
+  // Follicular lymphoma, "CR, PFS, OS for active phase 3 trials": 52 columns,
+  // most of them "Median PFS (patients <65 y)" and the like.
+  describe('subgroup values', () => {
+    const outcomes = heme([
+      row({ id: 'a1', source_id: 'ASH_2025_1', trial: { 'Response criteria': { value: 'Lugano' }, 'Trial name': { value: 'INMIND' } }, values: {
+        response_rates: [{ field: 'CR', value: '50', n: 100 }, { field: 'CR', value: '70', context: 'POD24', n: 20 }],
+        survival_pfs_os: [{ field: 'Median PFS', value: 'NR' }, { field: 'Median PFS', value: '12', context: 'patients <65 y', origin: 'registry' }],
+      } }),
+      row({ id: 'a2', source_id: 'ASH_2025_1', arm_name: 'Placebo', trial: { 'Response criteria': { value: 'Lugano' }, 'Trial name': { value: 'INMIND' } }, values: {
+        response_rates: [{ field: 'CR', value: '40', n: 90 }],
+      } }),
+      row({ id: 'b1', source_id: 'ASH_2025_2', nct_id: 'NCT2', arm_name: 'Mosun', values: {
+        response_rates: [{ field: 'CR', value: '60' }, { field: 'CR', value: '65', context: 'POD24' }],
+      } }),
+    ]);
+
+    it('the answer table shows only main values and the trial labels', () => {
+      const table = toTurnTable([outcomes])!;
+      expect(keys(table)).toEqual(expect.arrayContaining(['CR', 'Median PFS', 'Response criteria', 'Trial name']));
+      expect(keys(table)).not.toContain('CR (POD24)');
+      expect(keys(table)).not.toContain('Median PFS (patients <65 y)');
+      expect(table.rows).toHaveLength(3);
+      expect(cell(table, 2, 'Response criteria')).toBe('not stated');
+    });
+
+    it('subgroup values go in a second table with the same row identity columns', () => {
+      const table = toTurnTable([outcomes])!;
+      const subgroups = table.subgroups!;
+      const identity = keys(table).filter((key) => !['CR', 'Median PFS', 'Response criteria', 'Trial name'].includes(key));
+      expect(keys(subgroups)).toEqual([...identity, 'CR (POD24)', 'Median PFS (patients <65 y)']);
+      // The placebo arm reports no subgroup value, so it is left out.
+      expect(subgroups.rows).toHaveLength(2);
+      expect(cell(subgroups, 0, 'arm_name')).toBe('Tec');
+      expect(cell(subgroups, 1, 'arm_name')).toBe('Mosun');
+      expect(cell(subgroups, 0, 'CR (POD24)')).toBe('70 (n=20)');
+      expect(cell(subgroups, 0, 'Median PFS (patients <65 y)')).toBe('12 (registry)');
+      expect(cell(subgroups, 1, 'Median PFS (patients <65 y)')).toBe(ABSENT);
+    });
+
+    it('no subgroup table when no value has a context', () => {
+      const table = toTurnTable([heme([
+        row({ id: 'a1', values: { response_rates: [{ field: 'CR', value: '50' }] } }),
+        row({ id: 'a2', arm_name: 'X', values: { response_rates: [{ field: 'CR', value: '40' }] } }),
+      ])])!;
+      expect(table).not.toHaveProperty('subgroups');
+    });
+
+    it('subgroup values of every merged read are kept', () => {
+      const survival = heme([row({ id: 'a2', source_id: 'ASH_2025_1', arm_name: 'Placebo', values: {
+        survival_pfs_os: [{ field: 'Median PFS', value: '8', context: 'patients <65 y' }],
+      } })]);
+      const subgroups = toTurnTable([outcomes, survival])!.subgroups!;
+      expect(subgroups.rows.map((r) => r[keys(subgroups).indexOf('arm_name')])).toEqual(['Tec', 'Placebo', 'Mosun']);
+    });
+  });
+
+  it('trial values become columns and registry origin and caveats stay visible', () => {
+    const table = toTurnTable([
+      heme([
+        row({ trial: { 'Response criteria': { value: 'IMWG', origin: 'registry' }, 'Trial name': { value: 'MajesTEC-1', caveat: 'abstract only' } }, values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+        row({ id: 2, arm_name: 'Elra', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'Response criteria')).toBe('IMWG (registry)');
+    expect(cell(table, 0, 'Trial name')).toBe('MajesTEC-1 (abstract only)');
+    expect(cell(table, 1, 'Response criteria')).toBe('IMWG');
+  });
+
+  it('headers are the field labels as written', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { survival_pfs_os: [{ field: 'mPFS', value: '1' }, { field: 'AE discontinuation', value: '2' }] } }),
+        row({ id: 2, arm_name: 'X', values: { survival_pfs_os: [{ field: 'mPFS', value: '3' }, { field: 'AE discontinuation', value: '4' }] } }),
+      ]),
+    ]);
+    const labels = table!.columns.map((c) => c.label);
+    expect(labels).toEqual(expect.arrayContaining(['mPFS', 'AE discontinuation']));
+  });
+
+  it('keeps columns identical on every row: shared criteria and caveats', () => {
+    const shared = { 'Response criteria': { value: 'IMWG', caveat: 'per abstract' } };
+    const table = toTurnTable([
+      heme([
+        row({ trial: shared, values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+        row({ id: 2, arm_name: 'X', trial: shared, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'Response criteria')).toBe('IMWG (per abstract)');
+    expect(cell(table, 1, 'Response criteria')).toBe('IMWG (per abstract)');
+  });
+
+  it('shows n beside the value, before the markers', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [{ field: 'ORR', value: '63', n: 165, origin: 'registry' }] } }),
+        row({ id: 2, arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'ORR')).toBe('63 (n=165) (registry)');
+  });
+
+  it('draws no chart for arm_outcomes', () => {
+    const table = toTurnTable([heme([row({ values: { response_rates: [{ field: 'ORR', value: '63' }] } }), row({ id: 2, arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '5' }] } })])])!;
+    expect(table.parameters).toBeUndefined();
+    expect(toTurnChart(table, table.rows, ['ORR'], () => [])).toBeNull();
+  });
+
+  // A drug-class question is one arm_outcomes read per drug (heme-outcomes SKILL.md).
+  it('draws every arm_outcomes read of the turn, not only the last', () => {
+    const tec = heme([
+      row({ id: 'a1', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+      row({ id: 'a2', arm_name: 'Tec 2', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '60' }] } }),
+    ]);
+    const elra = heme([
+      row({ id: 'b1', source_id: 'b', nct_id: 'NCT2', arm_name: 'Elra', trial: { 'Response criteria': { value: 'IMWG 2016' } }, values: { response_rates: [{ field: 'ORR', value: '61' }] } }),
+      row({ id: 'b2', source_id: 'b', nct_id: 'NCT2', arm_name: 'Elra 2', trial: { 'Response criteria': { value: 'IMWG 2016' } }, values: { response_rates: [{ field: 'ORR', value: '58' }] } }),
+    ]);
+    const table = toTurnTable([tec, elra]);
+    expect(table!.rows).toHaveLength(4);
+    expect(table!.rows.map((r) => r[keys(table).indexOf('ORR')])).toEqual(['63', '60', '61', '58']);
+    expect(cell(table, 0, 'Response criteria')).toBe('IMWG');
+    expect(cell(table, 2, 'Response criteria')).toBe('IMWG 2016');
+  });
+
+  it('merges the families of two narrowed reads that hit the same arm', () => {
+    const response = heme([
+      row({ id: 'a1', values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+      row({ id: 'a2', arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+    ]);
+    const survival = heme([
+      row({ id: 'a1', values: { survival_pfs_os: [{ field: 'mPFS', value: 'NR' }] } }),
+    ]);
+    const table = toTurnTable([response, survival]);
+    expect(table!.rows).toHaveLength(2);
+    expect(cell(table, 0, 'ORR')).toBe('63');
+    expect(cell(table, 0, 'mPFS')).toBe('NR');
+  });
+
+  it('never joins arm_outcomes rows with clinical_trials into JSON blobs', () => {
+    const registry = { ok: true, table: 'clinical_trials', rows: [{ nct_id: 'NCT1', overall_status: 'RECRUITING' }] };
+    const outcomes = heme([row({ id: 'a1', values: { response_rates: [{ field: 'ORR', value: '63' }] } })]);
+    const other = heme([row({ id: 'b1', nct_id: 'NCT2', arm_name: 'Elra', values: { response_rates: [{ field: 'ORR', value: '61' }] } })]);
+    for (const outputs of [[registry, outcomes], [outcomes, other]]) {
+      const table = toTurnTable(outputs)!;
+      expect(keys(table)).not.toContain('values');
+      expect(keys(table)).not.toContain('trial');
+      expect(table.rows.flat().some((c) => c.startsWith('{'))).toBe(false);
+    }
+  });
+
+  it('a later outcome_fields or clinical_trials read does not replace the outcomes', () => {
+    const outcomes = heme([
+      row({ id: 'a1', values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+      row({ id: 'a2', arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+    ]);
+    const fields = { ok: true, table: 'outcome_fields', rows: [{ label: 'ORR', family: 'response_rates', value_type: 'pct', definition: 'x' }] };
+    const registry = { ok: true, table: 'clinical_trials', rows: [{ nct_id: 'NCT1', overall_status: 'RECRUITING' }, { nct_id: 'NCT9', overall_status: 'COMPLETED' }] };
+    for (const later of [fields, registry]) {
+      const table = toTurnTable([outcomes, later]);
+      expect(keys(table)).toContain('ORR');
+      expect(table!.rows).toHaveLength(2);
+    }
+  });
+
+  it('hides row ids and keeps what an abstract is cited by', () => {
+    const table = toTurnTable([
+      heme([
+        row({ id: 'abstract_ASH_2025_251_arm_1', trial_outcome_id: 'abstract_ASH_2025_251_arm_1', source_type: 'abstract', abstract_drugs: 'Tec', source_id: 'ASH_2025_251', source_url: 'https://doi.org/1', values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+        row({ id: 'abstract_ASH_2025_252_all', trial_outcome_id: null, source_type: 'poster', abstract_drugs: 'Elra; Tec', source_id: 'ASH_2025_252', source_url: 'https://doi.org/2', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    for (const hidden of ['id', 'trial_outcome_id', 'source_type', 'abstract_drugs']) expect(keys(table)).not.toContain(hidden);
+    expect(cell(table, 0, 'source_id')).toBe('ASH_2025_251');
+    expect(cell(table, 1, 'source_url')).toBe('https://doi.org/2');
+  });
+
+  it('puts Response criteria first among trial labels and every trial label before the values', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [{ field: 'ORR', value: '63' }], survival_pfs_os: [{ field: 'mPFS', value: '9' }] } }),
+        row({ id: 2, arm_name: 'X', trial: { 'Trial name': { value: 'MajesTEC-1' }, 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+      ]),
+    ]);
+    const order = keys(table);
+    expect(order.indexOf('Response criteria')).toBeLessThan(order.indexOf('Trial name'));
+    expect(order.indexOf('Trial name')).toBeLessThan(order.indexOf('ORR'));
+    expect(order.indexOf('Trial name')).toBeLessThan(order.indexOf('mPFS'));
+  });
+
+  it('says criteria are not stated for a row with response rates and no criteria', () => {
+    const table = toTurnTable([
+      heme([
+        row({ values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+        row({ id: 2, arm_name: 'X', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+        row({ id: 3, arm_name: 'Y', values: { survival_pfs_os: [{ field: 'mPFS', value: '9' }] } }),
+      ]),
+    ]);
+    expect(cell(table, 0, 'Response criteria')).toBe('not stated');
+    expect(cell(table, 1, 'Response criteria')).toBe('IMWG');
+    expect(cell(table, 2, 'Response criteria')).toBe('—');
+  });
+
+  it('a tool step draws arm_outcomes rows flattened, and other outputs as before', () => {
+    const outcomes = heme([
+      row({ trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+      row({ id: 2, arm_name: 'X', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+    ]);
+    const step = toStepTable(outcomes)!;
+    expect(keys(step)).not.toContain('values');
+    expect(keys(step)).not.toContain('trial');
+    expect(cell(step, 0, 'ORR')).toBe('63');
+    expect(cell(step, 1, 'Response criteria')).toBe('IMWG');
+    expect(toStepTable(trials)).toEqual(toResultTable(trials));
+  });
+
+  it('trial_outcomes tables are unchanged', () => {
+    const outcomes = { ok: true, table: 'trial_outcomes', rows: [
+      { nct_id: 'NCT1', arm_name: 'A', num_patients: 10, orr: 40, median_pfs: 5.5, line_of_treatment: '1L' },
+      { nct_id: 'NCT2', arm_name: 'B', num_patients: 20, orr: 30, median_pfs: 7, line_of_treatment: '1L' },
+    ] };
+    expect(toTurnTable([outcomes])).toMatchSnapshot();
   });
 });

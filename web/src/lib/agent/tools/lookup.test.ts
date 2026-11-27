@@ -207,3 +207,50 @@ describe('lookup_trial projection and budget', () => {
     expect(turn.remainingChars()).toBeLessThan(3_000);
   });
 });
+
+describe('lookup_trial per session', () => {
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  // Generated from main before heme sessions had their own lookup: tables,
+  // their order, projections, caveats and output.
+  it('melanoma lookup is unchanged', async () => {
+    const tools = toolsWith({
+      clinical_trials: { rows: [{ nct_id: 'NCT00006368', brief_title: 'A trial' }] },
+      trial_outcomes: { rows: [{ id: 'o1', nct_id: 'NCT00006368', arm_name: 'Nivolumab', orr: 40 }] },
+      km_curves: { rows: [] },
+    });
+
+    const result = await tools.lookup_trial.execute!({ nctId: 'NCT00006368' }, RUN_OPTIONS);
+
+    expect({ queries: fake.queries, result }).toMatchSnapshot();
+  });
+
+  it('heme lookup of an NCT queries arm_outcomes and not trial_outcomes or km_curves', async () => {
+    fake = createFakeSupabase({
+      clinical_trials: { rows: [{ nct_id: 'NCT00006368', brief_title: 'A trial' }] },
+      arm_outcomes: { rows: [{ id: 'a1', nct_id: 'NCT00006368', arm_name: 'Arm A' }] },
+    });
+    const tools = buildLookupTool({ ...REQUEST, cancerSlug: 'multiple-myeloma', turn: createTurnState() });
+
+    const result = await tools.lookup_trial.execute!({ nctId: 'NCT00006368' }, RUN_OPTIONS);
+
+    expect(fake.queries.map((q) => q.table)).toEqual(['clinical_trials', 'arm_outcomes']);
+    const { coverage } = result as { coverage: { presentIn: string[]; absentFrom: string[] } };
+    expect(coverage.presentIn).toEqual(['clinical_trials', 'arm_outcomes']);
+    expect(coverage.absentFrom).toEqual([]);
+  });
+
+  it('trims arm_outcomes rows to fit the budget like any other table', () => {
+    const wide = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `r${i}`, pad: 'x'.repeat(400) }));
+    const tables = { clinical_trials: { matched: 1, rows: wide(1) }, arm_outcomes: { matched: 10, rows: wide(10) } };
+    const limit = Math.floor(JSON.stringify(tables).length / 2);
+
+    const { tables: fitted, truncated } = fitLookupToBudget(tables, limit);
+
+    expect(JSON.stringify(fitted).length).toBeLessThanOrEqual(limit);
+    expect(truncated).toEqual(['arm_outcomes']);
+  });
+});

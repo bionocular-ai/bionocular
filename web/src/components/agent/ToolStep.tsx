@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { toResultTable } from '@/lib/agent/result-table';
+import { toStepTable } from '@/lib/agent/turn-table';
 import { cn } from '@/lib/utils';
 
 /**
@@ -164,7 +164,7 @@ export function ToolStep(props: ToolStepProps) {
   const [showRaw, setShowRaw] = useState(false);
   const [showRows, setShowRows] = useState(false);
   const hasRaw = state === 'output-available' || state === 'output-error';
-  const table = useMemo(() => toResultTable(output), [output]);
+  const table = useMemo(() => toStepTable(output), [output]);
 
   return (
     <div className="relative mb-1.5">

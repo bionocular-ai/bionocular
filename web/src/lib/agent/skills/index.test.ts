@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeSkills, loadSkill, parseSkill, SKILL_NAMES } from './index';
+import { describeSkills, loadSkill, parseSkill, SKILL_NAMES, skillsFor } from './index';
 
 describe('skills', () => {
   it('every registered skill loads from disk with a name, description and body', () => {
@@ -34,6 +34,56 @@ describe('skills', () => {
     // regimens, and the dose text of some carries formulation approval dates.
     expect(body).toContain('May be substituted');
     expect(body).toMatch(/`dose`/);
+  });
+
+  it('heme-outcomes parses and mentions criteria not stated', () => {
+    const { body } = loadSkill('heme-outcomes');
+    expect(body).toMatch(/criteria not stated/);
+    expect(body).toMatch(/criteria per the trial registry/);
+  });
+
+  // Golden case heme-mm-mrd-bcma-bispecifics, 3/3 runs: MRD rates reported
+  // with no criteria, and calls spent hunting for a drug-class filter.
+  it('heme-outcomes applies the criteria rule to MRD and says how to query a drug class', () => {
+    const { body } = loadSkill('heme-outcomes');
+    expect(body).toMatch(/MRD negativity included/);
+    expect(body).toMatch(/no drug-class filter/);
+  });
+
+  // Golden case heme-mm-cart-crs-icans quoted `abstract_ASH_2025_256_arm_1` and `dose_events_special`.
+  it('heme-outcomes forbids row ids and family keys in the answer', () => {
+    const { body } = loadSkill('heme-outcomes');
+    expect(body).toMatch(/never show a row `id`/);
+    expect(body).toMatch(/or a family key/);
+  });
+
+  // Follicular lymphoma, "all active phase 3 trials": the answer said "All 4"
+  // while the registry holds 29. A heme session's registry rows are only the
+  // trials its abstracts cite.
+  it('heme-outcomes scopes every trial count or list to the abstracts', () => {
+    const { body, description } = loadSkill('heme-outcomes');
+    expect(description).toMatch(/counting or listing trials/);
+    expect(body).toMatch(/only the trials an abstract\s+in `arm_outcomes` cites/);
+    expect(body).toMatch(/Never write "all trials"/);
+  });
+
+  it('offers heme-outcomes only in heme sessions', () => {
+    expect(skillsFor('Multiple Myeloma')).toContain('heme-outcomes');
+    expect(skillsFor('Cutaneous Melanoma')).not.toContain('heme-outcomes');
+    expect(describeSkills(skillsFor('Cutaneous Melanoma'))).not.toContain('heme-outcomes');
+    expect(skillsFor('Cutaneous Melanoma')).toContain('trial-outcomes');
+    expect(skillsFor('Multiple Myeloma')).not.toContain('trial-outcomes');
+  });
+
+  it('heme sessions drop the skills for tables they are not offered', () => {
+    expect(skillsFor('Multiple Myeloma')).toEqual(['coverage-and-citation', 'heme-outcomes']);
+  });
+
+  // Melanoma sessions must stay as they were before heme: same skills, same order.
+  it('melanoma sessions keep the original four skills in their original order', () => {
+    const original = ['trial-outcomes', 'trial-landscape', 'coverage-and-citation', 'standard-of-care'];
+    expect(skillsFor('Cutaneous Melanoma')).toEqual(original);
+    expect(skillsFor('Uveal Melanoma')).toEqual(original);
   });
 
   it('lists every skill for the system prompt, one line each', () => {

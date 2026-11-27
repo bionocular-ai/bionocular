@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { loadSkill, SKILL_NAMES } from '../skills';
+import { getDbCancerType } from '@/lib/api';
+import { loadSkill, skillsFor } from '../skills';
 import { runTool } from './logging';
 import type { AgentToolContext } from './supabase';
 
@@ -8,7 +9,7 @@ import type { AgentToolContext } from './supabase';
  * Hand the model a skill's body. The name is an enum over the registry, so
  * this tool can read nothing but the three files it names.
  */
-export function buildLoadSkillTool({ traceId, turn }: AgentToolContext) {
+export function buildLoadSkillTool({ traceId, turn, cancerSlug }: AgentToolContext) {
   return {
     load_skill: tool({
       description:
@@ -16,7 +17,7 @@ export function buildLoadSkillTool({ traceId, turn }: AgentToolContext) {
         'to load each are listed in your instructions. Load a skill once per conversation; ' +
         'its content stays in context.',
       inputSchema: z.object({
-        skill: z.enum(SKILL_NAMES),
+        skill: z.enum(skillsFor(getDbCancerType(cancerSlug))),
       }),
       execute: async (args) =>
         runTool('load_skill', { traceId, turn }, args, async () => {

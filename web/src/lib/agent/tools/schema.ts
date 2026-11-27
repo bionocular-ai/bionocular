@@ -1,5 +1,7 @@
+import { isHemeCancerType } from '@/lib/heme-cancers';
+
 /**
- * The six relations the agent may read, and how to query each one.
+ * The relations the agent may read, and how to query each one.
  *
  * This map is measured against the live database, not inferred from the app
  * code, because the tables disagree with each other: `cancer_type` is `text[]`
@@ -38,7 +40,8 @@ export interface AgentOrder {
 export interface AgentTableSpec {
   /** One line describing the table, used to generate the tool description. */
   readonly summary: string;
-  readonly cancerType: AgentColumn;
+  /** Absent only on a dictionary that describes every cancer type alike. */
+  readonly cancerType: AgentColumn | null;
   /** Absent where a table has no trial identifier at all. */
   readonly trialKey: AgentColumn | null;
   /**
@@ -472,19 +475,89 @@ const TABLE_DEFINITIONS = {
   },
 } as const satisfies Record<string, AgentTableSpec>;
 
-export type AgentTable = keyof typeof TABLE_DEFINITIONS;
+/** The value families of `arm_outcomes.values`: `ash_fields.FAMILY_TITLES` plus the registry-filled one. */
+export const ARM_OUTCOME_FAMILIES = [
+  'dose_events_special', 'safety_overall', 'survival_other', 'duration_transplant',
+  'survival_pfs_os', 'response_rates', 'population', 'regimen_drug', 'ae_reporting', 'registry',
+] as const;
+
+/**
+ * Heme outcomes live in a different shape from `trial_outcomes`: field values
+ * grouped by family in jsonb, with their meaning in a dictionary table rather
+ * than in 200 column names. Heme sessions read these instead of the melanoma
+ * outcome tables; see `tablesFor`.
+ */
+const HEME_TABLE_DEFINITIONS = {
+  arm_outcomes: {
+    summary:
+      'extracted outcomes from conference abstracts - one row per treatment arm, plus one ' +
+      '"All arms (pooled or trial-level)" row per abstract for values reported across arms; ' +
+      '`values` groups the fields by family and outcome_fields holds their definitions',
+    cancerType: { column: 'cancer_type', kind: 'array' },
+    trialKey: { column: 'nct_id', kind: 'scalar' },
+    // An abstract's arms and its "All arms" row sit together; `id` is unique.
+    order: [
+      { column: 'source_id', ascending: true },
+      { column: 'id', ascending: true },
+    ],
+    // `cancer_type` is left out for the same reason as on trial_outcomes: it is
+    // pinned by `applyCancerScope`.
+    projection:
+      'id, trial_outcome_id, source_type, source_id, source_url, nct_id, arm_name, generic_name, ' +
+      'num_patients, line_of_treatment, expert_review, abstract_drugs, trial, values',
+    // Every drug the abstract names, so a drug query also finds the "All arms" row.
+    filters: { drug: { column: 'abstract_drugs', kind: 'scalar' } },
+    via: {
+      table: 'clinical_trials',
+      filters: {
+        phase: { column: 'phases', kind: 'array' },
+        status: { column: 'overall_status', kind: 'exact' },
+        funding: { column: 'lead_sponsor_class', kind: 'partition' },
+      },
+    },
+  },
+
+  outcome_fields: {
+    summary: "the field dictionary for arm_outcomes - each field's label, family, value type and definition",
+    cancerType: null,
+    trialKey: null,
+    order: [
+      { column: 'family', ascending: true },
+      { column: 'sort_order', ascending: true },
+      { column: 'key', ascending: true },
+    ],
+    projection: 'label, family, value_type, definition',
+    filters: {},
+    wholeRead: true,
+  },
+} as const satisfies Record<string, AgentTableSpec>;
+
+export type AgentTable = keyof typeof TABLE_DEFINITIONS | keyof typeof HEME_TABLE_DEFINITIONS;
 
 /**
  * Same object, widened to the interface: `as const` alone would make `caveat`
  * and each `filters` key absent from the tables that omit them, which no caller
  * can index generically.
  */
-export const AGENT_TABLES: Record<AgentTable, AgentTableSpec> = TABLE_DEFINITIONS;
+export const AGENT_TABLES: Record<AgentTable, AgentTableSpec> = { ...TABLE_DEFINITIONS, ...HEME_TABLE_DEFINITIONS };
 
-export const AGENT_TABLE_NAMES = Object.keys(AGENT_TABLES) as [AgentTable, ...AgentTable[]];
+/** The tables a melanoma (any non-heme) session reads. */
+export const AGENT_TABLE_NAMES = Object.keys(TABLE_DEFINITIONS) as [AgentTable, ...AgentTable[]];
 
-/** The tables a trial can be looked up in: every one with a trial key. */
-export const TRIAL_KEYED_TABLES = AGENT_TABLE_NAMES.filter((name) => AGENT_TABLES[name].trialKey !== null);
+export const HEME_TABLE_NAMES = Object.keys(HEME_TABLE_DEFINITIONS) as AgentTable[];
+
+/**
+ * The melanoma tables a heme session keeps: only the registry holds heme rows.
+ * The curated landscape, approvals and news hold none, and offering them sent
+ * the model on empty queries. Add a table here once it carries heme data.
+ */
+const HEME_SHARED_TABLES: readonly AgentTable[] = ['clinical_trials'];
+
+/** The tables a session for this cancer type may query. */
+export function tablesFor(dbCancerType: string): [AgentTable, ...AgentTable[]] {
+  if (!isHemeCancerType(dbCancerType)) return AGENT_TABLE_NAMES;
+  return [...HEME_SHARED_TABLES, ...HEME_TABLE_NAMES] as [AgentTable, ...AgentTable[]];
+}
 
 /**
  * Minimal shape of a PostgREST query builder. Structural so the helpers below
@@ -515,14 +588,17 @@ export function applyOrder<Q extends FilterableQuery<Q>>(query: Q, table: AgentT
 /**
  * Restrict a query to one cancer type. Always applied - `cancer_type` is
  * non-null in every table, so this predicate can never silently drop rows
- * that should have been in scope.
+ * that should have been in scope. `outcome_fields` has no cancer type to
+ * scope by; it is read whole.
  */
 export function applyCancerScope<Q extends FilterableQuery<Q>>(
   query: Q,
   table: AgentTable,
   dbCancerType: string,
 ): Q {
-  const { column, kind } = AGENT_TABLES[table].cancerType;
+  const scope = AGENT_TABLES[table].cancerType;
+  if (!scope) return query;
+  const { column, kind } = scope;
   return kind === 'array' ? query.contains(column, [dbCancerType]) : query.eq(column, dbCancerType);
 }
 
@@ -670,12 +746,16 @@ const OTHER_FAMILY: Record<Exclude<EndpointFamily, 'both'>, Set<string>> = {
  * class siblings and companions, whatever `detail` and `endpoints` say: the
  * table draws those columns, and falls back to the siblings when the named
  * class is empty.
+ *
+ * `families` swaps `arm_outcomes.values` for one JSON path per family, so a
+ * response-rate question does not carry every safety and dosing field.
  */
 export function projectionFor(
   table: AgentTable,
   detail: 'concise' | 'detailed',
   endpoints: EndpointFamily = 'both',
   asked: readonly string[] = [],
+  families: readonly string[] = [],
 ): string {
   const spec = AGENT_TABLES[table];
   const selected = detail === 'concise' ? (spec.conciseProjection ?? spec.projection) : spec.projection;
@@ -683,7 +763,8 @@ export function projectionFor(
   const columns = selected
     .split(',')
     .map((column) => column.trim())
-    .filter((column) => !dropped.has(column));
+    .filter((column) => !dropped.has(column))
+    .flatMap((column) => (column === 'values' && families.length > 0 ? families.map((f) => `values->${f}`) : [column]));
   const extra = table === 'trial_outcomes' ? asked.flatMap((key) => [key, ...classSiblings(key), ...companions(key)]) : [];
   return [...new Set([...columns, ...extra])].join(', ');
 }
@@ -710,8 +791,8 @@ export function supportedFilters(table: AgentTable): FilterName[] {
  * Build the tool description from the map, so it can never again advertise
  * filters or tables that do not exist.
  */
-export function describeTables(): string {
-  return AGENT_TABLE_NAMES.map((name) => {
+export function describeTables(tables: readonly AgentTable[]): string {
+  return tables.map((name) => {
     const spec = AGENT_TABLES[name];
     const direct = Object.keys(spec.filters).join(', ');
     const viaNames = spec.via ? Object.keys(spec.via.filters).join(', ') : '';

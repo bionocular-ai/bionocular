@@ -11,7 +11,8 @@ import { runTool } from './logging';
 import { MIN_RESULT_CHARS, type TurnState } from './turn';
 import {
   AGENT_TABLES,
-  AGENT_TABLE_NAMES,
+  ARM_OUTCOME_FAMILIES,
+  HEME_TABLE_NAMES,
   applyCancerScope,
   applyNamedFilter,
   applyOrder,
@@ -21,6 +22,7 @@ import {
   projectionColumns,
   projectionFor,
   supportedFilters,
+  tablesFor,
   viaFilters,
   FUNDING_VALUES,
   TRIAL_OUTCOMES_ENDPOINTS,
@@ -127,6 +129,24 @@ function flattenEmbeds(rows: unknown[], table: AgentTable): unknown[] {
 }
 
 /**
+ * Put each narrowed family back under `values`. PostgREST returns a
+ * `values->family` path as a top-level key, so without this a narrowed row
+ * would have a different shape from an un-narrowed one. A family the row never
+ * reported comes back null and is left out, as it is from a whole `values`.
+ */
+function nestFamilies(rows: unknown[], families: readonly string[]): unknown[] {
+  return rows.map((row) => {
+    const rest = { ...(row as Record<string, unknown>) };
+    const values: Record<string, unknown> = {};
+    for (const family of families) {
+      if (rest[family] != null) values[family] = rest[family];
+      delete rest[family];
+    }
+    return { ...rest, values };
+  });
+}
+
+/**
  * Drop keys that carry no information, so a wide projection sends only the
  * columns a row actually populated. `trial_outcomes`' 198-column `detailed`
  * projection measures ~15.7 populated keys per row once this runs - what
@@ -220,6 +240,12 @@ export function missingTrialKeys(
   return requested.filter((id) => !present.has(id));
 }
 
+/** The two PostgREST filters `families` narrows rows with. */
+interface FamilyFilterable<Q> {
+  not(column: string, operator: string, value: unknown): Q;
+  or(filters: string): Q;
+}
+
 export interface AgentToolContext {
   userId: string;
   /** Dashboard slug, e.g. `cutaneous-melanoma`. Validated by the caller. */
@@ -238,15 +264,29 @@ const PHASE_VALUES = Object.keys(PHASE_MAP) as [string, ...string[]];
 export const FINDING_TYPES = ['trial', 'outcome', 'landscape', 'news', 'other'] as const;
 const STATUS_VALUES = Object.keys(STATUS_MAP) as [string, ...string[]];
 
+/** Heme sessions only, so a melanoma session's tool schema stays exactly as it was. */
+const FAMILIES_INPUT = {
+  families: z
+    .array(z.enum(ARM_OUTCOME_FAMILIES))
+    .min(1)
+    .optional()
+    .describe(
+      'arm_outcomes only: the value families the question is about; the others are left out of ' +
+        '`values`. Defaults to every family. outcome_fields gives the family of each field.',
+    ),
+};
+
 export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, turn }: AgentToolContext) {
   const dbCancerType = getDbCancerType(cancerSlug);
+  const tables = tablesFor(dbCancerType);
+  const heme = tables.includes('arm_outcomes');
 
   return {
     query_proprietary_data: tool({
       description:
         "Query Bionocular's own oncology database. This is the only source of data available - " +
         'there is no live registry or literature lookup. Every query is automatically restricted ' +
-        `to the dashboard's cancer type, so do not ask for one.\n\nTables:\n${describeTables()}\n\n` +
+        `to the dashboard's cancer type, so do not ask for one.\n\nTables:\n${describeTables(tables)}\n\n` +
         'Filters are named parameters, not column expressions; one marked "via clinical_trials" ' +
           'above joins through the trial registry instead of reading a column on that table, so it ' +
           'excludes rows with no nct_id - `coverage.viaJoin` reports how many that excluded.\n\n' +
@@ -259,7 +299,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         'filter, because unfiltered it reads the table end to end. The whole turn shares one ' +
         'result budget; once it is spent, further calls return coverage counts but no rows.',
       inputSchema: z.object({
-        table: z.enum(AGENT_TABLE_NAMES),
+        table: z.enum(tables),
         nctIds: z
           .array(z.string().regex(NCT_ID_PATTERN, 'must be an NCT number, e.g. NCT00006368'))
           .min(1)
@@ -338,11 +378,14 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           .max(MAX_ROWS)
           .default(DEFAULT_ROWS)
           .describe(`Raise toward ${MAX_ROWS} when the user asks for a complete set.`),
-      }),
+        // Typed as always present: a melanoma session's schema has no
+        // `families`, so the field is simply undefined there.
+      }).extend(heme ? FAMILIES_INPUT : ({} as typeof FAMILIES_INPUT)),
       execute: async (args) =>
         runTool('query_proprietary_data', { traceId, turn }, args, async () => {
-        const { table, nctIds, sponsor, phase, status, drug, funding, biomarker, detail, endpoints, columns, limit } =
-          args;
+        const {
+          table, nctIds, sponsor, phase, status, drug, funding, biomarker, detail, endpoints, columns, families, limit,
+        } = args;
         const spec = AGENT_TABLES[table];
 
         if (nctIds && !spec.trialKey) {
@@ -353,6 +396,32 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
             filter: 'nctIds',
             supportedFilters: supportedFilters(table),
             hint: `\`${table}\` is not keyed by trial, so it cannot be filtered by NCT number. Query it without \`nctIds\`.`,
+          };
+        }
+
+        // Each narrows one outcome shape; on another table it would narrow
+        // nothing and read as if it had.
+        const misplaced =
+          families !== undefined && table !== 'arm_outcomes'
+            ? 'families'
+            : HEME_TABLE_NAMES.includes(table)
+              ? columns !== undefined
+                ? 'columns'
+                : endpoints !== undefined
+                  ? 'endpoints'
+                  : null
+              : null;
+        if (misplaced) {
+          return {
+            ok: false as const,
+            reason: 'unsupported_filter' as const,
+            table,
+            filter: misplaced,
+            supportedFilters: supportedFilters(table),
+            hint:
+              misplaced === 'families'
+                ? `\`families\` narrows arm_outcomes only. Query \`${table}\` without it.`
+                : `\`${misplaced}\` applies to trial_outcomes only. On arm_outcomes, narrow \`values\` with \`families\` instead.`,
           };
         }
 
@@ -379,7 +448,15 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         // a table read: 500 unfiltered `trial_landscape` rows measured 48k
         // tokens and carried 3 that mattered. The default window still allows an
         // unfiltered browse, which is how "what exists here" gets answered.
-        const narrowed = [nctIds, sponsor, phase, status, drug, funding, biomarker].some((f) => f !== undefined);
+        // `families` narrows rows too: only those reporting a selected family
+        // are read (see below), which is what fits a whole-cancer heme read.
+        const narrowed = [nctIds, sponsor, phase, status, drug, funding, biomarker, families].some(
+          (f) => f !== undefined,
+        );
+        const familiesHint =
+          table === 'arm_outcomes'
+            ? ' On arm_outcomes, pass `families` (or fewer of them) to keep only the rows and values the question needs.'
+            : '';
         if (!narrowed && limit > DEFAULT_ROWS && !spec.wholeRead) {
           const filters = supportedFilters(table);
           return {
@@ -395,7 +472,8 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
                   'registry join rather than a column on this table - or find the trials you ' +
                   'want in another table first and pass their NCT numbers as `nctIds`.'
                 : 'Narrow it, or find the trials you want in another table first and pass ' +
-                  'their NCT numbers as `nctIds`.'),
+                  'their NCT numbers as `nctIds`.') +
+              familiesHint,
           };
         }
 
@@ -419,13 +497,24 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
           .map(([name]) => name);
         const activeVia = viaFilters(table, requested);
         const select =
-          projectionFor(table, detail ?? 'concise', endpoints ?? 'both', columns) + embedFor(table, activeVia);
+          projectionFor(table, detail ?? 'concise', endpoints ?? 'both', columns, families) +
+          embedFor(table, activeVia);
 
         let query = supabase.from(table).select(select, { count: 'exact' }).limit(rowLimit);
 
         query = applyOrder(query, table);
         query = applyCancerScope(query, table, dbCancerType);
         if (nctIds) query = applyTrialKeys(query, table, nctIds);
+        // A row reporting none of the selected families would come back as
+        // identity columns alone - across a whole cancer type that is most of
+        // the result budget, measured.
+        const reportingFamilies = <Q extends FamilyFilterable<Q>>(q: Q): Q =>
+          !families
+            ? q
+            : families.length === 1
+              ? q.not(`values->${families[0]}`, 'is', null)
+              : q.or(families.map((f) => `values->${f}.not.is.null`).join(','));
+        query = reportingFamilies(query);
 
         const named: Array<[FilterName, string | readonly string[] | undefined]> = [
           ['sponsor', sponsor],
@@ -478,6 +567,8 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
             .from(table)
             .select(trialKeyColumn, { count: 'exact', head: true });
           unlinkedQuery = applyCancerScope(unlinkedQuery, table, dbCancerType);
+          // Counted over the same rows the result was drawn from.
+          unlinkedQuery = reportingFamilies(unlinkedQuery);
           const { count: unlinkedCount, error: unlinkedError } = await unlinkedQuery.is(trialKeyColumn, null);
           if (unlinkedError) {
             console.error('query_proprietary_data via-join count failed', {
@@ -510,7 +601,8 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
         // Trimmed before the size budget runs, so the budget measures what the
         // model will actually be sent. The per-call cap and what is left of the
         // turn's budget both apply; whichever is tighter names the truncation.
-        const fetched = dropEmpty(compactInterventions(flattenEmbeds(data ?? [], table)));
+        const nested = families ? nestFamilies(data ?? [], families) : (data ?? []);
+        const fetched = dropEmpty(compactInterventions(flattenEmbeds(nested, table)));
         const matched = count ?? fetched.length;
         const remaining = turn.remainingChars();
 
@@ -557,7 +649,7 @@ export function buildSupabaseTools({ userId, cancerSlug, sessionId, traceId, tur
                   truncatedBy === 'turn_budget'
                     ? `Only ${rows.length} of ${matched} rows fit in what remains of this turn's result budget. Answer from what you have and say the result is partial; a narrower query may fit.`
                     : truncatedBy === 'size'
-                      ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.`
+                      ? `Only ${rows.length} of ${matched} rows fit in one result. Narrow the filters - do not present this as the full set.${familiesHint}`
                       : `You asked for ${rowLimit} of ${matched} matching rows. Re-run with a higher limit (up to ${MAX_ROWS}) if the user wants all of them, and until then say the result is a sample.`,
               }),
           ...(nctIds ? { trialKeyColumn: spec.trialKey?.column } : {}),

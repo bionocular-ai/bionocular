@@ -57,11 +57,17 @@ export interface EvalCase {
 }
 
 const CM = 'cutaneous-melanoma';
+const MM = 'multiple-myeloma';
+const AML = 'acute-myeloid-leukemia';
+const DLBCL = 'diffuse-large-b-cell-lymphoma';
+const FL = 'follicular-lymphoma';
 
 export const REFUSAL = /outside|not (cover|part of|within)|only cover|this dashboard|scoped to|cannot help with/i;
 export const ABSENCE = /no (record|rows?|data|results?|outcome|reported|match)|not (in|found|available|reported|present|have)|don't have|do not have|nothing (matched|found)|unavailable/i;
 export const PARTIAL = /sample|partial|subset|of \d|first \d|truncat|only \d|not (all|every|the full)|incomplete|more than/i;
 export const MEDICAL_REFERRAL = /oncologist|research tool|not (medical|clinical) advice|treating physician|care team/i;
+/** A heme response answer names its criteria, or says they were not stated (heme-outcomes skill). */
+export const RESPONSE_CRITERIA = /criteria|IMWG|International Myeloma Working Group|Lugano|\bELN\b|\bIWG\b/i;
 
 export const GOLDEN_CASES: EvalCase[] = [
   // Retrieval
@@ -396,6 +402,149 @@ export const GOLDEN_CASES: EvalCase[] = [
       // Scoped to a clause about RP1, so "first-line use is not approved" passes.
       answerNot: /investigational|\b(RP1|vusolimogene)\b[^.;]*\bis not (yet )?(FDA[- ])?approved\b/i,
       maxToolCalls: 3,
+    },
+  },
+
+  // Hematology: heme sessions read arm_outcomes and load heme-outcomes.
+  {
+    // A class has no filter: one `drug` query per agent, so the cap allows
+    // the skill, the field dictionary and about five drugs.
+    id: 'heme-mm-mrd-bcma-bispecifics',
+    category: 'clinical-reasoning',
+    cancerSlug: MM,
+    question: 'What MRD-negative complete response rates have been reported across BCMA bispecific antibodies?',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes' },
+      answer: RESPONSE_CRITERIA,
+      maxToolCalls: 8,
+    },
+  },
+  {
+    id: 'heme-mm-median-pfs-regimen',
+    category: 'clinical-reasoning',
+    cancerSlug: MM,
+    question: 'What median PFS has been reported for teclistamab plus daratumumab?',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes', args: { drug: /teclistamab|daratumumab/i } },
+      maxToolCalls: 5,
+    },
+  },
+  {
+    id: 'heme-mm-cart-crs-icans',
+    category: 'clinical-reasoning',
+    cancerSlug: MM,
+    question: 'What grade 3 or higher CRS and ICANS rates have been reported across CAR-T therapies?',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes', args: { families: ['dose_events_special'] } },
+      maxToolCalls: 5,
+    },
+  },
+  {
+    // Revumenib reports no criteria, olutasidenib reports IWG: the answer
+    // must say so rather than rank the two as equals, so it needs both the
+    // skill's "not stated" and IWG - the bare word "criteria" is not enough.
+    id: 'heme-aml-cr-crh-comparison',
+    category: 'clinical-reasoning',
+    cancerSlug: AML,
+    question: 'Compare the CR/CRh rates reported for revumenib and olutasidenib.',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes', args: { drug: /revumenib|olutasidenib/i } },
+      answer: /^(?=[\s\S]*not stated)(?=[\s\S]*\bIWG\b)/i,
+      maxToolCalls: 6,
+    },
+  },
+  {
+    id: 'heme-aml-median-os',
+    category: 'clinical-reasoning',
+    cancerSlug: AML,
+    question: 'What median overall survival has been reported for venetoclax plus azacitidine?',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes', args: { drug: /venetoclax|azacitidine/i } },
+      maxToolCalls: 5,
+    },
+  },
+  {
+    // No drug to filter by: the read that fits is the safety family.
+    id: 'heme-aml-early-mortality',
+    category: 'clinical-reasoning',
+    cancerSlug: AML,
+    question: 'Which regimens report 30-day or 60-day mortality, and what were the rates?',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes', args: { families: ['safety_overall'] } },
+      maxToolCalls: 5,
+    },
+  },
+  {
+    id: 'heme-dlbcl-cr-lugano',
+    category: 'clinical-reasoning',
+    cancerSlug: DLBCL,
+    question: 'What complete response rates under Lugano criteria have been reported for glofitamab?',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes', args: { drug: /glofitamab/i } },
+      answer: /Lugano/i,
+      maxToolCalls: 5,
+    },
+  },
+  {
+    id: 'heme-dlbcl-pfs-24mo',
+    category: 'clinical-reasoning',
+    cancerSlug: DLBCL,
+    question: 'What 24-month PFS rate has been reported for axicabtagene ciloleucel?',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes', args: { drug: /axicabtagene|axi-cel/i } },
+      maxToolCalls: 5,
+    },
+  },
+  {
+    id: 'heme-dlbcl-crs',
+    category: 'clinical-reasoning',
+    cancerSlug: DLBCL,
+    question: 'How often was cytokine release syndrome reported with epcoritamab, and at what grades?',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes', args: { drug: /epcoritamab/i } },
+      maxToolCalls: 5,
+    },
+  },
+  {
+    // Pinned from a live run: "All 4 active Phase 3 trials" while the registry
+    // holds 29. A heme session's clinical_trials holds only the trials ASH
+    // 2025 abstracts cite, so every count says that scope.
+    id: 'heme-fl-active-phase3-scope',
+    category: 'grounding',
+    cancerSlug: FL,
+    question: 'show me efficacy CR, PFS, OS for all active phase 3 trials in Follicular Lymphoma',
+    expect: {
+      skills: ['heme-outcomes'],
+      filter: { table: 'arm_outcomes' },
+      answer: /ASH(\s|-)?2025/i,
+      answerNot: /\ball (\d+ )?(active )?phase 3 trials\b/i,
+      maxToolCalls: 6,
+    },
+  },
+  {
+    // ASH_2025_1075, the one abstract in production with values but no
+    // per-arm values: its only row is "All arms (pooled or trial-level)".
+    // The answer must not invent an arm ("the single arm", "Arm A", "arm 1").
+    // Case-sensitive on purpose: under /i, `[A-Z]\b` matches the s of "arms".
+    // "All arms", "single-arm design" and "arm-level" stay allowed.
+    id: 'heme-pooled-only-abstract',
+    category: 'grounding',
+    cancerSlug: MM,
+    question: 'What did the VitalTraq study NCT06415656 report?',
+    expect: {
+      tools: ['lookup_trial'],
+      fastPath: 'lookup_trial',
+      answerNot: /\b([Aa]n?|[Tt]he|[Tt]his|[Oo]ne|[Ee]ach)( (single|sole|only))? arm\b(?!-)|\b[Aa]rm[ _]?(\d|[A-Z]\b)/,
+      maxToolCalls: 4,
     },
   },
 ];

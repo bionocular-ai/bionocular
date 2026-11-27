@@ -519,6 +519,66 @@ function caveatOf(
   return sentences.length > 0 ? sentences.join(' ') : undefined;
 }
 
+/** Row ids, source type and the drug-filter column: none is cited, so none is drawn. */
+const HIDDEN_ARM_COLUMNS = ['id', 'trial_outcome_id', 'source_type', 'abstract_drugs'];
+const CRITERIA = 'Response criteria';
+
+interface HemeEntry {
+  field?: unknown;
+  value?: unknown;
+  context?: unknown;
+  n?: unknown;
+  origin?: unknown;
+  caveat?: unknown;
+}
+
+/** The value as written, its n, then what the reader must not lose: registry origin and caveat. */
+function hemeCell({ value, n, origin, caveat }: HemeEntry): string {
+  const notes = [origin === 'registry' ? 'registry' : null, typeof caveat === 'string' && caveat ? caveat : null];
+  const note = notes.filter(Boolean).join('; ');
+  const text = n === null || n === undefined || n === '' ? formatCell(value) : `${formatCell(value)} (n=${String(n)})`;
+  return note ? `${text} (${note})` : text;
+}
+
+/** A subgroup, dose level or time point: the entry describes that subset, not the arm. */
+const hasContext = (entry: HemeEntry) => typeof entry.context === 'string' && entry.context !== '';
+const entryLabel = (entry: HemeEntry) => `${String(entry.field)}${hasContext(entry) ? ` (${String(entry.context)})` : ''}`;
+
+function entriesOf(values: unknown): HemeEntry[] {
+  if (typeof values !== 'object' || values === null) return [];
+  return Object.values(values).flatMap((entries) => (Array.isArray(entries) ? (entries as HemeEntry[]) : []));
+}
+
+/**
+ * An `arm_outcomes` row is nested - `trial` keyed by label, `values` keyed by
+ * family - so it is flattened to one column per label before it is drawn. A
+ * label that repeats in one row (two ORR readings) joins with `; `; an entry's
+ * `context` goes into the column name, so "ORR (patients with t(4;14))" is its
+ * own column rather than a second value under "ORR".
+ *
+ * Row ids are dropped: the skill forbids citing them, and `source_id` and
+ * `source_url` already say which abstract a row is. A row with response rates
+ * but no criteria reads "not stated" rather than the empty mark, since the
+ * reader has to know the rate was not qualified, not that a cell is missing.
+ */
+export function flattenArmOutcome(row: Row): Row {
+  const { trial, values, ...rest } = row;
+  for (const column of HIDDEN_ARM_COLUMNS) delete rest[column];
+  const columns = new Map<string, string[]>();
+  const add = (label: string, cell: string) => columns.set(label, [...(columns.get(label) ?? []), cell]);
+
+  if (typeof trial === 'object' && trial !== null) {
+    for (const [label, entry] of Object.entries(trial)) add(label, hemeCell(entry as HemeEntry));
+  }
+  const rates = (values as Row | null | undefined)?.response_rates;
+  const criteria = (trial as Record<string, HemeEntry> | null | undefined)?.[CRITERIA]?.value;
+  if (Array.isArray(rates) && rates.length > 0 && formatCell(criteria) === ABSENT) columns.set(CRITERIA, ['not stated']);
+  for (const entry of entriesOf(values)) add(entryLabel(entry), hemeCell(entry));
+  const flat: Row = { ...rest };
+  for (const [label, cells] of columns) flat[label] = cells.join('; ');
+  return flat;
+}
+
 function stripFolded(output: unknown, today: string): unknown {
   if (typeof output !== 'object' || output === null) return output;
   const { rows, ...rest } = output as { rows?: unknown };
@@ -534,19 +594,98 @@ function stripFolded(output: unknown, today: string): unknown {
   };
 }
 
+/**
+ * The flattened output, the label columns it added, which are drawn verbatim,
+ * and which of those hold a subgroup value. Trial labels, Response criteria
+ * first, lead the values on every row: column order is discovered row by row,
+ * so one row's values would otherwise land ahead of the next row's trial labels.
+ */
+function flattenOutput(output: unknown): { output: unknown; labels: string[]; subgroups: string[] } {
+  const { rows, ...rest } = output as { rows?: unknown };
+  if (!Array.isArray(rows)) return { output, labels: [], subgroups: [] };
+  const flat = rows.map((row) => flattenArmOutcome(row as Row));
+  const original = new Set(rows.flatMap((row) => Object.keys(row as Row)));
+  const keys = [...new Set(flat.flatMap((row) => Object.keys(row)))];
+  const labels = keys.filter((key) => !original.has(key));
+  const trialLabels = [...new Set([CRITERIA, ...rows.flatMap((row) => Object.keys(((row as Row).trial as Row | null) ?? {}))])];
+  const order = [
+    ...keys.filter((key) => original.has(key)),
+    ...trialLabels.filter((key) => labels.includes(key)),
+    ...labels.filter((key) => !trialLabels.includes(key)),
+  ];
+  const ordered = flat.map((row) => Object.fromEntries(order.map((key) => [key, row[key]])));
+  const subgroups = new Set(rows.flatMap((row) => entriesOf((row as Row).values).filter(hasContext).map(entryLabel)));
+  return { output: { ...rest, rows: ordered }, labels, subgroups: labels.filter((label) => subgroups.has(label)) };
+}
+
+const isArmOutcomes = (output: unknown) => (output as { table?: unknown }).table === 'arm_outcomes';
+
+/** One tool step's own rows: `arm_outcomes` flattened like the answer table, anything else as returned. */
+export function toStepTable(output: unknown): ResultTable | null {
+  if (typeof output !== 'object' || output === null || !isArmOutcomes(output)) return toResultTable(output);
+  const heme = flattenOutput(output);
+  return toResultTable(heme.output, heme.labels);
+}
+
+/**
+ * The arms with their main values, and the subgroup values in a second table.
+ * An FL answer drew 52 columns, most of them "Median PFS (patients <65 y)":
+ * the subset cuts buried the ITT values the question was about. Split after
+ * the columns are pruned over every row, so both tables carry the same
+ * identity columns and a reader can match a subgroup row to its arm; an arm
+ * with no subgroup value has no row in the second table.
+ */
+function toArmsTable(output: unknown, today: string): ResultTable | null {
+  const heme = flattenOutput(output);
+  const stripped = stripFolded(heme.output, today);
+  const table = toResultTable(stripped, heme.labels);
+  if (!table) return null;
+  const pick = (keep: (key: string) => boolean, rows: string[][]): ResultTable => {
+    const indices = table.columns.flatMap((column, i) => (keep(column.key) ? [i] : []));
+    return { columns: indices.map((i) => table.columns[i]), rows: rows.map((row) => indices.map((i) => row[i])) };
+  };
+  const isSubgroup = (key: string) => heme.subgroups.includes(key);
+  const main = { ...table, ...pick((key) => !isSubgroup(key), table.rows) };
+  const subgroupIndices = table.columns.flatMap((column, i) => (isSubgroup(column.key) ? [i] : []));
+  const subgroupRows = table.rows.filter((row) => subgroupIndices.some((i) => row[i] !== ABSENT));
+  const subgroups = pick((key) => isSubgroup(key) || !heme.labels.includes(key), subgroupRows);
+  return withSummary(subgroupRows.length > 0 ? { ...main, subgroups } : main, rowsOf(stripped));
+}
+
+/**
+ * Every `arm_outcomes` read of a turn, as one output. A drug class is one read
+ * per drug, and narrowed reads (`families`) can return the same arm twice, so
+ * rows merge by `id` and their `values` families combine. Arm rows repeat an
+ * nct_id and are nested, so they never join on it like registry rows do.
+ */
+function mergeArmReads(outputs: unknown[]): unknown {
+  const merged = new Map<unknown, Row>();
+  for (const row of outputs.flatMap(rowsOf)) {
+    const key = row.id ?? Symbol('no id');
+    const existing = merged.get(key);
+    const values = { ...(existing?.values as Row | undefined), ...(row.values as Row | undefined) };
+    merged.set(key, { ...existing, ...row, values });
+  }
+  return { ...(outputs[0] as Row), rows: [...merged.values()] };
+}
+
 export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultTable | null {
   const today = now.toISOString().slice(0, 10);
   const successful = outputs.filter(isSuccessful);
   if (successful.length === 0) return null;
 
-  const perArm = successful.filter(isPerArm);
-  const answer = perArm[perArm.length - 1];
-  if (answer && (answer as { table?: unknown }).table === 'trial_outcomes') return toOutcomesTable(answer);
   const drawOne = (output: unknown): ResultTable | null => {
     const stripped = stripFolded(output, today);
     const table = toResultTable(stripped);
     return table && withSummary(table, rowsOf(stripped));
   };
+  // Heme turns: the arms are the answer, whatever else the model read beside them.
+  const armReads = successful.filter(isArmOutcomes);
+  if (armReads.length > 0) return toArmsTable(mergeArmReads(armReads), today);
+
+  const perArm = successful.filter(isPerArm);
+  const answer = perArm[perArm.length - 1];
+  if (answer && (answer as { table?: unknown }).table === 'trial_outcomes') return toOutcomesTable(answer);
   if (answer || successful.length === 1) return drawOne(answer ?? successful[0]);
   const queries = outputs.map(asJoinable).filter((rows): rows is Row[] => rows !== null);
   // Nothing to join: draw the last result, the model's latest narrowing, rather

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildInstructions } from './prompts';
-import { describeSkills } from './skills';
+import { describeSkills, skillsFor } from './skills';
 
 describe('instructions', () => {
   const text = buildInstructions({ cancerType: 'Uveal Melanoma' });
@@ -23,11 +23,16 @@ describe('instructions', () => {
     // Capped in two parts rather than one total: a single total had 6 chars
     // left with three skills, so it forbade any fourth skill however short.
     // What must stay small is the always-sent core and each skill's line.
-    const skills = describeSkills();
+    const skills = describeSkills(skillsFor('Uveal Melanoma'));
     expect(text).toContain(skills);
     expect(text.length - skills.length).toBeLessThan(2_300);
     for (const line of skills.split('\n')) expect(line.length, line).toBeLessThan(340);
     expect(text).toContain('`trial-outcomes`');
     expect(text).toContain('`coverage-and-citation`');
+  });
+
+  it('lists heme-outcomes for a heme session only', () => {
+    expect(buildInstructions({ cancerType: 'Multiple Myeloma' })).toContain('`heme-outcomes`');
+    expect(text).not.toContain('heme-outcomes');
   });
 });
