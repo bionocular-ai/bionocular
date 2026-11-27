@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { answerCounts, toResultTable } from './result-table';
+import { ABSENT, answerCounts, toResultTable } from './result-table';
 import { toStepTable, toTurnTable, withoutAskedPhase } from './turn-table';
 import { toTurnChart } from './turn-chart';
 
@@ -1202,7 +1202,63 @@ describe('arm_outcomes answer tables', () => {
       ]),
     ]);
     expect(cell(table, 0, 'ORR')).toBe('63; 65');
-    expect(cell(table, 0, 'ORR (patients with t(4;14))')).toBe('70');
+    expect(cell(table!.subgroups!, 0, 'ORR (patients with t(4;14))')).toBe('70');
+  });
+
+  // Follicular lymphoma, "CR, PFS, OS for active phase 3 trials": 52 columns,
+  // most of them "Median PFS (patients <65 y)" and the like.
+  describe('subgroup values', () => {
+    const outcomes = heme([
+      row({ id: 'a1', source_id: 'ASH_2025_1', trial: { 'Response criteria': { value: 'Lugano' }, 'Trial name': { value: 'INMIND' } }, values: {
+        response_rates: [{ field: 'CR', value: '50', n: 100 }, { field: 'CR', value: '70', context: 'POD24', n: 20 }],
+        survival_pfs_os: [{ field: 'Median PFS', value: 'NR' }, { field: 'Median PFS', value: '12', context: 'patients <65 y', origin: 'registry' }],
+      } }),
+      row({ id: 'a2', source_id: 'ASH_2025_1', arm_name: 'Placebo', trial: { 'Response criteria': { value: 'Lugano' }, 'Trial name': { value: 'INMIND' } }, values: {
+        response_rates: [{ field: 'CR', value: '40', n: 90 }],
+      } }),
+      row({ id: 'b1', source_id: 'ASH_2025_2', nct_id: 'NCT2', arm_name: 'Mosun', values: {
+        response_rates: [{ field: 'CR', value: '60' }, { field: 'CR', value: '65', context: 'POD24' }],
+      } }),
+    ]);
+
+    it('the answer table shows only main values and the trial labels', () => {
+      const table = toTurnTable([outcomes])!;
+      expect(keys(table)).toEqual(expect.arrayContaining(['CR', 'Median PFS', 'Response criteria', 'Trial name']));
+      expect(keys(table)).not.toContain('CR (POD24)');
+      expect(keys(table)).not.toContain('Median PFS (patients <65 y)');
+      expect(table.rows).toHaveLength(3);
+      expect(cell(table, 2, 'Response criteria')).toBe('not stated');
+    });
+
+    it('subgroup values go in a second table with the same row identity columns', () => {
+      const table = toTurnTable([outcomes])!;
+      const subgroups = table.subgroups!;
+      const identity = keys(table).filter((key) => !['CR', 'Median PFS', 'Response criteria', 'Trial name'].includes(key));
+      expect(keys(subgroups)).toEqual([...identity, 'CR (POD24)', 'Median PFS (patients <65 y)']);
+      // The placebo arm reports no subgroup value, so it is left out.
+      expect(subgroups.rows).toHaveLength(2);
+      expect(cell(subgroups, 0, 'arm_name')).toBe('Tec');
+      expect(cell(subgroups, 1, 'arm_name')).toBe('Mosun');
+      expect(cell(subgroups, 0, 'CR (POD24)')).toBe('70 (n=20)');
+      expect(cell(subgroups, 0, 'Median PFS (patients <65 y)')).toBe('12 (registry)');
+      expect(cell(subgroups, 1, 'Median PFS (patients <65 y)')).toBe(ABSENT);
+    });
+
+    it('no subgroup table when no value has a context', () => {
+      const table = toTurnTable([heme([
+        row({ id: 'a1', values: { response_rates: [{ field: 'CR', value: '50' }] } }),
+        row({ id: 'a2', arm_name: 'X', values: { response_rates: [{ field: 'CR', value: '40' }] } }),
+      ])])!;
+      expect(table).not.toHaveProperty('subgroups');
+    });
+
+    it('subgroup values of every merged read are kept', () => {
+      const survival = heme([row({ id: 'a2', source_id: 'ASH_2025_1', arm_name: 'Placebo', values: {
+        survival_pfs_os: [{ field: 'Median PFS', value: '8', context: 'patients <65 y' }],
+      } })]);
+      const subgroups = toTurnTable([outcomes, survival])!.subgroups!;
+      expect(subgroups.rows.map((r) => r[keys(subgroups).indexOf('arm_name')])).toEqual(['Tec', 'Placebo', 'Mosun']);
+    });
   });
 
   it('trial values become columns and registry origin and caveats stay visible', () => {

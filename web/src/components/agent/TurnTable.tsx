@@ -1004,6 +1004,16 @@ export function TurnTable({
           ) : null}
         </div>
       ) : null}
+      {/* Subset cuts under the arms they belong to, closed until asked for:
+          open, they outnumbered the main values the question was about. */}
+      {table.subgroups ? (
+        <details className="pt-2">
+          <summary className={cn(MORE_CLASSES, 'mb-2 w-fit cursor-pointer')}>
+            Subgroups ({table.subgroups.columns.filter((c) => !table.columns.some((m) => m.key === c.key)).length})
+          </summary>
+          <TurnTable table={table.subgroups} cancerType={cancerType} marker={false} />
+        </details>
+      ) : null}
       {chart ? <TurnCharts chart={chart} /> : null}
       {efficacyLink ? (
         <div className="flex items-baseline gap-2 pt-1.5">

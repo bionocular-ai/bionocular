@@ -77,6 +77,11 @@ export interface ResultTable {
    * above the table.
    */
   caveat?: string;
+  /**
+   * Present only for an `arm_outcomes` turn with a subgroup value: those
+   * values, beside the same row identity columns, for the arms that report one.
+   */
+  subgroups?: ResultTable;
 }
 
 /**
