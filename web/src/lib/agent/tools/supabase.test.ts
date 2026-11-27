@@ -1753,6 +1753,11 @@ describe('store_finding', () => {
     expect(found.has('Off label')).toBe(false);
   });
 
+  it('counts an arm_outcomes source_id as citable, as the heme skill tells the model to cite it', () => {
+    const found = collectIdentifiers([{ id: 'abstract_ASH_2025_256_arm_1', source_id: 'ASH_2025_256', arm_name: 'Tec' }]);
+    expect(found.has('ASH_2025_256')).toBe(true);
+  });
+
   it('only offers finding types the data tools can produce', () => {
     expect(FINDING_TYPES).not.toContain('literature');
     expect(FINDING_TYPES).not.toContain('compound');

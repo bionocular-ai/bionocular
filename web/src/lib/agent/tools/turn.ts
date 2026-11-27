@@ -27,7 +27,8 @@ export const MIN_RESULT_CHARS = 2_000;
 
 /** Columns whose values are the identifiers an answer may cite. */
 // `source` is an approval row's NCCN version, the only thing it can be cited by.
-const IDENTIFIER_COLUMNS = new Set(['nct_id', 'nct_ids', 'abstract_id', 'publication_id', 'url', 'id', 'source']);
+// `source_id` is an arm_outcomes abstract (ASH_2025_256), which the heme skill cites by it.
+const IDENTIFIER_COLUMNS = new Set(['nct_id', 'nct_ids', 'abstract_id', 'publication_id', 'url', 'id', 'source', 'source_id']);
 
 /**
  * Every identifier a set of rows carries. Identifier columns are taken
