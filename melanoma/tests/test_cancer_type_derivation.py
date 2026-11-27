@@ -472,6 +472,9 @@ def test_extra_cancer_types_join_the_derived_label():
 
 def test_extra_cancer_type_already_derived_is_not_repeated():
     row = extract_processed_trial(
-        _raw(["Metastatic Uveal Melanoma"]), "NCT06581406", {}, extra_cancer_types=[UVEAL]
+        _raw(["Metastatic Uveal Melanoma"]),
+        "NCT06581406",
+        {},
+        extra_cancer_types=[UVEAL],
     )
     assert row["cancer_type"] == [UVEAL]

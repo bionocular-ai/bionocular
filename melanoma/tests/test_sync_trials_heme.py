@@ -44,7 +44,9 @@ class Recorder:
 
 def test_sync_one_writes_heme_tags_beside_derived():
     sb = Recorder()
-    assert sync.sync_one("NCT04763083", {}, OneTrialApi(), sb, False, [CLL]) == "fetched"
+    assert (
+        sync.sync_one("NCT04763083", {}, OneTrialApi(), sb, False, [CLL]) == "fetched"
+    )
     [row] = sb.rows["clinical_trials"]
     assert row["cancer_type"] == ["Cutaneous Melanoma", CLL]
     assert row["cancer_type_derived"] == ["Cutaneous Melanoma"]
