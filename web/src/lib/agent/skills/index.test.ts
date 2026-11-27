@@ -50,6 +50,13 @@ describe('skills', () => {
     expect(body).toMatch(/no drug-class filter/);
   });
 
+  // Golden case heme-mm-cart-crs-icans quoted `abstract_ASH_2025_256_arm_1` and `dose_events_special`.
+  it('heme-outcomes forbids row ids and family keys in the answer', () => {
+    const { body } = loadSkill('heme-outcomes');
+    expect(body).toMatch(/never show a row `id`/);
+    expect(body).toMatch(/or a family key/);
+  });
+
   it('offers heme-outcomes only in heme sessions', () => {
     expect(skillsFor('Multiple Myeloma')).toContain('heme-outcomes');
     expect(skillsFor('Cutaneous Melanoma')).not.toContain('heme-outcomes');

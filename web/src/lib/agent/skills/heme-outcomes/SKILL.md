@@ -63,6 +63,9 @@ interpreting it; do not guess from the label.
   a bound, not a point value. Quote both as stored.
 - Registry-origin values are marked "(registry)". Relay every `caveat`.
 - Quote, never derive: do not recompute, convert or round.
+- Name arms, trials and field labels. Cite an abstract by `source_id`
+  (ASH_2025_256) and a trial by `nct_id`; never show a row `id`
+  (abstract_ASH_2025_256_arm_1) or a family key (response_rates).
 
 ## Policy rules
 
