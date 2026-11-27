@@ -11,6 +11,10 @@ same expression as `AREA[LastUpdatePostDate]RANGE[cutoff,MAX]` (default cutoff:
 today - 2 days). Idempotent - re-running the same window is a no-op via PK
 upsert.
 
+The trials ASH 2025 abstracts cite (`resources/ash/trial_cancer_types.csv`)
+are refreshed on every run as well, and their heme cancers are added to the
+derived `cancer_type`, which the skin rules alone would leave without them.
+
 Usage:
     poetry run python3 scripts/sync_trials_supabase.py [--days N] [--full]
                                                        [--cancer-type X]
@@ -22,6 +26,7 @@ import logging
 import os
 import pathlib
 import sys
+from collections.abc import Sequence
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
@@ -39,6 +44,7 @@ from src.infrastructure.clinical_trials.cancer_type_mapping import (  # noqa: E4
     CANCER_TYPE_MAPPING,
     SKIN_CANCER_TYPES,
 )
+from src.infrastructure.clinical_trials.heme_tags import load_heme_tags  # noqa: E402
 from src.infrastructure.clinical_trials.supabase_parser import (  # noqa: E402
     extract_processed_trial,
 )
@@ -114,6 +120,13 @@ def discover_ncts(
     return nct_to_cancer_types
 
 
+def sync_targets(
+    discovered: dict[str, list[str]], heme: dict[str, list[str]]
+) -> list[str]:
+    """Discovered NCT ids, then the ASH-cited ones not already among them."""
+    return list(discovered) + [n for n in heme if n not in discovered]
+
+
 # Supabase occasionally drops one write (a 504, or a 400 with an empty body)
 # that succeeds when re-sent. Upserts are idempotent, so every failure is
 # retried, not just status codes we can name.
@@ -133,6 +146,7 @@ def sync_one(
     api: ClinicalTrialsGovAPIClient,
     supabase: Optional[Client],
     dry_run: bool,
+    heme_tags: Sequence[str] = (),
 ) -> str:
     """Fetch + upsert a single trial. Returns 'fetched', 'skipped', or 'error'."""
     raw = api.fetch_trial_data(nct)
@@ -140,7 +154,9 @@ def sync_one(
         logger.warning("Skipping %s: fetch returned None", nct)
         return "skipped"
 
-    parsed = extract_processed_trial(raw, nct, cancer_types_map)
+    parsed = extract_processed_trial(
+        raw, nct, cancer_types_map, extra_cancer_types=heme_tags
+    )
 
     if dry_run or supabase is None:
         return "fetched"
@@ -214,9 +230,18 @@ def main() -> int:
         "Discovered %d unique NCTs across %d cancer types", total, len(cancer_types)
     )
 
+    # ponytail: refreshes all ~568 listed trials every run; switch to filter.ids +
+    # LastUpdatePostDate if the list grows to thousands
+    heme = {} if args.cancer_type else load_heme_tags()
+    targets = sync_targets(nct_to_cancer_types, heme)
+    total = len(targets)
+    logger.info("Syncing %d NCTs, %d of them ASH-cited", total, len(heme))
+
     counts = {"fetched": 0, "skipped": 0, "error": 0}
-    for idx, nct in enumerate(nct_to_cancer_types, start=1):
-        result = sync_one(nct, nct_to_cancer_types, api, supabase, args.dry_run)
+    for idx, nct in enumerate(targets, start=1):
+        result = sync_one(
+            nct, nct_to_cancer_types, api, supabase, args.dry_run, heme.get(nct, [])
+        )
         counts[result] += 1
         if idx % 50 == 0 or idx == total:
             logger.info("Progress: %d/%d (%s)", idx, total, counts)
