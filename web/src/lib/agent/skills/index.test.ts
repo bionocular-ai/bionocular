@@ -69,6 +69,13 @@ describe('skills', () => {
     expect(skillsFor('Multiple Myeloma')).toEqual(['coverage-and-citation', 'heme-outcomes']);
   });
 
+  // Melanoma sessions must stay as they were before heme: same skills, same order.
+  it('melanoma sessions keep the original four skills in their original order', () => {
+    const original = ['trial-outcomes', 'trial-landscape', 'coverage-and-citation', 'standard-of-care'];
+    expect(skillsFor('Cutaneous Melanoma')).toEqual(original);
+    expect(skillsFor('Uveal Melanoma')).toEqual(original);
+  });
+
   it('lists every skill for the system prompt, one line each', () => {
     const lines = describeSkills().split('\n');
     expect(lines).toHaveLength(SKILL_NAMES.length);
