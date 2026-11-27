@@ -491,6 +491,12 @@ with (RESOURCES / "indications.csv").open(newline="") as _f:
 INDICATIONS = tuple(r["indication"] for r in _rows)
 _INCLUDES = {r["indication"]: r["includes"] for r in _rows}
 
+
+def full_names() -> dict[str, str]:
+    """Short indication label -> full cancer name, as written to trial_outcomes.cancer_type."""
+    return {r["indication"]: r["full_name"] for r in _rows}
+
+
 _LYMPHOMAS = {
     "DLBCL",
     "Follicular lymphoma",

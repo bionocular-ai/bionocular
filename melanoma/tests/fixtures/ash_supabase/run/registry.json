@@ -1,0 +1,20 @@
+{
+ "_meta": {},
+ "103": {
+  "extracted": {
+   "trial": {},
+   "arms": {
+    "arm_1": {
+     "route": {
+      "value": "IV",
+      "quote": "DRUG: drug D, IV",
+      "n": "",
+      "detail": "",
+      "derived": false
+     }
+    }
+   }
+  },
+  "flags": {}
+ }
+}

@@ -20,6 +20,7 @@ from ash_fields import (  # noqa: E402
     arm_fields,
     family_prompt,
     fields_for,
+    full_names,
     judge_items,
     judge_prompt,
     load_families,
@@ -84,6 +85,15 @@ def test_fields_for_filters_by_indication():
     assert "CR/CRh rate" not in mm
     assert fields_for(rates, None) == rates
     assert not fields_for(_family("survival_other"), "Multiple myeloma").fields
+
+
+def test_full_names_cover_every_indication():
+    names = full_names()
+    assert len(names) == 20
+    assert names["AML"] == "Acute Myeloid Leukemia"
+    assert names["Allo-HCT / GVHD"] == "Allogeneic Transplant / GVHD"
+    assert len(set(names.values())) == 20
+    assert {k for k, v in names.items() if k == v} <= {"Myelofibrosis"}
 
 
 def test_comparison_fields_only_on_the_experimental_arm():

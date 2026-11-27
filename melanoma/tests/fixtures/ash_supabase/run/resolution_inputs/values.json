@@ -1,0 +1,26 @@
+{
+ "0": {
+  "a": "101",
+  "arm": "arm_1: drug A",
+  "field": "CR rate",
+  "kind": "field",
+  "context": "",
+  "value": "85"
+ },
+ "1": {
+  "a": "102",
+  "arm": "arm_1: drug C",
+  "field": "CR rate",
+  "kind": "field",
+  "context": "",
+  "value": "40"
+ },
+ "2": {
+  "a": "103",
+  "arm": "arm_1: drug D",
+  "field": "CR rate",
+  "kind": "field",
+  "context": "",
+  "value": "60"
+ }
+}

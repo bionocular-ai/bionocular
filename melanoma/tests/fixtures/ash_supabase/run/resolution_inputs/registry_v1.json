@@ -1,0 +1,20 @@
+{
+ "_meta": {},
+ "103": {
+  "extracted": {
+   "trial": {},
+   "arms": {
+    "arm_1": {
+     "route": {
+      "value": "SC",
+      "quote": "DRUG: drug D, SC",
+      "n": "",
+      "detail": "",
+      "derived": false
+     }
+    }
+   }
+  },
+  "flags": {}
+ }
+}

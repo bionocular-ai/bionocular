@@ -1,0 +1,430 @@
+[
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "median_pfs",
+  "context": "",
+  "value_text": "NR",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_2",
+  "arm_name": "drug C",
+  "arm_role": "control",
+  "field_key": "median_pfs",
+  "context": "",
+  "value_text": "24.5",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "median_pfs",
+  "context": "patients with unmutated IGHV",
+  "value_text": "36.0",
+  "n": 40,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "p_value_pfs",
+  "context": "",
+  "value_text": "<0.001",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "hr_pfs",
+  "context": "",
+  "value_text": "0.42",
+  "n": null,
+  "detail": "A+B vs C",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "f_95pct_ci_of_hr_pfs",
+  "context": "",
+  "value_text": "0.30-0.60",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "patients_enrolled",
+  "context": "",
+  "value_text": "120",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "patients_treated",
+  "context": "",
+  "value_text": "118",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_2",
+  "arm_name": "drug C",
+  "arm_role": "control",
+  "field_key": "patients_enrolled",
+  "context": "",
+  "value_text": "119",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "orr_rate",
+  "context": "",
+  "value_text": "81.1",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "dose",
+  "context": "",
+  "value_text": "100 mg daily",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "crs_any_grade",
+  "context": "",
+  "value_text": "12",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "generic_name_per_component",
+  "context": "",
+  "value_text": "drug-a + drug-b",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "registry",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": "arm_1",
+  "arm_name": "drug A plus drug B",
+  "arm_role": "experimental",
+  "field_key": "generic_name_per_component",
+  "context": "",
+  "value_text": "drug-a + drug-b",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "registry",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": null,
+  "arm_name": null,
+  "arm_role": null,
+  "field_key": "setting",
+  "context": "",
+  "value_text": "relapsed/refractory",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "registry",
+  "caveat": null
+ },
+ {
+  "abstract": "1",
+  "doi": "10.1182/blood-2025-1",
+  "indication": "Chronic Lymphocytic Leukemia",
+  "nct_ids": [
+   "NCT00000001",
+   "NCT00000002"
+  ],
+  "arm_id": null,
+  "arm_name": null,
+  "arm_role": null,
+  "field_key": "response_criteria",
+  "context": "",
+  "value_text": "iwCLL",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "2",
+  "doi": "10.1182/blood-2025-2",
+  "indication": "Multiple Myeloma",
+  "nct_ids": [
+   "NCT00000003"
+  ],
+  "arm_id": null,
+  "arm_name": null,
+  "arm_role": null,
+  "field_key": "orr_rate",
+  "context": "",
+  "value_text": "70",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "2",
+  "doi": "10.1182/blood-2025-2",
+  "indication": "Multiple Myeloma",
+  "nct_ids": [
+   "NCT00000003"
+  ],
+  "arm_id": null,
+  "arm_name": null,
+  "arm_role": null,
+  "field_key": "median_pfs",
+  "context": "",
+  "value_text": "14.2",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "2",
+  "doi": "10.1182/blood-2025-2",
+  "indication": "Multiple Myeloma",
+  "nct_ids": [
+   "NCT00000003"
+  ],
+  "arm_id": null,
+  "arm_name": null,
+  "arm_role": null,
+  "field_key": "patients_enrolled",
+  "context": "",
+  "value_text": "40",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "3",
+  "doi": "10.1182/blood-2025-3",
+  "indication": "Acute Myeloid Leukemia",
+  "nct_ids": [],
+  "arm_id": "arm_1",
+  "arm_name": "drug D [dose level 1]",
+  "arm_role": "single arm",
+  "field_key": "cr_rate",
+  "context": "",
+  "value_text": "33",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": "possible source error, literal value kept: needs a person"
+ },
+ {
+  "abstract": "3",
+  "doi": "10.1182/blood-2025-3",
+  "indication": "Acute Myeloid Leukemia",
+  "nct_ids": [],
+  "arm_id": "arm_1",
+  "arm_name": "drug D [dose level 1]",
+  "arm_role": "single arm",
+  "field_key": "median_os",
+  "context": "",
+  "value_text": "8.1",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ },
+ {
+  "abstract": "3",
+  "doi": "10.1182/blood-2025-3",
+  "indication": "Acute Myeloid Leukemia",
+  "nct_ids": [],
+  "arm_id": "arm_1",
+  "arm_name": "drug D [dose level 1]",
+  "arm_role": "single arm",
+  "field_key": "dose",
+  "context": "",
+  "value_text": "6 cycles of drug D",
+  "n": null,
+  "detail": "",
+  "derived": false,
+  "origin": "abstract",
+  "caveat": null
+ }
+]
