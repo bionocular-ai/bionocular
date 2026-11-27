@@ -97,9 +97,7 @@ def plan_promotions(
     for row in rows:
         before = row.get("cancer_type") or []
         derived = row["cancer_type_derived"]
-        after = derived + [
-            t for t in heme.get(row["nct_id"], []) if t not in derived
-        ]
+        after = derived + [t for t in heme.get(row["nct_id"], []) if t not in derived]
         if set(before) == set(after):
             continue
         plan.append(
