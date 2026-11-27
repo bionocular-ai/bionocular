@@ -1256,6 +1256,63 @@ describe('arm_outcomes answer tables', () => {
     expect(toTurnChart(table, table.rows, ['ORR'], () => [])).toBeNull();
   });
 
+  // A drug-class question is one arm_outcomes read per drug (heme-outcomes SKILL.md).
+  it('draws every arm_outcomes read of the turn, not only the last', () => {
+    const tec = heme([
+      row({ id: 'a1', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+      row({ id: 'a2', arm_name: 'Tec 2', trial: { 'Response criteria': { value: 'IMWG' } }, values: { response_rates: [{ field: 'ORR', value: '60' }] } }),
+    ]);
+    const elra = heme([
+      row({ id: 'b1', source_id: 'b', nct_id: 'NCT2', arm_name: 'Elra', trial: { 'Response criteria': { value: 'IMWG 2016' } }, values: { response_rates: [{ field: 'ORR', value: '61' }] } }),
+      row({ id: 'b2', source_id: 'b', nct_id: 'NCT2', arm_name: 'Elra 2', trial: { 'Response criteria': { value: 'IMWG 2016' } }, values: { response_rates: [{ field: 'ORR', value: '58' }] } }),
+    ]);
+    const table = toTurnTable([tec, elra]);
+    expect(table!.rows).toHaveLength(4);
+    expect(table!.rows.map((r) => r[keys(table).indexOf('ORR')])).toEqual(['63', '60', '61', '58']);
+    expect(cell(table, 0, 'Response criteria')).toBe('IMWG');
+    expect(cell(table, 2, 'Response criteria')).toBe('IMWG 2016');
+  });
+
+  it('merges the families of two narrowed reads that hit the same arm', () => {
+    const response = heme([
+      row({ id: 'a1', values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+      row({ id: 'a2', arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+    ]);
+    const survival = heme([
+      row({ id: 'a1', values: { survival_pfs_os: [{ field: 'mPFS', value: 'NR' }] } }),
+    ]);
+    const table = toTurnTable([response, survival]);
+    expect(table!.rows).toHaveLength(2);
+    expect(cell(table, 0, 'ORR')).toBe('63');
+    expect(cell(table, 0, 'mPFS')).toBe('NR');
+  });
+
+  it('never joins arm_outcomes rows with clinical_trials into JSON blobs', () => {
+    const registry = { ok: true, table: 'clinical_trials', rows: [{ nct_id: 'NCT1', overall_status: 'RECRUITING' }] };
+    const outcomes = heme([row({ id: 'a1', values: { response_rates: [{ field: 'ORR', value: '63' }] } })]);
+    const other = heme([row({ id: 'b1', nct_id: 'NCT2', arm_name: 'Elra', values: { response_rates: [{ field: 'ORR', value: '61' }] } })]);
+    for (const outputs of [[registry, outcomes], [outcomes, other]]) {
+      const table = toTurnTable(outputs)!;
+      expect(keys(table)).not.toContain('values');
+      expect(keys(table)).not.toContain('trial');
+      expect(table.rows.flat().some((c) => c.startsWith('{'))).toBe(false);
+    }
+  });
+
+  it('a later outcome_fields or clinical_trials read does not replace the outcomes', () => {
+    const outcomes = heme([
+      row({ id: 'a1', values: { response_rates: [{ field: 'ORR', value: '63' }] } }),
+      row({ id: 'a2', arm_name: 'X', values: { response_rates: [{ field: 'ORR', value: '50' }] } }),
+    ]);
+    const fields = { ok: true, table: 'outcome_fields', rows: [{ label: 'ORR', family: 'response_rates', value_type: 'pct', definition: 'x' }] };
+    const registry = { ok: true, table: 'clinical_trials', rows: [{ nct_id: 'NCT1', overall_status: 'RECRUITING' }, { nct_id: 'NCT9', overall_status: 'COMPLETED' }] };
+    for (const later of [fields, registry]) {
+      const table = toTurnTable([outcomes, later]);
+      expect(keys(table)).toContain('ORR');
+      expect(table!.rows).toHaveLength(2);
+    }
+  });
+
   it('trial_outcomes tables are unchanged', () => {
     const outcomes = { ok: true, table: 'trial_outcomes', rows: [
       { nct_id: 'NCT1', arm_name: 'A', num_patients: 10, orr: 40, median_pfs: 5.5, line_of_treatment: '1L' },

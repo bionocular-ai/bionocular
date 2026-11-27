@@ -590,20 +590,43 @@ function flattenOutput(output: unknown): { output: unknown; labels: string[] } {
   return { output: { ...rest, rows: flat }, labels };
 }
 
+const isArmOutcomes = (output: unknown) => (output as { table?: unknown }).table === 'arm_outcomes';
+
+/**
+ * Every `arm_outcomes` read of a turn, as one output. A drug class is one read
+ * per drug, and narrowed reads (`families`) can return the same arm twice, so
+ * rows merge by `id` and their `values` families combine. Arm rows repeat an
+ * nct_id and are nested, so they never join on it like registry rows do.
+ */
+function mergeArmReads(outputs: unknown[]): unknown {
+  const merged = new Map<unknown, Row>();
+  for (const row of outputs.flatMap(rowsOf)) {
+    const key = row.id ?? Symbol('no id');
+    const existing = merged.get(key);
+    const values = { ...(existing?.values as Row | undefined), ...(row.values as Row | undefined) };
+    merged.set(key, { ...existing, ...row, values });
+  }
+  return { ...(outputs[0] as Row), rows: [...merged.values()] };
+}
+
 export function toTurnTable(outputs: unknown[], now: Date = new Date()): ResultTable | null {
   const today = now.toISOString().slice(0, 10);
   const successful = outputs.filter(isSuccessful);
   if (successful.length === 0) return null;
 
-  const perArm = successful.filter(isPerArm);
-  const answer = perArm[perArm.length - 1];
-  if (answer && (answer as { table?: unknown }).table === 'trial_outcomes') return toOutcomesTable(answer);
   const drawOne = (output: unknown): ResultTable | null => {
-    const heme = (output as { table?: unknown }).table === 'arm_outcomes' ? flattenOutput(output) : null;
+    const heme = isArmOutcomes(output) ? flattenOutput(output) : null;
     const stripped = stripFolded(heme ? heme.output : output, today);
     const table = toResultTable(stripped, heme?.labels);
     return table && withSummary(table, rowsOf(stripped));
   };
+  // Heme turns: the arms are the answer, whatever else the model read beside them.
+  const armReads = successful.filter(isArmOutcomes);
+  if (armReads.length > 0) return drawOne(mergeArmReads(armReads));
+
+  const perArm = successful.filter(isPerArm);
+  const answer = perArm[perArm.length - 1];
+  if (answer && (answer as { table?: unknown }).table === 'trial_outcomes') return toOutcomesTable(answer);
   if (answer || successful.length === 1) return drawOne(answer ?? successful[0]);
   const queries = outputs.map(asJoinable).filter((rows): rows is Row[] => rows !== null);
   // Nothing to join: draw the last result, the model's latest narrowing, rather
